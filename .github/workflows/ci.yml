@@ -136,9 +136,11 @@ jobs:
 
       - name: Set up toolchain and QEMU paths
         run: |
-          bindir=$(dirname "$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' -type f | head -1)")
-          test -n "$bindir"
-          echo "$bindir" >> "$GITHUB_PATH"
+          # No -type f (symlinks count); dirname of an empty find result is
+          # ".", so assert on the find output itself.
+          clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
+          test -n "$clangxx"
+          echo "$(dirname "$clangxx")" >> "$GITHUB_PATH"
           # Prefer a qemu-hexagon bundled with the toolchain; else use distro qemu.
           qemu=$(find "$HOME/hexagon" -name 'qemu-hexagon' -type f | head -1 || true)
           if [ -n "$qemu" ]; then
@@ -314,7 +316,16 @@ jobs:
             tar --zstd -xf toolchain.tar.zst && rm toolchain.tar.zst
             cd "$GITHUB_WORKSPACE"
           fi
-          bindir=$(dirname "$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' -type f | head -1)")
+          # No -type f: the compiler may be a symlink in the restored tree.
+          clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
+          if [ -z "$clangxx" ]; then
+            echo "contents of ~/hexagon:"
+            ls -la "$HOME/hexagon" 2>&1 | head -20
+            find "$HOME/hexagon" -maxdepth 3 | head -40
+            echo "::error::hexagon cross compiler not found under ~/hexagon"
+            exit 1
+          fi
+          bindir=$(dirname "$clangxx")
           export PATH="$HOME/qemu-hexagon-plugins:$bindir:$PATH"
           test -x "$HOME/qemu-hexagon-plugins/qemu-hexagon" || {
             echo "::error::plugin-enabled qemu-hexagon missing"; exit 1; }
