@@ -17,10 +17,16 @@ else()
 endif()
 
 # Warning flags for this project's own tests/examples; not propagated to consumers.
+option(SRT_WERROR "Treat warnings as errors in SampleRateTap's own targets" OFF)
 add_library(srt_warnings INTERFACE)
 target_compile_options(srt_warnings INTERFACE
     $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra -Wpedantic -Wconversion -Wshadow>
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->)
+if(SRT_WERROR)
+    target_compile_options(srt_warnings INTERFACE
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Werror>
+        $<$<CXX_COMPILER_ID:MSVC>:/WX>)
+endif()
 
 if(SRT_BUILD_TESTS)
     enable_testing()

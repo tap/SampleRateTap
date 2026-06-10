@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux GCC
+            os: ubuntu-latest
+            cc: gcc
+            cxx: g++
+            werror: ON
+          - name: Linux Clang
+            os: ubuntu-latest
+            cc: clang
+            cxx: clang++
+            werror: ON
+          - name: macOS AppleClang
+            os: macos-latest
+            werror: ON
+          # Warnings stay non-fatal on MSVC until /W4 output has been triaged.
+          - name: Windows MSVC
+            os: windows-latest
+            werror: OFF
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DSRT_WERROR=${{ matrix.werror }}
+
+      - name: Build
+        run: cmake --build build --config Release -j 4
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  sanitizers:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ASan + UBSan
+            flags: -fsanitize=address,undefined -fno-sanitize-recover=all
+          - name: TSan
+            flags: -fsanitize=thread
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        env:
+          CC: clang
+          CXX: clang++
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DSRT_BUILD_EXAMPLES=OFF
+          -DCMAKE_CXX_FLAGS="${{ matrix.flags }}"
+
+      - name: Build
+        run: cmake --build build -j 4
+
+      - name: Test
+        env:
+          TSAN_OPTIONS: halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: ctest --test-dir build --output-on-failure
+
+  clang-format:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Pinned major version: formatting output can differ across releases.
+      - name: Check formatting
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q clang-format-18
+          clang-format-18 --dry-run --Werror \
+            include/srt/*.hpp include/srt/detail/*.hpp \
+            tests/*.cpp tests/support/*.hpp examples/*.cpp
