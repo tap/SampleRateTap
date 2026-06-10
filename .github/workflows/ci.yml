@@ -136,9 +136,11 @@ jobs:
 
       - name: Set up toolchain and QEMU paths
         run: |
-          bindir=$(dirname "$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' -type f | head -1)")
-          test -n "$bindir"
-          echo "$bindir" >> "$GITHUB_PATH"
+          # No -type f (symlinks count); dirname of an empty find result is
+          # ".", so assert on the find output itself.
+          clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
+          test -n "$clangxx"
+          echo "$(dirname "$clangxx")" >> "$GITHUB_PATH"
           # Prefer a qemu-hexagon bundled with the toolchain; else use distro qemu.
           qemu=$(find "$HOME/hexagon" -name 'qemu-hexagon' -type f | head -1 || true)
           if [ -n "$qemu" ]; then
@@ -238,6 +240,9 @@ jobs:
     timeout-minutes: 45
     env:
       QEMU_PLUGIN_HEADER_URL: https://raw.githubusercontent.com/qemu/qemu/v8.2.2/include/qemu/qemu-plugin.h
+      QEMU_SRC_URL: https://download.qemu.org/qemu-8.2.2.tar.xz
+      # Hard pin from the "qemu source sha256:" line of run #24.
+      QEMU_SRC_SHA256: "847346c1b82c1a54b2c38f6edbd85549edeb17430b7d4d3da12620e2962bc4f3"
       HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -246,7 +251,7 @@ jobs:
         run: >
           sudo apt-get update -q &&
           sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
-          qemu-user libglib2.0-dev
+          libglib2.0-dev ninja-build meson flex bison
 
       - name: Build counting plugin
         run: |
@@ -269,10 +274,33 @@ jobs:
           python3 scripts/icount.py --target m55
           --build-dir build-m55 --plugin /tmp/libinsncount.so
 
-      # Hexagon counting requires a plugin-capable qemu-hexagon: Debian's
-      # user-mode build has plugins disabled, so this leg only works if the
-      # CodeLinaro toolchain's bundled qemu enables them. Experimental until
-      # confirmed; failures here do not gate.
+      # Neither Debian's nor the CodeLinaro toolchain's qemu-hexagon enables
+      # TCG plugins, so the Hexagon leg builds its own from the pinned QEMU
+      # release (linux-user target only, ~4 min, cached thereafter).
+      - name: Cache plugin-enabled qemu-hexagon
+        id: qemu-hex
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/qemu-hexagon-plugins
+          key: qemu-hexagon-plugins-${{ env.QEMU_SRC_URL }}-1
+
+      - name: Build plugin-enabled qemu-hexagon
+        if: steps.qemu-hex.outputs.cache-hit != 'true'
+        run: |
+          curl -sfLo /tmp/qemu-src.tar.xz "$QEMU_SRC_URL"
+          actual=$(sha256sum /tmp/qemu-src.tar.xz | cut -d' ' -f1)
+          echo "qemu source sha256: $actual (pin this in QEMU_SRC_SHA256)"
+          if [ -n "${QEMU_SRC_SHA256:-}" ] && [ "$actual" != "$QEMU_SRC_SHA256" ]; then
+            echo "::error::qemu source checksum mismatch"; exit 1
+          fi
+          tar -xJf /tmp/qemu-src.tar.xz -C /tmp
+          cd /tmp/qemu-*/
+          ./configure --target-list=hexagon-linux-user --enable-plugins \
+            --disable-docs --disable-tools --disable-system
+          ninja -C build qemu-hexagon
+          mkdir -p ~/qemu-hexagon-plugins
+          cp build/qemu-hexagon ~/qemu-hexagon-plugins/
+
       - name: Cache Hexagon toolchain
         id: cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
@@ -280,8 +308,7 @@ jobs:
           path: ~/hexagon
           key: ${{ env.HEXAGON_TOOLCHAIN_URL }}-verified-1
 
-      - name: Ratchet Hexagon (experimental)
-        continue-on-error: true
+      - name: Ratchet Hexagon
         run: |
           if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
             mkdir -p ~/hexagon && cd ~/hexagon
@@ -289,12 +316,24 @@ jobs:
             tar --zstd -xf toolchain.tar.zst && rm toolchain.tar.zst
             cd "$GITHUB_WORKSPACE"
           fi
-          bindir=$(dirname "$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' -type f | head -1)")
-          export PATH="$bindir:$PATH"
-          qemu=$(find "$HOME/hexagon" -name 'qemu-hexagon' -type f | head -1)
-          test -n "$qemu" && export PATH="$(dirname "$qemu"):$PATH"
-          qemu-hexagon -plugin help >/dev/null 2>&1 || {
-            echo "::notice::qemu-hexagon lacks plugin support; skipping"; exit 0; }
+          # No -type f: the compiler may be a symlink in the restored tree.
+          clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
+          if [ -z "$clangxx" ]; then
+            echo "contents of ~/hexagon:"
+            ls -la "$HOME/hexagon" 2>&1 | head -20
+            find "$HOME/hexagon" -maxdepth 3 | head -40
+            echo "::error::hexagon cross compiler not found under ~/hexagon"
+            exit 1
+          fi
+          bindir=$(dirname "$clangxx")
+          export PATH="$HOME/qemu-hexagon-plugins:$bindir:$PATH"
+          test -x "$HOME/qemu-hexagon-plugins/qemu-hexagon" || {
+            echo "::error::plugin-enabled qemu-hexagon missing"; exit 1; }
+          # qemu exits 1 with or without plugin support here (no guest binary
+          # was given), so probe by the error text, not the exit code.
+          if qemu-hexagon -plugin help 2>&1 | grep -q "unknown option"; then
+            echo "::error::built qemu-hexagon lacks plugin support"; exit 1
+          fi
           cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
             -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \

@@ -71,9 +71,10 @@ baseline lands and revised deliberately. Stop when any of:
   but they are a function of the **compiler version**: when the CI
   toolchain package updates, the ratchet job fails and the baselines get
   re-recorded in a reviewed commit — that is working as intended, not a
-  flake. Hexagon counting additionally needs a plugin-capable
-  `qemu-hexagon` (Debian's user-mode build has plugins disabled), so that
-  leg is experimental until the toolchain-bundled qemu is confirmed.
+  flake. Hexagon counting needs a plugin-capable `qemu-hexagon` — neither
+  Debian's nor the CodeLinaro toolchain's build enables TCG plugins — so
+  the CI job compiles one from the pinned QEMU release (linux-user target
+  only, cached).
 - **Wall-clock benches are never a hard gate on shared runners** (noise);
   they run as a smoke test in CI and produce trend artifacts only.
 
@@ -91,7 +92,8 @@ SNR table is already enforced by test thresholds.
   (`SRT_BUILD_BENCHMARKS`), host baselines, README perf section + update
   script, CI bench smoke job.
 - [x] **PR B** — QEMU instruction-count harness, `bench/baselines.json`
-  ratchet job in CI. M55 leg gating; Hexagon leg experimental pending a
-  plugin-capable qemu-hexagon.
+  ratchet job in CI. M55 leg gating.
+- [x] **PR B2** — Hexagon leg promoted to gating, running on a
+  from-source plugin-enabled qemu-hexagon (cached in CI).
 - [ ] **PR C…** — optimizations in the ROI order above, one per PR, each
   with numbers.
