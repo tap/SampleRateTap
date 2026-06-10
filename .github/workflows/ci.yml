@@ -80,6 +80,104 @@ jobs:
           UBSAN_OPTIONS: print_stacktrace=1
         run: ctest --test-dir build --output-on-failure
 
+  # Cross-compile for Qualcomm Hexagon (Linux/musl) with the open-source
+  # toolchain and run a subset of the suite under qemu-hexagon user-mode
+  # emulation. Validates ISA-level correctness on a 32-bit audio DSP target
+  # (size_t width, atomics lowering, musl libc, soft-float doubles); the
+  # long-running quality/lock simulations and the 10M-element thread stress
+  # are excluded — they prove DSP math and concurrency, which emulation
+  # neither speeds up nor measures meaningfully.
+  hexagon-qemu:
+    name: Hexagon cross (QEMU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Prebuilt open-source toolchain (BSD-3) published by Qualcomm/Quicinc;
+      # binary artifacts are hosted on CodeLinaro and linked from the
+      # quic/toolchain_for_hexagon release notes.
+      HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache toolchain
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/hexagon
+          key: ${{ env.HEXAGON_TOOLCHAIN_URL }}
+
+      - name: Download toolchain
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/hexagon && cd ~/hexagon
+          curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
+          tar --zstd -xf toolchain.tar.zst
+          rm toolchain.tar.zst
+
+      - name: Set up toolchain and QEMU paths
+        run: |
+          bindir=$(dirname "$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' -type f | head -1)")
+          test -n "$bindir"
+          echo "$bindir" >> "$GITHUB_PATH"
+          # Prefer a qemu-hexagon bundled with the toolchain; else use distro qemu.
+          qemu=$(find "$HOME/hexagon" -name 'qemu-hexagon' -type f | head -1 || true)
+          if [ -n "$qemu" ]; then
+            echo "$(dirname "$qemu")" >> "$GITHUB_PATH"
+          else
+            sudo apt-get update -q && sudo apt-get install -y -q qemu-user
+          fi
+
+      - name: Verify tools
+        run: |
+          hexagon-unknown-linux-musl-clang++ --version
+          qemu-hexagon --version
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake
+          -DSRT_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build build -j 4
+
+      - name: Test under emulation
+        run: >
+          ctest --test-dir build --output-on-failure
+          -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec'
+
+  # ------------------------------------------------------------------------
+  # Template: genuine Tensilica HiFi4/HiFi5 coverage. The HiFi audio ISA,
+  # xt-clang compiler and xt-run instruction-set simulator are proprietary
+  # (FlexLM-licensed Cadence tools), so this must run on a self-hosted
+  # runner with access to the license server. Uncomment and adapt once such
+  # a runner is registered (suggested labels: [self-hosted, cadence-xtensa]).
+  #
+  # hifi-iss:
+  #   name: HiFi ISS (self-hosted)
+  #   runs-on: [self-hosted, cadence-xtensa]
+  #   env:
+  #     XTENSA_CORE: <your HiFi core name>
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Configure
+  #       run: >
+  #         cmake -B build
+  #         -DCMAKE_BUILD_TYPE=Release
+  #         -DCMAKE_SYSTEM_NAME=Generic
+  #         -DCMAKE_C_COMPILER=xt-clang
+  #         -DCMAKE_CXX_COMPILER=xt-clang++
+  #         "-DCMAKE_CROSSCOMPILING_EMULATOR=xt-run;--xtensa-core=$XTENSA_CORE"
+  #         -DSRT_BUILD_EXAMPLES=OFF
+  #     - name: Build
+  #       run: cmake --build build -j
+  #     - name: Test on ISS
+  #       run: >
+  #         ctest --test-dir build --output-on-failure
+  #         -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec'
+  # ------------------------------------------------------------------------
+
   clang-format:
     name: clang-format
     runs-on: ubuntu-latest
