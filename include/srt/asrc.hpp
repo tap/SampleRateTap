@@ -216,8 +216,12 @@ private:
     std::atomic<std::uint64_t> resyncs_{0};
 };
 
-/// The float converter — the supported specialization in v0.1.
+/// The float converter.
 using AsyncSampleRateConverter = BasicAsyncSampleRateConverter<float>;
+/// Q15 fixed-point converter (int16_t samples; see SampleTraits<int16_t>).
+using AsyncSampleRateConverterQ15 = BasicAsyncSampleRateConverter<std::int16_t>;
+/// Q31 fixed-point converter (int32_t samples; see SampleTraits<int32_t>).
+using AsyncSampleRateConverterQ31 = BasicAsyncSampleRateConverter<std::int32_t>;
 
 } // namespace srt
 

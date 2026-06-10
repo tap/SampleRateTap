@@ -160,11 +160,20 @@ every test through the emulator transparently).
 ## Sample types
 
 The datapath is templated on the sample type via `srt::SampleTraits`
-(`include/srt/sample_traits.hpp`). v0.1 implements the `float` path (float
-I/O and coefficients, double accumulation). Q15/Q31 fixed-point support can
-be added by specializing `SampleTraits` with integer accumulators and a
-saturating `finalize()` — no API changes; the servo and filter design always
-run in double (control path / one-time init).
+(`include/srt/sample_traits.hpp`). Three formats are provided:
+
+| Type | Alias | Format | Measured SNR (997 Hz / 19.5 kHz, half scale, +200 ppm) |
+|---|---|---|---|
+| `float` | `AsyncSampleRateConverter` | float I/O, double accumulation | 133 dB / 105 dB |
+| `std::int32_t` | `AsyncSampleRateConverterQ31` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
+| `std::int16_t` | `AsyncSampleRateConverterQ15` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
+
+The fixed-point datapaths have integer-only inner loops (the μ blend factor
+is converted once per output sample), making them the appropriate choice for
+DSPs and MCUs without double-precision FPUs. Q31 is bit-for-bit as quiet as
+the float path; Q15's floor is the 16-bit format itself. The servo and the
+filter design always run in double (control path / one-time init, a handful
+of operations per block).
 
 ## Limitations
 

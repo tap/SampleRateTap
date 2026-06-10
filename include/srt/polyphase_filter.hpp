@@ -117,7 +117,9 @@ inline S interpolate(const PolyphaseFilterBank<S>& bank, const S* hist, double m
     std::size_t p = static_cast<std::size_t>(pos);
     if (p >= bank.numPhases()) // guards mu rounding up to exactly L
         p = bank.numPhases() - 1;
-    const double fr = pos - static_cast<double>(p);
+    // Converted once per output sample so fixed-point datapaths keep an
+    // integer-only inner loop.
+    const auto fr = Tr::makeBlendFactor(pos - static_cast<double>(p));
     const auto* c0 = bank.phase(p);
     const auto* c1 = bank.phase(p + 1);
     typename Tr::Accum acc{};

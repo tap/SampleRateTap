@@ -1,6 +1,6 @@
 // Deterministic single-threaded simulation of two independent clock domains
-// driving one AsyncSampleRateConverter. Producer and consumer events are
-// interleaved by next-event virtual time, so runs are exactly reproducible.
+// driving one converter. Producer and consumer events are interleaved by
+// next-event virtual time, so runs are exactly reproducible.
 #ifndef SRT_TESTS_TWO_CLOCK_SIM_HPP
 #define SRT_TESTS_TWO_CLOCK_SIM_HPP
 
@@ -12,15 +12,16 @@
 
 namespace srt_test {
 
-struct TwoClockSim {
-    srt::AsyncSampleRateConverter& asrc;
+template <srt::SampleType S>
+struct TwoClockSimT {
+    srt::BasicAsyncSampleRateConverter<S>& asrc;
     double fsIn;  ///< input-domain event rate (true input sample rate)
     double fsOut; ///< output-domain event rate (true output sample rate)
     std::size_t channels = 1;
     std::size_t chunkIn = 32;  ///< frames pushed per producer event
     std::size_t chunkOut = 32; ///< frames pulled per consumer event
     /// Input signal generator: value at input sample index i (all channels).
-    std::function<float(std::uint64_t)> gen = [](std::uint64_t) { return 0.0f; };
+    std::function<S(std::uint64_t)> gen = [](std::uint64_t) { return S{}; };
     /// Optional input-rate modulation: fsIn scale factor at virtual time t
     /// (e.g. for drift-ramp tests). Defaults to constant 1.
     std::function<double(double)> fsInScale = [](double) { return 1.0; };
@@ -29,15 +30,15 @@ struct TwoClockSim {
     /// pulled block: (interleavedSamples, frames, virtualTime).
     template <typename OnOutput>
     void run(double seconds, OnOutput&& onOut) {
-        std::vector<float> inBuf(chunkIn * channels);
-        std::vector<float> outBuf(chunkOut * channels);
+        std::vector<S> inBuf(chunkIn * channels);
+        std::vector<S> outBuf(chunkOut * channels);
         double tIn = 0.0;
         double tOut = 0.0;
         std::uint64_t idx = 0;
         while (tOut < seconds) {
             if (tIn <= tOut) {
                 for (std::size_t f = 0; f < chunkIn; ++f) {
-                    const float v = gen(idx++);
+                    const S v = gen(idx++);
                     for (std::size_t c = 0; c < channels; ++c)
                         inBuf[f * channels + c] = v;
                 }
@@ -51,6 +52,8 @@ struct TwoClockSim {
         }
     }
 };
+
+using TwoClockSim = TwoClockSimT<float>;
 
 } // namespace srt_test
 
