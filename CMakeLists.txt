@@ -42,3 +42,10 @@ option(SRT_BUILD_BENCHMARKS "Build SampleRateTap benchmarks" OFF)
 if(SRT_BUILD_BENCHMARKS)
     add_subdirectory(bench)
 endif()
+
+# Fixed deterministic workloads for the QEMU instruction-count ratchet;
+# buildable for any target including bare metal. See docs/PERFORMANCE.md.
+option(SRT_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF)
+if(SRT_BUILD_ICOUNT_BENCH)
+    add_subdirectory(bench/icount)
+endif()

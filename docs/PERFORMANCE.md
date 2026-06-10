@@ -63,6 +63,17 @@ baseline lands and revised deliberately. Stop when any of:
   compare against a checked-in `bench/baselines.json`; a PR fails if any
   metric regresses > 3%. Improvements update the file *in the diff* —
   reviewable, with history in git.
+
+  Mechanics: `bench/icount/` builds one fixed-workload binary per scenario
+  (no argv on bare metal); `tools/qemu_insn_plugin/` is the counting
+  plugin; `scripts/icount.py --target {m55,hexagon} --build-dir D --plugin
+  P [--update]` runs and compares. Counts are exact across runs (verified),
+  but they are a function of the **compiler version**: when the CI
+  toolchain package updates, the ratchet job fails and the baselines get
+  re-recorded in a reviewed commit — that is working as intended, not a
+  flake. Hexagon counting additionally needs a plugin-capable
+  `qemu-hexagon` (Debian's user-mode build has plugins disabled), so that
+  leg is experimental until the toolchain-bundled qemu is confirmed.
 - **Wall-clock benches are never a hard gate on shared runners** (noise);
   they run as a smoke test in CI and produce trend artifacts only.
 
@@ -79,7 +90,8 @@ SNR table is already enforced by test thresholds.
 - [x] **PR A** — this document, Google Benchmark infrastructure
   (`SRT_BUILD_BENCHMARKS`), host baselines, README perf section + update
   script, CI bench smoke job.
-- [ ] **PR B** — QEMU instruction-count harness (Hexagon + M55),
-  `bench/baselines.json` ratchet job in CI.
+- [x] **PR B** — QEMU instruction-count harness, `bench/baselines.json`
+  ratchet job in CI. M55 leg gating; Hexagon leg experimental pending a
+  plugin-capable qemu-hexagon.
 - [ ] **PR C…** — optimizations in the ROI order above, one per PR, each
   with numbers.
