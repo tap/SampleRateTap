@@ -143,9 +143,17 @@ CI builds and tests every push on:
   32-bit audio DSP target: `size_t` width, atomics lowering, musl libc and
   soft-float doubles. Emulation proves correctness, not performance; Hexagon
   and HiFi-class DSPs have no double-precision FPU, so the float datapath's
-  double accumulation runs soft-float there (the planned Q15/Q31 fixed-point
-  traits are the performance-appropriate path for such targets). Cycle
-  accuracy requires the vendor simulator.
+  double accumulation runs soft-float there (the Q15/Q31 fixed-point traits
+  are the performance-appropriate path for such targets). Cycle accuracy
+  requires the vendor simulator.
+- **Arm Cortex-M55**, bare metal (newlib + semihosting, no OS/threads),
+  executed on QEMU's MPS3 AN547 board model via `qemu-system-arm`. The
+  platform layer lives in `platform/mps3_an547/` (linker script + minimal
+  startup: vector table, FPU/MVE enable, 64-bit atomic helpers) with the
+  toolchain file `cmake/arm-cortex-m55-mps3.cmake`; the on-target run covers
+  the polyphase kernel, the fixed-point datapaths and the end-to-end
+  converter (see `tests/bare_metal_main.cpp` for the emulation-sized
+  filter).
 
 For **Tensilica HiFi4/HiFi5** the audio ISA, xt-clang compiler and xt-run
 instruction-set simulator are proprietary Cadence tools, so they cannot run

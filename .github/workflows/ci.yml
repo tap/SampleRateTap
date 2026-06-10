@@ -147,6 +147,36 @@ jobs:
           ctest --test-dir build --output-on-failure
           -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec'
 
+  # Cross-compile for Arm Cortex-M55 (bare metal, newlib + semihosting) and
+  # run the emulation-sized test subset on QEMU's MPS3 AN547 board model.
+  # Validates the library on a 32-bit MCU-class target with no OS, no
+  # threads and no double-precision FPU; the fixed-point datapaths are the
+  # performance-appropriate formats here.
+  cortex-m55-qemu:
+    name: Cortex-M55 cross (QEMU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain and QEMU
+        run: >
+          sudo apt-get update -q &&
+          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=MinSizeRel
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
+          -DSRT_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build build -j 4
+
+      - name: Test under emulation
+        run: ctest --test-dir build --output-on-failure
+
   # ------------------------------------------------------------------------
   # Template: genuine Tensilica HiFi4/HiFi5 coverage. The HiFi audio ISA,
   # xt-clang compiler and xt-run instruction-set simulator are proprietary
