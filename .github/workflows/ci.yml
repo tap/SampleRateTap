@@ -106,7 +106,10 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/hexagon
-          key: ${{ env.HEXAGON_TOOLCHAIN_URL }}
+          # -verified suffix: caches predating checksum verification are not
+          # reused (the download step, and thus verification, only runs on a
+          # cache miss).
+          key: ${{ env.HEXAGON_TOOLCHAIN_URL }}-verified-1
 
       - name: Download toolchain
         if: steps.cache.outputs.cache-hit != 'true'
