@@ -172,6 +172,30 @@ every test through the emulator transparently).
 
 [quic/toolchain_for_hexagon]: https://github.com/quic/toolchain_for_hexagon
 
+## Performance
+
+Methodology, optimization roadmap and regression gating live in
+[docs/PERFORMANCE.md](docs/PERFORMANCE.md). Build the benchmarks with
+`-DSRT_BUILD_BENCHMARKS=ON` (host only).
+
+<!-- PERF:BEGIN -->
+Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 2026-06-10); regenerate with `scripts/update_perf_docs.py`. Items are output samples (kernel) or frames (pipeline); ×realtime is per 48 kHz stream.
+
+| Benchmark | ns/item | ×realtime @48k |
+|---|---:|---:|
+| `BM_Kernel_Float_Fast` | 46.4 | 449× |
+| `BM_Kernel_Float_Balanced` | 67.7 | 308× |
+| `BM_Kernel_Float_Transparent` | 108.5 | 192× |
+| `BM_Kernel_Q15_Balanced` | 46.6 | 447× |
+| `BM_Kernel_Q31_Balanced` | 63.7 | 327× |
+| `BM_Pipeline_Float_Balanced_1ch` | 70.4 | 296× |
+| `BM_Pipeline_Float_Balanced_2ch` | 128.5 | 162× |
+| `BM_Pipeline_Float_Balanced_8ch` | 495.2 | 42× |
+| `BM_Pipeline_Q15_Balanced_2ch` | 91.1 | 229× |
+| `BM_Pipeline_Q31_Balanced_2ch` | 129.1 | 161× |
+| `BM_Pipeline_Float_Transparent_2ch` | 209.1 | 100× |
+<!-- PERF:END -->
+
 ## Sample types
 
 The datapath is templated on the sample type via `srt::SampleTraits`
