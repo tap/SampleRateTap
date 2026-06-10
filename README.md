@@ -130,6 +130,33 @@ adjacent phase-table rows (≈ −12 dB per doubling of `L`, +12 dB per octave o
 signal frequency). Servo lock from a cold start takes ~1 s; a 0 → 300 ppm
 drift ramp at 10 ppm/s is tracked without unlocking.
 
+## Platform support
+
+CI builds and tests every push on:
+
+- **Linux** (GCC, Clang) and **macOS** (AppleClang) with warnings as errors,
+  **Windows** (MSVC /W4)
+- **AddressSanitizer + UBSan** and **ThreadSanitizer** over the full suite
+- **Qualcomm Hexagon** (hexagon-unknown-linux-musl, the open-source clang
+  toolchain from [quic/toolchain_for_hexagon]) cross-compiled and executed
+  under `qemu-hexagon` user-mode emulation — validating the library on a
+  32-bit audio DSP target: `size_t` width, atomics lowering, musl libc and
+  soft-float doubles. Emulation proves correctness, not performance; Hexagon
+  and HiFi-class DSPs have no double-precision FPU, so the float datapath's
+  double accumulation runs soft-float there (the planned Q15/Q31 fixed-point
+  traits are the performance-appropriate path for such targets). Cycle
+  accuracy requires the vendor simulator.
+
+For **Tensilica HiFi4/HiFi5** the audio ISA, xt-clang compiler and xt-run
+instruction-set simulator are proprietary Cadence tools, so they cannot run
+in public CI; `.github/workflows/ci.yml` contains a commented self-hosted
+runner job template (`hifi-iss`) that drops in once a runner with a Cadence
+license is available. `cmake/hexagon-linux-musl.cmake` shows the general
+cross + emulator pattern (`CMAKE_CROSSCOMPILING_EMULATOR` makes `ctest` run
+every test through the emulator transparently).
+
+[quic/toolchain_for_hexagon]: https://github.com/quic/toolchain_for_hexagon
+
 ## Sample types
 
 The datapath is templated on the sample type via `srt::SampleTraits`
