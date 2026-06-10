@@ -30,7 +30,7 @@ jobs:
             os: windows-latest
             werror: OFF
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Configure
         env:
@@ -59,7 +59,7 @@ jobs:
           - name: TSan
             flags: -fsanitize=thread
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Configure
         env:
@@ -96,14 +96,15 @@ jobs:
       # binary artifacts are hosted on CodeLinaro and linked from the
       # quic/toolchain_for_hexagon release notes.
       HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
-      # Hard pin; fill in from the "toolchain sha256:" line of a trusted run.
-      HEXAGON_TOOLCHAIN_SHA256: ""
+      # Hard pin, taken from the "toolchain sha256:" line of run #13 (which
+      # also matched the published SHA256SUMS).
+      HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Cache toolchain
         id: cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/hexagon
           # -verified suffix: caches predating checksum verification are not
@@ -176,7 +177,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Install toolchain and QEMU
         run: >
@@ -231,7 +232,7 @@ jobs:
     name: clang-format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       # Pinned major version: formatting output can differ across releases.
       - name: Check formatting
         run: |
