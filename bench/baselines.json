@@ -1,0 +1,11 @@
+{
+  "hexagon": {},
+  "m55": {
+    "kernel_float": 99468474,
+    "kernel_q15": 181994196,
+    "kernel_q31": 210789622,
+    "pipeline_float": 108849761,
+    "pipeline_q15": 191120984,
+    "pipeline_q31": 216021689
+  }
+}

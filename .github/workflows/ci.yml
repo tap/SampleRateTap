@@ -228,6 +228,81 @@ jobs:
   #         -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec'
   # ------------------------------------------------------------------------
 
+  # Deterministic instruction-count ratchet (docs/PERFORMANCE.md): fixed
+  # workloads under QEMU with a counting plugin, gated against
+  # bench/baselines.json. Unlike wall-clock numbers these are noise-free,
+  # so a hard >3% gate is safe on shared runners.
+  icount-ratchet:
+    name: Instruction-count ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      QEMU_PLUGIN_HEADER_URL: https://raw.githubusercontent.com/qemu/qemu/v8.2.2/include/qemu/qemu-plugin.h
+      HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install toolchains and QEMU
+        run: >
+          sudo apt-get update -q &&
+          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+          qemu-user libglib2.0-dev
+
+      - name: Build counting plugin
+        run: |
+          curl -sfLo /tmp/qemu-plugin.h "$QEMU_PLUGIN_HEADER_URL"
+          gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/tmp \
+            -o /tmp/libinsncount.so tools/qemu_insn_plugin/insn_count.c
+
+      # Release (-O2), matching how the baselines were recorded.
+      - name: Build M55 workloads
+        run: >
+          cmake -B build-m55
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
+          -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
+          -DSRT_BUILD_ICOUNT_BENCH=ON
+          && cmake --build build-m55 -j 4
+
+      - name: Ratchet M55
+        run: >
+          python3 scripts/icount.py --target m55
+          --build-dir build-m55 --plugin /tmp/libinsncount.so
+
+      # Hexagon counting requires a plugin-capable qemu-hexagon: Debian's
+      # user-mode build has plugins disabled, so this leg only works if the
+      # CodeLinaro toolchain's bundled qemu enables them. Experimental until
+      # confirmed; failures here do not gate.
+      - name: Cache Hexagon toolchain
+        id: cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/hexagon
+          key: ${{ env.HEXAGON_TOOLCHAIN_URL }}-verified-1
+
+      - name: Ratchet Hexagon (experimental)
+        continue-on-error: true
+        run: |
+          if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
+            mkdir -p ~/hexagon && cd ~/hexagon
+            curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
+            tar --zstd -xf toolchain.tar.zst && rm toolchain.tar.zst
+            cd "$GITHUB_WORKSPACE"
+          fi
+          bindir=$(dirname "$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' -type f | head -1)")
+          export PATH="$bindir:$PATH"
+          qemu=$(find "$HOME/hexagon" -name 'qemu-hexagon' -type f | head -1)
+          test -n "$qemu" && export PATH="$(dirname "$qemu"):$PATH"
+          qemu-hexagon -plugin help >/dev/null 2>&1 || {
+            echo "::notice::qemu-hexagon lacks plugin support; skipping"; exit 0; }
+          cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
+            -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
+            -DSRT_BUILD_ICOUNT_BENCH=ON
+          cmake --build build-hex -j 4
+          python3 scripts/icount.py --target hexagon \
+            --build-dir build-hex --plugin /tmp/libinsncount.so
+
   # Keeps the benchmarks compiling and runnable; never a performance gate
   # (shared runners are noise — see docs/PERFORMANCE.md).
   bench-smoke:
