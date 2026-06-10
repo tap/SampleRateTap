@@ -228,6 +228,29 @@ jobs:
   #         -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec'
   # ------------------------------------------------------------------------
 
+  # Keeps the benchmarks compiling and runnable; never a performance gate
+  # (shared runners are noise — see docs/PERFORMANCE.md).
+  bench-smoke:
+    name: Benchmark smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DSRT_BUILD_BENCHMARKS=ON
+          -DSRT_BUILD_TESTS=OFF
+          -DSRT_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build build -j 4
+
+      - name: Run (smoke)
+        run: ./build/bench/srt_bench --benchmark_min_time=0.01s
+
   clang-format:
     name: clang-format
     runs-on: ubuntu-latest

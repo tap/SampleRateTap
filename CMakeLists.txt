@@ -36,3 +36,9 @@ endif()
 if(SRT_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
+# Host-only (Google Benchmark needs threads); see docs/PERFORMANCE.md.
+option(SRT_BUILD_BENCHMARKS "Build SampleRateTap benchmarks" OFF)
+if(SRT_BUILD_BENCHMARKS)
+    add_subdirectory(bench)
+endif()
