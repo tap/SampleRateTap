@@ -26,7 +26,9 @@ namespace srt {
 /// single producer thread; read(), readAvailable() and discard() only from the
 /// single consumer thread. Construction/destruction must not overlap either.
 /// Indices are monotonic and wrapped by a power-of-two mask, so the full
-/// capacity is usable.
+/// capacity is usable. Their unsigned wraparound (at 2^32 on 32-bit
+/// targets) is benign: occupancy is always a difference of the two
+/// indices, exact while capacity < 2^(bits-1).
 template <typename T>
 class SpscRing {
     static_assert(std::is_trivially_copyable_v<T>);
@@ -108,15 +110,17 @@ public:
 private:
     // 64-byte separation to keep producer- and consumer-owned state on
     // distinct cache lines (std::hardware_destructive_interference_size is
-    // deliberately avoided: it is ABI-fragile and warns on GCC).
+    // deliberately avoided: it is ABI-fragile and warns on GCC). The
+    // read-only members (buf_, mask_) lead so they share a line with each
+    // other, not with either side's mutable state.
     static constexpr std::size_t kCacheLine = 64;
 
+    std::vector<T> buf_;
+    std::size_t mask_;
     alignas(kCacheLine) std::atomic<std::size_t> head_{0}; // written by producer
     alignas(kCacheLine) std::size_t tailCache_{0};         // producer's view of tail
     alignas(kCacheLine) std::atomic<std::size_t> tail_{0}; // written by consumer
     alignas(kCacheLine) std::size_t headCache_{0};         // consumer's view of head
-    std::vector<T> buf_;
-    std::size_t mask_;
 };
 
 } // namespace srt

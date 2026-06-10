@@ -21,7 +21,8 @@ TEST(SpscRing, TwoThreadStressPreservesSequence) {
         std::vector<std::uint32_t> buf(64);
         std::uint64_t sent = 0;
         while (sent < kTotal) {
-            const std::size_t want = std::min<std::uint64_t>(chunk(rng), kTotal - sent);
+            const auto want =
+                static_cast<std::size_t>(std::min<std::uint64_t>(chunk(rng), kTotal - sent));
             for (std::size_t i = 0; i < want; ++i)
                 buf[i] = static_cast<std::uint32_t>(sent + i);
             std::size_t done = 0;

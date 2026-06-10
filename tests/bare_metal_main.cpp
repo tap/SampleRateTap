@@ -6,6 +6,8 @@
 // platform — keeping the on-target run focused on datapath correctness
 // (kernel accuracy, fixed-point arithmetic, ring buffer, end-to-end latency
 // path).
+#include <cstdio>
+
 #include <gtest/gtest.h>
 
 int main() {
@@ -13,5 +15,9 @@ int main() {
                                     "FixedPoint.AsrcQuality*:"
                                     "FixedPoint.FullScaleSineDoesNotWrapQ15";
     ::testing::InitGoogleTest();
-    return RUN_ALL_TESTS();
+    const int rc = RUN_ALL_TESTS();
+    // CTest's pass criterion: printed only if we get all the way here, so a
+    // crash after gtest's summary cannot register as a pass.
+    std::printf("SRT_TESTS_COMPLETE rc=%d\n", rc);
+    return rc;
 }

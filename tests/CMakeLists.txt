@@ -35,6 +35,7 @@ add_executable(srt_tests
     test_servo.cpp
     test_asrc_lock.cpp
     test_asrc_quality.cpp
+    test_fade.cpp
     test_latency.cpp)
 target_link_libraries(srt_tests PRIVATE
     SampleRateTap::SampleRateTap
@@ -55,7 +56,7 @@ if(SRT_BARE_METAL)
     target_link_libraries(srt_tests PRIVATE GTest::gtest)
     add_test(NAME srt_tests_emulated COMMAND srt_tests)
     set_tests_properties(srt_tests_emulated PROPERTIES
-        PASS_REGULAR_EXPRESSION "\\[  PASSED  \\]"
+        PASS_REGULAR_EXPRESSION "SRT_TESTS_COMPLETE rc=0"
         FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
         TIMEOUT 1800)
 else()

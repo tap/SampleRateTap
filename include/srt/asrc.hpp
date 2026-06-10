@@ -7,6 +7,7 @@
 #include <bit>
 #include <cstdint>
 #include <stdexcept>
+#include <type_traits>
 
 #include "srt/pi_servo.hpp"
 #include "srt/polyphase_filter.hpp"
@@ -35,13 +36,19 @@ enum class State : int {
 };
 
 /// Snapshot of converter telemetry; safe to call from any thread.
+///
+/// Counters are kept in 32-bit atomics internally (so the hot path stays
+/// genuinely lock-free on 32-bit targets) and therefore wrap at 2^32 —
+/// far beyond any plausible event count, but treat them as modular if you
+/// difference them over very long horizons.
 struct Status {
     State state = State::Filling;
     double ratioEstimate = 1.0;  ///< estimated f_in / f_out = 1 + epsHat
     double ppm = 0.0;            ///< epsHat * 1e6
     double fifoFillFrames = 0.0; ///< smoothed occupancy observable
     std::uint64_t underruns = 0; ///< consumer ran dry (output zero-padded)
-    std::uint64_t overruns = 0;  ///< producer pushes dropped (FIFO full)
+    std::uint64_t overruns = 0;  ///< push() calls that could not accept every
+                                 ///< offered frame (FIFO full; excess dropped)
     std::uint64_t resyncs = 0;   ///< hard occupancy resyncs (high watermark)
 };
 
@@ -60,16 +67,14 @@ template <SampleType S>
 class BasicAsyncSampleRateConverter {
 public:
     explicit BasicAsyncSampleRateConverter(const Config& cfg)
-        : cfg_(cfg), bank_(cfg.filter, cfg.sampleRateHz),
-          resampler_(bank_, cfg.channels, kPopChunkFrames),
-          ring_(ringCapacityElems(cfg, bank_.taps())),
-          servo_(cfg.servo, cfg.sampleRateHz, static_cast<double>(cfg.targetLatencyFrames)),
-          fillThresholdFrames_(cfg.targetLatencyFrames + bank_.taps()),
-          highWaterFrames_(std::max(3 * cfg.targetLatencyFrames,
-                                    fillThresholdFrames_ + cfg.targetLatencyFrames)) {
-        if (cfg.channels == 0 || cfg.sampleRateHz <= 0.0 || cfg.targetLatencyFrames == 0)
-            throw std::invalid_argument("AsyncSampleRateConverter: bad Config");
-        if (ring_.capacity() / cfg.channels <= highWaterFrames_)
+        : cfg_(validated(cfg)), bank_(cfg_.filter, cfg_.sampleRateHz),
+          resampler_(bank_, cfg_.channels, kPopChunkFrames),
+          ring_(ringCapacityElems(cfg_, bank_.taps())),
+          servo_(cfg_.servo, cfg_.sampleRateHz, static_cast<double>(cfg_.targetLatencyFrames)),
+          fillThresholdFrames_(cfg_.targetLatencyFrames + bank_.taps()),
+          highWaterFrames_(std::max(3 * cfg_.targetLatencyFrames,
+                                    fillThresholdFrames_ + cfg_.targetLatencyFrames)) {
+        if (ring_.capacity() / cfg_.channels <= highWaterFrames_)
             throw std::invalid_argument("AsyncSampleRateConverter: fifoFrames too small");
     }
 
@@ -88,8 +93,10 @@ public:
     }
 
     /// Consumer thread: produce exactly `frames` interleaved output frames at
-    /// the output clock. Silence-pads while filling and on underrun. Returns
-    /// the number of frames synthesized from real input.
+    /// the output clock. Silence-pads while filling and on underrun, and
+    /// fades the first kFadeFrames frames in after every (re)fill so dropout
+    /// recovery does not click. Returns the number of frames synthesized
+    /// from real input.
     std::size_t pull(S* interleaved, std::size_t frames) noexcept {
         const std::size_t ch = cfg_.channels;
         const auto popFn = [this](S* dst, std::size_t maxFrames) noexcept {
@@ -110,6 +117,7 @@ public:
             occ = backlogFrames();
             servo_.seed(occ);
             filling_ = false;
+            fadeFramesLeft_ = kFadeFrames;
         }
 
         if (occ > static_cast<double>(highWaterFrames_)) { // hard resync
@@ -125,6 +133,8 @@ public:
         const double epsHat = servo_.update(occ, resampler_.mu(), dt);
 
         const std::size_t made = resampler_.process(interleaved, frames, epsHat, popFn);
+        if (fadeFramesLeft_ != 0 && made != 0)
+            applyFadeIn(interleaved, made);
         if (made < frames) { // underrun: pad and refill
             fillSilence(interleaved + made * ch, (frames - made) * ch);
             underruns_.fetch_add(1, std::memory_order_relaxed);
@@ -190,14 +200,45 @@ private:
             dst[i] = SampleTraits<S>::silence();
     }
 
+    static S scaleSample(S x, double g) noexcept {
+        if constexpr (std::is_floating_point_v<S>)
+            return static_cast<S>(static_cast<double>(x) * g);
+        else
+            return detail::roundSat<S>(static_cast<double>(x) * g);
+    }
+
+    /// Linear gain ramp over the first kFadeFrames frames after a (re)fill.
+    /// Rare event and at most 64 frames, so the double math is acceptable
+    /// even on FPU-less targets.
+    void applyFadeIn(S* interleaved, std::size_t madeFrames) noexcept {
+        const std::size_t n = std::min(madeFrames, fadeFramesLeft_);
+        const std::size_t done = kFadeFrames - fadeFramesLeft_;
+        for (std::size_t f = 0; f < n; ++f) {
+            const double g = static_cast<double>(done + f + 1) / static_cast<double>(kFadeFrames);
+            for (std::size_t c = 0; c < cfg_.channels; ++c) {
+                S& x = interleaved[f * cfg_.channels + c];
+                x = scaleSample(x, g);
+            }
+        }
+        fadeFramesLeft_ -= n;
+    }
+
     void publishStatus() noexcept {
         const State st = filling_          ? State::Filling
                          : servo_.locked() ? State::Locked
                                            : State::Acquiring;
         state_.store(static_cast<int>(st), std::memory_order_relaxed);
-        ppm_.store(servo_.epsHat() * 1e6, std::memory_order_relaxed);
-        fill_.store(servo_.smoothedOccupancy(), std::memory_order_relaxed);
+        ppm_.store(static_cast<float>(servo_.epsHat() * 1e6), std::memory_order_relaxed);
+        fill_.store(static_cast<float>(servo_.smoothedOccupancy()), std::memory_order_relaxed);
     }
+
+    static Config validated(Config cfg) {
+        if (cfg.channels == 0 || cfg.sampleRateHz <= 0.0 || cfg.targetLatencyFrames == 0)
+            throw std::invalid_argument("AsyncSampleRateConverter: bad Config");
+        return cfg;
+    }
+
+    static constexpr std::size_t kFadeFrames = 64;
 
     Config cfg_;
     PolyphaseFilterBank<S> bank_;
@@ -206,14 +247,24 @@ private:
     PiServo servo_;
     std::size_t fillThresholdFrames_;
     std::size_t highWaterFrames_;
-    bool filling_ = true; // consumer-thread state; mirrored into state_
+    bool filling_ = true;            // consumer-thread state; mirrored into state_
+    std::size_t fadeFramesLeft_ = 0; // consumer-thread state
 
+    // Telemetry is 32-bit on purpose: 64-bit atomics fall back to lock-based
+    // libatomic on 32-bit targets (e.g. Hexagon), which would break the
+    // lock-free contract of the hot path. float carries ~7 significant
+    // digits — ample for ppm/fill observability; counters wrap at 2^32.
     std::atomic<int> state_{static_cast<int>(State::Filling)};
-    std::atomic<double> ppm_{0.0};
-    std::atomic<double> fill_{0.0};
-    std::atomic<std::uint64_t> underruns_{0};
-    std::atomic<std::uint64_t> overruns_{0};
-    std::atomic<std::uint64_t> resyncs_{0};
+    std::atomic<float> ppm_{0.0f};
+    std::atomic<float> fill_{0.0f};
+    std::atomic<std::uint32_t> underruns_{0};
+    std::atomic<std::uint32_t> overruns_{0};
+    std::atomic<std::uint32_t> resyncs_{0};
+
+    static_assert(std::atomic<int>::is_always_lock_free &&
+                      std::atomic<float>::is_always_lock_free &&
+                      std::atomic<std::uint32_t>::is_always_lock_free,
+                  "telemetry atomics must be lock-free for the RT contract");
 };
 
 /// The float converter.

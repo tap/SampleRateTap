@@ -114,11 +114,17 @@ struct SampleTraits<std::int16_t> {
     }
 
     static Coeff blend(Coeff a, Coeff b, BlendFactor fr) noexcept {
-        // Q14 + (Q15 * Q14) >> 15; the int promotion of (b - a) is exact.
-        return static_cast<Coeff>(a + ((fr * (b - a)) >> 15));
+        // Q14 + (Q15 * Q14) >> 15, in int64: the int32 product would fit
+        // today's coefficients (fr <= 32767 by construction), but only with
+        // ~5% margin against a worst-case adjacent-phase delta — not worth
+        // the silent invariant. One smull on 32-bit cores.
+        const std::int64_t diff = static_cast<std::int64_t>(b) - a;
+        return static_cast<Coeff>(a + ((fr * diff) >> 15));
     }
 
     static std::int16_t finalize(Accum acc) noexcept {
+        // Round-half-up, not half-even: the bias is a fraction of one
+        // sub-LSB rounding step, far below the Q15 noise floor.
         return detail::clampSat<std::int16_t>((acc + (1 << 13)) >> 14); // Q29 -> Q15
     }
 

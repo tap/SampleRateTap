@@ -11,8 +11,15 @@
  *     bare-metal toolchain ships no libatomic; PRIMASK critical sections
  *     are sufficient on a single-core part
  *
- * Note: this file may be compiled as C or C++ (the g++ driver treats .c
- * sources passed on its link line as C++), hence the extern "C" guards.
+ * The toolchain file passes this to the link line with `-x c`: under C the
+ * vector table's address-constant initializers are guaranteed link-time
+ * constants (a C++ compile could legally lower them to dynamic
+ * initialization, leaving the table zeroed at reset). The extern "C"
+ * guards keep the file safe if it is ever compiled as C++ anyway.
+ *
+ * Only the __atomic_* helpers the library and runtime currently need are
+ * provided; any future use of others (e.g. compare-exchange) fails loudly
+ * at link time.
  */
 #include <errno.h>
 #include <stddef.h>

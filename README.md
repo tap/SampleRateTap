@@ -155,6 +155,13 @@ CI builds and tests every push on:
   converter (see `tests/bare_metal_main.cpp` for the emulation-sized
   filter).
 
+A separate workflow (`.github/workflows/ci-arm64.yml`, manual + weekly)
+runs the suite natively on GitHub's `ubuntu-24.04-arm` runners, including
+the ring-buffer stress under ThreadSanitizer on genuinely weakly-ordered
+hardware — coverage x86 TSan and QEMU cannot provide. It is kept out of
+per-push CI because arm64 hosted runners are not available on every plan
+for private repositories.
+
 For **Tensilica HiFi4/HiFi5** the audio ISA, xt-clang compiler and xt-run
 instruction-set simulator are proprietary Cadence tools, so they cannot run
 in public CI; `.github/workflows/ci.yml` contains a commented self-hosted

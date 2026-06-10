@@ -25,8 +25,11 @@ set(CMAKE_CXX_FLAGS_INIT "${CMAKE_C_FLAGS_INIT}")
 get_filename_component(_srt_platform "${CMAKE_CURRENT_LIST_DIR}/../platform/mps3_an547" ABSOLUTE)
 # The startup .c is handed to the link line directly; the gcc driver
 # compiles it with the same -mcpu/-mfloat-abi flags as everything else.
+# `-x c` forces C compilation even under the g++ driver (which would treat
+# a .c link input as C++): C guarantees the vector table's address-constant
+# initializers are link-time constants, never dynamic initialization.
 set(CMAKE_EXE_LINKER_FLAGS_INIT
-    "--specs=rdimon.specs -nostartfiles -Wl,--gc-sections -T${_srt_platform}/mps3_an547.ld ${_srt_platform}/startup_an547.c")
+    "--specs=rdimon.specs -nostartfiles -Wl,--gc-sections -T${_srt_platform}/mps3_an547.ld -x c ${_srt_platform}/startup_an547.c -x none")
 
 set(CMAKE_CROSSCOMPILING_EMULATOR
     "qemu-system-arm;-M;mps3-an547;-nographic;-semihosting;-kernel")
