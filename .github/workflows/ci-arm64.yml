@@ -1,0 +1,54 @@
+# Native arm64 coverage: the only job that exercises the SPSC ring's
+# acquire/release protocol on real weakly-ordered hardware (x86 TSan runs
+# can't reorder like Arm does, and QEMU does not model weak memory).
+#
+# Kept out of the per-push workflow on purpose: GitHub's arm64 hosted
+# runners ("ubuntu-24.04-arm") are not available on every plan for private
+# repositories, and an unavailable label leaves a run queued forever.
+# Trigger manually, or let the weekly schedule catch regressions.
+name: CI arm64
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+
+jobs:
+  arm64-native:
+    name: Linux arm64 (native weak-memory)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Configure (Release)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSRT_WERROR=ON
+
+      - name: Build
+        run: cmake --build build -j 4
+
+      - name: Full test suite
+        run: ctest --test-dir build --output-on-failure
+
+      # The ring stress under TSan on weakly-ordered silicon is the point
+      # of this workflow: run it several times for schedule diversity.
+      - name: Configure (TSan)
+        env:
+          CC: clang
+          CXX: clang++
+        run: >
+          cmake -B build-tsan
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DSRT_BUILD_EXAMPLES=OFF
+          -DCMAKE_CXX_FLAGS="-fsanitize=thread"
+
+      - name: Build (TSan)
+        run: cmake --build build-tsan -j 4
+
+      - name: Ring stress under TSan
+        env:
+          TSAN_OPTIONS: halt_on_error=1
+        run: |
+          for i in 1 2 3 4 5; do
+            ctest --test-dir build-tsan -R 'SpscRing' --output-on-failure
+          done

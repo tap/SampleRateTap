@@ -30,7 +30,7 @@ jobs:
             os: windows-latest
             werror: OFF
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Configure
         env:
@@ -59,7 +59,7 @@ jobs:
           - name: TSan
             flags: -fsanitize=thread
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Configure
         env:
@@ -96,12 +96,14 @@ jobs:
       # binary artifacts are hosted on CodeLinaro and linked from the
       # quic/toolchain_for_hexagon release notes.
       HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
+      # Hard pin; fill in from the "toolchain sha256:" line of a trusted run.
+      HEXAGON_TOOLCHAIN_SHA256: ""
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Cache toolchain
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/hexagon
           key: ${{ env.HEXAGON_TOOLCHAIN_URL }}
@@ -111,8 +113,22 @@ jobs:
         run: |
           mkdir -p ~/hexagon && cd ~/hexagon
           curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
+          # Integrity check against the published SHA256SUMS, plus the hard
+          # pin when set. The SUMS file catches corruption and
+          # cache-poisoning; only the pin catches an origin compromise.
+          curl -sfLo SHA256SUMS "$(dirname "$HEXAGON_TOOLCHAIN_URL")/SHA256SUMS"
+          expected=$(grep "$(basename "$HEXAGON_TOOLCHAIN_URL")" SHA256SUMS | awk '{print $1}' | head -1)
+          actual=$(sha256sum toolchain.tar.zst | cut -d' ' -f1)
+          echo "toolchain sha256: $actual (pin this in HEXAGON_TOOLCHAIN_SHA256)"
+          if [ -z "$expected" ] || [ "$actual" != "$expected" ]; then
+            echo "::error::toolchain does not match published SHA256SUMS"; exit 1
+          fi
+          if [ -n "${HEXAGON_TOOLCHAIN_SHA256:-}" ] && \
+             [ "$actual" != "$HEXAGON_TOOLCHAIN_SHA256" ]; then
+            echo "::error::toolchain checksum mismatch against pinned value"; exit 1
+          fi
           tar --zstd -xf toolchain.tar.zst
-          rm toolchain.tar.zst
+          rm toolchain.tar.zst SHA256SUMS
 
       - name: Set up toolchain and QEMU paths
         run: |
@@ -157,7 +173,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Install toolchain and QEMU
         run: >
@@ -212,7 +228,7 @@ jobs:
     name: clang-format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       # Pinned major version: formatting output can differ across releases.
       - name: Check formatting
         run: |
