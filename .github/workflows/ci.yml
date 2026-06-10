@@ -239,8 +239,8 @@ jobs:
     env:
       QEMU_PLUGIN_HEADER_URL: https://raw.githubusercontent.com/qemu/qemu/v8.2.2/include/qemu/qemu-plugin.h
       QEMU_SRC_URL: https://download.qemu.org/qemu-8.2.2.tar.xz
-      # Hard pin; fill in from the "qemu source sha256:" line of a trusted run.
-      QEMU_SRC_SHA256: ""
+      # Hard pin from the "qemu source sha256:" line of run #24.
+      QEMU_SRC_SHA256: "847346c1b82c1a54b2c38f6edbd85549edeb17430b7d4d3da12620e2962bc4f3"
       HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -316,8 +316,13 @@ jobs:
           fi
           bindir=$(dirname "$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' -type f | head -1)")
           export PATH="$HOME/qemu-hexagon-plugins:$bindir:$PATH"
-          qemu-hexagon -plugin help >/dev/null 2>&1 || {
-            echo "::error::built qemu-hexagon lacks plugin support"; exit 1; }
+          test -x "$HOME/qemu-hexagon-plugins/qemu-hexagon" || {
+            echo "::error::plugin-enabled qemu-hexagon missing"; exit 1; }
+          # qemu exits 1 with or without plugin support here (no guest binary
+          # was given), so probe by the error text, not the exit code.
+          if qemu-hexagon -plugin help 2>&1 | grep -q "unknown option"; then
+            echo "::error::built qemu-hexagon lacks plugin support"; exit 1
+          fi
           cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
             -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
