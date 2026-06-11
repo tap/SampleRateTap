@@ -49,3 +49,9 @@ option(SRT_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF)
 if(SRT_BUILD_ICOUNT_BENCH)
     add_subdirectory(bench/icount)
 endif()
+
+# C ABI shared library for FFI consumers (see notebooks/asrc_demo.ipynb).
+option(SRT_BUILD_CAPI "Build the C ABI shared library" OFF)
+if(SRT_BUILD_CAPI)
+    add_subdirectory(tools/capi)
+endif()

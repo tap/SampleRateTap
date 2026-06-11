@@ -376,4 +376,5 @@ jobs:
           sudo apt-get update -q && sudo apt-get install -y -q clang-format-18
           clang-format-18 --dry-run --Werror \
             include/srt/*.hpp include/srt/detail/*.hpp \
+            bench/*.cpp bench/icount/*.cpp tools/capi/*.cpp \
             tests/*.cpp tests/support/*.hpp examples/*.cpp

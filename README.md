@@ -48,7 +48,13 @@ srt::Status st = asrc.status();            // any thread: state, ppm, fill,
 ```
 
 `examples/drifting_clocks.cpp` runs two real threads 500 ppm apart and shows
-the lock acquisition and rate estimate.
+the lock acquisition and rate estimate. For a visual tour — lock, measured
+transparency vs. a naive FIFO, spectrograms, latency, drift tracking,
+dropout recovery — see
+[notebooks/asrc_demo.ipynb](notebooks/asrc_demo.ipynb), which drives the
+library through its C ABI (`-DSRT_BUILD_CAPI=ON`, `tools/capi/`) via ctypes
+(Python needs `numpy` and `matplotlib`; the first cell builds the shared
+library if missing).
 
 ## How it works
 
