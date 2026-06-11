@@ -54,7 +54,11 @@ dropout recovery — see
 [notebooks/asrc_demo.ipynb](notebooks/asrc_demo.ipynb), which drives the
 library through its C ABI (`-DSRT_BUILD_CAPI=ON`, `tools/capi/`) via ctypes
 (Python needs `numpy` and `matplotlib`; the first cell builds the shared
-library if missing).
+library if missing). A second notebook,
+[notebooks/asrc_block_size_study.ipynb](notebooks/asrc_block_size_study.ipynb),
+measures how processing block size (32 / 64 / 240 frames) trades latency
+against servo observability — including per-impulse latency-breathing
+measurements and a calibrated FM/wideband quality decomposition.
 
 ## How it works
 
@@ -97,8 +101,11 @@ to roughly −120 dBc equivalent at 20 kHz while still tracking a 1 ppm/s
 oscillator drift ramp with under half a frame of standing error. With coarse
 blocks (e.g. ≥32-frame callbacks) that level of quiet is information-
 theoretically unavailable from counts alone, so the servo deliberately stays
-in Track, where the block beat is phase-tracked as benign latency breathing
-(sub-cent wow at sub-hertz rates). Promotion to Quiet is gated on the
+in Track, where the block beat is phase-tracked mostly as benign latency
+breathing, the remainder as cent-scale low-rate FM (measured in
+[notebooks/asrc_block_size_study.ipynb](notebooks/asrc_block_size_study.ipynb):
+~0.9 cents rms / 61 dB wideband at 32-frame blocks, ~1.3 cents rms / 53 dB
+at 5 ms blocks). Promotion to Quiet is gated on the
 cascade-smoothed error, which is exactly the discriminator between the two
 regimes.
 
