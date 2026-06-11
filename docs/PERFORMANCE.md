@@ -97,5 +97,10 @@ table is already enforced by test thresholds.
   ratchet job in CI. M55 leg gating.
 - [x] **PR B2** — Hexagon leg promoted to gating, running on a
   from-source plugin-enabled qemu-hexagon (cached in CI).
-- [ ] **PR C…** — optimizations in the ROI order above, one per PR, each
+- [x] **PR C1** — hypothesis 1 (per-frame blended-row precompute for
+  multichannel): stereo pipeline −36% wall-clock on x86, −15/−30/−21%
+  instructions (float/Q15/Q31) on M55, 8-channel −52% wall-clock; mono
+  kernels bit-identical and count-identical (control). Outputs unchanged
+  bit-for-bit.
+- [ ] **PR C2…** — remaining hypotheses in ROI order, one per PR, each
   with numbers.

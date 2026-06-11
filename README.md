@@ -210,27 +210,27 @@ Executed instructions per fixed workload (`bench/icount/`), measured under QEMU 
 | `kernel_float` | 99,468,474 | 339,027,222 |
 | `kernel_q15` | 181,994,196 | 102,819,852 |
 | `kernel_q31` | 210,789,622 | 110,455,141 |
-| `pipeline_float` | 108,849,761 | 357,571,696 |
-| `pipeline_q15` | 191,120,984 | 138,169,321 |
-| `pipeline_q31` | 216,021,689 | 143,138,347 |
+| `pipeline_float` | 92,724,190 | 357,571,696 |
+| `pipeline_q15` | 134,581,279 | 138,169,321 |
+| `pipeline_q31` | 170,542,353 | 143,138,347 |
 <!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->
-Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 2026-06-10); regenerate with `scripts/update_perf_docs.py`. Items are output samples (kernel) or frames (pipeline); ×realtime is per 48 kHz stream.
+Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.10GHz, 2026-06-11); regenerate with `scripts/update_perf_docs.py`. Items are output samples (kernel) or frames (pipeline); ×realtime is per 48 kHz stream.
 
 | Benchmark | ns/item | ×realtime @48k |
 |---|---:|---:|
-| `BM_Kernel_Float_Fast` | 46.4 | 449× |
-| `BM_Kernel_Float_Balanced` | 67.7 | 308× |
-| `BM_Kernel_Float_Transparent` | 108.5 | 192× |
-| `BM_Kernel_Q15_Balanced` | 46.6 | 447× |
-| `BM_Kernel_Q31_Balanced` | 63.7 | 327× |
-| `BM_Pipeline_Float_Balanced_1ch` | 70.4 | 296× |
-| `BM_Pipeline_Float_Balanced_2ch` | 128.5 | 162× |
-| `BM_Pipeline_Float_Balanced_8ch` | 495.2 | 42× |
-| `BM_Pipeline_Q15_Balanced_2ch` | 91.1 | 229× |
-| `BM_Pipeline_Q31_Balanced_2ch` | 129.1 | 161× |
-| `BM_Pipeline_Float_Transparent_2ch` | 209.1 | 100× |
+| `BM_Kernel_Float_Fast` | 36.2 | 576× |
+| `BM_Kernel_Float_Balanced` | 54.0 | 386× |
+| `BM_Kernel_Float_Transparent` | 84.1 | 248× |
+| `BM_Kernel_Q15_Balanced` | 38.3 | 544× |
+| `BM_Kernel_Q31_Balanced` | 53.6 | 389× |
+| `BM_Pipeline_Float_Balanced_1ch` | 58.1 | 359× |
+| `BM_Pipeline_Float_Balanced_2ch` | 77.1 | 270× |
+| `BM_Pipeline_Float_Balanced_8ch` | 248.3 | 84× |
+| `BM_Pipeline_Q15_Balanced_2ch` | 53.9 | 386× |
+| `BM_Pipeline_Q31_Balanced_2ch` | 112.1 | 186× |
+| `BM_Pipeline_Float_Transparent_2ch` | 111.2 | 187× |
 <!-- PERF:END -->
 
 ## Sample types

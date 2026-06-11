@@ -129,6 +129,39 @@ inline S interpolate(const PolyphaseFilterBank<S>& bank, const S* hist, double m
     return Tr::finalize(acc);
 }
 
+/// Blends the two phase rows adjacent to mu into `row` (taps() entries).
+/// Multichannel datapaths do this once per output frame and then run
+/// dotRow() per channel, instead of re-blending inside interpolate() for
+/// every channel.
+template <SampleType S>
+inline void blendRow(const PolyphaseFilterBank<S>& bank, typename SampleTraits<S>::Coeff* row,
+                     double mu) noexcept {
+    using Tr = SampleTraits<S>;
+    const double pos = mu * static_cast<double>(bank.numPhases());
+    std::size_t p = static_cast<std::size_t>(pos);
+    if (p >= bank.numPhases())
+        p = bank.numPhases() - 1;
+    const auto fr = Tr::makeBlendFactor(pos - static_cast<double>(p));
+    const auto* c0 = bank.phase(p);
+    const auto* c1 = bank.phase(p + 1);
+    const std::size_t taps = bank.taps();
+    for (std::size_t t = 0; t < taps; ++t)
+        row[t] = Tr::blend(c0[t], c1[t], fr);
+}
+
+/// Dot product of a pre-blended coefficient row against a history window.
+/// Identical arithmetic to interpolate() given the same mu: blend then mac,
+/// per tap, in the same order — outputs are bit-exact either way.
+template <SampleType S>
+inline S dotRow(const typename SampleTraits<S>::Coeff* row, const S* hist,
+                std::size_t taps) noexcept {
+    using Tr = SampleTraits<S>;
+    typename Tr::Accum acc{};
+    for (std::size_t t = 0; t < taps; ++t)
+        acc = Tr::mac(acc, hist[t], row[t]);
+    return Tr::finalize(acc);
+}
+
 /// Streaming fractional-delay engine for one converter instance.
 ///
 /// Owns the per-channel history delay lines (planar, contiguous windows with
@@ -148,7 +181,8 @@ public:
     FractionalResampler(const PolyphaseFilterBank<S>& bank, std::size_t channels,
                         std::size_t chunkFrames = 64)
         : bank_(&bank), channels_(channels), chunk_(chunkFrames),
-          histCap_(bank.taps() + chunkFrames), scratch_(chunkFrames * channels), hist_(channels) {
+          histCap_(bank.taps() + chunkFrames), scratch_(chunkFrames * channels), hist_(channels),
+          row_(bank.taps()) {
         if (channels_ == 0 || chunk_ == 0)
             throw std::invalid_argument("FractionalResampler: bad config");
         for (auto& h : hist_)
@@ -210,8 +244,17 @@ public:
                     return n; // dry: mu_ not advanced for this frame
             }
             mu_ = m;
-            for (std::size_t c = 0; c < channels_; ++c)
-                out[n * channels_ + c] = interpolate(*bank_, window(c), m);
+            if (channels_ == 1) { // fused blend+mac; no scratch traffic
+                out[n] = interpolate(*bank_, window(0), m);
+            } else {
+                // Blend once per frame, dot per channel: the blend is the
+                // same for every channel, so this halves the inner-loop work
+                // for stereo and scales with channel count.
+                blendRow(*bank_, row_.data(), m);
+                const std::size_t taps = bank_->taps();
+                for (std::size_t c = 0; c < channels_; ++c)
+                    out[n * channels_ + c] = dotRow<S>(row_.data(), window(c), taps);
+            }
         }
         return maxFrames;
     }
@@ -247,6 +290,7 @@ private:
     std::size_t histCap_;
     std::vector<S> scratch_; // interleaved staging for bulk pops
     std::vector<std::vector<S>> hist_;
+    std::vector<typename SampleTraits<S>::Coeff> row_; // per-frame blended coefficients
     std::size_t end_ = 0; // shared end index; all channels advance in lockstep
     std::size_t scratchFrames_ = 0;
     std::size_t scratchPos_ = 0;
