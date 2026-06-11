@@ -152,6 +152,11 @@ CI builds and tests every push on:
   double accumulation runs soft-float there (the Q15/Q31 fixed-point traits
   are the performance-appropriate path for such targets). Cycle accuracy
   requires the vendor simulator.
+- **Performance gating on both DSP targets**: fixed workloads run under
+  QEMU with an instruction-counting plugin and are compared against
+  committed baselines (`bench/baselines.json`) at ±3% — a hot-path
+  regression on Hexagon or Cortex-M55 fails CI. See
+  [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 - **Arm Cortex-M55**, bare metal (newlib + semihosting, no OS/threads),
   executed on QEMU's MPS3 AN547 board model via `qemu-system-arm`. The
   platform layer lives in `platform/mps3_an547/` (linker script + minimal
@@ -183,6 +188,19 @@ every test through the emulator transparently).
 Methodology, optimization roadmap and regression gating live in
 [docs/PERFORMANCE.md](docs/PERFORMANCE.md). Build the benchmarks with
 `-DSRT_BUILD_BENCHMARKS=ON` (host only).
+
+<!-- ICOUNT:BEGIN -->
+Executed instructions per fixed workload (`bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bench/baselines.json`:
+
+| Workload | Cortex-M55 | Hexagon |
+|---|---:|---:|
+| `kernel_float` | 99,468,474 | 339,027,222 |
+| `kernel_q15` | 181,994,196 | 102,819,852 |
+| `kernel_q31` | 210,789,622 | 110,455,141 |
+| `pipeline_float` | 108,849,761 | 357,571,696 |
+| `pipeline_q15` | 191,120,984 | 138,169,321 |
+| `pipeline_q31` | 216,021,689 | 143,138,347 |
+<!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->
 Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 2026-06-10); regenerate with `scripts/update_perf_docs.py`. Items are output samples (kernel) or frames (pipeline); ×realtime is per 48 kHz stream.

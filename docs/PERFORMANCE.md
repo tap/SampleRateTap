@@ -82,9 +82,11 @@ baseline lands and revised deliberately. Stop when any of:
 
 `scripts/update_perf_docs.py` runs the host benchmarks and rewrites the
 README between `<!-- PERF:BEGIN -->` / `<!-- PERF:END -->`, annotated with
-machine + date. Deterministic (instruction-count) numbers get the same
-treatment once PR B lands, and CI regenerates them to fail on drift. The
-SNR table is already enforced by test thresholds.
+machine + date. The instruction-count table
+(`scripts/update_icount_docs.py`, `<!-- ICOUNT:BEGIN/END -->`) derives 1:1
+from `bench/baselines.json`, and the icount-ratchet CI job regenerates it
+and fails on any diff — those published numbers cannot go stale. The SNR
+table is already enforced by test thresholds.
 
 ## Sequencing & status
 
