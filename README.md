@@ -138,6 +138,12 @@ sample-granular transfer, 0.5 FS sine, 1 s analysis window after settling):
 | `balanced()` (L=256, T=48) | 133 dB | 118 dB | 111 dB | 105 dB | 0.50 ms |
 | `transparent()` (L=512, T=80) | 133 dB | — | — | 108 dB | 0.83 ms |
 
+AES17-style THD+N measured under identical conditions against
+libsamplerate, soxr and hardware datasheet figures:
+[docs/COMPARISON.md](docs/COMPARISON.md) (−132 dB THD+N / 149 dB DR at the
+24-bit interface, servo in the loop;
+[notebooks/asrc_comparison.ipynb](notebooks/asrc_comparison.ipynb)).
+
 The high-frequency residual is dominated by the linear interpolation between
 adjacent phase-table rows (≈ −12 dB per doubling of `L`, +12 dB per octave of
 signal frequency). Servo lock from a cold start takes ~1 s; a 0 → 300 ppm
