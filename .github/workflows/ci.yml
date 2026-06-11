@@ -342,6 +342,14 @@ jobs:
           python3 scripts/icount.py --target hexagon \
             --build-dir build-hex --plugin /tmp/libinsncount.so
 
+      # The README instruction-count table derives 1:1 from the committed
+      # baselines; regenerating it must produce no diff.
+      - name: Docs freshness
+        run: |
+          python3 scripts/update_icount_docs.py
+          git diff --exit-code README.md || {
+            echo "::error::README icount table is stale; run scripts/update_icount_docs.py"; exit 1; }
+
   # Keeps the benchmarks compiling and runnable; never a performance gate
   # (shared runners are noise — see docs/PERFORMANCE.md).
   bench-smoke:
