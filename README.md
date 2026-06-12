@@ -170,6 +170,13 @@ CI builds and tests every push on:
   committed baselines (`bench/baselines.json`) at ±3% — a hot-path
   regression on Hexagon or Cortex-M55 fails CI. See
   [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+- **Arm Cortex-M33** (Raspberry Pi Pico 2 / RP2350 class), bare metal on
+  QEMU's MPS2+ AN505 model, sharing the Armv8-M platform layer below. The
+  M33 has no FP64 and no Helium, and the instruction baselines make the
+  consequences concrete: the float datapath costs ~19× the M55's
+  instructions (soft-double accumulation) — on Pico-class parts use
+  Q15/Q31, where 48 kHz mono fits a 150 MHz core with room to spare and
+  stereo wants the `fast()` preset or the RP2350's second core.
 - **Arm Cortex-M55**, bare metal (newlib + semihosting, no OS/threads),
   executed on QEMU's MPS3 AN547 board model via `qemu-system-arm`. The
   platform layer lives in `platform/mps3_an547/` (linker script + minimal
@@ -205,14 +212,14 @@ Methodology, optimization roadmap and regression gating live in
 <!-- ICOUNT:BEGIN -->
 Executed instructions per fixed workload (`bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bench/baselines.json`:
 
-| Workload | Cortex-M55 | Hexagon |
-|---|---:|---:|
-| `kernel_float` | 99,468,474 | 339,027,222 |
-| `kernel_q15` | 181,994,196 | 102,819,852 |
-| `kernel_q31` | 210,789,622 | 110,455,141 |
-| `pipeline_float` | 91,477,022 | 344,819,729 |
-| `pipeline_q15` | 134,581,279 | 133,644,650 |
-| `pipeline_q31` | 170,542,353 | 142,846,068 |
+| Workload | Cortex-M33 | Cortex-M55 | Hexagon |
+|---|---:|---:|---:|
+| `kernel_float` | 1,897,321,329 | 99,468,474 | 339,027,222 |
+| `kernel_q15` | 587,096,252 | 181,994,196 | 102,819,852 |
+| `kernel_q31` | 634,168,961 | 210,789,622 | 110,455,141 |
+| `pipeline_float` | 1,875,169,869 | 91,477,022 | 344,819,729 |
+| `pipeline_q15` | 520,832,307 | 134,581,279 | 133,644,650 |
+| `pipeline_q31` | 597,243,912 | 170,542,353 | 142,846,068 |
 <!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->

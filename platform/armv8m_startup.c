@@ -1,4 +1,5 @@
-/* Minimal bare-metal startup for Cortex-M55 on the MPS3 AN547 (QEMU),
+/* Minimal bare-metal startup for Armv8-M targets under QEMU (Cortex-M55
+ * on mps3-an547, Cortex-M33 on mps2-an505),
  * replacing the toolchain crt0 (linked with -nostartfiles):
  *   - vector table with initial stack pointer and Reset_Handler
  *   - FPU/MVE coprocessor enable before any FP instruction executes
