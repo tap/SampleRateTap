@@ -4,12 +4,13 @@
 Runs every srt_icount_* binary in a build directory under QEMU with the
 instruction-counting plugin, then compares against bench/baselines.json.
 
-  icount.py --target {hexagon,m55} --build-dir DIR --plugin LIB [--update]
+  icount.py --target {hexagon,m55,m33} --build-dir DIR --plugin LIB [--update]
             [--baselines bench/baselines.json] [--tolerance 0.03]
 
-Exit nonzero if any scenario regresses beyond tolerance, or has no recorded
-baseline (its measured value is printed so it can be committed). --update
-rewrites the baselines file with the measured values instead.
+The gate is two-sided: exit nonzero if any scenario regresses beyond
+tolerance, improves beyond tolerance (the baseline must be re-recorded so
+the gate stays tight), or has no recorded baseline. --update rewrites the
+target's entry to exactly the measured scenarios instead.
 """
 import argparse
 import glob
@@ -38,8 +39,11 @@ def qemu_cmd(target: str, plugin: str, binary: str) -> list[str]:
 
 
 def measure(target: str, plugin: str, binary: str) -> int:
-    proc = subprocess.run(qemu_cmd(target, plugin, binary), timeout=3600,
-                          capture_output=True, text=True)
+    try:
+        proc = subprocess.run(qemu_cmd(target, plugin, binary), timeout=600,
+                              capture_output=True, text=True)
+    except subprocess.TimeoutExpired:
+        raise SystemExit(f"{binary}: timed out after 600 s under QEMU")
     out = proc.stdout + proc.stderr
     if "SRT_ICOUNT_DONE ok=1" not in out:
         print(out, file=sys.stderr)
@@ -69,17 +73,22 @@ def main() -> int:
 
     path = pathlib.Path(args.baselines)
     baselines = json.loads(path.read_text()) if path.exists() else {}
-    base = baselines.setdefault(args.target, {})
+    base = baselines.get(args.target, {})
 
     failures = []
+    measured = {}
     for binary in binaries:
         scenario = os.path.basename(binary).removeprefix("srt_icount_")
         count = measure(args.target, args.plugin, binary)
+        measured[scenario] = count
         recorded = base.get(scenario)
         if recorded is None:
             print(f"{scenario}: {count} insns (NO BASELINE — commit this value)")
             if not args.update:
                 failures.append(scenario)
+        elif recorded == 0:
+            print(f"{scenario}: {count} insns vs baseline 0 (INVALID BASELINE)")
+            failures.append(scenario)
         else:
             delta = (count - recorded) / recorded
             verdict = "ok"
@@ -87,13 +96,19 @@ def main() -> int:
                 verdict = "REGRESSION"
                 failures.append(scenario)
             elif delta < -args.tolerance:
-                verdict = "improved — update the baseline"
+                # Two-sided: a stale (too-high) baseline would let future
+                # regressions hide inside the slack, so improvements must be
+                # committed too.
+                verdict = ("IMPROVED beyond tolerance — run icount.py --update "
+                           "and commit bench/baselines.json")
+                failures.append(scenario)
             print(f"{scenario}: {count} insns vs baseline {recorded} "
                   f"({delta:+.2%}) {verdict}")
-        if args.update:
-            base[scenario] = count
 
     if args.update:
+        # Exactly the measured scenarios: stale keys for renamed/removed
+        # workloads must not linger as dead gate entries.
+        baselines[args.target] = measured
         path.write_text(json.dumps(baselines, indent=2, sort_keys=True) + "\n")
         print(f"updated {path}")
         return 0
