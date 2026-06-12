@@ -43,6 +43,13 @@ stream to a file and analyze it offline with the notebook tooling
 (`notebooks/asrc_comparison.ipynb` has the AES17-style measurement
 machinery) — the clocks are real even if the signal never goes analog.
 
+[`examples/alsa_bridge.cpp`](../examples/alsa_bridge.cpp) (built as
+`srt_alsa_bridge` when ALSA is found) implements this harness: `--csv` logs
+the per-second `status()` telemetry for plotting the ppm trace, `--dump`
+captures the post-ASRC float stream for the offline analysis above, and
+`--tone <hz>` substitutes a synthetic sine paced by the input device's real
+clock when the analog path is not trusted.
+
 ## Setup 2 — Pi (Cortex-A) + Raspberry Pi Pico 2: the M33 target on real silicon
 
 *Validates the QEMU-derived Cortex-M33 numbers on an actual RP2350.*
