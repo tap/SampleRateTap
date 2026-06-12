@@ -11,7 +11,7 @@
     "kernel_float": 99468474,
     "kernel_q15": 181994196,
     "kernel_q31": 210789622,
-    "pipeline_float": 92724190,
+    "pipeline_float": 91477022,
     "pipeline_q15": 134581279,
     "pipeline_q31": 170542353
   }
