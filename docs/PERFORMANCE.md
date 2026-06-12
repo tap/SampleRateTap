@@ -99,8 +99,10 @@ table is already enforced by test thresholds.
   from-source plugin-enabled qemu-hexagon (cached in CI).
 - [x] **PR C1** — hypothesis 1 (per-frame blended-row precompute for
   multichannel): stereo pipeline −36% wall-clock on x86, −15/−30/−21%
-  instructions (float/Q15/Q31) on M55, 8-channel −52% wall-clock; mono
-  kernels bit-identical and count-identical (control). Outputs unchanged
+  instructions (float/Q15/Q31) on M55, 8-channel −52% wall-clock;
+  Hexagon −3.6/−3.3/−0.2% (its pipelines are dominated by per-sample
+  soft-double phase math — the C3 motivation); mono kernels
+  count-identical on both targets (control). Outputs unchanged
   bit-for-bit.
 - [ ] **PR C2…** — remaining hypotheses in ROI order, one per PR, each
   with numbers.
