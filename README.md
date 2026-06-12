@@ -207,6 +207,11 @@ every test through the emulator transparently).
 
 [quic/toolchain_for_hexagon]: https://github.com/quic/toolchain_for_hexagon
 
+Everything above runs on emulated or simulated clocks. For validating
+against *real* independent oscillators with commodity hardware (a Pi with
+two USB audio dongles, a Pi + Pico 2, two Pis over Ethernet), see
+[docs/HARDWARE_TESTING.md](docs/HARDWARE_TESTING.md).
+
 ## Performance
 
 Methodology, optimization roadmap and regression gating live in
