@@ -3,9 +3,9 @@
     "kernel_float": 339027222,
     "kernel_q15": 102819852,
     "kernel_q31": 110455141,
-    "pipeline_float": 344819729,
-    "pipeline_q15": 133644650,
-    "pipeline_q31": 142846068
+    "pipeline_float": 339159505,
+    "pipeline_q15": 125405793,
+    "pipeline_q31": 125290133
   },
   "m55": {
     "kernel_float": 99468474,

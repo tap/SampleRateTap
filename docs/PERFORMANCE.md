@@ -112,7 +112,9 @@ table is already enforced by test thresholds.
   changes output bits — recorded below as deferred hypothesis 5), Q31
   dotRow is scalar (no packed 64-bit multiply in baseline ISAs). restrict
   measured: M55 pipeline_float −1.35% instructions, all other scenarios
-  exactly 0.00%; x86 same-state A/B −3.7% wall-clock.
+  exactly 0.00%; x86 same-state A/B −3.7% wall-clock; Hexagon
+  pipeline_float −1.6%, Q15 −6.2%, Q31 −12.3% (hexagon-clang schedules
+  the dot loops substantially better once aliasing is provable).
 - [ ] **PR C3…** — remaining hypotheses in ROI order, one per PR, each
   with numbers. Hypothesis 5 (deferred): explicit 4-way double
   accumulation for the float dot product — est. 2–3× float kernel on
