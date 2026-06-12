@@ -12,6 +12,15 @@
 #include "srt/detail/kaiser.hpp"
 #include "srt/sample_traits.hpp"
 
+// No-alias qualifier for the kernel hot loops: without it the compiler
+// versions the blend loop behind a runtime aliasing check (verified with
+// -fopt-info-vec; see docs/PERFORMANCE.md, hypothesis 2).
+#if defined(_MSC_VER)
+#define SRT_RESTRICT __restrict
+#else
+#define SRT_RESTRICT __restrict__
+#endif
+
 namespace srt {
 
 /// Specification of the interpolation prototype filter.
@@ -134,8 +143,8 @@ inline S interpolate(const PolyphaseFilterBank<S>& bank, const S* hist, double m
 /// dotRow() per channel, instead of re-blending inside interpolate() for
 /// every channel.
 template <SampleType S>
-inline void blendRow(const PolyphaseFilterBank<S>& bank, typename SampleTraits<S>::Coeff* row,
-                     double mu) noexcept {
+inline void blendRow(const PolyphaseFilterBank<S>& bank,
+                     typename SampleTraits<S>::Coeff* SRT_RESTRICT row, double mu) noexcept {
     using Tr = SampleTraits<S>;
     const double pos = mu * static_cast<double>(bank.numPhases());
     std::size_t p = static_cast<std::size_t>(pos);
@@ -153,7 +162,7 @@ inline void blendRow(const PolyphaseFilterBank<S>& bank, typename SampleTraits<S
 /// Identical arithmetic to interpolate() given the same mu: blend then mac,
 /// per tap, in the same order — outputs are bit-exact either way.
 template <SampleType S>
-inline S dotRow(const typename SampleTraits<S>::Coeff* row, const S* hist,
+inline S dotRow(const typename SampleTraits<S>::Coeff* SRT_RESTRICT row, const S* SRT_RESTRICT hist,
                 std::size_t taps) noexcept {
     using Tr = SampleTraits<S>;
     typename Tr::Accum acc{};

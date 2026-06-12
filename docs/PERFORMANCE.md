@@ -104,5 +104,16 @@ table is already enforced by test thresholds.
   soft-double phase math — the C3 motivation); mono kernels
   count-identical on both targets (control). Outputs unchanged
   bit-for-bit.
-- [ ] **PR C2…** — remaining hypotheses in ROI order, one per PR, each
-  with numbers.
+- [x] **PR C2** — vectorization audit (hypothesis 2). Verified with
+  -fopt-info-vec: blendRow vectorizes (was alias-versioned; SRT_RESTRICT
+  removes the runtime check), Q15 dotRow auto-vectorizes, float dotRow is
+  scalar **by design** (strict double accumulation forbids reassociation;
+  vectorizing requires explicit multi-accumulator partial sums, which
+  changes output bits — recorded below as deferred hypothesis 5), Q31
+  dotRow is scalar (no packed 64-bit multiply in baseline ISAs). restrict
+  measured: M55 pipeline_float −1.35% instructions, all other scenarios
+  exactly 0.00%; x86 same-state A/B −3.7% wall-clock.
+- [ ] **PR C3…** — remaining hypotheses in ROI order, one per PR, each
+  with numbers. Hypothesis 5 (deferred): explicit 4-way double
+  accumulation for the float dot product — est. 2–3× float kernel on
+  AVX2-class SIMD, but bit-changing; take only if budgets demand it.
