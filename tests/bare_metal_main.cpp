@@ -13,7 +13,9 @@
 int main() {
     // MultiChannelShort.* stays in: it is the only on-target coverage of the
     // N-channel deinterleave and the wide-MAC dotRow paths at N > 2.
-    ::testing::GTEST_FLAG(filter) = "-AsrcQuality.*:AsrcLock.*:Servo.*:Kaiser.*MeetsSpec:"
+    // "AsrcQuality*" (no dot) excludes every quality suite: in gtest filters
+    // '.' is a literal, so "AsrcQuality.*" would not cover AsrcQuality16k.
+    ::testing::GTEST_FLAG(filter) = "-AsrcQuality*:AsrcLock.*:Servo.*:Kaiser.*MeetsSpec:"
                                     "FixedPoint.AsrcQuality*:"
                                     "FixedPoint.FullScaleSineDoesNotWrapQ15:"
                                     "MultiChannel.*";
