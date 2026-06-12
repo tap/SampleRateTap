@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include "srt/detail/kaiser.hpp"
@@ -20,6 +21,20 @@
 #define SRT_RESTRICT __restrict
 #else
 #define SRT_RESTRICT __restrict__
+#endif
+
+// Dual 16x16 MAC (SMLALD) for the Q15 dot product on Arm cores that have
+// the DSP extension but no Helium — the Cortex-M33/M4/M7 class (e.g.
+// Raspberry Pi Pico 2). Gated off when MVE is present: on M55 the compiler
+// already auto-vectorizes the scalar loop with Helium and the intrinsic
+// path would replace vectors with dual-MACs (see docs/PERFORMANCE.md,
+// hypothesis 4). Bit-exactness: each 16x16 product is exact in int32 and
+// the int64 accumulation is associative, so pairing changes no output bit.
+#if defined(__ARM_FEATURE_DSP) && !defined(__ARM_FEATURE_MVE)
+#include <arm_acle.h>
+#define SRT_Q15_SMLALD 1
+#else
+#define SRT_Q15_SMLALD 0
 #endif
 
 namespace srt {
@@ -203,6 +218,25 @@ template <SampleType S>
 inline S dotRow(const typename SampleTraits<S>::Coeff* SRT_RESTRICT row, const S* SRT_RESTRICT hist,
                 std::size_t taps) noexcept {
     using Tr = SampleTraits<S>;
+#if SRT_Q15_SMLALD
+    if constexpr (std::is_same_v<S, std::int16_t>) {
+        std::int64_t acc = 0;
+        std::size_t t = 0;
+        for (; t + 1 < taps; t += 2) {
+            // memcpy keeps the 16-bit pair loads alignment-safe; both
+            // compile to a single 32-bit load (little-endian packing
+            // matches SMLALD's lo/hi lanes).
+            std::uint32_t h;
+            std::uint32_t r;
+            std::memcpy(&h, hist + t, sizeof h);
+            std::memcpy(&r, row + t, sizeof r);
+            acc = __smlald(static_cast<int16x2_t>(h), static_cast<int16x2_t>(r), acc);
+        }
+        for (; t < taps; ++t) // odd-tap tail; every preset is even
+            acc = Tr::mac(acc, hist[t], row[t]);
+        return Tr::finalize(acc);
+    }
+#endif
     typename Tr::Accum acc{};
     for (std::size_t t = 0; t < taps; ++t)
         acc = Tr::mac(acc, hist[t], row[t]);
@@ -300,7 +334,11 @@ public:
                     return n; // dry: phase_ not advanced for this frame
             }
             phase_ = m;
-            if (channels_ == 1) { // fused blend+mac; no scratch traffic
+            // Q15 on SMLALD targets routes mono through blendRow+dotRow as
+            // well: dotRow carries the dual-MAC loop, and the two paths are
+            // bit-exact by construction (see dotRow).
+            constexpr bool kPreferDotRow = SRT_Q15_SMLALD && std::is_same_v<S, std::int16_t>;
+            if (channels_ == 1 && !kPreferDotRow) { // fused blend+mac; no scratch traffic
                 out[n] = interpolatePhase(*bank_, window(0), m);
             } else {
                 // Blend once per frame, dot per channel: the blend is the
