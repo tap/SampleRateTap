@@ -18,8 +18,9 @@ simulator, Cadence xt-run) or hardware counters (DWT.CYCCNT on M55 silicon);
 the instruction metric is what CI can gate deterministically.
 
 The benchmark matrix: sample type (float / Q15 / Q31) × filter preset
-(fast / balanced / transparent) × channels (1 / 2 / 8), trimmed to the
-combinations that change the answer.
+(fast / balanced / transparent) × channels (1 / 2 / 8 / 12 / 16 — 12 is
+the 7.1.4 deployment shape, 16 the AVB-with-reference-mics one), trimmed
+to the combinations that change the answer.
 
 ## The loop
 

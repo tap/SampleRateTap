@@ -167,7 +167,7 @@ jobs:
       - name: Test under emulation
         run: >
           ctest --test-dir build --output-on-failure
-          -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec'
+          -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.'
 
   # Cross-compile for Arm Cortex-M55 (bare metal, newlib + semihosting) and
   # run the emulation-sized test subset on QEMU's MPS3 AN547 board model.

@@ -113,6 +113,20 @@ at 5 ms blocks). Promotion to Quiet is gated on the
 cascade-smoothed error, which is exactly the discriminator between the two
 regimes.
 
+**Multichannel.** `channels` is a runtime count with no architectural limit
+(mono through 7.1.4 and beyond). Use **one converter instance per clock
+domain**, not per channel group: every channel of an instance is resampled
+at literally the same fractional position each frame, so inter-channel
+phase coherence is exact by construction — no skew to budget for in
+surround imaging or microphone-array processing (relevant when an AVB
+stream bundles reference mics with the program feed; AVB Class A's 8-frame
+packets are also fine-grained enough for the Quiet servo stage). Per frame
+the coefficient blend is computed once and shared, so N channels cost
+`blend + N×dot`, not `N×(blend + dot)`. Channel independence is enforced
+by test at 12 and 16 channels (distinct tone per channel; crosstalk
+bounded below −100 dB float / −72 dB Q15), including a Track-stage
+variant that runs on the emulated embedded targets.
+
 **Under/overrun policy.** `pull()` always fills its buffer: silence while
 filling or after an underrun (the converter then refills and re-locks,
 keeping the ppm estimate). If the consumer stalls until the high watermark,
@@ -229,27 +243,32 @@ Executed instructions per fixed workload (`bench/icount/`), measured under QEMU 
 | `kernel_float` | 1,897,321,329 | 99,468,474 | 339,027,222 |
 | `kernel_q15` | 587,096,252 | 181,994,196 | 102,819,852 |
 | `kernel_q31` | 634,168,961 | 210,789,622 | 110,455,141 |
+| `pipeline12_q15` | 962,613,655 | 387,876,968 | 378,858,793 |
 | `pipeline_float` | 1,856,735,553 | 92,751,177 | 335,912,671 |
 | `pipeline_q15` | 484,146,844 | 127,446,817 | 119,847,854 |
 | `pipeline_q31` | 566,751,937 | 162,708,581 | 120,694,199 |
 <!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->
-Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.10GHz, 2026-06-11); regenerate with `scripts/update_perf_docs.py`. Items are output samples (kernel) or frames (pipeline); ×realtime is per 48 kHz stream.
+Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 2026-06-12); regenerate with `scripts/update_perf_docs.py`. Items are output samples (kernel) or frames (pipeline); ×realtime is per 48 kHz stream.
 
 | Benchmark | ns/item | ×realtime @48k |
 |---|---:|---:|
-| `BM_Kernel_Float_Fast` | 36.2 | 576× |
-| `BM_Kernel_Float_Balanced` | 54.0 | 386× |
-| `BM_Kernel_Float_Transparent` | 84.1 | 248× |
-| `BM_Kernel_Q15_Balanced` | 38.3 | 544× |
-| `BM_Kernel_Q31_Balanced` | 53.6 | 389× |
-| `BM_Pipeline_Float_Balanced_1ch` | 58.1 | 359× |
-| `BM_Pipeline_Float_Balanced_2ch` | 77.1 | 270× |
-| `BM_Pipeline_Float_Balanced_8ch` | 248.3 | 84× |
-| `BM_Pipeline_Q15_Balanced_2ch` | 53.9 | 386× |
-| `BM_Pipeline_Q31_Balanced_2ch` | 112.1 | 186× |
-| `BM_Pipeline_Float_Transparent_2ch` | 111.2 | 187× |
+| `BM_Kernel_Float_Fast` | 54.5 | 382× |
+| `BM_Kernel_Float_Balanced` | 86.6 | 241× |
+| `BM_Kernel_Float_Transparent` | 132.4 | 157× |
+| `BM_Kernel_Q15_Balanced` | 51.6 | 404× |
+| `BM_Kernel_Q31_Balanced` | 66.5 | 313× |
+| `BM_Pipeline_Float_Balanced_1ch` | 88.8 | 235× |
+| `BM_Pipeline_Float_Balanced_2ch` | 131.2 | 159× |
+| `BM_Pipeline_Float_Balanced_8ch` | 460.2 | 45× |
+| `BM_Pipeline_Q15_Balanced_2ch` | 70.8 | 294× |
+| `BM_Pipeline_Q31_Balanced_2ch` | 130.3 | 160× |
+| `BM_Pipeline_Float_Transparent_2ch` | 241.5 | 86× |
+| `BM_Pipeline_Float_Balanced_12ch` | 678.3 | 31× |
+| `BM_Pipeline_Q15_Balanced_12ch` | 233.8 | 89× |
+| `BM_Pipeline_Float_Balanced_16ch` | 894.6 | 23× |
+| `BM_Pipeline_Q15_Balanced_16ch` | 290.3 | 72× |
 <!-- PERF:END -->
 
 ## Sample types

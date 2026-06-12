@@ -126,11 +126,29 @@ void BM_Pipeline_Q31_Balanced_2ch(benchmark::State& s) {
 void BM_Pipeline_Float_Transparent_2ch(benchmark::State& s) {
     pipelineBench<float>(s, srt::FilterSpec::transparent(), 2);
 }
+// Deployment shapes: 12 channels (7.1.4 surround), 16 (AVB stream bundling
+// reference microphones with the program feed).
+void BM_Pipeline_Float_Balanced_12ch(benchmark::State& s) {
+    pipelineBench<float>(s, srt::FilterSpec::balanced(), 12);
+}
+void BM_Pipeline_Q15_Balanced_12ch(benchmark::State& s) {
+    pipelineBench<std::int16_t>(s, srt::FilterSpec::balanced(), 12);
+}
+void BM_Pipeline_Float_Balanced_16ch(benchmark::State& s) {
+    pipelineBench<float>(s, srt::FilterSpec::balanced(), 16);
+}
+void BM_Pipeline_Q15_Balanced_16ch(benchmark::State& s) {
+    pipelineBench<std::int16_t>(s, srt::FilterSpec::balanced(), 16);
+}
 BENCHMARK(BM_Pipeline_Float_Balanced_1ch);
 BENCHMARK(BM_Pipeline_Float_Balanced_2ch);
 BENCHMARK(BM_Pipeline_Float_Balanced_8ch);
 BENCHMARK(BM_Pipeline_Q15_Balanced_2ch);
 BENCHMARK(BM_Pipeline_Q31_Balanced_2ch);
 BENCHMARK(BM_Pipeline_Float_Transparent_2ch);
+BENCHMARK(BM_Pipeline_Float_Balanced_12ch);
+BENCHMARK(BM_Pipeline_Q15_Balanced_12ch);
+BENCHMARK(BM_Pipeline_Float_Balanced_16ch);
+BENCHMARK(BM_Pipeline_Q15_Balanced_16ch);
 
 } // namespace

@@ -11,9 +11,12 @@
 #include <gtest/gtest.h>
 
 int main() {
+    // MultiChannelShort.* stays in: it is the only on-target coverage of the
+    // N-channel deinterleave and the wide-MAC dotRow paths at N > 2.
     ::testing::GTEST_FLAG(filter) = "-AsrcQuality.*:AsrcLock.*:Servo.*:Kaiser.*MeetsSpec:"
                                     "FixedPoint.AsrcQuality*:"
-                                    "FixedPoint.FullScaleSineDoesNotWrapQ15";
+                                    "FixedPoint.FullScaleSineDoesNotWrapQ15:"
+                                    "MultiChannel.*";
     ::testing::InitGoogleTest();
     const int rc = RUN_ALL_TESTS();
     // CTest's pass criterion: printed only if we get all the way here, so a

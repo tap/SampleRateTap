@@ -22,6 +22,8 @@ struct TwoClockSimT {
     std::size_t chunkOut = 32; ///< frames pulled per consumer event
     /// Input signal generator: value at input sample index i (all channels).
     std::function<S(std::uint64_t)> gen = [](std::uint64_t) { return S{}; };
+    /// Per-channel generator (sample index, channel); overrides gen when set.
+    std::function<S(std::uint64_t, std::size_t)> genCh = {};
     /// Optional input-rate modulation: fsIn scale factor at virtual time t
     /// (e.g. for drift-ramp tests). Defaults to constant 1.
     std::function<double(double)> fsInScale = [](double) { return 1.0; };
@@ -38,9 +40,15 @@ struct TwoClockSimT {
         while (tOut < seconds) {
             if (tIn <= tOut) {
                 for (std::size_t f = 0; f < chunkIn; ++f) {
-                    const S v = gen(idx++);
-                    for (std::size_t c = 0; c < channels; ++c)
-                        inBuf[f * channels + c] = v;
+                    if (genCh) {
+                        for (std::size_t c = 0; c < channels; ++c)
+                            inBuf[f * channels + c] = genCh(idx, c);
+                        ++idx;
+                    } else {
+                        const S v = gen(idx++);
+                        for (std::size_t c = 0; c < channels; ++c)
+                            inBuf[f * channels + c] = v;
+                    }
                 }
                 asrc.push(inBuf.data(), chunkIn);
                 tIn += static_cast<double>(chunkIn) / (fsIn * fsInScale(tIn));
