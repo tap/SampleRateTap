@@ -1,12 +1,14 @@
 /// \file srt_capi.cpp
 /// \brief C ABI shim over the float converter, for FFI consumers (ctypes,
-/// cffi, Julia, ...). Build with SRT_BUILD_CAPI=ON; see
+/// cffi, Julia, ...). Build with SRT_BUILD_CAPI=ON; srt_capi.h is the
+/// contract (thread affinity, error convention); see
 /// notebooks/asrc_demo.ipynb for a worked client.
 ///
 /// The shim is intentionally minimal: an opaque handle, the push/pull hot
 /// path, telemetry, and designed latency. Errors surface as null handles or
-/// zero return values; the hot-path functions keep the library's noexcept
-/// guarantee.
+/// zero return values, and every entry point tolerates a null handle — the
+/// documented error convention ("check srt_create for NULL") otherwise
+/// invites a crash on exactly the path where the caller forgot to check.
 #include <cstddef>
 #include <cstdint>
 #include <new>
@@ -14,8 +16,23 @@
 #include "srt/srt.hpp"
 
 extern "C" {
-
 struct SrtHandle; // opaque
+}
+
+namespace {
+srt::AsyncSampleRateConverter* impl(SrtHandle* h) noexcept {
+    return reinterpret_cast<srt::AsyncSampleRateConverter*>(h);
+}
+const srt::AsyncSampleRateConverter* impl(const SrtHandle* h) noexcept {
+    return reinterpret_cast<const srt::AsyncSampleRateConverter*>(h);
+}
+} // namespace
+
+extern "C" {
+
+unsigned srt_version(void) noexcept {
+    return SRT_VERSION_MAJOR * 10000u + SRT_VERSION_MINOR * 100u + SRT_VERSION_PATCH;
+}
 
 /// preset: 0 = fast, 1 = balanced, 2 = transparent.
 SrtHandle* srt_create(double sampleRateHz, std::size_t channels, std::size_t targetLatencyFrames,
@@ -36,21 +53,26 @@ SrtHandle* srt_create(double sampleRateHz, std::size_t channels, std::size_t tar
 }
 
 void srt_destroy(SrtHandle* h) noexcept {
-    delete reinterpret_cast<srt::AsyncSampleRateConverter*>(h);
+    delete impl(h);
 }
 
 std::size_t srt_push(SrtHandle* h, const float* interleaved, std::size_t frames) noexcept {
-    return reinterpret_cast<srt::AsyncSampleRateConverter*>(h)->push(interleaved, frames);
+    return h ? impl(h)->push(interleaved, frames) : 0;
 }
 
 std::size_t srt_pull(SrtHandle* h, float* interleaved, std::size_t frames) noexcept {
-    return reinterpret_cast<srt::AsyncSampleRateConverter*>(h)->pull(interleaved, frames);
+    return h ? impl(h)->pull(interleaved, frames) : 0;
 }
 
 /// out[0]=state (0 Filling, 1 Acquiring, 2 Locked), out[1]=ppm,
 /// out[2]=fifoFillFrames, out[3]=underruns, out[4]=overruns, out[5]=resyncs.
 void srt_status(const SrtHandle* h, double out[6]) noexcept {
-    const srt::Status s = reinterpret_cast<const srt::AsyncSampleRateConverter*>(h)->status();
+    if (!h) {
+        for (int i = 0; i < 6; ++i)
+            out[i] = 0.0;
+        return;
+    }
+    const srt::Status s = impl(h)->status();
     out[0] = static_cast<double>(static_cast<int>(s.state));
     out[1] = s.ppm;
     out[2] = s.fifoFillFrames;
@@ -60,11 +82,12 @@ void srt_status(const SrtHandle* h, double out[6]) noexcept {
 }
 
 double srt_designed_latency_seconds(const SrtHandle* h) noexcept {
-    return reinterpret_cast<const srt::AsyncSampleRateConverter*>(h)->designedLatencySeconds();
+    return h ? impl(h)->designedLatencySeconds() : 0.0;
 }
 
 void srt_reset_from_consumer(SrtHandle* h) noexcept {
-    reinterpret_cast<srt::AsyncSampleRateConverter*>(h)->resetFromConsumer();
+    if (h)
+        impl(h)->resetFromConsumer();
 }
 
 } // extern "C"

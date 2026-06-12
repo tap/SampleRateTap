@@ -37,6 +37,7 @@ add_executable(srt_tests
     test_asrc_quality.cpp
     test_asrc_quality_16k.cpp
     test_fade.cpp
+    test_hardening.cpp
     test_latency.cpp
     test_multichannel.cpp)
 target_link_libraries(srt_tests PRIVATE
