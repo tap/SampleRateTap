@@ -94,6 +94,21 @@ struct FilterSpec {
                 .stopbandHz = 26000.0,
                 .stopbandAttenDb = 140.0};
     }
+
+    /// This spec with the band edges rescaled from the 48 kHz design rate
+    /// to sampleRateHz. The presets' passband/stopband are absolute Hz
+    /// chosen for ~48 kHz operation; at other rates the same L/T with
+    /// proportional band edges gives the identical normalized-frequency
+    /// response (and group delay in samples — i.e. more milliseconds at
+    /// lower rates). See also ServoConfig::scaledTo and
+    /// Config::forSampleRate, which a 16 kHz deployment wants as a set.
+    FilterSpec scaledTo(double sampleRateHz) const noexcept {
+        constexpr double kDesignRateHz = 48000.0;
+        FilterSpec s = *this;
+        s.passbandHz *= sampleRateHz / kDesignRateHz;
+        s.stopbandHz *= sampleRateHz / kDesignRateHz;
+        return s;
+    }
 };
 
 /// Immutable polyphase coefficient table designed at construction.

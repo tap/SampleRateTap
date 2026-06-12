@@ -1,10 +1,10 @@
 // 16 kHz -> 16 kHz quality coverage (a real deployment rate, e.g.
 // reference-microphone processing). Same methodology as
-// test_asrc_quality.cpp, with two rate-specific twists, both applied
-// test-side (the header presets and defaults are deliberately untouched):
+// test_asrc_quality.cpp, configured through Config::forSampleRate — the
+// rate-scaling rule this suite originally established by hand:
 //
 //  1. FilterSpec band edges are absolute Hz and the presets assume ~48 kHz,
-//     so passbandHz/stopbandHz are scaled by 16/48.
+//     so passbandHz/stopbandHz must scale with the rate.
 //  2. ServoConfig bandwidths are absolute Hz too. The slip-sawtooth beat
 //     sits at ppm * fs = 3.2 Hz instead of 9.6 Hz, so with default servo
 //     settings the 3-pole quiet smoother rejects it (16/48)^3 ~ 28.6 dB
@@ -13,6 +13,10 @@
 //     signal frequency (the small-index FM sideband signature). Scaling
 //     the servo bandwidths by 16/48 keeps the loop identical in
 //     normalized (per-sample) terms and restores the 48 kHz structure.
+//
+// This suite doubles as the regression test for Config::forSampleRate
+// itself (including its inverse hold-time scaling, which the hand-scaled
+// original did not apply — re-measured identical within noise).
 #include <cmath>
 #include <cstdio>
 #include <numbers>
@@ -30,35 +34,15 @@ constexpr double kFs = 16000.0;
 constexpr double kEps = 200e-6;
 constexpr double kAmp = 0.5;
 
-// balanced() with band edges scaled to 16 kHz: identical L/T (so the same
-// normalized-frequency response and the same group delay in samples — which
-// is 3x the milliseconds at one third the rate).
-srt::FilterSpec balancedAt16k() {
-    return {.numPhases = 256,
-            .tapsPerPhase = 48,
-            .passbandHz = 20000.0 * 16.0 / 48.0, // ~6666.7 Hz
-            .stopbandHz = 28000.0 * 16.0 / 48.0, // ~9333.3 Hz
-            .stopbandAttenDb = 120.0};
-}
-
 // Resamples a sine across a +200 ppm clock offset (sample-synchronous
 // transfer) and measures the residual after removing the fitted fundamental
 // from the last second of output. Mirrors measureSnrDb in
-// test_asrc_quality.cpp at fs = 16 kHz.
-double measureSnrDb16k(const srt::FilterSpec& spec, double freqHz) {
-    srt::Config cfg;
-    cfg.sampleRateHz = kFs;
+// test_asrc_quality.cpp at fs = 16 kHz, with all rate adaptation coming
+// from Config::forSampleRate (filter band edges, servo bandwidths and
+// hold times).
+double measureSnrDb16k(double freqHz) {
+    srt::Config cfg = srt::Config::forSampleRate(kFs);
     cfg.channels = 1;
-    cfg.filter = spec;
-    // Servo scaled with the rate (see file comment): same normalized loop
-    // as the 48 kHz defaults.
-    constexpr double r = 16.0 / 48.0;
-    cfg.servo.acquireBandwidthHz *= r;
-    cfg.servo.trackBandwidthHz *= r;
-    cfg.servo.quietBandwidthHz *= r;
-    cfg.servo.acquireSmootherHz *= r;
-    cfg.servo.trackSmootherHz *= r;
-    cfg.servo.quietSmootherHz *= r;
     srt::AsyncSampleRateConverter asrc(cfg);
     srt_test::TwoClockSim sim{.asrc = asrc,
                               .fsIn = kFs * (1.0 + kEps),
@@ -91,7 +75,7 @@ double measureSnrDb16k(const srt::FilterSpec& spec, double freqHz) {
     // The tracked frequency must still match the true clock ratio closely.
     EXPECT_NEAR(fit.freqNorm / nuOutExpected, 1.0, 2e-6);
     const double snr = srt_test::snrDb(fit);
-    std::printf("[ measured ] %5.0f Hz, %zu phases: SNR %.1f dB\n", freqHz, spec.numPhases, snr);
+    std::printf("[ measured ] %5.0f Hz: SNR %.1f dB\n", freqHz, snr);
     return snr;
 }
 
@@ -102,17 +86,36 @@ double measureSnrDb16k(const srt::FilterSpec& spec, double freqHz) {
 // the tones sit at the same f/fs as the 48 kHz suite's 997 Hz/6 k/12 k/
 // 19.5 k, which measure 135.0/120.0/112.8/105.8 dB on the same host —
 // matching within ~1 dB, as expected.
+// Fast deterministic check of the scaling rule itself (the sims below are
+// the behavioral validation).
+TEST(AsrcQuality16k, ForSampleRateScalesHzFieldsOnly) {
+    const srt::Config c = srt::Config::forSampleRate(16000.0);
+    const srt::Config d; // 48 kHz defaults
+    const double r = 16000.0 / 48000.0;
+    EXPECT_DOUBLE_EQ(c.sampleRateHz, 16000.0);
+    EXPECT_DOUBLE_EQ(c.filter.passbandHz, d.filter.passbandHz * r);
+    EXPECT_DOUBLE_EQ(c.filter.stopbandHz, d.filter.stopbandHz * r);
+    EXPECT_EQ(c.filter.numPhases, d.filter.numPhases);
+    EXPECT_EQ(c.filter.tapsPerPhase, d.filter.tapsPerPhase);
+    EXPECT_DOUBLE_EQ(c.servo.quietBandwidthHz, d.servo.quietBandwidthHz * r);
+    EXPECT_DOUBLE_EQ(c.servo.acquireSmootherHz, d.servo.acquireSmootherHz * r);
+    EXPECT_DOUBLE_EQ(c.servo.quietHoldSeconds, d.servo.quietHoldSeconds / r);
+    EXPECT_DOUBLE_EQ(c.servo.lockThresholdFrames, d.servo.lockThresholdFrames);
+    EXPECT_DOUBLE_EQ(c.servo.maxDeviationPpm, d.servo.maxDeviationPpm);
+    EXPECT_EQ(c.targetLatencyFrames, d.targetLatencyFrames);
+}
+
 TEST(AsrcQuality16k, Balanced333Hz) {
-    EXPECT_GT(measureSnrDb16k(balancedAt16k(), 333.0), 132.0);
+    EXPECT_GT(measureSnrDb16k(333.0), 132.0);
 }
 TEST(AsrcQuality16k, Balanced2kHz) {
-    EXPECT_GT(measureSnrDb16k(balancedAt16k(), 2000.0), 117.0);
+    EXPECT_GT(measureSnrDb16k(2000.0), 117.0);
 }
 TEST(AsrcQuality16k, Balanced4kHz) {
-    EXPECT_GT(measureSnrDb16k(balancedAt16k(), 4000.0), 110.0);
+    EXPECT_GT(measureSnrDb16k(4000.0), 110.0);
 }
 TEST(AsrcQuality16k, Balanced6_5kHz) {
-    EXPECT_GT(measureSnrDb16k(balancedAt16k(), 6500.0), 102.0);
+    EXPECT_GT(measureSnrDb16k(6500.0), 102.0);
 }
 
 } // namespace
