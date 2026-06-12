@@ -152,6 +152,28 @@ TEST(MultiChannel, Independence16chQ15) {
 // MultiChannel.* runs are excluded): a Track-stage run that still catches
 // any channel permutation or gross crosstalk on the target's own datapath
 // — including the wide-MAC dotRow paths (SMLALD on M33-class).
+// Channels 5 and 7 are the only counts that reach the channel-parallel
+// K=2 and K=1 remainder tiles (8/4/2/1 tiling: 5 = 4+1, 7 = 4+2+1) — the
+// audit found those tiles had zero coverage. Float, because float is the
+// channel-parallel sample type.
+TEST(MultiChannelShort, Independence5chFloat) {
+    const auto r = measureIndependence<float>(5, 4.0, 0.25, 8);
+    for (const auto& ch : r) {
+        EXPECT_NEAR(ch.amplitude, kAmp, 0.05);
+        EXPECT_GT(ch.snrDb, 35.0);
+        EXPECT_LT(ch.worstCrosstalkDb, -50.0);
+    }
+}
+
+TEST(MultiChannelShort, Independence7chFloat) {
+    const auto r = measureIndependence<float>(7, 4.0, 0.25, 8);
+    for (const auto& ch : r) {
+        EXPECT_NEAR(ch.amplitude, kAmp, 0.05);
+        EXPECT_GT(ch.snrDb, 35.0);
+        EXPECT_LT(ch.worstCrosstalkDb, -50.0);
+    }
+}
+
 TEST(MultiChannelShort, Independence12chQ15) {
     const auto r = measureIndependence<std::int16_t>(12, 4.0, 0.25, 8);
     for (const auto& ch : r) {

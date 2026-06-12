@@ -32,6 +32,8 @@ namespace srt {
 template <typename T>
 class SpscRing {
     static_assert(std::is_trivially_copyable_v<T>);
+    // The lock-free claim of the whole audio path rests on these indices.
+    static_assert(std::atomic<std::size_t>::is_always_lock_free);
 
 public:
     /// Allocates the buffer; capacity is rounded up to a power of two.

@@ -331,8 +331,9 @@ inline void dotRowsFrameMajor(const typename SampleTraits<S>::Coeff* SRT_RESTRIC
 
 /// Streaming fractional-delay engine for one converter instance.
 ///
-/// Owns the per-channel history delay lines (planar, contiguous windows with
-/// periodic compaction) and the phase accumulator mu. Input frames are pulled
+/// Owns the history delay lines (planar per-channel below the
+/// channel-parallel threshold, frame-major above it — see the hist_
+/// field) and the phase accumulator mu. Input frames are pulled
 /// through a caller-supplied PopFn in small bulk chunks and deinterleaved into
 /// the histories as the integer read position advances.
 ///
@@ -403,6 +404,11 @@ public:
     /// read position by (1 + epsHat) input frames per output frame. Returns
     /// the number produced; fewer than maxFrames means the source ran dry
     /// (underrun). RT-safe: no allocation, locks or exceptions.
+    ///
+    /// Preconditions (the converter upholds both; direct users must too):
+    /// a successful prime() before the first process() — the window math
+    /// underflows otherwise — and reset()+reprime after any dry return, as
+    /// a dry advance==2 slip leaves history and phase one frame apart.
     ///
     /// PopFn: std::size_t popFrames(S* dst, std::size_t maxFrames) — bulk-pops
     /// interleaved frames, returning the count actually delivered.

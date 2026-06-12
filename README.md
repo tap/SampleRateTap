@@ -143,8 +143,18 @@ latency = targetLatencyFrames + (L·T − 1)/(2L)      [input frames]
 `designedLatencySeconds()` reports the figure; the FIFO term breathes by a
 fraction of the block size as the servo tracks drift. The filter is linear
 phase. For lower latency use `FilterSpec::fast()` (~16-frame group delay)
-and a smaller `targetLatencyFrames`; the FIFO setpoint must stay above the
-peak occupancy excursion of your push/pull block jitter.
+and a smaller `targetLatencyFrames`.
+
+**The setpoint must exceed the pull block size** — a pull synthesizes from
+frames already buffered, so a setpoint at or below the callback size is
+infeasible and would drain into a permanent dropout cycle. The converter
+enforces this automatically: when it observes pull blocks larger than the
+configured setpoint it raises the effective setpoint (block + ~half-block
+margin, bounded by FIFO capacity) and reports the value in
+`Status::effectiveTargetLatencyFrames`; latency follows the raised
+setpoint. Callbacks above ~340 frames also need `fifoFrames` sized
+explicitly. The setpoint must additionally stay above the peak occupancy
+excursion of your push/pull jitter, as before.
 
 ## Measured performance
 

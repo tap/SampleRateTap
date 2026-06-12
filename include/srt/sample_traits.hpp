@@ -128,10 +128,11 @@ struct SampleTraits<std::int16_t> {
     }
 
     static Coeff blend(Coeff a, Coeff b, BlendFactor fr) noexcept {
-        // Q14 + (Q15 * Q14) >> 15, in int64: the int32 product would fit
-        // today's coefficients (fr <= 32767 by construction), but only with
-        // ~5% margin against a worst-case adjacent-phase delta — not worth
-        // the silent invariant. One smull on 32-bit cores.
+        // Q14 + (Q15 * Q14) >> 15, in int64: the worst-case int32 product
+        // 32767 * 65535 = 2,147,385,345 sits 0.005% under INT32_MAX —
+        // real adjacent-phase deltas are tiny (|diff| <= 41 measured on the
+        // transparent table), but a margin that thin is not an invariant
+        // worth relying on silently. One smull on 32-bit cores.
         const std::int64_t diff = static_cast<std::int64_t>(b) - a;
         return static_cast<Coeff>(a + ((fr * diff) >> 15));
     }

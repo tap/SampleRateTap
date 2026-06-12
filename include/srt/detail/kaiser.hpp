@@ -52,8 +52,12 @@ inline double kaiserBeta(double attenDb) noexcept {
 ///                       (e.g. 8 kHz transition at 48 kHz -> 8000/48000)
 /// \return estimated taps per polyphase phase: N = (A - 8) / (2.285 * 2*pi * df)
 inline std::size_t estimateTaps(double attenDb, double transWidthNorm) noexcept {
+    // Clamp pathological inputs (attenDb < 8, non-positive width): the raw
+    // formula goes negative/infinite there and casting that to size_t is UB.
+    if (!(transWidthNorm > 0.0))
+        return 4;
     const double n = (attenDb - 8.0) / (2.285 * 2.0 * std::numbers::pi * transWidthNorm);
-    return static_cast<std::size_t>(std::ceil(n));
+    return n > 4.0 ? static_cast<std::size_t>(std::ceil(n)) : 4;
 }
 
 /// sin(pi x)/(pi x) with the removable singularity handled.

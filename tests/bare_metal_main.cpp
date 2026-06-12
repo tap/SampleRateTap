@@ -18,7 +18,7 @@ int main() {
     ::testing::GTEST_FLAG(filter) = "-AsrcQuality*:AsrcLock.*:Servo.*:Kaiser.*MeetsSpec:"
                                     "FixedPoint.AsrcQuality*:"
                                     "FixedPoint.FullScaleSineDoesNotWrapQ15:"
-                                    "MultiChannel.*";
+                                    "MultiChannel.*:Feasibility.*:Reset.*";
     ::testing::InitGoogleTest();
     const int rc = RUN_ALL_TESTS();
     // CTest's pass criterion: printed only if we get all the way here, so a

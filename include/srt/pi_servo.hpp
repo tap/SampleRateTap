@@ -119,6 +119,12 @@ public:
     /// step.
     void seed(double occPlusMu) noexcept { lpFast_ = q1_ = q2_ = q3_ = occPlusMu; }
 
+    /// Move the occupancy setpoint. The integrator (ppm estimate) is kept and
+    /// the smoothers are left tracking the real observable, so the loop slews
+    /// to the new setpoint at its clamped rate with no transient discontinuity
+    /// — used by the converter's adaptive pull-block setpoint raise.
+    void setTarget(double targetFrames) noexcept { target_ = targetFrames; }
+
     /// One control update; call once per pull() before synthesis.
     /// \param occFrames raw backlog in frames (FIFO + staged frames)
     /// \param mu        current fractional read position; occ + mu changes
