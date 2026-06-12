@@ -64,6 +64,29 @@ struct ServoConfig {
     double quietHoldSeconds = 2.0;       ///< cascade-|e| hold => track -> quiet
     double unlockThresholdFrames = 24.0; ///< |e| above this => demote a stage
     double maxDeviationPpm = 1000.0;     ///< epsHat clamp = +/- 1.5x this
+
+    /// This config rescaled from the 48 kHz design rate to sampleRateHz:
+    /// the loop bandwidths and error-smoother corners are absolute Hz and
+    /// must track the rate, or the slip-sawtooth beat (ppm * fs) walks out
+    /// from under the smoothers — measured as a ~32 dB quality loss at
+    /// 16 kHz with unscaled defaults. Hold times scale inversely so the
+    /// promotion gates wait the same number of loop time constants.
+    /// Frame-denominated thresholds and ppm limits are rate-invariant and
+    /// stay put. See Config::forSampleRate.
+    ServoConfig scaledTo(double sampleRateHz) const noexcept {
+        constexpr double kDesignRateHz = 48000.0;
+        const double r = sampleRateHz / kDesignRateHz;
+        ServoConfig s = *this;
+        s.acquireBandwidthHz *= r;
+        s.trackBandwidthHz *= r;
+        s.quietBandwidthHz *= r;
+        s.acquireSmootherHz *= r;
+        s.trackSmootherHz *= r;
+        s.quietSmootherHz *= r;
+        s.lockHoldSeconds /= r;
+        s.quietHoldSeconds /= r;
+        return s;
+    }
 };
 
 /// PI loop filter + three-stage lock-state machine. Pure double-precision

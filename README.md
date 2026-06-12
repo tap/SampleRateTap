@@ -169,9 +169,12 @@ drift ramp at 10 ppm/s is tracked without unlocking.
 
 The same structure holds at other deployment rates, e.g. 16 kHz for
 reference-microphone processing — but `FilterSpec` band edges and
-`ServoConfig` bandwidths are absolute Hz (the defaults assume ~48 kHz), so
-scale both with the rate (balanced at 16 kHz: passband ≈ 6.67 kHz, stopband
-≈ 9.33 kHz, servo bandwidths × 16/48). Measured that way
+`ServoConfig` bandwidths are absolute Hz designed for ~48 kHz, and running
+another rate with unscaled defaults silently costs quality (measured:
+~32 dB at 16 kHz). Start any non-48 kHz deployment from
+`srt::Config::forSampleRate(rateHz)`, which rescales both (plus the servo
+hold times); `FilterSpec::scaledTo` / `ServoConfig::scaledTo` exist for
+custom presets. Measured through that factory
 (`tests/test_asrc_quality_16k.cpp`), 16 kHz matches the 48 kHz
 normalized-frequency structure: 136.6 dB at 333 Hz and 106.5 dB at 6.5 kHz,
 within ~1 dB of the 48 kHz tones at the same f/fs. Interpolation noise

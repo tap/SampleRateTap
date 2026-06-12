@@ -26,6 +26,28 @@ struct Config {
     std::size_t fifoFrames = 0;           ///< ring capacity; 0 => automatic
     FilterSpec filter{};
     ServoConfig servo{};
+
+    /// Defaults adapted to a nominal rate other than 48 kHz. The filter
+    /// band edges and servo bandwidths are absolute Hz designed for 48 kHz;
+    /// running another rate with unscaled defaults silently costs quality
+    /// (measured: ~32 dB at 16 kHz, because the slip beat ppm * fs drops
+    /// below the servo smoothers' rejection). This factory rescales both —
+    /// see FilterSpec::scaledTo and ServoConfig::scaledTo — and is the
+    /// recommended starting point for any non-48 kHz deployment:
+    ///
+    ///   srt::Config cfg = srt::Config::forSampleRate(16000.0);
+    ///   cfg.channels = ...;            // then adjust as usual
+    ///
+    /// Frame-denominated fields (targetLatencyFrames, fifoFrames) are
+    /// rate-invariant in frames and left alone; note their duration in
+    /// milliseconds scales inversely with the rate.
+    static Config forSampleRate(double sampleRateHz) noexcept {
+        Config c;
+        c.sampleRateHz = sampleRateHz;
+        c.filter = c.filter.scaledTo(sampleRateHz);
+        c.servo = c.servo.scaledTo(sampleRateHz);
+        return c;
+    }
 };
 
 /// Converter state as seen by status().
