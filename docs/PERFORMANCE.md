@@ -121,7 +121,10 @@ table is already enforced by test thresholds.
   float path traded cheap HW doubles for int64 ops; accepted for the
   cross-target win). x86 same-minute A/B: float −5.4%, Q15 −12.0%.
   Quality *improved*: 135.0 dB at 997 Hz (2^-64 phase vs 2^-52).
-  Hexagon recorded from the PR's gating run.
+  Hexagon (from the PR's gating run): pipeline Q31 −15.5%, Q15 −10.3%,
+  float −2.6% — the per-sample soft-double phase math C1 identified as
+  dominating Hexagon's pipelines is now gone; kernels count-identical
+  (control).
 - [ ] **PR C4…** — remaining hypotheses (explicit SIMD; deferred
   multi-accumulator float dot) only if budgets demand. Hypothesis 5 (deferred): explicit 4-way double
   accumulation for the float dot product — est. 2–3× float kernel on

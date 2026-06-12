@@ -214,9 +214,9 @@ Executed instructions per fixed workload (`bench/icount/`), measured under QEMU 
 | `kernel_float` | 99,468,474 | 339,027,222 |
 | `kernel_q15` | 181,994,196 | 102,819,852 |
 | `kernel_q31` | 210,789,622 | 110,455,141 |
-| `pipeline_float` | 92,751,177 | 344,819,729 |
-| `pipeline_q15` | 127,446,817 | 133,644,650 |
-| `pipeline_q31` | 162,708,581 | 142,846,068 |
+| `pipeline_float` | 92,751,177 | 335,912,671 |
+| `pipeline_q15` | 127,446,817 | 119,847,854 |
+| `pipeline_q31` | 162,708,581 | 120,694,199 |
 <!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->
