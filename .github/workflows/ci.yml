@@ -199,6 +199,35 @@ jobs:
       - name: Test under emulation
         run: ctest --test-dir build --output-on-failure
 
+  # Cortex-M33 (Raspberry Pi Pico 2 / RP2350 class: single-precision FPU,
+  # no FP64, no MVE) on QEMU's MPS2+ AN505 model. Shares the Armv8-M
+  # startup with the M55 target; quantifies the soft-double float path and
+  # anchors the Q15/Q31 budgets for Pico-class parts.
+  cortex-m33-qemu:
+    name: Cortex-M33 cross (QEMU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install toolchain and QEMU
+        run: >
+          sudo apt-get update -q &&
+          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=MinSizeRel
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake
+          -DSRT_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build build -j 4
+
+      - name: Test under emulation
+        run: ctest --test-dir build --output-on-failure
+
   # ------------------------------------------------------------------------
   # Template: genuine Tensilica HiFi4/HiFi5 coverage. The HiFi audio ISA,
   # xt-clang compiler and xt-run instruction-set simulator are proprietary
@@ -273,6 +302,20 @@ jobs:
         run: >
           python3 scripts/icount.py --target m55
           --build-dir build-m55 --plugin /tmp/libinsncount.so
+
+      - name: Build M33 workloads
+        run: >
+          cmake -B build-m33
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake
+          -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
+          -DSRT_BUILD_ICOUNT_BENCH=ON
+          && cmake --build build-m33 -j 4
+
+      - name: Ratchet M33
+        run: >
+          python3 scripts/icount.py --target m33
+          --build-dir build-m33 --plugin /tmp/libinsncount.so
 
       # Neither Debian's nor the CodeLinaro toolchain's qemu-hexagon enables
       # TCG plugins, so the Hexagon leg builds its own from the pinned QEMU

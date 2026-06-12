@@ -13,11 +13,11 @@ import re
 import sys
 
 BEGIN, END = "<!-- ICOUNT:BEGIN -->", "<!-- ICOUNT:END -->"
-TARGET_NAMES = {"m55": "Cortex-M55", "hexagon": "Hexagon"}
+TARGET_NAMES = {"m33": "Cortex-M33", "m55": "Cortex-M55", "hexagon": "Hexagon"}
 
 
 def table(baselines: dict) -> str:
-    targets = [t for t in ("m55", "hexagon") if baselines.get(t)]
+    targets = [t for t in ("m33", "m55", "hexagon") if baselines.get(t)]
     scenarios = sorted({s for t in targets for s in baselines[t]})
     lines = [
         "Executed instructions per fixed workload (`bench/icount/`), measured "

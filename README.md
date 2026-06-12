@@ -174,6 +174,13 @@ CI builds and tests every push on:
   committed baselines (`bench/baselines.json`) at ±3% — a hot-path
   regression on Hexagon or Cortex-M55 fails CI. See
   [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+- **Arm Cortex-M33** (Raspberry Pi Pico 2 / RP2350 class), bare metal on
+  QEMU's MPS2+ AN505 model, sharing the Armv8-M platform layer below. The
+  M33 has no FP64 and no Helium, and the instruction baselines make the
+  consequences concrete: the float datapath costs ~19× the M55's
+  instructions (soft-double accumulation) — on Pico-class parts use
+  Q15/Q31, where 48 kHz mono fits a 150 MHz core with room to spare and
+  stereo wants the `fast()` preset or the RP2350's second core.
 - **Arm Cortex-M55**, bare metal (newlib + semihosting, no OS/threads),
   executed on QEMU's MPS3 AN547 board model via `qemu-system-arm`. The
   platform layer lives in `platform/mps3_an547/` (linker script + minimal
@@ -200,6 +207,11 @@ every test through the emulator transparently).
 
 [quic/toolchain_for_hexagon]: https://github.com/quic/toolchain_for_hexagon
 
+Everything above runs on emulated or simulated clocks. For validating
+against *real* independent oscillators with commodity hardware (a Pi with
+two USB audio dongles, a Pi + Pico 2, two Pis over Ethernet), see
+[docs/HARDWARE_TESTING.md](docs/HARDWARE_TESTING.md).
+
 ## Performance
 
 Methodology, optimization roadmap and regression gating live in
@@ -209,14 +221,14 @@ Methodology, optimization roadmap and regression gating live in
 <!-- ICOUNT:BEGIN -->
 Executed instructions per fixed workload (`bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bench/baselines.json`:
 
-| Workload | Cortex-M55 | Hexagon |
-|---|---:|---:|
-| `kernel_float` | 99,468,474 | 339,027,222 |
-| `kernel_q15` | 181,994,196 | 102,819,852 |
-| `kernel_q31` | 210,789,622 | 110,455,141 |
-| `pipeline_float` | 92,751,177 | 335,912,671 |
-| `pipeline_q15` | 127,446,817 | 119,847,854 |
-| `pipeline_q31` | 162,708,581 | 120,694,199 |
+| Workload | Cortex-M33 | Cortex-M55 | Hexagon |
+|---|---:|---:|---:|
+| `kernel_float` | 1,897,321,329 | 99,468,474 | 339,027,222 |
+| `kernel_q15` | 587,096,252 | 181,994,196 | 102,819,852 |
+| `kernel_q31` | 634,168,961 | 210,789,622 | 110,455,141 |
+| `pipeline_float` | 1,856,735,553 | 92,751,177 | 335,912,671 |
+| `pipeline_q15` | 499,819,202 | 127,446,817 | 119,847,854 |
+| `pipeline_q31` | 566,751,937 | 162,708,581 | 120,694,199 |
 <!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->

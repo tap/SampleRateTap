@@ -46,8 +46,12 @@ combinations that change the answer.
    Correction discovered while measuring: Cortex-M55's *scalar* FPU does
    support FP64 (only MVE is fp16/fp32), so the M55 float path was never
    soft-double-bound — Hexagon is the genuinely double-less target.
-4. **Explicit SIMD kernels** (NEON / AVX2 / Helium MVE for Q15 on M55) —
-   only if budgets still demand it after 1–3.
+4. **Explicit SIMD kernels** — partially moot for M55: objdump confirms
+   GCC already auto-vectorizes the Q15/Q31 kernels with Helium at -O2
+   (the M55's ~4× Q15 advantage over the scalar M33 in the baselines is
+   MVE at work). Remaining candidates: packed SMLAD Q15 kernel for
+   M33/Pico-class parts (their binaries are nearly DSP-extension-free
+   today), NEON/AVX2 for hosts — only if budgets demand.
 
 ## "Done" criteria
 
@@ -68,7 +72,8 @@ baseline lands and revised deliberately. Stop when any of:
   Mechanics: `bench/icount/` builds one fixed-workload binary per scenario
   (no argv on bare metal); `tools/qemu_insn_plugin/` is the counting
   plugin; `scripts/icount.py --target {m55,hexagon} --build-dir D --plugin
-  P [--update]` runs and compares. Counts are exact across runs (verified),
+  P [--update]` runs and compares; targets are m55, m33 (mps2-an505) and
+  hexagon. Counts are exact across runs (verified),
   but they are a function of the **compiler version**: when the CI
   toolchain package updates, the ratchet job fails and the baselines get
   re-recorded in a reviewed commit — that is working as intended, not a
