@@ -168,7 +168,12 @@ jobs:
       - name: Test under emulation
         run: >
           ctest --test-dir build --output-on-failure
-          -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.'
+          -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation'
+        # ConfigValidation: this static-musl toolchain cannot unwind across
+        # frames — the constructor throws correctly but EXPECT_THROW never
+        # catches and libc++abi terminates. Validation is target-independent
+        # and covered on every other leg; limitation tracked in
+        # docs/PERFORMANCE.md "Known debt".
 
   # Cross-compile for Arm Cortex-M55 (bare metal, newlib + semihosting) and
   # run the emulation-sized test subset on QEMU's MPS3 AN547 board model.

@@ -109,6 +109,12 @@ table is already enforced by test thresholds.
   the matching comment).
 - **Tail-latency benchmark not implemented**: the Metrics table promises
   p99/max per-call `pull(128)` timing; no benchmark measures it yet.
+- **Hexagon static-musl cannot catch exceptions**: a constructor throw
+  terminates via libc++abi instead of propagating (discovered when the
+  first EXPECT_THROW test reached that leg; ConfigValidation is excluded
+  there). Deployment note: on this toolchain configuration, treat invalid
+  Config as fatal — validate inputs before constructing. Candidate fix:
+  link an unwinder (-unwindlib=libunwind) in cmake/hexagon-linux-musl.cmake.
 
 ## Sequencing & status
 
