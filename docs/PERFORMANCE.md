@@ -163,14 +163,27 @@ table is already enforced by test thresholds.
   shape for HVX. The HVX-compatible shape is **channel-parallel** (one
   64-bit lane-pair per channel; 16 channels fill one vector exactly),
   recorded as hypothesis C6 below.
-- [ ] **PR C6…** — channel-parallel dot for high channel counts
-  (12-channel 7.1.4 and 16-channel AVB-with-reference-mics are real
-  deployments): channels in SIMD lanes, one accumulator lane per
-  channel, coefficient broadcast — bit-exact for *every* sample type
-  including float, since each channel's accumulation order is unchanged.
-  Wants a channel-major history layout above a channel threshold.
-  Candidates: AVX2 (4 double lanes), Helium, HVX (16 x int64 lanes).
-  Profile the 12-channel deinterleave/scatter cost first. Hypothesis 5
+- [x] **PR C6** — channel-parallel dot for high channel counts
+  (frame-major history + register-blocked 8/4/2/1 channel tiles,
+  `SRT_CP_MIN_CHANNELS` = 4, hosts only). Profile first (callgrind,
+  12ch Q15): per-channel dot MACs ≈ 85% of instructions, deinterleave
+  ~2% — the dots were the target. Results, same-minute A/B:
+  **float 8/12/16-channel −38/−38/−42% wall-clock with AVX2+FMA**
+  (`-march=native`; −4–5% on baseline SSE2 builds — gains scale with
+  SIMD width because the channel axis is the *only* axis the float path
+  may vectorize on: per-channel double accumulation order is unchanged,
+  so it is bit-exact, hash-verified against planar over 30k blocks ×
+  4 configs). **Fixed-point: negative result, planar kept** — the
+  channel-parallel form measured ~1.5× SLOWER than planar Q15 on hosts
+  (planar already auto-vectorizes over taps; integer reduction is
+  exactly reassociable, so that axis was never blocked). Two
+  implementation lessons recorded: a naive channels-inner loop with
+  memory accumulators is 2.8× slower than planar (register-block or
+  don't bother), and the mode gate must be compile-time — a runtime
+  bool in the hot loops cost +6–8% on the M55 ratchet before the
+  constexpr gate restored every embedded scenario to 0.00%.
+  Embedded channel-parallel (HVX 16×int64-lane, Helium) remains a
+  follow-up candidate if DSP budgets demand it. Hypothesis 5
   (deferred): explicit 4-way double accumulation for the float dot —
-  est. 2–3× float kernel on AVX2-class SIMD, but bit-changing; take only
-  if budgets demand it.
+  bit-changing; superseded for N≥4 by C6's bit-exact channel axis, only
+  relevant for mono/stereo float if ever needed.

@@ -254,21 +254,21 @@ Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 
 
 | Benchmark | ns/item | ×realtime @48k |
 |---|---:|---:|
-| `BM_Kernel_Float_Fast` | 54.5 | 382× |
-| `BM_Kernel_Float_Balanced` | 86.6 | 241× |
-| `BM_Kernel_Float_Transparent` | 132.4 | 157× |
-| `BM_Kernel_Q15_Balanced` | 51.6 | 404× |
-| `BM_Kernel_Q31_Balanced` | 66.5 | 313× |
-| `BM_Pipeline_Float_Balanced_1ch` | 88.8 | 235× |
-| `BM_Pipeline_Float_Balanced_2ch` | 131.2 | 159× |
-| `BM_Pipeline_Float_Balanced_8ch` | 460.2 | 45× |
-| `BM_Pipeline_Q15_Balanced_2ch` | 70.8 | 294× |
-| `BM_Pipeline_Q31_Balanced_2ch` | 130.3 | 160× |
-| `BM_Pipeline_Float_Transparent_2ch` | 241.5 | 86× |
-| `BM_Pipeline_Float_Balanced_12ch` | 678.3 | 31× |
-| `BM_Pipeline_Q15_Balanced_12ch` | 233.8 | 89× |
-| `BM_Pipeline_Float_Balanced_16ch` | 894.6 | 23× |
-| `BM_Pipeline_Q15_Balanced_16ch` | 290.3 | 72× |
+| `BM_Kernel_Float_Fast` | 48.9 | 426× |
+| `BM_Kernel_Float_Balanced` | 69.0 | 302× |
+| `BM_Kernel_Float_Transparent` | 109.1 | 191× |
+| `BM_Kernel_Q15_Balanced` | 45.2 | 461× |
+| `BM_Kernel_Q31_Balanced` | 62.9 | 331× |
+| `BM_Pipeline_Float_Balanced_1ch` | 67.7 | 308× |
+| `BM_Pipeline_Float_Balanced_2ch` | 107.8 | 193× |
+| `BM_Pipeline_Float_Balanced_8ch` | 336.2 | 62× |
+| `BM_Pipeline_Q15_Balanced_2ch` | 56.0 | 372× |
+| `BM_Pipeline_Q31_Balanced_2ch` | 120.8 | 173× |
+| `BM_Pipeline_Float_Transparent_2ch` | 164.2 | 127× |
+| `BM_Pipeline_Float_Balanced_12ch` | 511.8 | 41× |
+| `BM_Pipeline_Q15_Balanced_12ch` | 189.1 | 110× |
+| `BM_Pipeline_Float_Balanced_16ch` | 649.6 | 32× |
+| `BM_Pipeline_Q15_Balanced_16ch` | 241.8 | 86× |
 <!-- PERF:END -->
 
 ## Sample types
