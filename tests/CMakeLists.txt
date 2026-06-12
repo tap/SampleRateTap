@@ -35,6 +35,7 @@ add_executable(srt_tests
     test_servo.cpp
     test_asrc_lock.cpp
     test_asrc_quality.cpp
+    test_asrc_quality_16k.cpp
     test_fade.cpp
     test_latency.cpp
     test_multichannel.cpp)

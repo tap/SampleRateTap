@@ -167,6 +167,17 @@ adjacent phase-table rows (≈ −12 dB per doubling of `L`, +12 dB per octave o
 signal frequency). Servo lock from a cold start takes ~1 s; a 0 → 300 ppm
 drift ramp at 10 ppm/s is tracked without unlocking.
 
+The same structure holds at other deployment rates, e.g. 16 kHz for
+reference-microphone processing — but `FilterSpec` band edges and
+`ServoConfig` bandwidths are absolute Hz (the defaults assume ~48 kHz), so
+scale both with the rate (balanced at 16 kHz: passband ≈ 6.67 kHz, stopband
+≈ 9.33 kHz, servo bandwidths × 16/48). Measured that way
+(`tests/test_asrc_quality_16k.cpp`), 16 kHz matches the 48 kHz
+normalized-frequency structure: 136.6 dB at 333 Hz and 106.5 dB at 6.5 kHz,
+within ~1 dB of the 48 kHz tones at the same f/fs. Interpolation noise
+depends only on f/fs; group delay at the same tap count stays ~24 input
+samples and therefore triples in milliseconds (1.5 ms vs 0.5 ms).
+
 ## Platform support
 
 CI builds and tests every push on:
