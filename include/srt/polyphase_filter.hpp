@@ -5,6 +5,7 @@
 
 #include <bit>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -158,6 +159,43 @@ inline void blendRow(const PolyphaseFilterBank<S>& bank,
         row[t] = Tr::blend(c0[t], c1[t], fr);
 }
 
+/// Phase-bit variants: the fractional position as an unsigned Q0.64
+/// fraction. The polyphase index is the top log2(L) bits and the intra-phase
+/// blend factor comes from the bits below — no double arithmetic per sample,
+/// which is what makes this path cheap on targets without a double-precision
+/// FPU. Resolution is 2^-64 samples (finer than the double-mu path's 2^-52).
+template <SampleType S>
+inline void blendRowPhase(const PolyphaseFilterBank<S>& bank,
+                          typename SampleTraits<S>::Coeff* SRT_RESTRICT row,
+                          std::uint64_t phase) noexcept {
+    using Tr = SampleTraits<S>;
+    const int lg = std::countr_zero(bank.numPhases()); // L is a power of two
+    const std::size_t p = static_cast<std::size_t>(phase >> (64 - lg));
+    const auto fr = Tr::blendFactorFromQ64(phase << lg);
+    const auto* c0 = bank.phase(p);
+    const auto* c1 = bank.phase(p + 1);
+    const std::size_t taps = bank.taps();
+    for (std::size_t t = 0; t < taps; ++t)
+        row[t] = Tr::blend(c0[t], c1[t], fr);
+}
+
+/// interpolate() over a Q0.64 phase; fused blend+mac (mono fast path).
+template <SampleType S>
+inline S interpolatePhase(const PolyphaseFilterBank<S>& bank, const S* hist,
+                          std::uint64_t phase) noexcept {
+    using Tr = SampleTraits<S>;
+    const int lg = std::countr_zero(bank.numPhases());
+    const std::size_t p = static_cast<std::size_t>(phase >> (64 - lg));
+    const auto fr = Tr::blendFactorFromQ64(phase << lg);
+    const auto* c0 = bank.phase(p);
+    const auto* c1 = bank.phase(p + 1);
+    typename Tr::Accum acc{};
+    const std::size_t taps = bank.taps();
+    for (std::size_t t = 0; t < taps; ++t)
+        acc = Tr::mac(acc, hist[t], Tr::blend(c0[t], c1[t], fr));
+    return Tr::finalize(acc);
+}
+
 /// Dot product of a pre-blended coefficient row against a history window.
 /// Identical arithmetic to interpolate() given the same mu: blend then mac,
 /// per tap, in the same order — outputs are bit-exact either way.
@@ -178,11 +216,15 @@ inline S dotRow(const typename SampleTraits<S>::Coeff* SRT_RESTRICT row, const S
 /// through a caller-supplied PopFn in small bulk chunks and deinterleaved into
 /// the histories as the integer read position advances.
 ///
-/// Phase accumulator: mu is a double in [0, 1) and accumulates only the rate
-/// DEVIATION eps per output sample; the unity part of the ratio is applied as
-/// the integer window advance. Adding eps ~ 1e-4 to a [0,1) double keeps full
-/// 52-bit fractional precision (2^-52 samples ~ 5 attoseconds at 48 kHz), far
-/// below the ~8 ps jitter budget for 120 dB transparency.
+/// Phase accumulator: the fractional position lives in an unsigned Q0.64
+/// integer and accumulates only the rate DEVIATION eps per output sample
+/// (converted from double once per process() call, at block rate); the
+/// unity part of the ratio is applied as the integer window advance. The
+/// per-sample path is therefore integer-only (plus one single-precision
+/// blend-factor conversion on the float datapath) — no doubles, which is
+/// what keeps it cheap on FPU-less DSP targets. Resolution is 2^-64 samples,
+/// far below the ~8 ps jitter budget for 120 dB transparency, and slips are
+/// detected by 64-bit wraparound instead of comparisons.
 template <SampleType S>
 class FractionalResampler {
 public:
@@ -202,14 +244,16 @@ public:
     /// Clears history, scratch and mu. Frames already popped into the scratch
     /// are dropped (only used across discontinuities, where they are stale).
     void reset() noexcept {
-        mu_ = 0.0;
+        phase_ = 0;
         end_ = 0;
         primed_ = false;
         scratchFrames_ = 0;
         scratchPos_ = 0;
     }
 
-    double mu() const noexcept { return mu_; }
+    /// Fractional position in [0,1) as a double; used by the servo at block
+    /// rate (one conversion per pull, not per sample).
+    double mu() const noexcept { return static_cast<double>(phase_) * 0x1p-64; }
     bool primed() const noexcept { return primed_; }
 
     /// Frames popped from the source but not yet consumed by the filter; part
@@ -238,28 +282,31 @@ public:
     /// interleaved frames, returning the count actually delivered.
     template <typename PopFn>
     std::size_t process(S* out, std::size_t maxFrames, double epsHat, PopFn&& popFrames) noexcept {
+        // eps in Q0.64, converted once per call (block rate). |eps| is
+        // servo-clamped to ~1e-3, so eps * 2^64 fits int64 comfortably.
+        const auto epsFix = static_cast<std::int64_t>(epsHat * 0x1p64);
+        const auto epsU = static_cast<std::uint64_t>(epsFix);
         for (std::size_t n = 0; n < maxFrames; ++n) {
-            double m = mu_ + epsHat;
+            const std::uint64_t m = phase_ + epsU; // mod 2^64
             std::size_t advance = 1;
-            if (m >= 1.0) { // forward slip: consume one extra input frame
-                m -= 1.0;
-                advance = 2;
-            } else if (m < 0.0) { // backward slip: re-use the current window
-                m += 1.0;
-                advance = 0;
+            if (epsFix >= 0) {
+                if (m < phase_)      // wrapped past 1.0: forward slip,
+                    advance = 2;     // consume one extra input frame
+            } else if (m > phase_) { // wrapped below 0.0: backward slip,
+                advance = 0;         // re-use the current window
             }
             for (std::size_t a = 0; a < advance; ++a) {
                 if (!appendOne(popFrames))
-                    return n; // dry: mu_ not advanced for this frame
+                    return n; // dry: phase_ not advanced for this frame
             }
-            mu_ = m;
+            phase_ = m;
             if (channels_ == 1) { // fused blend+mac; no scratch traffic
-                out[n] = interpolate(*bank_, window(0), m);
+                out[n] = interpolatePhase(*bank_, window(0), m);
             } else {
                 // Blend once per frame, dot per channel: the blend is the
                 // same for every channel, so this halves the inner-loop work
                 // for stereo and scales with channel count.
-                blendRow(*bank_, row_.data(), m);
+                blendRowPhase(*bank_, row_.data(), m);
                 const std::size_t taps = bank_->taps();
                 for (std::size_t c = 0; c < channels_; ++c)
                     out[n * channels_ + c] = dotRow<S>(row_.data(), window(c), taps);
@@ -303,7 +350,7 @@ private:
     std::size_t end_ = 0; // shared end index; all channels advance in lockstep
     std::size_t scratchFrames_ = 0;
     std::size_t scratchPos_ = 0;
-    double mu_ = 0.0;
+    std::uint64_t phase_ = 0; // fractional position, unsigned Q0.64
     bool primed_ = false;
 };
 

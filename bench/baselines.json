@@ -3,16 +3,16 @@
     "kernel_float": 339027222,
     "kernel_q15": 102819852,
     "kernel_q31": 110455141,
-    "pipeline_float": 344819729,
-    "pipeline_q15": 133644650,
-    "pipeline_q31": 142846068
+    "pipeline_float": 335912671,
+    "pipeline_q15": 119847854,
+    "pipeline_q31": 120694199
   },
   "m55": {
     "kernel_float": 99468474,
     "kernel_q15": 181994196,
     "kernel_q31": 210789622,
-    "pipeline_float": 91477022,
-    "pipeline_q15": 134581279,
-    "pipeline_q31": 170542353
+    "pipeline_float": 92751177,
+    "pipeline_q15": 127446817,
+    "pipeline_q31": 162708581
   }
 }

@@ -69,6 +69,14 @@ struct SampleTraits<float> {
     /// Convert the intra-phase fraction (in [0,1)) once per output sample.
     static BlendFactor makeBlendFactor(double fr) noexcept { return static_cast<BlendFactor>(fr); }
 
+    /// Blend factor from the top bits of a Q0.64 intra-phase fraction.
+    /// Single-precision only: the value is reduced to 24 bits first so the
+    /// uint->float conversion is exact and no double op is needed
+    /// (significant on targets without a double-precision FPU).
+    static BlendFactor blendFactorFromQ64(std::uint64_t frac) noexcept {
+        return static_cast<float>(frac >> 40) * 0x1p-24f;
+    }
+
     /// acc + x * c, in the accumulator domain.
     static Accum mac(Accum acc, float x, Coeff c) noexcept {
         return acc + static_cast<double>(x) * static_cast<double>(c);
@@ -106,6 +114,12 @@ struct SampleTraits<std::int16_t> {
 
     static BlendFactor makeBlendFactor(double fr) noexcept {
         return static_cast<BlendFactor>(fr * 32768.0); // Q15
+    }
+
+    /// Q15 blend factor straight from a Q0.64 fraction's top bits: no
+    /// floating point at all on the fixed-point per-sample path.
+    static BlendFactor blendFactorFromQ64(std::uint64_t frac) noexcept {
+        return static_cast<BlendFactor>(frac >> 49); // Q15
     }
 
     static Accum mac(Accum acc, std::int16_t x, Coeff c) noexcept {
@@ -154,6 +168,11 @@ struct SampleTraits<std::int32_t> {
         return static_cast<BlendFactor>(fr * 1048576.0); // Q20
     }
 
+    /// Q20 blend factor straight from a Q0.64 fraction's top bits.
+    static BlendFactor blendFactorFromQ64(std::uint64_t frac) noexcept {
+        return static_cast<BlendFactor>(frac >> 44); // Q20
+    }
+
     static Accum mac(Accum acc, std::int32_t x, Coeff c) noexcept {
         return acc + ((static_cast<std::int64_t>(x) * c) >> 16); // Q61 -> Q45
     }
@@ -179,6 +198,9 @@ concept SampleType =
         { SampleTraits<T>::makeCoeff(d) } -> std::same_as<typename SampleTraits<T>::Coeff>;
         {
             SampleTraits<T>::makeBlendFactor(d)
+        } -> std::same_as<typename SampleTraits<T>::BlendFactor>;
+        {
+            SampleTraits<T>::blendFactorFromQ64(std::uint64_t{})
         } -> std::same_as<typename SampleTraits<T>::BlendFactor>;
         { SampleTraits<T>::mac(a, x, c) } -> std::same_as<typename SampleTraits<T>::Accum>;
         { SampleTraits<T>::blend(c, c, f) } -> std::same_as<typename SampleTraits<T>::Coeff>;

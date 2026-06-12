@@ -75,10 +75,14 @@ The table stores an extra row (phase 0 advanced one tap) so the μ wrap
 1.0 → 0.0 with a one-sample window shift — the whole-sample slip — is
 exactly continuous and branch-free.
 
-**Phase accumulator.** μ ∈ [0, 1) is a double that accumulates only the rate
-*deviation* ε per output sample; the unity part of the ratio is the integer
-window advance. Resolution is 2⁻⁵² samples, far below the ~8 ps jitter
-budget for 120 dB transparency at 20 kHz.
+**Phase accumulator.** The fractional position lives in an unsigned Q0.64
+integer that accumulates only the rate *deviation* ε per output sample
+(converted from the servo's double once per block); the unity part of the
+ratio is the integer window advance, and whole-sample slips are detected by
+64-bit wraparound. The per-sample path is integer-only — no doubles — which
+keeps it cheap on DSPs without double-precision FPUs. Resolution is 2⁻⁶⁴
+samples, far below the ~8 ps jitter budget for 120 dB transparency at
+20 kHz.
 
 **Clock servo.** A lock-free SPSC FIFO sits between the domains and its
 occupancy is the phase detector of a type-2 (PI) loop whose output ε̂ drives
@@ -210,9 +214,9 @@ Executed instructions per fixed workload (`bench/icount/`), measured under QEMU 
 | `kernel_float` | 99,468,474 | 339,027,222 |
 | `kernel_q15` | 181,994,196 | 102,819,852 |
 | `kernel_q31` | 210,789,622 | 110,455,141 |
-| `pipeline_float` | 91,477,022 | 344,819,729 |
-| `pipeline_q15` | 134,581,279 | 133,644,650 |
-| `pipeline_q31` | 170,542,353 | 142,846,068 |
+| `pipeline_float` | 92,751,177 | 335,912,671 |
+| `pipeline_q15` | 127,446,817 | 119,847,854 |
+| `pipeline_q31` | 162,708,581 | 120,694,199 |
 <!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->
