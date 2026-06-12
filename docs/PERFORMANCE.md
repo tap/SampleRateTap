@@ -143,8 +143,33 @@ table is already enforced by test thresholds.
   invariant and is not worth it at current budgets. The kernel_q15
   scenario measures the fused `interpolate()` call, which is intentionally
   unchanged (the converter no longer uses it on these targets).
-- [ ] **PR C5…** — remaining hypotheses (Hexagon HVX — the largest
-  untouched pool; deferred multi-accumulator float dot) only if budgets
-  demand. Hypothesis 5 (deferred): explicit 4-way double
-  accumulation for the float dot product — est. 2–3× float kernel on
-  AVX2-class SIMD, but bit-changing; take only if budgets demand it.
+- [x] **PR C5** — Hexagon wide-MAC Q15 dot product: **measured negative
+  result, code intentionally not kept.** A `vrmpyh` intrinsic loop (four
+  exact 16x16 products per instruction into the int64 accumulator — the
+  C4 argument, 4-wide) was implemented, passed the full suite on Hexagon
+  QEMU bit-exactly, and measured only **−0.31%** on pipeline_q15
+  (119,847,854 → 119,478,758). Disassembly comparison (CI llvm-objdump,
+  pre/post): the baseline binary contains **zero** wide MACs and the
+  intrinsic build contains 10 — so the compiler had not already done
+  this; the gain is genuinely tiny because Hexagon's scalar ISA already
+  has single-instruction 64-bit MACs (`Rxx += mpy`) and 64-bit loads,
+  and the 2-byte-aligned history window costs combine work that eats the
+  rest. Per the stop rule (per-arch complexity must justify itself), the
+  intrinsic was reverted and this note is the deliverable. Note for HVX
+  proper: a 48–80-tap dot does not fill one 128-byte vector and HVX
+  16-bit MACs accumulate in 32-bit lanes, overflowing the exact-int64
+  invariant after ~24 worst-case taps — per-channel dots are the wrong
+  shape for HVX. The HVX-compatible shape is **channel-parallel** (one
+  64-bit lane-pair per channel; 16 channels fill one vector exactly),
+  recorded as hypothesis C6 below.
+- [ ] **PR C6…** — channel-parallel dot for high channel counts
+  (12-channel 7.1.4 and 16-channel AVB-with-reference-mics are real
+  deployments): channels in SIMD lanes, one accumulator lane per
+  channel, coefficient broadcast — bit-exact for *every* sample type
+  including float, since each channel's accumulation order is unchanged.
+  Wants a channel-major history layout above a channel threshold.
+  Candidates: AVX2 (4 double lanes), Helium, HVX (16 x int64 lanes).
+  Profile the 12-channel deinterleave/scatter cost first. Hypothesis 5
+  (deferred): explicit 4-way double accumulation for the float dot —
+  est. 2–3× float kernel on AVX2-class SIMD, but bit-changing; take only
+  if budgets demand it.
