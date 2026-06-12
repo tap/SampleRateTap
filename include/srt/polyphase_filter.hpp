@@ -37,6 +37,30 @@
 #define SRT_Q15_SMLALD 0
 #endif
 
+// Channel-parallel dot product for high channel counts (hypothesis C6,
+// docs/PERFORMANCE.md): history stored frame-major so the per-tap inner
+// loop runs across channels — contiguous loads, one accumulator lane per
+// channel, coefficient broadcast. Bit-exact because each channel's
+// accumulation order over taps is unchanged (lanes are channels, not
+// taps), which is what lets the FLOAT path vectorize at all: its strict
+// per-channel double accumulation forbids tap-axis SIMD (PERFORMANCE.md
+// hypothesis 5), but the channel axis is free. Float-only by measurement:
+// fixed-point planar dots already auto-vectorize over taps on hosts
+// (integer reduction is exactly reassociable) and measured ~1.5x FASTER
+// than the channel-parallel form. Host-only: the embedded targets keep
+// their proven planar codegen (Helium on M55, SMLALD on M33-class,
+// Hexagon's measured scalar floor — see PERFORMANCE.md C4/C5).
+#if !defined(__ARM_FEATURE_MVE) && !defined(__ARM_FEATURE_DSP) && !defined(__hexagon__)
+#define SRT_CHANNEL_PARALLEL 1
+#else
+#define SRT_CHANNEL_PARALLEL 0
+#endif
+// Minimum channel count for the frame-major path (overridable for A/B
+// measurements; the blend-share planar path stays better at low counts).
+#ifndef SRT_CP_MIN_CHANNELS
+#define SRT_CP_MIN_CHANNELS 4
+#endif
+
 namespace srt {
 
 /// Specification of the interpolation prototype filter.
@@ -243,6 +267,53 @@ inline S dotRow(const typename SampleTraits<S>::Coeff* SRT_RESTRICT row, const S
     return Tr::finalize(acc);
 }
 
+/// One K-channel tile of the channel-parallel dot (hypothesis C6): K
+/// accumulators live in a constexpr-size local array — registers, not
+/// memory — while the tap loop walks the frame-major window with stride
+/// `stride` samples per frame. K is the register-blocking factor; a naive
+/// channels-inner loop with accumulators in memory measures ~2.8x SLOWER
+/// than planar (each mac round-trips its accumulator through the stack).
+template <SampleType S, std::size_t K>
+inline void dotTileFrameMajor(const typename SampleTraits<S>::Coeff* SRT_RESTRICT row,
+                              const S* SRT_RESTRICT x, std::size_t taps, std::size_t stride,
+                              S* SRT_RESTRICT out) noexcept {
+    using Tr = SampleTraits<S>;
+    typename Tr::Accum acc[K]{};
+    for (std::size_t t = 0; t < taps; ++t) {
+        const auto coeff = row[t];
+        const S* SRT_RESTRICT frame = x + t * stride;
+        for (std::size_t k = 0; k < K; ++k)
+            acc[k] = Tr::mac(acc[k], frame[k], coeff);
+    }
+    for (std::size_t k = 0; k < K; ++k)
+        out[k] = Tr::finalize(acc[k]);
+}
+
+/// Channel-parallel dot products over a frame-major history block: all
+/// channels' outputs for one frame in register-blocked tiles of 8/4/2/1.
+/// Per channel the accumulation order over taps equals dotRow's, so the
+/// outputs are bit-exact vs the planar path for every sample type — float
+/// included, since each channel's double accumulator still sums the taps
+/// in the same order (lanes are channels, not taps).
+template <SampleType S>
+inline void dotRowsFrameMajor(const typename SampleTraits<S>::Coeff* SRT_RESTRICT row,
+                              const S* SRT_RESTRICT x, std::size_t taps, std::size_t channels,
+                              S* SRT_RESTRICT out) noexcept {
+    std::size_t c = 0;
+    for (; c + 8 <= channels; c += 8)
+        dotTileFrameMajor<S, 8>(row, x + c, taps, channels, out + c);
+    if (c + 4 <= channels) {
+        dotTileFrameMajor<S, 4>(row, x + c, taps, channels, out + c);
+        c += 4;
+    }
+    if (c + 2 <= channels) {
+        dotTileFrameMajor<S, 2>(row, x + c, taps, channels, out + c);
+        c += 2;
+    }
+    if (c < channels)
+        dotTileFrameMajor<S, 1>(row, x + c, taps, channels, out + c);
+}
+
 /// Streaming fractional-delay engine for one converter instance.
 ///
 /// Owns the per-channel history delay lines (planar, contiguous windows with
@@ -262,16 +333,22 @@ inline S dotRow(const typename SampleTraits<S>::Coeff* SRT_RESTRICT row, const S
 template <SampleType S>
 class FractionalResampler {
 public:
+    /// Frame-major channel-parallel mode is compiled in only on CP targets
+    /// and only for floating-point samples (see SRT_CHANNEL_PARALLEL).
+    static constexpr bool kChannelParallel =
+        SRT_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
+
     /// Allocates histories and the pop scratch buffer; setup time only.
     FractionalResampler(const PolyphaseFilterBank<S>& bank, std::size_t channels,
                         std::size_t chunkFrames = 64)
         : bank_(&bank), channels_(channels), chunk_(chunkFrames),
-          histCap_(bank.taps() + chunkFrames), scratch_(chunkFrames * channels), hist_(channels),
-          row_(bank.taps()) {
+          histCap_(bank.taps() + chunkFrames), scratch_(chunkFrames * channels),
+          frameMajor_(kChannelParallel && channels >= SRT_CP_MIN_CHANNELS),
+          hist_(frameMajor_ ? 1 : channels), row_(bank.taps()) {
         if (channels_ == 0 || chunk_ == 0)
             throw std::invalid_argument("FractionalResampler: bad config");
         for (auto& h : hist_)
-            h.assign(histCap_, SampleTraits<S>::silence());
+            h.assign(histCap_ * (frameMajor_ ? channels_ : 1), SampleTraits<S>::silence());
         reset();
     }
 
@@ -340,6 +417,13 @@ public:
             constexpr bool kPreferDotRow = SRT_Q15_SMLALD && std::is_same_v<S, std::int16_t>;
             if (channels_ == 1 && !kPreferDotRow) { // fused blend+mac; no scratch traffic
                 out[n] = interpolatePhase(*bank_, window(0), m);
+            } else if (kChannelParallel && frameMajor_) { // constant-folds away off-host
+                // High channel counts: one blend, then all channels' dots in
+                // a single channel-parallel pass over the frame-major window.
+                blendRowPhase(*bank_, row_.data(), m);
+                const std::size_t taps = bank_->taps();
+                const S* base = hist_[0].data() + (end_ - taps) * channels_;
+                dotRowsFrameMajor<S>(row_.data(), base, taps, channels_, out + n * channels_);
             } else {
                 // Blend once per frame, dot per channel: the blend is the
                 // same for every channel, so this halves the inner-loop work
@@ -364,15 +448,23 @@ private:
             if (scratchFrames_ == 0)
                 return false;
         }
-        if (end_ == histCap_) { // compact: keep the newest T-1 samples at the front
+        if (end_ == histCap_) { // compact: keep the newest T-1 frames at the front
             const std::size_t keep = bank_->taps() - 1;
+            // Samples per frame slot; the gate is compile-time so non-CP
+            // targets keep their previous codegen exactly (the runtime form
+            // measured +6-8% on the M55 ratchet from hot-loop branch bloat).
+            const std::size_t w = (kChannelParallel && frameMajor_) ? channels_ : 1;
             for (auto& h : hist_)
-                std::memmove(h.data(), h.data() + end_ - keep, keep * sizeof(S));
+                std::memmove(h.data(), h.data() + (end_ - keep) * w, keep * w * sizeof(S));
             end_ = keep;
         }
         const S* frame = scratch_.data() + scratchPos_ * channels_;
-        for (std::size_t c = 0; c < channels_; ++c)
-            hist_[c][end_] = frame[c];
+        if (kChannelParallel && frameMajor_) { // frames stay interleaved: one contiguous copy
+            std::memcpy(hist_[0].data() + end_ * channels_, frame, channels_ * sizeof(S));
+        } else {
+            for (std::size_t c = 0; c < channels_; ++c)
+                hist_[c][end_] = frame[c];
+        }
         ++end_;
         ++scratchPos_;
         return true;
@@ -383,6 +475,11 @@ private:
     std::size_t chunk_;
     std::size_t histCap_;
     std::vector<S> scratch_; // interleaved staging for bulk pops
+    // History storage: planar (one delay line per channel, hist_[c]) below
+    // SRT_CP_MIN_CHANNELS, frame-major (single interleaved line, hist_[0])
+    // at or above it on SRT_CHANNEL_PARALLEL targets. end_/histCap_ count
+    // frames in both modes.
+    bool frameMajor_;
     std::vector<std::vector<S>> hist_;
     std::vector<typename SampleTraits<S>::Coeff> row_; // per-frame blended coefficients
     std::size_t end_ = 0; // shared end index; all channels advance in lockstep
