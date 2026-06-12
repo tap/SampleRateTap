@@ -6,8 +6,9 @@
 // elimination and pins down cross-run determinism.
 //
 // SRT_SC_KIND: 0 = kernel (interpolate in isolation), 1 = pipeline (duplex
-//              push/pull through the full converter, stereo)
+//              push/pull through the full converter)
 // SRT_SC_TYPE: 0 = float, 1 = Q15, 2 = Q31
+// SRT_SC_CH:   pipeline channel count (default 2; 12 = the 7.1.4 shape)
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -52,9 +53,13 @@ double runKernel() {
     return sink;
 }
 
+#ifndef SRT_SC_CH
+#define SRT_SC_CH 2
+#endif
+
 template <typename S>
 double runPipeline() {
-    constexpr std::size_t kCh = 2;
+    constexpr std::size_t kCh = SRT_SC_CH;
     constexpr std::size_t kBlock = 32;
     srt::Config cfg;
     cfg.channels = kCh;

@@ -11,6 +11,7 @@
     "kernel_float": 1897321329,
     "kernel_q15": 587096252,
     "kernel_q31": 634168961,
+    "pipeline12_q15": 962613655,
     "pipeline_float": 1856735553,
     "pipeline_q15": 484146844,
     "pipeline_q31": 566751937
@@ -19,6 +20,7 @@
     "kernel_float": 99468474,
     "kernel_q15": 181994196,
     "kernel_q31": 210789622,
+    "pipeline12_q15": 387876968,
     "pipeline_float": 92751177,
     "pipeline_q15": 127446817,
     "pipeline_q31": 162708581
