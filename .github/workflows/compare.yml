@@ -1,0 +1,113 @@
+# Cross-resampler instruction-count comparison (docs/COMPARISON.md).
+# Manual trigger only: competitor counts are measured once per
+# toolchain/version pin and recorded in the docs, not gated — the ratchet
+# (ci.yml) gates only our own code. Prints one "CMP_COUNT <target> <bin> <n>"
+# line per measurement for harvesting.
+name: Resampler comparison (icount)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  compare-icount:
+    name: Comparison instruction counts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      QEMU_PLUGIN_HEADER_URL: https://raw.githubusercontent.com/qemu/qemu/v8.2.2/include/qemu/qemu-plugin.h
+      QEMU_SRC_URL: https://download.qemu.org/qemu-8.2.2.tar.xz
+      QEMU_SRC_SHA256: "847346c1b82c1a54b2c38f6edbd85549edeb17430b7d4d3da12620e2962bc4f3"
+      HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install toolchains and QEMU
+        run: >
+          sudo apt-get update -q &&
+          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+          libglib2.0-dev ninja-build meson flex bison
+
+      - name: Build counting plugin
+        run: |
+          curl -sfLo /tmp/qemu-plugin.h "$QEMU_PLUGIN_HEADER_URL"
+          gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/tmp \
+            -o /tmp/libinsncount.so tools/qemu_insn_plugin/insn_count.c
+
+      - name: Measure M55 and M33
+        run: |
+          for tgt in m55 m33; do
+            if [ "$tgt" = m33 ]; then
+              tc=cmake/arm-cortex-m33-mps2.cmake; machine=mps2-an505
+            else
+              tc=cmake/arm-cortex-m55-mps3.cmake; machine=mps3-an547
+            fi
+            cmake -B build-$tgt -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_TOOLCHAIN_FILE=$tc \
+              -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
+              -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
+            cmake --build build-$tgt -j 4
+            for bin in cmp_icount_srt_float cmp_icount_lsr_medium cmp_icount_lsr_best; do
+              out=$(qemu-system-arm -M $machine -nographic -semihosting \
+                -d plugin -plugin /tmp/libinsncount.so \
+                -kernel build-$tgt/bench/icount/$bin 2>&1)
+              echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
+                echo "$out"; echo "::error::$tgt $bin did not complete"; exit 1; }
+              n=$(echo "$out" | grep -o 'SRT_INSN_COUNT [0-9]*' | cut -d' ' -f2)
+              echo "CMP_COUNT $tgt $bin $n"
+            done
+          done
+
+      - name: Cache plugin-enabled qemu-hexagon
+        id: qemu-hex
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/qemu-hexagon-plugins
+          key: qemu-hexagon-plugins-${{ env.QEMU_SRC_URL }}-1
+
+      - name: Build plugin-enabled qemu-hexagon
+        if: steps.qemu-hex.outputs.cache-hit != 'true'
+        run: |
+          curl -sfLo /tmp/qemu-src.tar.xz "$QEMU_SRC_URL"
+          actual=$(sha256sum /tmp/qemu-src.tar.xz | cut -d' ' -f1)
+          if [ "$actual" != "$QEMU_SRC_SHA256" ]; then
+            echo "::error::qemu source checksum mismatch"; exit 1
+          fi
+          tar -xJf /tmp/qemu-src.tar.xz -C /tmp
+          cd /tmp/qemu-*/
+          ./configure --target-list=hexagon-linux-user --enable-plugins \
+            --disable-docs --disable-tools --disable-system
+          ninja -C build qemu-hexagon
+          mkdir -p ~/qemu-hexagon-plugins
+          cp build/qemu-hexagon ~/qemu-hexagon-plugins/
+
+      - name: Cache Hexagon toolchain
+        id: cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/hexagon
+          key: ${{ env.HEXAGON_TOOLCHAIN_URL }}-verified-1
+
+      - name: Measure Hexagon
+        run: |
+          if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
+            mkdir -p ~/hexagon && cd ~/hexagon
+            curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
+            tar --zstd -xf toolchain.tar.zst && rm toolchain.tar.zst
+            cd "$GITHUB_WORKSPACE"
+          fi
+          clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
+          [ -n "$clangxx" ] || { echo "::error::hexagon compiler not found"; exit 1; }
+          export PATH="$HOME/qemu-hexagon-plugins:$(dirname "$clangxx"):$PATH"
+          cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
+            -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
+            -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
+          cmake --build build-hex -j 4
+          for bin in cmp_icount_srt_float cmp_icount_lsr_medium cmp_icount_lsr_best; do
+            out=$(qemu-hexagon -d plugin -plugin /tmp/libinsncount.so \
+              build-hex/bench/icount/$bin 2>&1)
+            echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
+              echo "$out"; echo "::error::hexagon $bin did not complete"; exit 1; }
+            n=$(echo "$out" | grep -o 'SRT_INSN_COUNT [0-9]*' | cut -d' ' -f2)
+            echo "CMP_COUNT hexagon $bin $n"
+          done

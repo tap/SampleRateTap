@@ -39,6 +39,75 @@ Reading guide:
   libraries do not solve.
 - The naive FIFO row is the cost of doing nothing.
 
+## Computational cost, identical conditions (software subjects)
+
+Same engines, same task: convert a float 997 Hz stereo stream at the fixed,
+known near-unity ratio 1 + 200 ppm, streaming in 128-frame blocks
+(`bench/compare/`, `-DSRT_BUILD_COMPARE_BENCH=ON`). SampleRateTap runs its
+datapath with a constant rate deviation (the servo is quiescent at a fixed
+ratio); the libraries take the ratio as an input. Quality tiers are paired
+by vendor-stated stopband: balanced ≈ `MEDIUM` ≈ `HQ` (~120 dB),
+transparent ≈ `BEST` ≈ `VHQ` (~140 dB+). Latency figures are measured:
+SampleRateTap's is the filter group delay, libsamplerate's the input
+buffered before its first streaming output, soxr's via `soxr_delay()`.
+
+### Host wall-clock (x86, GCC 13.3 -O2, shared Xeon @ 2.10 GHz, 2026-06-12)
+
+Million output frames/s — relative ratios are the meaningful figures on a
+shared machine; all subjects ran in the same session.
+
+| Engine (~120 dB tier) | mono | stereo | 8-ch | algorithmic latency |
+|---|---:|---:|---:|---:|
+| **SampleRateTap** balanced | 15.6 | 10.5 | 3.0 | **23.5 frames (0.49 ms)** |
+| libsamplerate `MEDIUM` (0.2.2) | 4.4 | 3.7 | 1.4 | 46 frames (0.96 ms) |
+| soxr `HQ` (0.1.3) | 72.9 | 32.4 | 8.4 | 556–607 frames (11.6–12.6 ms) |
+
+| Engine (~140 dB tier) | stereo | algorithmic latency |
+|---|---:|---:|
+| **SampleRateTap** transparent | 5.8 | 40 frames (0.83 ms) |
+| libsamplerate `BEST` | 0.9 | 143 frames (3.0 ms) |
+| soxr `VHQ` | 22.2 | 777 frames (16.2 ms) |
+
+| No competitor analog | stereo | |
+|---|---:|---|
+| **SampleRateTap** Q15 balanced | 17.5 | the row FPU-less embedded targets actually run |
+
+Reading guide:
+
+- **soxr wins raw host throughput, and the latency column is why.** It
+  processes in large internal batches with SIMD throughout (soxr latency
+  measured via `soxr_delay()`). At ~12–16 ms it is a fine batch/offline
+  resampler and unusable inside a 1–2 ms live monitoring budget — the
+  regime SampleRateTap is built for. There is no setting that buys soxr's
+  throughput at SampleRateTap's latency.
+- **libsamplerate is the closest architectural analog** (streaming
+  time-domain polyphase, block-by-block) and SampleRateTap is 2.9–3.6×
+  faster at the matched ~120 dB tier, 6.2× at ~140 dB, while also carrying
+  ~2–3.6× less latency. That is the near-unity specialization dividend:
+  a 48-tap window with a creeping phase instead of general-ratio
+  machinery.
+- Even at 8 channels, one stream costs SampleRateTap ~1.6 % of a single
+  Xeon core (3.0 M frames/s ≈ 62× realtime).
+
+### Embedded executed instructions per output frame (QEMU TCG plugin)
+
+Same comparison workload cross-compiled per target (`SRT_ICOUNT_COMPARE`,
+`.github/workflows/compare.yml`; deterministic counts, methodology as the
+ratchet in [PERFORMANCE.md](PERFORMANCE.md)). Stereo float, 2 s of audio.
+libsamplerate 0.2.2; arm-none-eabi-gcc 13.2.1, hexagon-clang 19.1.5, -O2.
+
+| Target | **SampleRateTap** balanced | lsr `MEDIUM` | lsr `BEST` |
+|---|---:|---:|---:|
+| Cortex-M55 | **899** | 2,218 (2.5×) | 6,400 (7.1×) |
+| Cortex-M33 (Pico 2 class) | 18,842¹ | 49,424 (2.6×) | 149,426 (7.9×) |
+| Hexagon | HEX_SRT | HEX_MED | HEX_BEST |
+
+¹ The float datapath is soft-double-bound on the FP64-less M33 — the
+README directs Pico-class parts to Q15, where the **full converter**
+(servo and FIFO included) costs ~5,206 instructions/frame: libsamplerate
+has no fixed-point path, so its cheapest option on such parts costs
+**~9.5×** what SampleRateTap's intended configuration does.
+
 ## The landscape
 
 | | Type | Clock recovery | Ratio range | Quality | Latency | Footprint / targets | License & form |
