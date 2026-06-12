@@ -130,7 +130,21 @@ table is already enforced by test thresholds.
   float −2.6% — the per-sample soft-double phase math C1 identified as
   dominating Hexagon's pipelines is now gone; kernels count-identical
   (control).
-- [ ] **PR C4…** — remaining hypotheses (explicit SIMD; deferred
-  multi-accumulator float dot) only if budgets demand. Hypothesis 5 (deferred): explicit 4-way double
+- [x] **PR C4** — SMLALD Q15 dot product for DSP-extension cores without
+  Helium (M33/M4/M7 class; gated on `__ARM_FEATURE_DSP &&
+  !__ARM_FEATURE_MVE` so the M55 keeps its auto-vectorized loop — verified
+  0.00% on every M55 and Hexagon scenario). Bit-exact by construction:
+  exact int32 products, associative int64 accumulation; Q15 mono routes
+  through blendRow+dotRow on these targets to reach the dual-MAC loop.
+  M33 pipeline_q15 −3.1%. Honest accounting: the win is bounded because
+  the M33 Q15 frame cost is dominated by the coefficient blend's 64-bit
+  products (`fr * diff >> 15`, one smull each) and transport, not the dot
+  product; a packed blend would change the documented int64 blend
+  invariant and is not worth it at current budgets. The kernel_q15
+  scenario measures the fused `interpolate()` call, which is intentionally
+  unchanged (the converter no longer uses it on these targets).
+- [ ] **PR C5…** — remaining hypotheses (Hexagon HVX — the largest
+  untouched pool; deferred multi-accumulator float dot) only if budgets
+  demand. Hypothesis 5 (deferred): explicit 4-way double
   accumulation for the float dot product — est. 2–3× float kernel on
   AVX2-class SIMD, but bit-changing; take only if budgets demand it.

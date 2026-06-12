@@ -12,7 +12,7 @@
     "kernel_q15": 587096252,
     "kernel_q31": 634168961,
     "pipeline_float": 1856735553,
-    "pipeline_q15": 499819202,
+    "pipeline_q15": 484146844,
     "pipeline_q31": 566751937
   },
   "m55": {
