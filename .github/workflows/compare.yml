@@ -7,6 +7,11 @@ name: Resampler comparison (icount)
 
 on:
   workflow_dispatch:
+  # Temporary, for the initial harvest before this file exists on main
+  # (workflow_dispatch only registers from the default branch); removed
+  # once the Hexagon numbers are pinned in docs/COMPARISON.md.
+  push:
+    branches: [claude/compute-comparison]
 
 jobs:
   compare-icount:
