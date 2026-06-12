@@ -216,7 +216,10 @@ two USB audio dongles, a Pi + Pico 2, two Pis over Ethernet), see
 
 Methodology, optimization roadmap and regression gating live in
 [docs/PERFORMANCE.md](docs/PERFORMANCE.md). Build the benchmarks with
-`-DSRT_BUILD_BENCHMARKS=ON` (host only).
+`-DSRT_BUILD_BENCHMARKS=ON` (host only). A measured computational
+head-to-head against libsamplerate and soxr — host wall-clock and embedded
+instruction counts (`-DSRT_BUILD_COMPARE_BENCH=ON`, `SRT_ICOUNT_COMPARE`) —
+lives in [docs/COMPARISON.md](docs/COMPARISON.md).
 
 <!-- ICOUNT:BEGIN -->
 Executed instructions per fixed workload (`bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bench/baselines.json`:

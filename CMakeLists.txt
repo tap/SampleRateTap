@@ -43,6 +43,16 @@ if(SRT_BUILD_BENCHMARKS)
     add_subdirectory(bench)
 endif()
 
+# Head-to-head vs libsamplerate/soxr at a fixed known ratio (host-only;
+# needs the system packages). See docs/COMPARISON.md.
+option(SRT_BUILD_COMPARE_BENCH "Build resampler comparison benchmarks" OFF)
+if(SRT_BUILD_COMPARE_BENCH)
+    if(NOT SRT_BUILD_BENCHMARKS)
+        message(FATAL_ERROR "SRT_BUILD_COMPARE_BENCH requires SRT_BUILD_BENCHMARKS")
+    endif()
+    add_subdirectory(bench/compare)
+endif()
+
 # Fixed deterministic workloads for the QEMU instruction-count ratchet;
 # buildable for any target including bare metal. See docs/PERFORMANCE.md.
 option(SRT_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF)
