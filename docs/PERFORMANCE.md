@@ -42,9 +42,10 @@ combinations that change the answer.
    stereo; scales with channel count; makes the loop SIMD-friendlier.
 2. **Auto-vectorization quality**: contiguity, aliasing, alignment of the
    history window and coefficient rows. Verify, don't assume.
-3. **Fixed-point phase accumulator** (Q32.32): removes the ~10 per-sample
-   double operations — invisible in host numbers, significant on
-   double-less embedded FPUs. This is what the instruction metric is for.
+3. **Fixed-point phase accumulator** (done as Q0.64; see status below).
+   Correction discovered while measuring: Cortex-M55's *scalar* FPU does
+   support FP64 (only MVE is fp16/fp32), so the M55 float path was never
+   soft-double-bound — Hexagon is the genuinely double-less target.
 4. **Explicit SIMD kernels** (NEON / AVX2 / Helium MVE for Q15 on M55) —
    only if budgets still demand it after 1–3.
 
@@ -113,7 +114,15 @@ table is already enforced by test thresholds.
   dotRow is scalar (no packed 64-bit multiply in baseline ISAs). restrict
   measured: M55 pipeline_float −1.35% instructions, all other scenarios
   exactly 0.00%; x86 same-state A/B −3.7% wall-clock.
-- [ ] **PR C3…** — remaining hypotheses in ROI order, one per PR, each
-  with numbers. Hypothesis 5 (deferred): explicit 4-way double
+- [x] **PR C3** — Q0.64 fixed-point phase accumulator: per-sample path is
+  integer-only (slips via 64-bit wraparound; blend factor from phase bits;
+  eps converted once per block). M55: Q15 −5.3%, Q31 −4.6%, float +1.4%
+  (M55 has scalar FP64 hardware — see corrected hypothesis 3 — so its
+  float path traded cheap HW doubles for int64 ops; accepted for the
+  cross-target win). x86 same-minute A/B: float −5.4%, Q15 −12.0%.
+  Quality *improved*: 135.0 dB at 997 Hz (2^-64 phase vs 2^-52).
+  Hexagon recorded from the PR's gating run.
+- [ ] **PR C4…** — remaining hypotheses (explicit SIMD; deferred
+  multi-accumulator float dot) only if budgets demand. Hypothesis 5 (deferred): explicit 4-way double
   accumulation for the float dot product — est. 2–3× float kernel on
   AVX2-class SIMD, but bit-changing; take only if budgets demand it.
