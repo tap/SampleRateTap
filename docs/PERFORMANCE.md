@@ -65,10 +65,13 @@ baseline lands and revised deliberately. Stop when any of:
 
 ## Regression prevention
 
-- **Deterministic ratchet (CI-gated)**: the QEMU instruction-count benches
-  compare against a checked-in `bench/baselines.json`; a PR fails if any
-  metric regresses > 3%. Improvements update the file *in the diff* —
-  reviewable, with history in git.
+- **Deterministic ratchet (CI-gated, two-sided)**: the QEMU
+  instruction-count benches compare against a checked-in
+  `bench/baselines.json`; a PR fails if any metric moves more than 3% in
+  *either* direction. Regressions are rejected; improvements beyond
+  tolerance also fail until the baseline is re-recorded (`icount.py
+  --update`) *in the diff* — otherwise the stale slack would let later
+  regressions hide. Reviewable, with history in git.
 
   Mechanics: `bench/icount/` builds one fixed-workload binary per scenario
   (no argv on bare metal); `tools/qemu_insn_plugin/` is the counting
@@ -94,6 +97,14 @@ machine + date. The instruction-count table
 from `bench/baselines.json`, and the icount-ratchet CI job regenerates it
 and fails on any diff — those published numbers cannot go stale. The SNR
 table is already enforced by test thresholds.
+
+## Known debt
+
+- **MSVC /W4 triage outstanding**: the Windows CI leg builds with
+  `SRT_WERROR=OFF` until the /W4 output has been triaged (ci.yml carries
+  the matching comment).
+- **Tail-latency benchmark not implemented**: the Metrics table promises
+  p99/max per-call `pull(128)` timing; no benchmark measures it yet.
 
 ## Sequencing & status
 

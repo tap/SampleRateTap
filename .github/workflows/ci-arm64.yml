@@ -1,6 +1,8 @@
-# Native arm64 coverage: the only job that exercises the SPSC ring's
-# acquire/release protocol on real weakly-ordered hardware (x86 TSan runs
-# can't reorder like Arm does, and QEMU does not model weak memory).
+# TSan on native arm64: ci.yml's macos-latest leg already runs the suite
+# per push on Apple Silicon (arm64), but without TSan — this workflow's
+# unique value is the ring stress under TSan on real weakly-ordered
+# hardware (x86 TSan runs can't reorder like Arm does, and QEMU does not
+# model weak memory).
 #
 # Kept out of the per-push workflow on purpose: GitHub's arm64 hosted
 # runners ("ubuntu-24.04-arm") are not available on every plan for private
@@ -12,6 +14,10 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 6 * * 1" # Mondays 06:17 UTC
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   arm64-native:
@@ -52,3 +58,22 @@ jobs:
           for i in 1 2 3 4 5; do
             ctest --test-dir build-tsan -R 'SpscRing' --output-on-failure
           done
+
+      # Scheduled runs have no PR or push audience; without this a weekly
+      # failure goes unseen until someone checks the Actions tab.
+      - name: File or update failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="ci-arm64 weekly run failing"
+          body="Run failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          number=$(gh issue list --repo "${{ github.repository }}" \
+            --state open --search "in:title \"$title\"" \
+            --json number,title \
+            --jq ".[] | select(.title == \"$title\") | .number" | head -1)
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --repo "${{ github.repository }}" --body "$body"
+          else
+            gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body"
+          fi

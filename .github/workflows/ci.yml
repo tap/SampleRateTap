@@ -25,7 +25,8 @@ jobs:
           - name: macOS AppleClang
             os: macos-latest
             werror: ON
-          # Warnings stay non-fatal on MSVC until /W4 output has been triaged.
+          # Warnings stay non-fatal on MSVC until /W4 output has been
+          # triaged (docs/PERFORMANCE.md "Known debt").
           - name: Windows MSVC
             os: windows-latest
             werror: OFF
@@ -107,10 +108,10 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/hexagon
-          # -verified suffix: caches predating checksum verification are not
-          # reused (the download step, and thus verification, only runs on a
-          # cache miss).
-          key: ${{ env.HEXAGON_TOOLCHAIN_URL }}-verified-1
+          # Keyed on the pinned digest: every job that can write this key
+          # verifies its download against the same pin, so no unverified
+          # writer can poison the trusted entry.
+          key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
 
       - name: Download toolchain
         if: steps.cache.outputs.cache-hit != 'true'
@@ -268,11 +269,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      QEMU_PLUGIN_HEADER_URL: https://raw.githubusercontent.com/qemu/qemu/v8.2.2/include/qemu/qemu-plugin.h
+      # Commit the v8.2.2 tag pointed at when pinned (tags are movable;
+      # commit SHAs are not), with the header's digest verified on download.
+      QEMU_PLUGIN_HEADER_URL: https://raw.githubusercontent.com/qemu/qemu/11aa0b1ff115b86160c4d37e7c37e6a6b13b77ea/include/qemu/qemu-plugin.h
+      QEMU_PLUGIN_HEADER_SHA256: "c53a2af163e80e3f4bc6c60dbdfc84003db329d757e37cd8a16a77e1d82606ff"
       QEMU_SRC_URL: https://download.qemu.org/qemu-8.2.2.tar.xz
       # Hard pin from the "qemu source sha256:" line of run #24.
       QEMU_SRC_SHA256: "847346c1b82c1a54b2c38f6edbd85549edeb17430b7d4d3da12620e2962bc4f3"
       HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
+      # Same hard pin as the hexagon-qemu job: this job also writes the
+      # shared toolchain cache, so it must verify against the same digest.
+      HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
@@ -285,6 +292,10 @@ jobs:
       - name: Build counting plugin
         run: |
           curl -sfLo /tmp/qemu-plugin.h "$QEMU_PLUGIN_HEADER_URL"
+          actual=$(sha256sum /tmp/qemu-plugin.h | cut -d' ' -f1)
+          if [ "$actual" != "$QEMU_PLUGIN_HEADER_SHA256" ]; then
+            echo "::error::qemu-plugin.h checksum mismatch"; exit 1
+          fi
           gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/tmp \
             -o /tmp/libinsncount.so tools/qemu_insn_plugin/insn_count.c
 
@@ -349,13 +360,20 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/hexagon
-          key: ${{ env.HEXAGON_TOOLCHAIN_URL }}-verified-1
+          # Same digest-keyed name as the hexagon-qemu job; the download
+          # below verifies the same pin before anything is saved under it.
+          key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
 
       - name: Ratchet Hexagon
         run: |
           if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
             mkdir -p ~/hexagon && cd ~/hexagon
             curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
+            actual=$(sha256sum toolchain.tar.zst | cut -d' ' -f1)
+            if [ "$actual" != "$HEXAGON_TOOLCHAIN_SHA256" ]; then
+              echo "::error::toolchain checksum mismatch against pinned value"
+              exit 1
+            fi
             tar --zstd -xf toolchain.tar.zst && rm toolchain.tar.zst
             cd "$GITHUB_WORKSPACE"
           fi
@@ -416,6 +434,39 @@ jobs:
       - name: Run (smoke)
         run: ./build/bench/srt_bench --benchmark_min_time=0.01s
 
+  # Keeps the manually-triggered comparison paths (compare.yml,
+  # bench/compare) compiling per push; build-only — the measured numbers
+  # come from the manual workflow, never from here.
+  compare-smoke:
+    name: Comparison build smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install dependencies
+        run: >
+          sudo apt-get update -q &&
+          sudo apt-get install -y -q libsamplerate0-dev libsoxr-dev
+          gcc-arm-none-eabi
+
+      - name: Build host comparison bench
+        run: >
+          cmake -B build-host
+          -DCMAKE_BUILD_TYPE=Release
+          -DSRT_BUILD_BENCHMARKS=ON
+          -DSRT_BUILD_COMPARE_BENCH=ON
+          && cmake --build build-host -j 4 --target srt_bench_compare
+
+      - name: Build M55 comparison workload
+        run: >
+          cmake -B build-m55
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
+          -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
+          -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
+          && cmake --build build-m55 -j 4 --target cmp_icount_lsr_medium
+
   clang-format:
     name: clang-format
     runs-on: ubuntu-latest
@@ -427,5 +478,6 @@ jobs:
           sudo apt-get update -q && sudo apt-get install -y -q clang-format-18
           clang-format-18 --dry-run --Werror \
             include/srt/*.hpp include/srt/detail/*.hpp \
-            bench/*.cpp bench/icount/*.cpp tools/capi/*.cpp \
-            tests/*.cpp tests/support/*.hpp examples/*.cpp
+            bench/*.cpp bench/icount/*.cpp bench/compare/*.cpp \
+            tools/capi/*.cpp tools/qemu_insn_plugin/*.c \
+            tests/*.cpp tests/support/*.hpp examples/*.cpp platform/*.c

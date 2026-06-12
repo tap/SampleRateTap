@@ -36,6 +36,13 @@ def run_bench(bench: str) -> list[dict]:
 
 
 def table(rows: list[dict]) -> str:
+    usable = [b for b in rows
+              if b.get("run_type") == "iteration" and b.get("items_per_second")]
+    if not usable:
+        # An empty or items_per_second-less run would silently blank the
+        # README table.
+        raise SystemExit("benchmark produced no usable rows "
+                         "(empty list or missing items_per_second)")
     lines = [
         f"Indicative numbers from a shared machine ({cpu_name()}, "
         f"{datetime.date.today().isoformat()}); regenerate with "

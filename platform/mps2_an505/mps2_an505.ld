@@ -79,6 +79,10 @@ SECTIONS
         __heap_end__ = .;
     } > DATA
 
+    /* MSPLIM (set in Reset_Handler): the stack may descend to the heap cap
+     * but no further — overflow into the heap faults instead of corrupting. */
+    __stack_limit = __heap_end__;
+
     /* librdimon's (unused, weak) _sbrk references `end`; satisfy it. */
     PROVIDE(end = __heap_start__);
 }

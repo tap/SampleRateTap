@@ -17,6 +17,9 @@ MEMORY
 }
 
 __stack_top = ORIGIN(DTCM) + LENGTH(DTCM);
+/* MSPLIM (set in Reset_Handler): the stack owns all of DTCM, so the lowest
+ * address it may legally reach is the region base. */
+__stack_limit = ORIGIN(DTCM);
 
 ENTRY(Reset_Handler)
 

@@ -33,6 +33,7 @@ extern "C" {
 
 extern uint32_t __bss_start__, __bss_end__;
 extern uint32_t __stack_top;
+extern uint32_t __stack_limit;
 extern char __heap_start__, __heap_end__;
 
 extern void __libc_init_array(void);
@@ -101,6 +102,11 @@ uint64_t __atomic_exchange_8(volatile void* ptr, uint64_t value, int memorder) {
 }
 
 void Reset_Handler(void) {
+    /* MSPLIM exists on Armv8-M Mainline only (both targets are M33/M55
+     * class): a main-stack overflow past __stack_limit raises a fault
+     * instead of silently corrupting whatever sits below the stack. */
+    __asm volatile("msr msplim, %0" ::"r"(&__stack_limit));
+
     /* Grant full access to CP10/CP11 (scalar FPU + MVE) first: code below
      * may legitimately use FP registers once newlib is involved. */
     volatile uint32_t* const cpacr = (volatile uint32_t*)0xE000ED88u;
@@ -120,15 +126,23 @@ void Default_Handler(void) {
     }
 }
 
+void HardFault_Handler(void) {
+    /* Distinct park loop so a HardFault (e.g. MSPLIM violation escalation)
+     * is distinguishable from other parked vectors under a debugger. */
+    __asm volatile("bkpt #0");
+    for (;;) {
+    }
+}
+
 __attribute__((section(".vectors"), used)) static const uintptr_t vectors[16] = {
     (uintptr_t)&__stack_top,
     (uintptr_t)&Reset_Handler,
-    (uintptr_t)&Default_Handler, /* NMI */
-    (uintptr_t)&Default_Handler, /* HardFault */
-    (uintptr_t)&Default_Handler, /* MemManage */
-    (uintptr_t)&Default_Handler, /* BusFault */
-    (uintptr_t)&Default_Handler, /* UsageFault */
-    (uintptr_t)&Default_Handler, /* SecureFault */
+    (uintptr_t)&Default_Handler,   /* NMI */
+    (uintptr_t)&HardFault_Handler, /* HardFault */
+    (uintptr_t)&Default_Handler,   /* MemManage */
+    (uintptr_t)&Default_Handler,   /* BusFault */
+    (uintptr_t)&Default_Handler,   /* UsageFault */
+    (uintptr_t)&Default_Handler,   /* SecureFault */
     0,
     0,
     0,
