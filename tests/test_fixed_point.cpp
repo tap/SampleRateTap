@@ -100,10 +100,10 @@ TEST(FixedPoint, AsrcQualityQ15_997Hz) {
     EXPECT_GT(measureSnrDb<std::int16_t>(997.0, 0.5), 73.0);
 }
 TEST(FixedPoint, AsrcQualityQ31_997Hz) {
-    EXPECT_GT(measureSnrDb<std::int32_t>(997.0, 0.5), 124.0);
+    EXPECT_GT(measureSnrDb<std::int32_t>(997.0, 0.5), 124.0); // measured ~133 dB
 }
 TEST(FixedPoint, AsrcQualityQ31_19_5kHz) {
-    EXPECT_GT(measureSnrDb<std::int32_t>(19500.0, 0.5), 96.0);
+    EXPECT_GT(measureSnrDb<std::int32_t>(19500.0, 0.5), 96.0); // measured ~105 dB
 }
 
 TEST(FixedPoint, FullScaleSineDoesNotWrapQ15) {

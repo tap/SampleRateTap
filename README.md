@@ -16,7 +16,7 @@ slips that occur roughly once every `1/ppm` samples.
 - Real-time safe audio path: `push()`/`pull()` are `noexcept`, lock-free and
   allocation-free; all allocation and filter design happen in the constructor
 - Measured quality (default *balanced* preset, +200 ppm offset, THD+N-style
-  residual): **133 dB** SNR at 997 Hz, **111 dB** at 12 kHz, **105 dB** at
+  residual): **135 dB** SNR at 997 Hz, **112 dB** at 12 kHz, **105 dB** at
   19.5 kHz
 - ~**1.5 ms** designed latency with the default configuration at 48 kHz
   (24-frame filter group delay + 48-frame FIFO setpoint)
@@ -53,12 +53,26 @@ transparency vs. a naive FIFO, spectrograms, latency, drift tracking,
 dropout recovery — see
 [notebooks/asrc_demo.ipynb](notebooks/asrc_demo.ipynb), which drives the
 library through its C ABI (`-DSRT_BUILD_CAPI=ON`, `tools/capi/`) via ctypes
-(Python needs `numpy` and `matplotlib`; the first cell builds the shared
-library if missing). A second notebook,
+(Python needs `numpy` and `matplotlib`; the comparison notebook below
+additionally needs the `samplerate` and `soxr` packages; the first cell
+builds the shared library if missing). A second notebook,
 [notebooks/asrc_block_size_study.ipynb](notebooks/asrc_block_size_study.ipynb),
 measures how processing block size (32 / 64 / 240 frames) trades latency
 against servo observability — including per-impulse latency-breathing
 measurements and a calibrated FM/wideband quality decomposition.
+
+For real hardware there are three more entry points:
+`examples/alsa_bridge.cpp` (two ALSA devices on their real crystals — the
+[hardware testing](docs/HARDWARE_TESTING.md) Setup 1 harness, with CSV
+telemetry and post-ASRC capture), `examples/pico2_cyccnt/` (flashable
+RP2350 firmware measuring real cycles per block against the QEMU
+instruction baselines), and `examples/pico2_dualcore/` (the
+one-clock-domain-per-core RP2350 deployment, self-validating).
+
+**Consuming the library**: `add_subdirectory` or `FetchContent` only —
+there are no install/package rules yet. Version 0.1.0 (`SRT_VERSION_*` in
+`srt/srt.hpp`, `srt_version()` over the C ABI); pre-1.0, the API may
+still change between versions.
 
 ## How it works
 
@@ -163,7 +177,7 @@ sample-granular transfer, 0.5 FS sine, 1 s analysis window after settling):
 
 | Preset | 997 Hz | 6 kHz | 12 kHz | 19.5 kHz | group delay |
 |---|---|---|---|---|---|
-| `balanced()` (L=256, T=48) | 133 dB | 118 dB | 111 dB | 105 dB | 0.50 ms |
+| `balanced()` (L=256, T=48) | 135 dB | 120 dB | 112 dB | 105 dB | 0.50 ms |
 | `transparent()` (L=512, T=80) | 133 dB | — | — | 108 dB | 0.83 ms |
 
 AES17-style THD+N measured under identical conditions against
@@ -210,15 +224,20 @@ CI builds and tests every push on:
 - **Performance gating on both DSP targets**: fixed workloads run under
   QEMU with an instruction-counting plugin and are compared against
   committed baselines (`bench/baselines.json`) at ±3% — a hot-path
-  regression on Hexagon or Cortex-M55 fails CI. See
+  regression on Hexagon, Cortex-M55 or Cortex-M33 fails CI. See
   [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 - **Arm Cortex-M33** (Raspberry Pi Pico 2 / RP2350 class), bare metal on
   QEMU's MPS2+ AN505 model, sharing the Armv8-M platform layer below. The
   M33 has no FP64 and no Helium, and the instruction baselines make the
   consequences concrete: the float datapath costs ~19× the M55's
   instructions (soft-double accumulation) — on Pico-class parts use
-  Q15/Q31, where 48 kHz mono fits a 150 MHz core with room to spare and
-  stereo wants the `fast()` preset or the RP2350's second core.
+  Q15/Q31. The instruction baselines suggest 48 kHz Q15 mono fits a
+  150 MHz core and stereo wants the `fast()` preset or the RP2350's
+  second core — instruction counts are not cycle counts, so treat these
+  as budgets pending real-silicon validation: `examples/pico2_cyccnt/`
+  is a flashable DWT.CYCCNT harness built to measure exactly this, and
+  `examples/pico2_dualcore/` validates the one-clock-domain-per-core
+  deployment shape.
 - **Arm Cortex-M55**, bare metal (newlib + semihosting, no OS/threads),
   executed on QEMU's MPS3 AN547 board model via `qemu-system-arm`. The
   platform layer lives in `platform/mps3_an547/` (linker script + minimal
@@ -302,7 +321,7 @@ The datapath is templated on the sample type via `srt::SampleTraits`
 
 | Type | Alias | Format | Measured SNR (997 Hz / 19.5 kHz, half scale, +200 ppm) |
 |---|---|---|---|
-| `float` | `AsyncSampleRateConverter` | float I/O, double accumulation | 133 dB / 105 dB |
+| `float` | `AsyncSampleRateConverter` | float I/O, double accumulation | 135 dB / 105 dB |
 | `std::int32_t` | `AsyncSampleRateConverterQ31` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
 | `std::int16_t` | `AsyncSampleRateConverterQ15` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
 

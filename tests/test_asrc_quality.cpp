@@ -56,7 +56,7 @@ double measureSnrDb(const srt::FilterSpec& spec, double freqHz) {
     return snr;
 }
 
-// Thresholds sit ~4 dB under measured performance (133/118/111/105 dB for
+// Thresholds sit 4-7 dB under measured performance (135/120/113/106 dB for
 // balanced at 997/6k/12k/19.5k; 133/108 dB for transparent). The residual at
 // high frequencies is dominated by the linear interpolation between adjacent
 // phase-table rows, which falls ~12 dB per doubling of numPhases and rises

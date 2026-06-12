@@ -229,6 +229,11 @@ int main(int argc, char** argv) {
     cfg.sampleRateHz = static_cast<double>(args.rate);
     cfg.channels = args.channels;
     cfg.targetLatencyFrames = args.latency;
+    // Per the ServoConfig guidance: the unlock threshold must sit
+    // comfortably above half the transfer block, or block-quantized
+    // occupancy excursions can demote the servo stage spuriously.
+    cfg.servo.unlockThresholdFrames =
+        std::max(cfg.servo.unlockThresholdFrames, 1.5 * static_cast<double>(args.period));
     srt::AsyncSampleRateConverter asrc(cfg);
     std::printf("designed latency: %.2f ms%s\n", asrc.designedLatencySeconds() * 1e3,
                 args.toneHz > 0.0 ? "  (tone mode: captured samples discarded)" : "");
