@@ -100,7 +100,7 @@ libsamplerate 0.2.2; arm-none-eabi-gcc 13.2.1, hexagon-clang 19.1.5, -O2.
 |---|---:|---:|---:|
 | Cortex-M55 | **899** | 2,218 (2.5×) | 6,400 (7.1×) |
 | Cortex-M33 (Pico 2 class) | 18,842¹ | 49,424 (2.6×) | 149,426 (7.9×) |
-| Hexagon | HEX_SRT | HEX_MED | HEX_BEST |
+| Hexagon | **3,275** | 9,102 (2.8×) | 26,959 (8.2×) |
 
 ¹ The float datapath is soft-double-bound on the FP64-less M33 — the
 README directs Pico-class parts to Q15, where the **full converter**
