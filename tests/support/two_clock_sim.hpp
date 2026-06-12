@@ -23,7 +23,7 @@ struct TwoClockSimT {
     /// Input signal generator: value at input sample index i (all channels).
     std::function<S(std::uint64_t)> gen = [](std::uint64_t) { return S{}; };
     /// Per-channel generator (sample index, channel); overrides gen when set.
-    std::function<S(std::uint64_t, std::size_t)> genCh;
+    std::function<S(std::uint64_t, std::size_t)> genCh = {};
     /// Optional input-rate modulation: fsIn scale factor at virtual time t
     /// (e.g. for drift-ramp tests). Defaults to constant 1.
     std::function<double(double)> fsInScale = [](double) { return 1.0; };

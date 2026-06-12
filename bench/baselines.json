@@ -3,6 +3,7 @@
     "kernel_float": 339027222,
     "kernel_q15": 102819852,
     "kernel_q31": 110455141,
+    "pipeline12_q15": 378858793,
     "pipeline_float": 335912671,
     "pipeline_q15": 119847854,
     "pipeline_q31": 120694199
