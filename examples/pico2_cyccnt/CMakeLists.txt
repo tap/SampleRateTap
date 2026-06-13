@@ -42,7 +42,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 pico_sdk_init()
 
 # Float datapath measurement: soft-double accumulation on the M33, expected
-# ~19x the Q15 instruction count — slow but a real number is still valuable.
+# ~3.8x the Q15 instruction count (1,856.7M vs 484.1M baselines) — slow
+# but a real number is still valuable.
 option(PICO2_MEASURE_FLOAT "Measure the float (soft FP64) datapath too" ON)
 
 add_executable(pico2_cyccnt main.cpp)

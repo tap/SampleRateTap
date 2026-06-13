@@ -63,7 +63,9 @@ clock when the analog path is not trusted.
 
 Two things this proves that emulation cannot:
 
-- **The cycle budget.** [PERFORMANCE.md](PERFORMANCE.md) notes that QEMU
+- **The cycle budget** (harness shipped: [`examples/pico2_cyccnt/`](../examples/pico2_cyccnt/)
+  builds a flashable UF2 for this measurement).
+  [PERFORMANCE.md](PERFORMANCE.md) notes that QEMU
   gives deterministic *instruction* counts, not cycles, and real cycles
   need hardware counters. The RP2350 has DWT.CYCCNT: wrapping `pull()`
   in CYCCNT reads gives real cycles-per-block at 150 MHz — directly
@@ -71,9 +73,10 @@ Two things this proves that emulation cannot:
   is tight on one core. Correlating CYCCNT against the QEMU instruction
   baselines also calibrates the ratchet ("1 QEMU instruction ≈ N RP2350
   cycles") for all future M33 numbers.
-- **Dual-core deployment.** The README suggests dedicating the RP2350's
-  second core to stereo; an actual core1-runs-ASRC build verifies that
-  guidance.
+- **Dual-core deployment** (harness shipped:
+  [`examples/pico2_dualcore/`](../examples/pico2_dualcore/), self-validating
+  PASS/FAIL phases). The README suggests dedicating the RP2350's second
+  core to one clock domain; flashing the example verifies that guidance.
 
 ## Setup 3 — two Pis over Ethernet
 
@@ -95,15 +98,13 @@ X ppm, N hours, zero discontinuities"). Then Setup 2, because
 real-silicon CYCCNT numbers close the loop on everything the M33
 emulation work predicted.
 
-The code each setup needs:
+What exists and what remains:
 
-- **Setup 1**: an ALSA duplex bridge example (two threads around
-  `push()`/`pull()`, telemetry logging to CSV, optional post-ASRC capture
-  to disk) plus a script to plot the ppm trace and analyze the captured
-  stream.
-- **Setup 2**: a small Pico SDK firmware project wrapping the header-only
-  library — the M33 toolchain support already proves the code compiles
-  for that core (`cmake/arm-cortex-m33-mps2.cmake` shows the required
-  flags: `-mcpu=cortex-m33 -mthumb -mfloat-abi=hard`).
-- **Setup 3**: two small programs (UDP sender, receiver-with-ASRC) reusing
-  the Setup 1 bridge's output half.
+- **Setup 1**: shipped — `examples/alsa_bridge.cpp` (see above). Still
+  missing: a small script to plot the `--csv` ppm trace and run the
+  notebook analysis over a `--dump` capture.
+- **Setup 2**: shipped — `examples/pico2_cyccnt/` (cycle measurement) and
+  `examples/pico2_dualcore/` (dual-core deployment), both building
+  flashable UF2s; the measured numbers await a physical Pico 2.
+- **Setup 3**: not yet written — two small programs (UDP sender,
+  receiver-with-ASRC) reusing the Setup 1 bridge's output half.

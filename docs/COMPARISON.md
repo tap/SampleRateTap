@@ -58,7 +58,7 @@ shared machine; all subjects ran in the same session.
 
 | Engine (~120 dB tier) | mono | stereo | 8-ch | algorithmic latency |
 |---|---:|---:|---:|---:|
-| **SampleRateTap** balanced | 15.6 | 10.5 | 3.0 | **23.5 frames (0.49 ms)** |
+| **SampleRateTap** balanced | 15.6 | 10.5 | 3.0 | **24 frames (0.50 ms)** |
 | libsamplerate `MEDIUM` (0.2.2) | 4.4 | 3.7 | 1.4 | 46 frames (0.96 ms) |
 | soxr `HQ` (0.1.3) | 72.9 | 32.4 | 8.4 | 556–607 frames (11.6–12.6 ms) |
 
@@ -82,6 +82,7 @@ Reading guide:
   throughput at SampleRateTap's latency.
 - **libsamplerate is the closest architectural analog** (streaming
   time-domain polyphase, block-by-block) and SampleRateTap is 2.9–3.6×
+  (mono/stereo; 2.1× at 8 channels, where both engines amortize)
   faster at the matched ~120 dB tier, 6.2× at ~140 dB, while also carrying
   ~2–3.6× less latency. That is the near-unity specialization dividend:
   a 48-tap window with a creeping phase instead of general-ratio
@@ -104,15 +105,15 @@ libsamplerate 0.2.2; arm-none-eabi-gcc 13.2.1, hexagon-clang 19.1.5, -O2.
 
 ¹ The float datapath is soft-double-bound on the FP64-less M33 — the
 README directs Pico-class parts to Q15, where the **full converter**
-(servo and FIFO included) costs ~5,206 instructions/frame: libsamplerate
-has no fixed-point path, so its cheapest option on such parts costs
-**~9.5×** what SampleRateTap's intended configuration does.
+(servo and FIFO included) costs ~5,043 instructions/frame (post-C4):
+libsamplerate has no fixed-point path, so its cheapest option on such parts costs
+**~9.8×** what SampleRateTap's intended configuration does.
 
 ## The landscape
 
 | | Type | Clock recovery | Ratio range | Quality | Latency | Footprint / targets | License & form |
 |---|---|---|---|---|---|---|---|
-| **SampleRateTap** | software ASRC | built-in (PI servo on FIFO occupancy) | near-unity (±~1000 ppm) | −132 dB THD+N / 149 dB DR measured above; Q15/Q31 paths for FPU-less DSPs | **1.5 ms default** (0.5 ms filter); sub-ms with `fast()` | 308× RT/core x86; ~515 insn/sample Q15 on Hexagon, CI-gated | MIT, header-only C++20 |
+| **SampleRateTap** | software ASRC | built-in (PI servo on FIFO occupancy) | near-unity (±~1000 ppm) | −132 dB THD+N / 149 dB DR measured above; Q15/Q31 paths for FPU-less DSPs | **1.5 ms default** (0.5 ms filter); sub-ms with `fast()` | 308× RT/core x86; ~515 insn/sample Q15 kernel-only on Hexagon (full converter ~1,245/frame stereo), CI-gated | MIT, header-only C++20 |
 | [AD1896][ad1896] (ADI) | hardware ASRC | built-in | 1:8 up / 7.75:1 down | THD+N −117 dB min / −133 dB best; 142 dB DNR (datasheet) | sub-ms–ms, mode dependent | dedicated chip, one stereo pair | proprietary |
 | [SRC4392][src4392] (TI) | hardware ASRC | built-in (automatic) | 1:16–16:1 | THD+N −140 dB typ; 144 dB DR (datasheet) | selectable filter delay | dedicated chip + DIR/DIT | proprietary |
 | [libsamplerate][lsr] | resampler library | **no** — caller supplies ratio | 1/256–256 | measured above (near-unity); 97 dB worst-case across ratios (own docs) | filter-dependent, offline-friendly | portable C, float | BSD-2 |

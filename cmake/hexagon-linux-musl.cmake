@@ -7,7 +7,10 @@
 # with hexagon-unknown-linux-musl-clang++ and qemu-hexagon on PATH.
 #
 # Note: emulation validates ISA-level *correctness* (32-bit size_t, atomics
-# lowering, musl libc), not performance — Hexagon has no double-precision
+# lowering, musl libc), not performance. Caveat: under this static-musl
+# configuration C++ exceptions terminate (libc++abi) instead of
+# propagating — constructor validation errors are fatal here; see the
+# Known-debt entry in docs/PERFORMANCE.md — Hexagon has no double-precision
 # FPU, so the double-heavy paths run soft-float. Cycle counts need the
 # Hexagon SDK simulator.
 set(CMAKE_SYSTEM_NAME Linux)
