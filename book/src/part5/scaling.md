@@ -1,5 +1,9 @@
 # Channels, rates, and the rules that scale
 
+> For every type of animal there is a most convenient size, and a large change in size inevitably carries with it a change of form.
+>
+> — J. B. S. Haldane, *On Being the Right Size*
+
 Every measured number in this book so far was taken at one operating point:
 48 kHz, one or two channels, fine-grained transfer. Real deployments move
 along three axes away from that point — more **channels**, a different

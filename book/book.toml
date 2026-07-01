@@ -1,5 +1,5 @@
 [book]
-title = "Inside SampleRateTap"
+title = "SampleRateTap: The Story of an Asynchronous Sample Rate Converter"
 description = "A working tour of a real-time asynchronous sample rate converter: the DSP, the C++, the concurrency, and the measurements that hold it together."
 authors = ["The SampleRateTap project"]
 language = "en"

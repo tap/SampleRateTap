@@ -1,5 +1,9 @@
 # The lock-free ring: `spsc_ring.hpp`
 
+> Time is what keeps everything from happening at once.
+>
+> — Ray Cummings
+
 Every other component in this library is mathematics. This one is physics.
 
 The converter's whole purpose is to sit between two threads that must never

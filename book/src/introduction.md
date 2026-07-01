@@ -1,5 +1,9 @@
 # Introduction
 
+> Talk is cheap. Show me the code.
+>
+> — Linus Torvalds
+
 This book explains one piece of software completely.
 
 The software is **SampleRateTap**, a header-only C++20 library that solves a

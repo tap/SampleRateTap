@@ -1,5 +1,9 @@
 # Two crystals, one stream
 
+> No man ever steps in the same river twice, for it is not the same river and he is not the same man.
+>
+> — attributed to Heraclitus
+
 Every specification of this library begins with a lie that the audio
 industry tells itself daily: "48 kHz."
 

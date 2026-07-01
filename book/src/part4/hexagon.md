@@ -1,5 +1,9 @@
 # Hexagon: a DSP that keeps secrets
 
+> Trust, but verify.
+>
+> — Russian proverb
+
 Every portability chapter in this part answers the same question: what did
 the target force the library to learn that no amount of host testing could
 have taught it? Hexagon — Qualcomm's DSP architecture, the kind of core

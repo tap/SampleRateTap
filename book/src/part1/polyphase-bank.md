@@ -1,5 +1,9 @@
 # The polyphase bank
 
+> Show me your flowcharts and conceal your tables, and I shall continue to be mystified. Show me your tables, and I won't usually need your flowcharts; they'll be obvious.
+>
+> — Fred Brooks, *The Mythical Man-Month*
+
 The previous chapter ended with a prototype filter: 12,288 double-precision
 coefficients (for the default preset) describing one ideal anti-imaging
 lowpass, oversampled 256× against the input rate. This chapter is about a

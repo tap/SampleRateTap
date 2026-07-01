@@ -1,5 +1,9 @@
 # Tests as specifications
 
+> Program testing can be used to show the presence of bugs, but never to show their absence!
+>
+> — Edsger W. Dijkstra
+
 Part I ended each chapter with a list of tests. This chapter is about what
 those tests actually *are* — because in this project they are not the usual
 smoke detectors bolted on after the fact. They are the specification. The

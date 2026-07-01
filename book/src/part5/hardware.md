@@ -1,5 +1,9 @@
 # Real clocks: bridges and firmware
 
+> In theory, there is no difference between theory and practice. In practice, there is.
+>
+> — attributed to Yogi Berra, among others
+
 Everything measured so far in this book — the 135 dB residual, the lock in
 ~1 s, the drift ramp tracked without unlocking — came out of a simulation.
 A good one: deterministic, sample-granular, reproducible to the bit, able

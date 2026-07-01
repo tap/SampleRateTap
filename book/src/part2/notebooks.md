@@ -1,5 +1,9 @@
 # Notebooks as calibrated instruments
 
+> The first principle is that you must not fool yourself — and you are the easiest person to fool.
+>
+> — Richard Feynman
+
 The previous two chapters covered claims a machine can gate: thresholds in
 tests, instruction counts in a ratchet. But some of this project's most
 consequential claims are not pass/fail propositions. *How much worse is a

@@ -1,5 +1,9 @@
 # The fractional resampler
 
+> God made the integers; all else is the work of man.
+>
+> — Leopold Kronecker
+
 The servo chapter ended with a number: ε̂, the rate-deviation estimate,
 delivered once per output block. This chapter spends it.
 

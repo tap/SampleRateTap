@@ -1,5 +1,9 @@
 # The C ABI
 
+> Be conservative in what you do, be liberal in what you accept from others.
+>
+> — Jon Postel, RFC 761
+
 This chapter exists because of a plot. Part II's notebooks are the
 library's most persuasive evidence — the servo locking from a cold start,
 the 135 dB money plot, the naive-FIFO spectrogram full of clicks — and

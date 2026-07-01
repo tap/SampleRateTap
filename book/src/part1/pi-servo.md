@@ -1,5 +1,9 @@
 # The clock servo: `pi_servo.hpp`
 
+> A governor is a part of a machine by means of which the velocity of the machine is kept nearly uniform, notwithstanding variations in the driving-power or the resistance.
+>
+> — James Clerk Maxwell, *On Governors* (1868)
+
 There is a number this entire library exists to find, and nobody will tell
 it to us.
 

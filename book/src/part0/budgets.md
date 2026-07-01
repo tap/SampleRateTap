@@ -1,5 +1,9 @@
 # Budgets: latency, quality, compute
 
+> Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away.
+>
+> — Antoine de Saint-Exupéry, *Wind, Sand and Stars*
+
 The previous chapter ended with three words used as if they were
 self-explanatory: latency, quality, compute. This chapter turns each into
 a number with a derivation behind it, because everything in Part I is an

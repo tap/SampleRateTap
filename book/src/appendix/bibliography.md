@@ -1,5 +1,9 @@
 # Appendix C: Annotated bibliography
 
+> If I have seen further it is by standing on the shoulders of giants.
+>
+> — Isaac Newton, letter to Robert Hooke
+
 This project's provenance statement is short: all code implements
 long-published methods, and no third-party source was copied. This
 appendix lists those methods' sources — plus the tools and competitors the

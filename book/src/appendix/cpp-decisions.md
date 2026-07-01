@@ -1,5 +1,9 @@
 # Appendix A: The C++ decision log
 
+> There are only two kinds of languages: the ones people complain about and the ones nobody uses.
+>
+> — Bjarne Stroustrup
+
 Every chapter of this book has defended C++ decisions in passing, in the
 context that made them necessary. This appendix collects them in one place,
 in one format: the decision, what was rejected, why, and where in the

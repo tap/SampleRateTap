@@ -1,5 +1,9 @@
 # Designing the filter: `kaiser.hpp`
 
+> The purpose of computing is insight, not numbers.
+>
+> — Richard Hamming
+
 This is the only file in the library that runs exactly once per converter,
 and it decides the quality ceiling of everything downstream. Every output
 sample the converter will ever produce is a dot product against

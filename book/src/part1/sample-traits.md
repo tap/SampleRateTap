@@ -1,5 +1,9 @@
 # Sample types as a customization point: `sample_traits.hpp`
 
+> Make illegal states unrepresentable.
+>
+> — Yaron Minsky
+
 The polyphase machinery of the last two chapters computes one thing: a dot
 product between a window of input samples and an interpolated row of filter
 coefficients. The problem is that this library ships to machines that do not

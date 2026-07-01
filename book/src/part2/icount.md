@@ -1,5 +1,9 @@
 # Counting instructions, deterministically
 
+> When you can measure what you are speaking about, and express it in numbers, you know something about it; but when you cannot measure it, when you cannot express it in numbers, your knowledge is of a meagre and unsatisfactory kind.
+>
+> — Lord Kelvin
+
 The optimization campaign of Part III makes claims like "−5.3% on the M55
 Q15 pipeline" and expects you to believe the decimal point. This chapter is
 about the machinery that makes such a decimal point *mean* something — and

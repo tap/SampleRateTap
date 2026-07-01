@@ -1,5 +1,9 @@
 # Appendix B: Glossary
 
+> The limits of my language mean the limits of my world.
+>
+> — Ludwig Wittgenstein, *Tractatus Logico-Philosophicus*
+
 Terms of art as this book uses them. Where the general meaning and this
 project's usage differ, the entry gives the project's.
 

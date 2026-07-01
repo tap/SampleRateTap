@@ -1,5 +1,9 @@
 # Composition: `asrc.hpp`
 
+> The whole is something beside the parts.
+>
+> — Aristotle, *Metaphysics*
+
 Every previous chapter built a component that is correct on its own terms.
 This chapter is about the file that has no terms of its own: `asrc.hpp`
 contains almost no algorithm, no mathematics, and fewer than three hundred

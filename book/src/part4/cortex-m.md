@@ -1,5 +1,9 @@
 # Cortex-M: bare metal, two ways
 
+> Civilization advances by extending the number of important operations which we can perform without thinking about them.
+>
+> — Alfred North Whitehead
+
 The Hexagon port ran the library on a strange ISA under a familiar OS.
 The Cortex-M ports remove the OS. No loader, no threads, no filesystem,
 no `argv`, no reliable way to even return an exit code — and the library
