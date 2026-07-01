@@ -11,3 +11,4 @@ create-missing = false
 [output.html]
 default-theme = "rust"
 git-repository-url = "https://github.com/tap/SampleRateTap"
+site-url = "/SampleRateTap/"

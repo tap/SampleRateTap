@@ -87,8 +87,10 @@ fails on a stale anchor), every figure is regenerated from the same math
 and measured traces by `scripts/book_figures.py`, and every chapter ends
 with runnable commands that reproduce its claims.
 
-Build it with [mdBook](https://rust-lang.github.io/mdBook/) (CI pins
-v0.4.40):
+Read it at **<https://tap.github.io/SampleRateTap/>** (published from
+`main` by the `book-pages` workflow; note the site is public even though
+this repository is private), or build it locally with
+[mdBook](https://rust-lang.github.io/mdBook/) (CI pins v0.4.40):
 
 ```sh
 mdbook build book        # or: mdbook serve book --open
