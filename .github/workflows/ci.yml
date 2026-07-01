@@ -486,3 +486,34 @@ jobs:
             bench/*.cpp bench/icount/*.cpp bench/compare/*.cpp \
             tools/capi/*.cpp tools/qemu_insn_plugin/*.c \
             tests/*.cpp tests/support/*.hpp examples/*.cpp platform/*.c
+
+  # The book (book/) quotes library code via mdBook anchor includes; this
+  # gate makes a refactor that orphans an excerpt fail CI, the same
+  # freshness contract as the README's generated tables. Warnings are
+  # errors: a missing anchor is a warning, and a missing anchor is rot.
+  book:
+    name: Book build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MDBOOK_URL: https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz
+      MDBOOK_SHA256: "9ef07fd288ba58ff3b99d1c94e6d414d431c9a61fdb20348e5beb74b823d546b"
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install mdBook (pinned)
+        run: |
+          curl -sfLo /tmp/mdbook.tar.gz "$MDBOOK_URL"
+          actual=$(sha256sum /tmp/mdbook.tar.gz | cut -d' ' -f1)
+          if [ "$actual" != "$MDBOOK_SHA256" ]; then
+            echo "::error::mdbook checksum mismatch"; exit 1
+          fi
+          tar -xzf /tmp/mdbook.tar.gz -C /tmp
+
+      - name: Build (warnings are errors)
+        run: |
+          /tmp/mdbook build book 2>&1 | tee /tmp/book-build.log
+          if grep -qiE 'warning|error' /tmp/book-build.log; then
+            echo "::error::mdbook reported warnings/errors (stale anchor or broken include?)"
+            exit 1
+          fi
