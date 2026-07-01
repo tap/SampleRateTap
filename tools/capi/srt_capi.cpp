@@ -1,3 +1,4 @@
+// ANCHOR: abi_doc
 /// \file srt_capi.cpp
 /// \brief C ABI shim over the float converter, for FFI consumers (ctypes,
 /// cffi, Julia, ...). Build with SRT_BUILD_CAPI=ON; srt_capi.h is the
@@ -9,12 +10,14 @@
 /// zero return values, and every entry point tolerates a null handle — the
 /// documented error convention ("check srt_create for NULL") otherwise
 /// invites a crash on exactly the path where the caller forgot to check.
+// ANCHOR_END: abi_doc
 #include <cstddef>
 #include <cstdint>
 #include <new>
 
 #include "srt/srt.hpp"
 
+// ANCHOR: abi_impl
 extern "C" {
 struct SrtHandle; // opaque
 }
@@ -27,6 +30,7 @@ const srt::AsyncSampleRateConverter* impl(const SrtHandle* h) noexcept {
     return reinterpret_cast<const srt::AsyncSampleRateConverter*>(h);
 }
 } // namespace
+// ANCHOR_END: abi_impl
 
 extern "C" {
 
@@ -34,6 +38,7 @@ unsigned srt_version(void) noexcept {
     return SRT_VERSION_MAJOR * 10000u + SRT_VERSION_MINOR * 100u + SRT_VERSION_PATCH;
 }
 
+// ANCHOR: abi_create
 /// preset: 0 = fast, 1 = balanced, 2 = transparent.
 SrtHandle* srt_create(double sampleRateHz, std::size_t channels, std::size_t targetLatencyFrames,
                       int preset) noexcept {
@@ -51,11 +56,13 @@ SrtHandle* srt_create(double sampleRateHz, std::size_t channels, std::size_t tar
         return nullptr;
     }
 }
+// ANCHOR_END: abi_create
 
 void srt_destroy(SrtHandle* h) noexcept {
     delete impl(h);
 }
 
+// ANCHOR: abi_null
 std::size_t srt_push(SrtHandle* h, const float* interleaved, std::size_t frames) noexcept {
     return h ? impl(h)->push(interleaved, frames) : 0;
 }
@@ -63,6 +70,7 @@ std::size_t srt_push(SrtHandle* h, const float* interleaved, std::size_t frames)
 std::size_t srt_pull(SrtHandle* h, float* interleaved, std::size_t frames) noexcept {
     return h ? impl(h)->pull(interleaved, frames) : 0;
 }
+// ANCHOR_END: abi_null
 
 /// out[0]=state (0 Filling, 1 Acquiring, 2 Locked), out[1]=ppm,
 /// out[2]=fifoFillFrames, out[3]=underruns, out[4]=overruns, out[5]=resyncs.

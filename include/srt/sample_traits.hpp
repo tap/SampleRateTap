@@ -1,3 +1,4 @@
+// ANCHOR: st_overview
 /// \file sample_traits.hpp
 /// \brief Sample-type customization point for the resampling datapath.
 ///
@@ -14,6 +15,7 @@
 /// The clock servo and the filter design always run in double regardless of
 /// sample type (control path and one-time init, not the audio path), so the
 /// fixed-point datapaths contain no floating-point inner loops.
+// ANCHOR_END: st_overview
 #ifndef SRT_SAMPLE_TRAITS_HPP
 #define SRT_SAMPLE_TRAITS_HPP
 
@@ -26,6 +28,7 @@ namespace srt {
 
 namespace detail {
 
+// ANCHOR: st_roundsat
 /// Round-and-saturate a double to a signed integer coefficient/sample type.
 template <typename I>
 constexpr I roundSat(double v) noexcept {
@@ -38,6 +41,7 @@ constexpr I roundSat(double v) noexcept {
         return std::numeric_limits<I>::max();
     return static_cast<I>(r);
 }
+// ANCHOR_END: st_roundsat
 
 /// Saturate a 64-bit accumulator result to a narrower signed integer.
 template <typename I>
@@ -49,10 +53,13 @@ constexpr I clampSat(std::int64_t v) noexcept {
 
 } // namespace detail
 
+// ANCHOR: st_primary
 /// Primary template intentionally undefined; specialize per sample type.
 template <typename T>
 struct SampleTraits;
+// ANCHOR_END: st_primary
 
+// ANCHOR: st_float
 /// Float datapath: float samples and coefficients, double accumulation.
 /// The double accumulator keeps the dot-product noise floor far below the
 /// 120 dB transparency target; float coefficient storage quantizes the
@@ -69,6 +76,7 @@ struct SampleTraits<float> {
     /// Convert the intra-phase fraction (in [0,1)) once per output sample.
     static BlendFactor makeBlendFactor(double fr) noexcept { return static_cast<BlendFactor>(fr); }
 
+    // ANCHOR: st_blend_q64_float
     /// Blend factor from the top bits of a Q0.64 intra-phase fraction.
     /// Single-precision only: the value is reduced to 24 bits first so the
     /// uint->float conversion is exact and no double op is needed
@@ -76,6 +84,7 @@ struct SampleTraits<float> {
     static BlendFactor blendFactorFromQ64(std::uint64_t frac) noexcept {
         return static_cast<float>(frac >> 40) * 0x1p-24f;
     }
+    // ANCHOR_END: st_blend_q64_float
 
     /// acc + x * c, in the accumulator domain.
     static Accum mac(Accum acc, float x, Coeff c) noexcept {
@@ -91,7 +100,9 @@ struct SampleTraits<float> {
     /// The zero/silence sample value.
     static float silence() noexcept { return 0.0f; }
 };
+// ANCHOR_END: st_float
 
+// ANCHOR: st_q15_header
 /// Q15 fixed-point datapath (samples are int16_t in Q0.15).
 ///
 /// Coefficients are stored in Q1.14: the prototype's peak tap reaches ~1.0
@@ -107,26 +118,34 @@ struct SampleTraits<std::int16_t> {
     using Coeff = std::int16_t;
     using Accum = std::int64_t;
     using BlendFactor = std::int32_t; ///< fraction in Q15
+    // ANCHOR_END: st_q15_header
 
+    // ANCHOR: st_q15_coeff
     static Coeff makeCoeff(double c) noexcept {
         return detail::roundSat<Coeff>(c * 16384.0); // Q1.14
     }
+    // ANCHOR_END: st_q15_coeff
 
     static BlendFactor makeBlendFactor(double fr) noexcept {
         return static_cast<BlendFactor>(fr * 32768.0); // Q15
     }
 
+    // ANCHOR: st_q15_q64
     /// Q15 blend factor straight from a Q0.64 fraction's top bits: no
     /// floating point at all on the fixed-point per-sample path.
     static BlendFactor blendFactorFromQ64(std::uint64_t frac) noexcept {
         return static_cast<BlendFactor>(frac >> 49); // Q15
     }
+    // ANCHOR_END: st_q15_q64
 
+    // ANCHOR: st_q15_mac
     static Accum mac(Accum acc, std::int16_t x, Coeff c) noexcept {
         return acc + static_cast<std::int64_t>(static_cast<std::int32_t>(x) *
                                                static_cast<std::int32_t>(c));
     }
+    // ANCHOR_END: st_q15_mac
 
+    // ANCHOR: st_q15_blend
     static Coeff blend(Coeff a, Coeff b, BlendFactor fr) noexcept {
         // Q14 + (Q15 * Q14) >> 15, in int64: the worst-case int32 product
         // 32767 * 65535 = 2,147,385,345 sits 0.005% under INT32_MAX —
@@ -136,16 +155,20 @@ struct SampleTraits<std::int16_t> {
         const std::int64_t diff = static_cast<std::int64_t>(b) - a;
         return static_cast<Coeff>(a + ((fr * diff) >> 15));
     }
+    // ANCHOR_END: st_q15_blend
 
+    // ANCHOR: st_q15_finalize
     static std::int16_t finalize(Accum acc) noexcept {
         // Round-half-up, not half-even: the bias is a fraction of one
         // sub-LSB rounding step, far below the Q15 noise floor.
         return detail::clampSat<std::int16_t>((acc + (1 << 13)) >> 14); // Q29 -> Q15
     }
+    // ANCHOR_END: st_q15_finalize
 
     static std::int16_t silence() noexcept { return 0; }
 };
 
+// ANCHOR: st_q31
 /// Q31 fixed-point datapath (samples are int32_t in Q0.31).
 ///
 /// Coefficients are stored in Q1.30 (one headroom bit for the ~1.0 peak
@@ -174,9 +197,11 @@ struct SampleTraits<std::int32_t> {
         return static_cast<BlendFactor>(frac >> 44); // Q20
     }
 
+    // ANCHOR: st_q31_mac
     static Accum mac(Accum acc, std::int32_t x, Coeff c) noexcept {
         return acc + ((static_cast<std::int64_t>(x) * c) >> 16); // Q61 -> Q45
     }
+    // ANCHOR_END: st_q31_mac
 
     static Coeff blend(Coeff a, Coeff b, BlendFactor fr) noexcept {
         const std::int64_t diff = static_cast<std::int64_t>(b) - a;
@@ -189,7 +214,9 @@ struct SampleTraits<std::int32_t> {
 
     static std::int32_t silence() noexcept { return 0; }
 };
+// ANCHOR_END: st_q31
 
+// ANCHOR: st_concept
 /// Satisfied by any type with a complete, well-formed SampleTraits
 /// specialization.
 template <typename T>
@@ -212,6 +239,7 @@ concept SampleType =
 static_assert(SampleType<float>);
 static_assert(SampleType<std::int16_t>);
 static_assert(SampleType<std::int32_t>);
+// ANCHOR_END: st_concept
 
 } // namespace srt
 
