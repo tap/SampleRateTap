@@ -1,8 +1,8 @@
 # Notebooks as calibrated instruments
 
-> The first principle is that you must not fool yourself — and you are the easiest person to fool.
+> There are three kinds of lies: lies, damned lies, and statistics.
 >
-> — Richard Feynman
+> — popularized by Mark Twain, who credited Benjamin Disraeli
 
 The previous two chapters covered claims a machine can gate: thresholds in
 tests, instruction counts in a ratchet. But some of this project's most

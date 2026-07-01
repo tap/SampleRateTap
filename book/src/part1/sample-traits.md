@@ -1,8 +1,8 @@
 # Sample types as a customization point: `sample_traits.hpp`
 
-> Make illegal states unrepresentable.
+> Form is exactly emptiness; emptiness is exactly form.
 >
-> — Yaron Minsky
+> — the Heart Sutra
 
 The polyphase machinery of the last two chapters computes one thing: a dot
 product between a window of input samples and an interpolated row of filter
