@@ -1,3 +1,4 @@
+// ANCHOR: kai_design_note
 /// \file kaiser.hpp
 /// \brief Kaiser-window FIR prototype design for the polyphase interpolation bank.
 ///
@@ -8,6 +9,7 @@
 /// minutes of compile time in every including translation unit. Runtime design
 /// takes well under 10 ms, runs once in a constructor, and is off the audio path,
 /// so all design math here is plain runtime double precision.
+// ANCHOR_END: kai_design_note
 #ifndef SRT_DETAIL_KAISER_HPP
 #define SRT_DETAIL_KAISER_HPP
 
@@ -18,6 +20,7 @@
 
 namespace srt::detail {
 
+// ANCHOR: kai_besseli0
 /// Modified Bessel function of the first kind, order zero, by power series.
 /// Converges for all practical Kaiser betas (|x| < ~40); terms are added until
 /// they no longer contribute at double precision.
@@ -34,7 +37,9 @@ inline double besselI0(double x) noexcept {
     }
     return sum;
 }
+// ANCHOR_END: kai_besseli0
 
+// ANCHOR: kai_beta
 /// Kaiser window shape parameter for a given stopband attenuation in dB
 /// (Kaiser's published empirical fit).
 inline double kaiserBeta(double attenDb) noexcept {
@@ -44,7 +49,9 @@ inline double kaiserBeta(double attenDb) noexcept {
         return 0.5842 * std::pow(attenDb - 21.0, 0.4) + 0.07886 * (attenDb - 21.0);
     return 0.0;
 }
+// ANCHOR_END: kai_beta
 
+// ANCHOR: kai_estimate
 /// Kaiser/harris FIR length estimate, expressed per polyphase branch.
 ///
 /// \param attenDb        target stopband attenuation in dB
@@ -59,7 +66,9 @@ inline std::size_t estimateTaps(double attenDb, double transWidthNorm) noexcept 
     const double n = (attenDb - 8.0) / (2.285 * 2.0 * std::numbers::pi * transWidthNorm);
     return n > 4.0 ? static_cast<std::size_t>(std::ceil(n)) : 4;
 }
+// ANCHOR_END: kai_estimate
 
+// ANCHOR: kai_sinc
 /// sin(pi x)/(pi x) with the removable singularity handled.
 inline double sinc(double x) noexcept {
     if (std::abs(x) < 1e-12)
@@ -67,7 +76,9 @@ inline double sinc(double x) noexcept {
     const double px = std::numbers::pi * x;
     return std::sin(px) / px;
 }
+// ANCHOR_END: kai_sinc
 
+// ANCHOR: kai_prototype
 /// Designs the Kaiser-windowed sinc prototype lowpass for an L-phase
 /// interpolation bank.
 ///
@@ -98,6 +109,7 @@ inline void designPrototype(std::span<double> h, std::size_t numPhases, double c
     for (auto& v : h)
         v *= gain;
 }
+// ANCHOR_END: kai_prototype
 
 } // namespace srt::detail
 

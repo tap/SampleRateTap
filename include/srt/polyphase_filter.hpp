@@ -63,6 +63,7 @@
 
 namespace srt {
 
+// ANCHOR: bank_spec
 /// Specification of the interpolation prototype filter.
 ///
 /// numPhases (L) sets the polyphase table resolution: the residual images from
@@ -94,6 +95,7 @@ struct FilterSpec {
                 .stopbandHz = 26000.0,
                 .stopbandAttenDb = 140.0};
     }
+    // ANCHOR_END: bank_spec
 
     /// This spec with the band edges rescaled from the 48 kHz design rate
     /// to sampleRateHz. The presets' passband/stopband are absolute Hz
@@ -111,6 +113,7 @@ struct FilterSpec {
     }
 };
 
+// ANCHOR: bank_layout
 /// Immutable polyphase coefficient table designed at construction.
 ///
 /// Storage layout: (L+1) rows of T coefficients. Row p in [0, L) is polyphase
@@ -119,11 +122,13 @@ struct FilterSpec {
 /// and the mu wrap 1.0 -> 0.0 (window shifted by one sample) is exactly
 /// continuous. Rows are stored tap-reversed so the dot product runs forward
 /// over an oldest-first history window.
+// ANCHOR_END: bank_layout
 template <SampleType S>
 class PolyphaseFilterBank {
 public:
     using Coeff = typename SampleTraits<S>::Coeff;
 
+    // ANCHOR: bank_build
     /// Designs the prototype (double precision) and builds the table.
     /// Allocates; may throw std::invalid_argument / std::bad_alloc. Do this at
     /// setup time, not on the audio path.
@@ -150,7 +155,9 @@ public:
             }
         }
     }
+    // ANCHOR_END: bank_build
 
+    // ANCHOR: bank_accessors
     /// Row pointer for phase p in [0, numPhases()]; T contiguous coefficients.
     const Coeff* phase(std::size_t p) const noexcept { return table_.data() + p * taps_; }
     std::size_t numPhases() const noexcept { return phases_; } ///< L
@@ -160,6 +167,7 @@ public:
     double groupDelaySamples() const noexcept {
         return static_cast<double>(phases_ * taps_ - 1) / (2.0 * static_cast<double>(phases_));
     }
+    // ANCHOR_END: bank_accessors
 
 private:
     std::size_t phases_;
@@ -167,6 +175,7 @@ private:
     std::vector<Coeff> table_; // (L+1) x T, rows tap-reversed
 };
 
+// ANCHOR: bank_interpolate
 /// Evaluates one output sample at fractional position mu in [0, 1).
 ///
 /// \param hist oldest-first window of the newest T input samples of one channel
@@ -192,6 +201,7 @@ inline S interpolate(const PolyphaseFilterBank<S>& bank, const S* hist, double m
         acc = Tr::mac(acc, hist[t], Tr::blend(c0[t], c1[t], fr));
     return Tr::finalize(acc);
 }
+// ANCHOR_END: bank_interpolate
 
 /// Blends the two phase rows adjacent to mu into `row` (taps() entries).
 /// Multichannel datapaths do this once per output frame and then run
