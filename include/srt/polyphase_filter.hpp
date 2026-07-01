@@ -23,6 +23,7 @@
 #define SRT_RESTRICT __restrict__
 #endif
 
+// ANCHOR: opt_smlald_gate
 // Dual 16x16 MAC (SMLALD) for the Q15 dot product on Arm cores that have
 // the DSP extension but no Helium — the Cortex-M33/M4/M7 class (e.g.
 // Raspberry Pi Pico 2). Gated off when MVE is present: on M55 the compiler
@@ -36,6 +37,7 @@
 #else
 #define SRT_Q15_SMLALD 0
 #endif
+// ANCHOR_END: opt_smlald_gate
 
 // Channel-parallel dot product for high channel counts (hypothesis C6,
 // docs/PERFORMANCE.md): history stored frame-major so the per-tap inner
@@ -298,6 +300,7 @@ inline S dotRow(const typename SampleTraits<S>::Coeff* SRT_RESTRICT row, const S
 }
 // ANCHOR_END: rs_dot_row
 
+// ANCHOR: opt_dot_tile
 /// One K-channel tile of the channel-parallel dot (hypothesis C6): K
 /// accumulators live in a constexpr-size local array — registers, not
 /// memory — while the tap loop walks the frame-major window with stride
@@ -319,8 +322,10 @@ inline void dotTileFrameMajor(const typename SampleTraits<S>::Coeff* SRT_RESTRIC
     for (std::size_t k = 0; k < K; ++k)
         out[k] = Tr::finalize(acc[k]);
 }
+// ANCHOR_END: opt_dot_tile
 
 // ANCHOR: rs_dot_rows_frame_major
+// ANCHOR: opt_dot_rows
 /// Channel-parallel dot products over a frame-major history block: all
 /// channels' outputs for one frame in register-blocked tiles of 8/4/2/1.
 /// Per channel the accumulation order over taps equals dotRow's, so the
@@ -346,6 +351,7 @@ inline void dotRowsFrameMajor(const typename SampleTraits<S>::Coeff* SRT_RESTRIC
         dotTileFrameMajor<S, 1>(row, x + c, taps, channels, out + c);
 }
 // ANCHOR_END: rs_dot_rows_frame_major
+// ANCHOR_END: opt_dot_rows
 
 // ANCHOR: rs_class_doc
 /// Streaming fractional-delay engine for one converter instance.
