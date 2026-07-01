@@ -414,6 +414,7 @@ public:
     /// interleaved frames, returning the count actually delivered.
     template <typename PopFn>
     std::size_t process(S* out, std::size_t maxFrames, double epsHat, PopFn&& popFrames) noexcept {
+        // ANCHOR: p0_phase_step
         // eps in Q0.64, converted once per call (block rate). |eps| is
         // servo-clamped to ~1e-3, so eps * 2^64 fits int64 comfortably.
         const auto epsFix = static_cast<std::int64_t>(epsHat * 0x1p64);
@@ -432,6 +433,7 @@ public:
                     return n; // dry: phase_ not advanced for this frame
             }
             phase_ = m;
+            // ANCHOR_END: p0_phase_step
             // Q15 on SMLALD targets routes mono through blendRow+dotRow as
             // well: dotRow carries the dual-MAC loop, and the two paths are
             // bit-exact by construction (see dotRow).

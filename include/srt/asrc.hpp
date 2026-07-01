@@ -19,6 +19,7 @@
 
 namespace srt {
 
+// ANCHOR: p0_config
 /// Converter configuration. The defaults give ~1.5 ms designed latency at
 /// 48 kHz (FIFO setpoint 48 frames + ~24 frames filter group delay; see
 /// the README latency section), transparent for clocks within +/-1000 ppm.
@@ -29,6 +30,7 @@ struct Config {
     std::size_t fifoFrames = 0;           ///< ring capacity; 0 => automatic
     FilterSpec filter{};
     ServoConfig servo{};
+    // ANCHOR_END: p0_config
 
     /// Defaults adapted to a nominal rate other than 48 kHz. The filter
     /// band edges and servo bandwidths are absolute Hz designed for 48 kHz;
