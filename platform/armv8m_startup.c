@@ -47,6 +47,7 @@ void* __dso_handle;
 void _init(void) {}
 void _fini(void) {}
 
+/* ANCHOR: pt_sbrk */
 void* _sbrk(ptrdiff_t increment) {
     static char* brk = &__heap_start__;
     if (brk + increment > &__heap_end__) {
@@ -57,7 +58,9 @@ void* _sbrk(ptrdiff_t increment) {
     brk += increment;
     return prev;
 }
+/* ANCHOR_END: pt_sbrk */
 
+/* ANCHOR: pt_irqlock */
 static inline uint32_t irqLock(void) {
     uint32_t primask;
     __asm volatile("mrs %0, PRIMASK\n cpsid i" : "=r"(primask)::"memory");
@@ -67,6 +70,7 @@ static inline uint32_t irqLock(void) {
 static inline void irqRestore(uint32_t primask) {
     __asm volatile("msr PRIMASK, %0" ::"r"(primask) : "memory");
 }
+/* ANCHOR_END: pt_irqlock */
 
 uint64_t __atomic_load_8(const volatile void* ptr, int memorder) {
     (void)memorder;
@@ -83,6 +87,7 @@ void __atomic_store_8(volatile void* ptr, uint64_t value, int memorder) {
     irqRestore(m);
 }
 
+/* ANCHOR: pt_atomic_rmw */
 uint64_t __atomic_fetch_add_8(volatile void* ptr, uint64_t value, int memorder) {
     (void)memorder;
     const uint32_t m = irqLock();
@@ -91,6 +96,7 @@ uint64_t __atomic_fetch_add_8(volatile void* ptr, uint64_t value, int memorder) 
     irqRestore(m);
     return prev;
 }
+/* ANCHOR_END: pt_atomic_rmw */
 
 uint64_t __atomic_exchange_8(volatile void* ptr, uint64_t value, int memorder) {
     (void)memorder;
@@ -101,6 +107,7 @@ uint64_t __atomic_exchange_8(volatile void* ptr, uint64_t value, int memorder) {
     return prev;
 }
 
+/* ANCHOR: pt_reset */
 void Reset_Handler(void) {
     /* MSPLIM exists on Armv8-M Mainline only (both targets are M33/M55
      * class): a main-stack overflow past __stack_limit raises a fault
@@ -119,6 +126,7 @@ void Reset_Handler(void) {
     __libc_init_array();          /* C++ static constructors */
     exit(main(0, (char**)0));
 }
+/* ANCHOR_END: pt_reset */
 
 void Default_Handler(void) {
     for (;;) {
@@ -134,6 +142,7 @@ void HardFault_Handler(void) {
     }
 }
 
+/* ANCHOR: pt_vectors */
 __attribute__((section(".vectors"), used)) static const uintptr_t vectors[16] = {
     (uintptr_t)&__stack_top,
     (uintptr_t)&Reset_Handler,
@@ -152,6 +161,7 @@ __attribute__((section(".vectors"), used)) static const uintptr_t vectors[16] = 
     (uintptr_t)&Default_Handler, /* PendSV */
     (uintptr_t)&Default_Handler, /* SysTick */
 };
+/* ANCHOR_END: pt_vectors */
 
 #ifdef __cplusplus
 } /* extern "C" */
