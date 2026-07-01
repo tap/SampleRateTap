@@ -17,6 +17,15 @@ wires them together and adds the four things none of them could own alone:
 a lifecycle state machine, an under/overrun policy, telemetry, and
 validation.
 
+![The composed converter: producer pushes into the ring, the servo turns
+ring occupancy into a rate estimate, the resampler consumes at that rate,
+the consumer pulls](../img/architecture.svg)
+
+*The whole machine on one page. The ring is the only structure both clock
+domains touch; everything downstream of it — servo, resampler, and both
+their states — lives on the consumer's side, which is why `pull()` carries
+all the policy and `push()` is eight lines.*
+
 ## The two-agent shape
 
 The public surface is two functions and a contract:
@@ -118,6 +127,17 @@ configuration: a 64-frame callback drops out every ~0.24 seconds
 indefinitely, never reaching Locked, with the reported ppm pegged at a
 false +1500 (the clamp, mistaken for the answer). A 240-frame callback
 produced 80% silence.
+
+![Measured FIFO occupancy for pull(64) at default configuration, before
+and after the feasibility fix](../img/feasibility.svg)
+
+*Both panels are measurements, not models: `scripts/book_figures.py`
+compiles the same trace dumper against the include/ tree of the last
+pre-fix commit (via `git archive`) and against HEAD, and runs the
+identical scenario. Before: drain, underrun, refill — four dropouts a
+second, forever. After: one adaptive raise on the first pull, then the
+servo regulates the effective setpoint and the underrun count stays at
+zero.*
 
 Why didn't anything catch it? Because every artifact that exercised the
 converter had, innocently, been configured just clear of the cliff. The

@@ -34,7 +34,7 @@ we cite the textbook and spend our pages on what the textbooks omit: why
 
 ## How this book stays honest
 
-Two mechanical commitments distinguish this book from most code walkthroughs.
+Three mechanical commitments distinguish this book from most code walkthroughs.
 
 **The excerpts are live.** Every block of library code you read is included
 into the book at build time from the actual header in the repository, by
@@ -50,6 +50,16 @@ yourself* section listing the exact tests, benchmarks, or notebooks that
 back what you just read. When this book says the ring buffer is correct
 under weak memory ordering, you will be holding the ThreadSanitizer
 invocation that fails if it is not.
+
+**The figures are regenerable.** Every plot in this book is produced by
+`scripts/book_figures.py` from the sources the text cites: the filter
+curves re-run the header's design math formula-for-formula, and the servo
+and feasibility traces are *measured* — the script compiles a small trace
+dumper against the real headers (and, for the before-the-fix panel,
+against the pre-fix commit's headers pulled from git history) and runs it
+in deterministic virtual time. Rerun the script and you reproduce every
+figure; nothing is drawn from memory except the one architecture diagram,
+which is labeled as drawn.
 
 ## The history is the curriculum
 

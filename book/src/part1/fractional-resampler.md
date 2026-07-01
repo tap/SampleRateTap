@@ -157,6 +157,16 @@ slip detector**, for both signs of ε, with no comparisons against 1.0 or
   1.0.
 - Otherwise `advance = 1`: the metronomic case.
 
+![The Q0.64 phase accumulator slipping by wraparound, for both signs of
+epsilon](../img/q064-slip.svg)
+
+*The slip logic run with the real mod-2⁶⁴ arithmetic, ε exaggerated to
+0.09 so the wraps are visible (at the real |ε| ≈ 2×10⁻⁴ a slip fires once
+every few thousand frames). Left: the fraction creeps upward until the add
+wraps past 1.0 — consume one extra frame. Right: with ε negative the add
+wraps on *every* ordinary frame, and the anomaly is the one that doesn't —
+reuse the window. From `scripts/book_figures.py`.*
+
 At +500 ppm a forward slip fires every 2 000 output samples, and thanks
 to the bank's extra row the filter evaluated after `advance = 2` at small
 μ is the exact continuation of the filter before it at μ ≈ 1.
