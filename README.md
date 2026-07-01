@@ -74,6 +74,29 @@ there are no install/package rules yet. Version 0.1.0 (`SRT_VERSION_*` in
 `srt/srt.hpp`, `srt_version()` over the C ABI); pre-1.0, the API may
 still change between versions.
 
+## The book
+
+The repository includes a full-length tutorial book (`book/`) that walks
+every header file line by line — the DSP, the C++ idioms chosen and
+rejected, how thread safety works, how the servo was tuned, and the
+optimization campaign with its dead ends preserved. It is written for a
+reader learning C++, DSP, and real-time concurrency with this converter as
+the running example. Three mechanical commitments keep it honest: every
+code excerpt is included live from the actual headers at build time (CI
+fails on a stale anchor), every figure is regenerated from the same math
+and measured traces by `scripts/book_figures.py`, and every chapter ends
+with runnable commands that reproduce its claims.
+
+Build it with [mdBook](https://rust-lang.github.io/mdBook/) (CI pins
+v0.4.40):
+
+```sh
+mdbook build book        # or: mdbook serve book --open
+```
+
+Start at `book/src/SUMMARY.md` for the table of contents, or read the
+sources directly — they are plain Markdown.
+
 ## How it works
 
 The design follows the classic commercial-ASRC architecture (AD1896-style
