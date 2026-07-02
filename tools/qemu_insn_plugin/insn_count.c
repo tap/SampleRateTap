@@ -21,6 +21,7 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_version = QEMU_PLUGIN_VERSION;
 
 static uint64_t insn_count;
 
+/* ANCHOR: pf_hooks */
 static void tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb* tb) {
     (void)id;
     size_t n = qemu_plugin_tb_n_insns(tb);
@@ -37,6 +38,7 @@ static void at_exit(qemu_plugin_id_t id, void* userdata) {
     g_autofree gchar* msg = g_strdup_printf("SRT_INSN_COUNT %" PRIu64 "\n", insn_count);
     qemu_plugin_outs(msg);
 }
+/* ANCHOR_END: pf_hooks */
 
 QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_t* info, int argc,
                                            char** argv) {

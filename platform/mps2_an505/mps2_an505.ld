@@ -8,6 +8,7 @@
  *   SSRAM1   4 MB @ 0x10000000  - vector table + code + rodata
  *   SSRAM2/3 4 MB @ 0x38000000  - data + bss + heap + stack
  */
+/* ANCHOR: pt_memory */
 MEMORY
 {
     CODE (rx) : ORIGIN = 0x10000000, LENGTH = 4M
@@ -15,6 +16,7 @@ MEMORY
 }
 
 __stack_top = ORIGIN(DATA) + LENGTH(DATA);
+/* ANCHOR_END: pt_memory */
 
 ENTRY(Reset_Handler)
 
@@ -72,6 +74,7 @@ SECTIONS
         __bss_end__ = .;
     } > DATA
 
+    /* ANCHOR: pt_heap_stack */
     /* Stack lives at the top of DATA; cap the heap 64 KB below it. */
     .heap (NOLOAD) : ALIGN(8) {
         __heap_start__ = .;
@@ -82,6 +85,7 @@ SECTIONS
     /* MSPLIM (set in Reset_Handler): the stack may descend to the heap cap
      * but no further — overflow into the heap faults instead of corrupting. */
     __stack_limit = __heap_end__;
+    /* ANCHOR_END: pt_heap_stack */
 
     /* librdimon's (unused, weak) _sbrk references `end`; satisfy it. */
     PROVIDE(end = __heap_start__);

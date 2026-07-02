@@ -20,6 +20,7 @@
 
 namespace srt {
 
+// ANCHOR: contract
 /// Lock-free SPSC ring buffer of trivially copyable elements.
 ///
 /// Thread contract: write() and writeAvailable() may only be called from the
@@ -34,6 +35,7 @@ class SpscRing {
     static_assert(std::is_trivially_copyable_v<T>);
     // The lock-free claim of the whole audio path rests on these indices.
     static_assert(std::atomic<std::size_t>::is_always_lock_free);
+    // ANCHOR_END: contract
 
 public:
     /// Allocates the buffer; capacity is rounded up to a power of two.
@@ -45,6 +47,7 @@ public:
 
     std::size_t capacity() const noexcept { return buf_.size(); }
 
+    // ANCHOR: write
     /// Producer: append up to n elements; returns the number actually written.
     std::size_t write(const T* src, std::size_t n) noexcept {
         const std::size_t head = head_.load(std::memory_order_relaxed);
@@ -64,12 +67,15 @@ public:
         return n;
     }
 
+    // ANCHOR_END: write
+
     /// Producer: exact free space at the time of the call.
     std::size_t writeAvailable() noexcept {
         tailCache_ = tail_.load(std::memory_order_acquire);
         return capacity() - (head_.load(std::memory_order_relaxed) - tailCache_);
     }
 
+    // ANCHOR: read
     /// Consumer: remove up to n elements; returns the number actually read.
     std::size_t read(T* dst, std::size_t n) noexcept {
         const std::size_t tail = tail_.load(std::memory_order_relaxed);
@@ -88,6 +94,8 @@ public:
         }
         return n;
     }
+
+    // ANCHOR_END: read
 
     /// Consumer: exact occupancy at the time of the call.
     std::size_t readAvailable() noexcept {
@@ -110,6 +118,7 @@ public:
     }
 
 private:
+    // ANCHOR: layout
     // 64-byte separation to keep producer- and consumer-owned state on
     // distinct cache lines (std::hardware_destructive_interference_size is
     // deliberately avoided: it is ABI-fragile and warns on GCC). The
@@ -123,6 +132,7 @@ private:
     alignas(kCacheLine) std::size_t tailCache_{0};         // producer's view of tail
     alignas(kCacheLine) std::atomic<std::size_t> tail_{0}; // written by consumer
     alignas(kCacheLine) std::size_t headCache_{0};         // consumer's view of head
+    // ANCHOR_END: layout
 };
 
 } // namespace srt

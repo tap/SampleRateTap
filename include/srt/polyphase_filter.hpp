@@ -23,6 +23,7 @@
 #define SRT_RESTRICT __restrict__
 #endif
 
+// ANCHOR: opt_smlald_gate
 // Dual 16x16 MAC (SMLALD) for the Q15 dot product on Arm cores that have
 // the DSP extension but no Helium — the Cortex-M33/M4/M7 class (e.g.
 // Raspberry Pi Pico 2). Gated off when MVE is present: on M55 the compiler
@@ -36,6 +37,7 @@
 #else
 #define SRT_Q15_SMLALD 0
 #endif
+// ANCHOR_END: opt_smlald_gate
 
 // Channel-parallel dot product for high channel counts (hypothesis C6,
 // docs/PERFORMANCE.md): history stored frame-major so the per-tap inner
@@ -63,6 +65,7 @@
 
 namespace srt {
 
+// ANCHOR: bank_spec
 /// Specification of the interpolation prototype filter.
 ///
 /// numPhases (L) sets the polyphase table resolution: the residual images from
@@ -94,6 +97,7 @@ struct FilterSpec {
                 .stopbandHz = 26000.0,
                 .stopbandAttenDb = 140.0};
     }
+    // ANCHOR_END: bank_spec
 
     /// This spec with the band edges rescaled from the 48 kHz design rate
     /// to sampleRateHz. The presets' passband/stopband are absolute Hz
@@ -111,6 +115,7 @@ struct FilterSpec {
     }
 };
 
+// ANCHOR: bank_layout
 /// Immutable polyphase coefficient table designed at construction.
 ///
 /// Storage layout: (L+1) rows of T coefficients. Row p in [0, L) is polyphase
@@ -119,11 +124,13 @@ struct FilterSpec {
 /// and the mu wrap 1.0 -> 0.0 (window shifted by one sample) is exactly
 /// continuous. Rows are stored tap-reversed so the dot product runs forward
 /// over an oldest-first history window.
+// ANCHOR_END: bank_layout
 template <SampleType S>
 class PolyphaseFilterBank {
 public:
     using Coeff = typename SampleTraits<S>::Coeff;
 
+    // ANCHOR: bank_build
     /// Designs the prototype (double precision) and builds the table.
     /// Allocates; may throw std::invalid_argument / std::bad_alloc. Do this at
     /// setup time, not on the audio path.
@@ -150,7 +157,9 @@ public:
             }
         }
     }
+    // ANCHOR_END: bank_build
 
+    // ANCHOR: bank_accessors
     /// Row pointer for phase p in [0, numPhases()]; T contiguous coefficients.
     const Coeff* phase(std::size_t p) const noexcept { return table_.data() + p * taps_; }
     std::size_t numPhases() const noexcept { return phases_; } ///< L
@@ -160,6 +169,7 @@ public:
     double groupDelaySamples() const noexcept {
         return static_cast<double>(phases_ * taps_ - 1) / (2.0 * static_cast<double>(phases_));
     }
+    // ANCHOR_END: bank_accessors
 
 private:
     std::size_t phases_;
@@ -167,6 +177,7 @@ private:
     std::vector<Coeff> table_; // (L+1) x T, rows tap-reversed
 };
 
+// ANCHOR: bank_interpolate
 /// Evaluates one output sample at fractional position mu in [0, 1).
 ///
 /// \param hist oldest-first window of the newest T input samples of one channel
@@ -192,6 +203,7 @@ inline S interpolate(const PolyphaseFilterBank<S>& bank, const S* hist, double m
         acc = Tr::mac(acc, hist[t], Tr::blend(c0[t], c1[t], fr));
     return Tr::finalize(acc);
 }
+// ANCHOR_END: bank_interpolate
 
 /// Blends the two phase rows adjacent to mu into `row` (taps() entries).
 /// Multichannel datapaths do this once per output frame and then run
@@ -213,6 +225,7 @@ inline void blendRow(const PolyphaseFilterBank<S>& bank,
         row[t] = Tr::blend(c0[t], c1[t], fr);
 }
 
+// ANCHOR: rs_blend_row_phase
 /// Phase-bit variants: the fractional position as an unsigned Q0.64
 /// fraction. The polyphase index is the top log2(L) bits and the intra-phase
 /// blend factor comes from the bits below — no double arithmetic per sample,
@@ -232,7 +245,9 @@ inline void blendRowPhase(const PolyphaseFilterBank<S>& bank,
     for (std::size_t t = 0; t < taps; ++t)
         row[t] = Tr::blend(c0[t], c1[t], fr);
 }
+// ANCHOR_END: rs_blend_row_phase
 
+// ANCHOR: rs_interpolate_phase
 /// interpolate() over a Q0.64 phase; fused blend+mac (mono fast path).
 template <SampleType S>
 inline S interpolatePhase(const PolyphaseFilterBank<S>& bank, const S* hist,
@@ -249,7 +264,9 @@ inline S interpolatePhase(const PolyphaseFilterBank<S>& bank, const S* hist,
         acc = Tr::mac(acc, hist[t], Tr::blend(c0[t], c1[t], fr));
     return Tr::finalize(acc);
 }
+// ANCHOR_END: rs_interpolate_phase
 
+// ANCHOR: rs_dot_row
 /// Dot product of a pre-blended coefficient row against a history window.
 /// Identical arithmetic to interpolate() given the same mu: blend then mac,
 /// per tap, in the same order — outputs are bit-exact either way.
@@ -281,7 +298,9 @@ inline S dotRow(const typename SampleTraits<S>::Coeff* SRT_RESTRICT row, const S
         acc = Tr::mac(acc, hist[t], row[t]);
     return Tr::finalize(acc);
 }
+// ANCHOR_END: rs_dot_row
 
+// ANCHOR: opt_dot_tile
 /// One K-channel tile of the channel-parallel dot (hypothesis C6): K
 /// accumulators live in a constexpr-size local array — registers, not
 /// memory — while the tap loop walks the frame-major window with stride
@@ -303,7 +322,10 @@ inline void dotTileFrameMajor(const typename SampleTraits<S>::Coeff* SRT_RESTRIC
     for (std::size_t k = 0; k < K; ++k)
         out[k] = Tr::finalize(acc[k]);
 }
+// ANCHOR_END: opt_dot_tile
 
+// ANCHOR: rs_dot_rows_frame_major
+// ANCHOR: opt_dot_rows
 /// Channel-parallel dot products over a frame-major history block: all
 /// channels' outputs for one frame in register-blocked tiles of 8/4/2/1.
 /// Per channel the accumulation order over taps equals dotRow's, so the
@@ -328,7 +350,10 @@ inline void dotRowsFrameMajor(const typename SampleTraits<S>::Coeff* SRT_RESTRIC
     if (c < channels)
         dotTileFrameMajor<S, 1>(row, x + c, taps, channels, out + c);
 }
+// ANCHOR_END: rs_dot_rows_frame_major
+// ANCHOR_END: opt_dot_rows
 
+// ANCHOR: rs_class_doc
 /// Streaming fractional-delay engine for one converter instance.
 ///
 /// Owns the history delay lines (planar per-channel below the
@@ -348,6 +373,7 @@ inline void dotRowsFrameMajor(const typename SampleTraits<S>::Coeff* SRT_RESTRIC
 /// detected by 64-bit wraparound instead of comparisons.
 template <SampleType S>
 class FractionalResampler {
+    // ANCHOR_END: rs_class_doc
 public:
     /// Frame-major channel-parallel mode is compiled in only on CP targets
     /// and only for floating-point samples (see SRT_CHANNEL_PARALLEL).
@@ -378,6 +404,7 @@ public:
         scratchPos_ = 0;
     }
 
+    // ANCHOR: rs_mu
     /// Fractional position in [0,1) as a double; used by the servo at block
     /// rate (one conversion per pull, not per sample).
     double mu() const noexcept { return static_cast<double>(phase_) * 0x1p-64; }
@@ -386,6 +413,7 @@ public:
     /// Frames popped from the source but not yet consumed by the filter; part
     /// of the effective backlog the servo must observe.
     std::size_t bufferedFrames() const noexcept { return scratchFrames_ - scratchPos_; }
+    // ANCHOR_END: rs_mu
 
     /// Fills the history window with taps() frames from the source.
     /// Returns false (and stays unprimed) if the source ran dry.
@@ -400,6 +428,7 @@ public:
         return true;
     }
 
+    // ANCHOR: rs_process_doc
     /// Synthesizes up to maxFrames output frames (interleaved) advancing the
     /// read position by (1 + epsHat) input frames per output frame. Returns
     /// the number produced; fewer than maxFrames means the source ran dry
@@ -414,6 +443,9 @@ public:
     /// interleaved frames, returning the count actually delivered.
     template <typename PopFn>
     std::size_t process(S* out, std::size_t maxFrames, double epsHat, PopFn&& popFrames) noexcept {
+        // ANCHOR_END: rs_process_doc
+        // ANCHOR: p0_phase_step
+        // ANCHOR: rs_slip
         // eps in Q0.64, converted once per call (block rate). |eps| is
         // servo-clamped to ~1e-3, so eps * 2^64 fits int64 comfortably.
         const auto epsFix = static_cast<std::int64_t>(epsHat * 0x1p64);
@@ -432,6 +464,9 @@ public:
                     return n; // dry: phase_ not advanced for this frame
             }
             phase_ = m;
+            // ANCHOR_END: p0_phase_step
+            // ANCHOR_END: rs_slip
+            // ANCHOR: rs_dispatch
             // Q15 on SMLALD targets routes mono through blendRow+dotRow as
             // well: dotRow carries the dual-MAC loop, and the two paths are
             // bit-exact by construction (see dotRow).
@@ -454,6 +489,7 @@ public:
                 for (std::size_t c = 0; c < channels_; ++c)
                     out[n * channels_ + c] = dotRow<S>(row_.data(), window(c), taps);
             }
+            // ANCHOR_END: rs_dispatch
         }
         return maxFrames;
     }
@@ -461,6 +497,7 @@ public:
 private:
     const S* window(std::size_t c) const noexcept { return hist_[c].data() + end_ - bank_->taps(); }
 
+    // ANCHOR: rs_append
     template <typename PopFn>
     bool appendOne(PopFn&& popFrames) noexcept {
         if (scratchPos_ == scratchFrames_) {
@@ -490,12 +527,14 @@ private:
         ++scratchPos_;
         return true;
     }
+    // ANCHOR_END: rs_append
 
     const PolyphaseFilterBank<S>* bank_;
     std::size_t channels_;
     std::size_t chunk_;
     std::size_t histCap_;
     std::vector<S> scratch_; // interleaved staging for bulk pops
+    // ANCHOR: rs_members
     // History storage: planar (one delay line per channel, hist_[c]) below
     // SRT_CP_MIN_CHANNELS, frame-major (single interleaved line, hist_[0])
     // at or above it on SRT_CHANNEL_PARALLEL targets. end_/histCap_ count
@@ -507,6 +546,7 @@ private:
     std::size_t scratchFrames_ = 0;
     std::size_t scratchPos_ = 0;
     std::uint64_t phase_ = 0; // fractional position, unsigned Q0.64
+    // ANCHOR_END: rs_members
     bool primed_ = false;
 };
 

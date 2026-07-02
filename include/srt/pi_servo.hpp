@@ -47,6 +47,7 @@
 
 namespace srt {
 
+// ANCHOR: sv_config
 /// Servo tuning. Defaults suit a 48 kHz near-unity converter.
 /// unlockThresholdFrames should stay comfortably above half the push/pull
 /// block size, since block-quantized occupancy legitimately excursions by
@@ -64,7 +65,9 @@ struct ServoConfig {
     double quietHoldSeconds = 2.0;       ///< cascade-|e| hold => track -> quiet
     double unlockThresholdFrames = 24.0; ///< |e| above this => demote a stage
     double maxDeviationPpm = 1000.0;     ///< epsHat clamp = +/- 1.5x this
+    // ANCHOR_END: sv_config
 
+    // ANCHOR: sv_scaled_to
     /// This config rescaled from the 48 kHz design rate to sampleRateHz:
     /// the loop bandwidths and error-smoother corners are absolute Hz and
     /// must track the rate, or the slip-sawtooth beat (ppm * fs) walks out
@@ -87,6 +90,7 @@ struct ServoConfig {
         s.quietHoldSeconds /= r;
         return s;
     }
+    // ANCHOR_END: sv_scaled_to
 };
 
 /// PI loop filter + three-stage lock-state machine. Pure double-precision
@@ -103,6 +107,7 @@ public:
         reset(false);
     }
 
+    // ANCHOR: sv_reset
     /// Re-arm the loop. keepIntegrator preserves the accumulated ppm estimate
     /// (the right choice after a dropout: the clocks have not changed).
     void reset(bool keepIntegrator) noexcept {
@@ -124,7 +129,9 @@ public:
     /// to the new setpoint at its clamped rate with no transient discontinuity
     /// — used by the converter's adaptive pull-block setpoint raise.
     void setTarget(double targetFrames) noexcept { target_ = targetFrames; }
+    // ANCHOR_END: sv_reset
 
+    // ANCHOR: sv_update_smooth
     /// One control update; call once per pull() before synthesis.
     /// \param occFrames raw backlog in frames (FIFO + staged frames)
     /// \param mu        current fractional read position; occ + mu changes
@@ -143,7 +150,9 @@ public:
         q3_ += aq * (q2_ - q3_);
         const double eFast = lpFast_ - target_;
         const double eQuiet = q3_ - target_;
+        // ANCHOR_END: sv_update_smooth
 
+        // ANCHOR: sv_update_stages
         const double limit = 1.5 * cfg_.maxDeviationPpm * 1e-6;
         switch (stage_) {
         case Stage::Acquire:
@@ -168,7 +177,9 @@ public:
             }
             break;
         }
+        // ANCHOR_END: sv_update_stages
 
+        // ANCHOR: sv_update_out
         double kp = 0.0;
         double ki = 0.0;
         double e = 0.0;
@@ -187,6 +198,7 @@ public:
         epsHat_ = std::clamp(kp * e + integ_, -limit, limit);
         return epsHat_;
     }
+    // ANCHOR_END: sv_update_out
 
     Stage stage() const noexcept { return stage_; }
     bool locked() const noexcept { return stage_ != Stage::Acquire; }
@@ -199,6 +211,7 @@ private:
         return 1.0 - std::exp(-2.0 * std::numbers::pi * cornerHz * dt);
     }
 
+    // ANCHOR: sv_hold
     /// Hold-window logic shared by both promotions: |e| must stay below the
     /// threshold for holdSeconds; meanwhile epsHat is averaged (time constant
     /// holdSeconds/5) so the promotion can hand a clean estimate to the
@@ -218,12 +231,15 @@ private:
         holdTimer_ = 0.0;
         return true;
     }
+    // ANCHOR_END: sv_hold
 
+    // ANCHOR: sv_gains
     void computeGains(double bandwidthHz, double& kp, double& ki) const noexcept {
         const double wn = 2.0 * std::numbers::pi * bandwidthHz;
         kp = 2.0 * cfg_.damping * wn / fs_;
         ki = wn * wn / fs_;
     }
+    // ANCHOR_END: sv_gains
 
     ServoConfig cfg_;
     double fs_;

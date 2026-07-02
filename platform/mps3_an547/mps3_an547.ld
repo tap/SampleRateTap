@@ -8,6 +8,7 @@
  *   DTCM   512 KB @ 0x20000000  - stack
  *   ISRAM    2 MB @ 0x21000000  - data + bss + heap
  */
+/* ANCHOR: pt_memory */
 MEMORY
 {
     ITCM (rx)  : ORIGIN = 0x00000000, LENGTH = 512K
@@ -20,6 +21,7 @@ __stack_top = ORIGIN(DTCM) + LENGTH(DTCM);
 /* MSPLIM (set in Reset_Handler): the stack owns all of DTCM, so the lowest
  * address it may legally reach is the region base. */
 __stack_limit = ORIGIN(DTCM);
+/* ANCHOR_END: pt_memory */
 
 ENTRY(Reset_Handler)
 
@@ -77,11 +79,13 @@ SECTIONS
         __bss_end__ = .;
     } > DATA
 
+    /* ANCHOR: pt_heap */
     .heap (NOLOAD) : ALIGN(8) {
         __heap_start__ = .;
         . = ORIGIN(DATA) + LENGTH(DATA);
         __heap_end__ = .;
     } > DATA
+    /* ANCHOR_END: pt_heap */
 
     /* librdimon's (unused, weak) _sbrk references `end`; satisfy it. */
     PROVIDE(end = __heap_start__);

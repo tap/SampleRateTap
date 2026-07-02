@@ -19,6 +19,7 @@
 
 namespace srt {
 
+// ANCHOR: p0_config
 /// Converter configuration. The defaults give ~1.5 ms designed latency at
 /// 48 kHz (FIFO setpoint 48 frames + ~24 frames filter group delay; see
 /// the README latency section), transparent for clocks within +/-1000 ppm.
@@ -29,6 +30,7 @@ struct Config {
     std::size_t fifoFrames = 0;           ///< ring capacity; 0 => automatic
     FilterSpec filter{};
     ServoConfig servo{};
+    // ANCHOR_END: p0_config
 
     /// Defaults adapted to a nominal rate other than 48 kHz. The filter
     /// band edges and servo bandwidths are absolute Hz designed for 48 kHz;
@@ -146,6 +148,7 @@ public:
             return ring_.read(dst, maxFrames * cfg_.channels) / cfg_.channels;
         };
 
+        // ANCHOR: asrc_feasibility
         // Feasibility: a pull must synthesize from frames already buffered,
         // so the occupancy setpoint must exceed the pull block size or the
         // loop drains into a permanent underrun limit cycle (dropouts every
@@ -173,8 +176,10 @@ public:
             }
         }
 
+        // ANCHOR_END: asrc_feasibility
         double occ = backlogFrames();
 
+        // ANCHOR: asrc_filling
         if (filling_) {
             if (occ < static_cast<double>(fillThresholdFrames_)) {
                 fillSilence(interleaved, frames * ch);
@@ -190,6 +195,8 @@ public:
             fadeFramesLeft_ = kFadeFrames;
         }
 
+        // ANCHOR_END: asrc_filling
+        // ANCHOR: asrc_resync
         if (occ > static_cast<double>(highWaterFrames_)) { // hard resync
             const double target = static_cast<double>(targetFrames_);
             // The discard can only come from the ring; frames staged in the
@@ -206,9 +213,11 @@ public:
             servo_.seed(occ + resampler_.mu());
         }
 
+        // ANCHOR_END: asrc_resync
         const double dt = static_cast<double>(frames) / cfg_.sampleRateHz;
         const double epsHat = servo_.update(occ, resampler_.mu(), dt);
 
+        // ANCHOR: asrc_underrun
         const std::size_t made = resampler_.process(interleaved, frames, epsHat, popFn);
         if (fadeFramesLeft_ != 0 && made != 0)
             applyFadeIn(interleaved, made);
@@ -220,6 +229,7 @@ public:
         }
         publishStatus();
         return made;
+        // ANCHOR_END: asrc_underrun
     }
 
     /// Any thread: telemetry snapshot (relaxed atomics; fields are individually

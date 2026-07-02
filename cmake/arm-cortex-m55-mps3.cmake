@@ -23,6 +23,7 @@ set(CMAKE_C_FLAGS_INIT "-mcpu=cortex-m55 -mthumb -mfloat-abi=hard -ffunction-sec
 set(CMAKE_CXX_FLAGS_INIT "${CMAKE_C_FLAGS_INIT}")
 
 get_filename_component(_srt_platform "${CMAKE_CURRENT_LIST_DIR}/../platform/mps3_an547" ABSOLUTE)
+# ANCHOR: pt_linkline
 # The startup .c is handed to the link line directly; the gcc driver
 # compiles it with the same -mcpu/-mfloat-abi flags as everything else.
 # `-x c` forces C compilation even under the g++ driver (which would treat
@@ -30,6 +31,7 @@ get_filename_component(_srt_platform "${CMAKE_CURRENT_LIST_DIR}/../platform/mps3
 # initializers are link-time constants, never dynamic initialization.
 set(CMAKE_EXE_LINKER_FLAGS_INIT
     "--specs=rdimon.specs -nostartfiles -Wl,--gc-sections -T${_srt_platform}/mps3_an547.ld -x c ${CMAKE_CURRENT_LIST_DIR}/../platform/armv8m_startup.c -x none")
+# ANCHOR_END: pt_linkline
 
 set(CMAKE_CROSSCOMPILING_EMULATOR
     "qemu-system-arm;-M;mps3-an547;-nographic;-semihosting;-kernel")

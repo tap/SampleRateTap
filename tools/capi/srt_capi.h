@@ -1,3 +1,4 @@
+/* ANCHOR: abi_contract */
 /* SampleRateTap C ABI — FFI surface over the float converter.
  *
  * Build the shared library with -DSRT_BUILD_CAPI=ON. This header is the
@@ -17,6 +18,7 @@
  * size_t in these signatures follows the platform ABI (32-bit on 32-bit
  * targets) — declare foreign types accordingly.
  */
+/* ANCHOR_END: abi_contract */
 #ifndef SRT_CAPI_H
 #define SRT_CAPI_H
 
@@ -26,6 +28,7 @@
 extern "C" {
 #endif
 
+/* ANCHOR: abi_surface */
 typedef struct SrtHandle SrtHandle;
 
 /* ABI/version probe: returns SRT_VERSION_MAJOR*10000 +
@@ -55,6 +58,7 @@ double srt_designed_latency_seconds(const SrtHandle* h);
 /* Consumer thread: discard all buffered input, forget the ppm estimate,
  * return to Filling. */
 void srt_reset_from_consumer(SrtHandle* h);
+/* ANCHOR_END: abi_surface */
 
 #ifdef __cplusplus
 }

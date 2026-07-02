@@ -12,6 +12,7 @@
 
 namespace srt_test {
 
+// ANCHOR: pf_knobs
 template <srt::SampleType S>
 struct TwoClockSimT {
     srt::BasicAsyncSampleRateConverter<S>& asrc;
@@ -27,7 +28,9 @@ struct TwoClockSimT {
     /// Optional input-rate modulation: fsIn scale factor at virtual time t
     /// (e.g. for drift-ramp tests). Defaults to constant 1.
     std::function<double(double)> fsInScale = [](double) { return 1.0; };
+    // ANCHOR_END: pf_knobs
 
+    // ANCHOR: pf_run
     /// Runs for `seconds` of output-clock virtual time. onOut receives every
     /// pulled block: (interleavedSamples, frames, virtualTime).
     template <typename OnOutput>
@@ -59,6 +62,7 @@ struct TwoClockSimT {
             }
         }
     }
+    // ANCHOR_END: pf_run
 };
 
 using TwoClockSim = TwoClockSimT<float>;
