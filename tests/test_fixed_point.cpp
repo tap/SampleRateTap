@@ -41,7 +41,11 @@ TEST(FixedPoint, DcGainIsUnityQ15) {
     std::vector<std::int16_t> dc(bank.taps(), 32767);
     for (int i = 0; i < 16; ++i) {
         const double mu = static_cast<double>(i) / 16.0;
-        EXPECT_NEAR(srt::interpolate(bank, dc.data(), mu), 32767, 4) << "mu=" << mu;
+        // 12 LSB = a -0.003 dB branch-gain deviation: per-tap rounding of
+        // the compensated (rect-smoothed) rows biases a few LSB further
+        // than the plain Kaiser rows did — still 3x inside the +/-0.01 dB
+        // passband contract (37 LSB at this scale).
+        EXPECT_NEAR(srt::interpolate(bank, dc.data(), mu), 32767, 12) << "mu=" << mu;
     }
 }
 

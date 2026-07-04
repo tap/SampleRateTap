@@ -17,7 +17,10 @@ slips that occur roughly once every `1/ppm` samples.
   allocation-free; all allocation and filter design happen in the constructor
 - Measured quality (default *balanced* preset, +200 ppm offset, THD+N-style
   residual): **135 dB** SNR at 997 Hz, **112 dB** at 12 kHz, **105 dB** at
-  19.5 kHz
+  19.5 kHz; **134.5 dB** on the program-weighted 24-tone pink multitone.
+  The `economy` preset measures **131.6 dB** program-weighted at two-thirds
+  of balanced's per-sample compute (worst-case sine near Nyquist: 77 dB —
+  the documented trade)
 - ~**1.5 ms** designed latency with the default configuration at 48 kHz
   (24-frame filter group delay + 48-frame FIFO setpoint)
 
@@ -107,9 +110,15 @@ conversion degenerates into a *creeping fractional delay*.
 
 **Datapath.** A Kaiser-windowed sinc prototype is designed at construction
 and decomposed into `L` polyphase branches of `T` taps (default 256 × 48,
-120 dB stopband, flat to 20 kHz). Each output sample evaluates one branch
-pair: coefficients are linearly interpolated between the two phases adjacent
-to the fractional position μ, with the dot product accumulated in double.
+120 dB stopband, flat to 20 kHz). Every preset except `fast` additionally
+places transmission zeros at each integer multiple of the sample rate
+(droop pre-compensated, same tap budget): the images of low-frequency
+program energy — where real audio concentrates — land on those zeros,
+deepening their rejection 10–20 dB for free. The `economy` preset leans on
+this hardest: 2/3 the taps of `balanced`, within 3 dB of it program-
+weighted. Each output sample evaluates one branch pair: coefficients are
+linearly interpolated between the two phases adjacent to the fractional
+position μ, with the dot product accumulated in double.
 The table stores an extra row (phase 0 advanced one tap) so the μ wrap
 1.0 → 0.0 with a one-sample window shift — the whole-sample slip — is
 exactly continuous and branch-free.

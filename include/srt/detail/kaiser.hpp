@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <numbers>
 #include <span>
+#include <vector>
 
 namespace srt::detail {
 
@@ -110,6 +111,182 @@ inline void designPrototype(std::span<double> h, std::size_t numPhases, double c
         v *= gain;
 }
 // ANCHOR_END: kai_prototype
+
+/// Solves the dense n x n system m * out = rhs in place (Gaussian elimination
+/// with partial pivoting; row-major m). Small systems only — the compensated
+/// design below solves at most 15 unknowns.
+inline void solveDense(std::span<double> m, std::span<double> rhs, std::span<double> out,
+                       std::size_t n) noexcept {
+    std::vector<std::size_t> order(n);
+    for (std::size_t i = 0; i < n; ++i)
+        order[i] = i;
+    for (std::size_t col = 0; col < n; ++col) {
+        std::size_t piv = col;
+        for (std::size_t r = col + 1; r < n; ++r)
+            if (std::abs(m[order[r] * n + col]) > std::abs(m[order[piv] * n + col]))
+                piv = r;
+        std::swap(order[col], order[piv]);
+        const std::size_t p = order[col];
+        for (std::size_t r = col + 1; r < n; ++r) {
+            const std::size_t rr = order[r];
+            const double f = m[rr * n + col] / m[p * n + col];
+            for (std::size_t q = col; q < n; ++q)
+                m[rr * n + q] -= f * m[p * n + q];
+            rhs[rr] -= f * rhs[p];
+        }
+    }
+    for (std::size_t col = n; col-- > 0;) {
+        const std::size_t p = order[col];
+        double v = rhs[p];
+        for (std::size_t q = col + 1; q < n; ++q)
+            v -= m[p * n + q] * out[q];
+        out[col] = v / m[p * n + col];
+    }
+}
+
+// ANCHOR: pw_comp_design
+/// Designs a prototype with transmission zeros at every integer multiple of
+/// the sample rate, passband droop pre-compensated (the music-dsp thread's
+/// suggestion, done inside the passband spec — see the epilogue chapter of
+/// the book and notebooks/asrc_rbj_analysis.ipynb).
+///
+/// Construction: the zeros come from convolving with a one-input-sample rect
+/// (multiplies the response by sinc(f/fs), zero at every k*fs — exactly where
+/// the images of low-frequency program energy sit). The rect's passband droop
+/// (-2.64 dB at 20 kHz) is cancelled by tilting the design target by
+/// 1/sinc(f/fs), expressed as a short cosine series in f — which in time is a
+/// weighted sum of the brickwall kernel at small integer shifts, so the whole
+/// design stays closed-form: no FFT, no dependency. Two correction passes
+/// (measure the built passband by direct DFT, fold the deviation back into
+/// the tilt) hold every preset's ripple within +/-0.003 dB.
+///
+/// \param h            output, length L*T for the TOTAL taps per phase T; the
+///                     sinc design uses T-1 taps and the rect supplies the
+///                     +1 (composite length L*(T-1)+L-1, one zero of padding)
+/// \param numPhases    L
+/// \param cutoffNorm   as designPrototype
+/// \param beta         Kaiser shape parameter for the T-1-tap base design
+/// \param passbandNorm passband edge / sample rate (flatness is corrected and
+///                     verified up to here)
+///
+/// Costs a few ms more than designPrototype (three kernel builds plus ~100
+/// direct-DFT probes); still constructor-only, off the audio path. Allocates
+/// workspace; may throw std::bad_alloc.
+inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhases,
+                                       double cutoffNorm, double beta, double passbandNorm) {
+    const std::size_t L = numPhases;
+    const std::size_t total = h.size() / L; // total taps per phase (with rect)
+    const std::size_t td = total - 1;       // sinc-design taps per phase
+    const std::size_t n = L * td;           // fine-grid design length
+    const std::size_t nc = n + L - 1;       // composite length after rect
+    // Compensator order: enough cosine terms to hold the passband tilt to
+    // ~1e-4, capped so the shifted kernels stay well inside short windows.
+    const std::size_t M = std::min<std::size_t>(14, (td - 1) / 5);
+
+    constexpr std::size_t kGrid = 1001; // fit grid over f/fs in [0, 0.5]
+    constexpr std::size_t kProbe = 48;  // passband correction probes
+    std::vector<double> target(kGrid), a(M + 1), fine(n), probe(kProbe);
+    for (std::size_t g = 0; g < kGrid; ++g) {
+        const double f = 0.5 * static_cast<double>(g) / static_cast<double>(kGrid - 1);
+        const double pf = std::numbers::pi * f;
+        target[g] = f < 1e-9 ? 1.0 : pf / std::sin(pf); // 1/sinc(f/fs)
+    }
+
+    const auto fitCosineSeries = [&] {
+        // Weighted LS of target on cos(2*pi*m*f): exact where flatness is
+        // specified (the passband, heavy weight), merely tracked above it.
+        std::vector<double> nm((M + 1) * (M + 1), 0.0), rhs(M + 1, 0.0), basis(M + 1);
+        for (std::size_t g = 0; g < kGrid; ++g) {
+            const double f = 0.5 * static_cast<double>(g) / static_cast<double>(kGrid - 1);
+            const double w2 = f <= passbandNorm + 0.02 ? 1e8 : 1.0; // (weight 1e4)^2
+            for (std::size_t m = 0; m <= M; ++m)
+                basis[m] = std::cos(2.0 * std::numbers::pi * static_cast<double>(m) * f);
+            for (std::size_t r = 0; r <= M; ++r) {
+                for (std::size_t q = 0; q <= M; ++q)
+                    nm[r * (M + 1) + q] += w2 * basis[r] * basis[q];
+                rhs[r] += w2 * basis[r] * target[g];
+            }
+        }
+        solveDense(nm, rhs, a, M + 1);
+    };
+
+    const auto build = [&] {
+        // Tilted ideal kernel: sum of the brickwall sinc at integer shifts.
+        // Centered at n/2 (not (n-1)/2): the even-length rect below shifts
+        // the composite by (L-1)/2, and n/2 + (L-1)/2 == (L*total - 1)/2 —
+        // the exact center designPrototype uses, so the bank's phase/delay
+        // convention is identical for both designs. (Getting this wrong is a
+        // half-fine-sample delay error: ~-72 dB at 1 kHz, worse by 6 dB per
+        // octave — the fractional-delay accuracy tests catch it.)
+        const double center = 0.5 * static_cast<double>(n);
+        const double i0Beta = besselI0(beta);
+        for (std::size_t i = 0; i < n; ++i) {
+            const double t = (static_cast<double>(i) - center) / static_cast<double>(L);
+            double v = a[0] * cutoffNorm * sinc(cutoffNorm * t);
+            for (std::size_t m = 1; m <= M; ++m) {
+                const double dm = static_cast<double>(m);
+                v += 0.5 * a[m] * cutoffNorm *
+                     (sinc(cutoffNorm * (t - dm)) + sinc(cutoffNorm * (t + dm)));
+            }
+            const double u = (static_cast<double>(i) - center) / center;
+            fine[i] = v * besselI0(beta * std::sqrt(std::max(0.0, 1.0 - u * u))) / i0Beta;
+        }
+        // Rect convolution as a running sum: exact zeros at every k*fs.
+        double run = 0.0;
+        for (std::size_t i = 0; i < nc; ++i) {
+            run += i < n ? fine[i] : 0.0;
+            if (i >= L)
+                run -= fine[i - L];
+            h[i] = run / static_cast<double>(L);
+        }
+        for (std::size_t i = nc; i < h.size(); ++i)
+            h[i] = 0.0;
+        double sum = 0.0;
+        for (std::size_t i = 0; i < nc; ++i)
+            sum += h[i];
+        const double gain = static_cast<double>(L) / sum;
+        for (std::size_t i = 0; i < nc; ++i)
+            h[i] *= gain;
+    };
+
+    for (int pass = 0; pass < 2; ++pass) {
+        fitCosineSeries();
+        build();
+        // Probe the built passband by direct DFT (cos projection about the
+        // composite's symmetry center, (L*total - 1)/2 == nc/2) and fold the
+        // deviation into the tilt.
+        const double center = 0.5 * static_cast<double>(nc);
+        for (std::size_t j = 0; j < kProbe; ++j) {
+            const double f = passbandNorm * static_cast<double>(j + 1) / kProbe;
+            double acc = 0.0;
+            for (std::size_t i = 0; i < nc; ++i)
+                acc += h[i] * std::cos(2.0 * std::numbers::pi * f *
+                                       (static_cast<double>(i) - center) / static_cast<double>(L));
+            probe[j] = std::abs(acc) / static_cast<double>(L);
+        }
+        for (std::size_t g = 0; g < kGrid; ++g) {
+            const double f = 0.5 * static_cast<double>(g) / static_cast<double>(kGrid - 1);
+            if (f > passbandNorm)
+                continue;
+            // probe[j] sits at f = passbandNorm*(j+1)/kProbe, i.e. x = j+1
+            const double x = f / passbandNorm * kProbe - 1.0;
+            double d;
+            if (x <= 0.0) {
+                d = probe[0];
+            } else if (x >= static_cast<double>(kProbe - 1)) {
+                d = probe[kProbe - 1];
+            } else {
+                const auto j = static_cast<std::size_t>(x);
+                const double fr = x - static_cast<double>(j);
+                d = probe[j] * (1.0 - fr) + probe[j + 1] * fr;
+            }
+            target[g] /= std::max(d, 0.5);
+        }
+    }
+    fitCosineSeries();
+    build();
+}
+// ANCHOR_END: pw_comp_design
 
 } // namespace srt::detail
 
