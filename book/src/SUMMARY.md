@@ -40,6 +40,10 @@
 - [Real clocks: bridges and firmware](part5/hardware.md)
 - [Channels, rates, and the rules that scale](part5/scaling.md)
 
+# Epilogue
+
+- [A letter from the list](epilogue/letter.md)
+
 ---
 
 [Appendix A: The C++ decision log](appendix/cpp-decisions.md)

@@ -172,6 +172,7 @@ inline void solveDense(std::span<double> m, std::span<double> rhs, std::span<dou
 /// Costs a few ms more than designPrototype (three kernel builds plus ~100
 /// direct-DFT probes); still constructor-only, off the audio path. Allocates
 /// workspace; may throw std::bad_alloc.
+// ANCHOR_END: pw_comp_design
 inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhases,
                                        double cutoffNorm, double beta, double passbandNorm) {
     const std::size_t L = numPhases;
@@ -231,6 +232,7 @@ inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhase
             const double u = (static_cast<double>(i) - center) / center;
             fine[i] = v * besselI0(beta * std::sqrt(std::max(0.0, 1.0 - u * u))) / i0Beta;
         }
+        // ANCHOR: pw_comp_rect
         // Rect convolution as a running sum: exact zeros at every k*fs.
         double run = 0.0;
         for (std::size_t i = 0; i < nc; ++i) {
@@ -241,6 +243,7 @@ inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhase
         }
         for (std::size_t i = nc; i < h.size(); ++i)
             h[i] = 0.0;
+        // ANCHOR_END: pw_comp_rect
         double sum = 0.0;
         for (std::size_t i = 0; i < nc; ++i)
             sum += h[i];
@@ -286,7 +289,6 @@ inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhase
     fitCosineSeries();
     build();
 }
-// ANCHOR_END: pw_comp_design
 
 } // namespace srt::detail
 
