@@ -196,12 +196,18 @@ inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhase
     const auto fitCosineSeries = [&] {
         // Weighted LS of target on cos(2*pi*m*f): exact where flatness is
         // specified (the passband, heavy weight), merely tracked above it.
+        // Basis by Chebyshev recurrence: cos(m x) from the two previous
+        // orders, one real cosine per grid point.
         std::vector<double> nm((M + 1) * (M + 1), 0.0), rhs(M + 1, 0.0), basis(M + 1);
         for (std::size_t g = 0; g < kGrid; ++g) {
             const double f = 0.5 * static_cast<double>(g) / static_cast<double>(kGrid - 1);
             const double w2 = f <= passbandNorm + 0.02 ? 1e8 : 1.0; // (weight 1e4)^2
-            for (std::size_t m = 0; m <= M; ++m)
-                basis[m] = std::cos(2.0 * std::numbers::pi * static_cast<double>(m) * f);
+            const double c1 = std::cos(2.0 * std::numbers::pi * f);
+            basis[0] = 1.0;
+            if (M >= 1)
+                basis[1] = c1;
+            for (std::size_t m = 2; m <= M; ++m)
+                basis[m] = 2.0 * c1 * basis[m - 1] - basis[m - 2];
             for (std::size_t r = 0; r <= M; ++r) {
                 for (std::size_t q = 0; q <= M; ++q)
                     nm[r * (M + 1) + q] += w2 * basis[r] * basis[q];
@@ -219,18 +225,49 @@ inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhase
         // convention is identical for both designs. (Getting this wrong is a
         // half-fine-sample delay error: ~-72 dB at 1 kHz, worse by 6 dB per
         // octave — the fractional-delay accuracy tests catch it.)
+        //
+        // Transcendental budget: the naive form of this loop calls libm sin
+        // once per tap per compensator term (~2M calls across the design; a
+        // measured +225M constructor instructions on Cortex-M55, and worse
+        // where doubles are soft). Instead: sin(pi*c*(t -+ m)) expands by
+        // angle addition over precomputed sin/cos(pi*c*m), and sin/cos of
+        // the per-tap angle advance by a unit rotator, re-synced with real
+        // libm calls every 4096 taps to bound drift far below the design's
+        // own accuracy floor.
         const double center = 0.5 * static_cast<double>(n);
         const double i0Beta = besselI0(beta);
+        std::vector<double> cs(M + 1), sn(M + 1);
+        for (std::size_t m = 0; m <= M; ++m) {
+            cs[m] = std::cos(std::numbers::pi * cutoffNorm * static_cast<double>(m));
+            sn[m] = std::sin(std::numbers::pi * cutoffNorm * static_cast<double>(m));
+        }
+        const double step = std::numbers::pi * cutoffNorm / static_cast<double>(L);
+        const double stepC = std::cos(step), stepS = std::sin(step);
+        double angS = 0.0, angC = 1.0; // sin/cos(pi*c*t_i), re-synced below
         for (std::size_t i = 0; i < n; ++i) {
             const double t = (static_cast<double>(i) - center) / static_cast<double>(L);
-            double v = a[0] * cutoffNorm * sinc(cutoffNorm * t);
+            if (i % 4096 == 0) {
+                angS = std::sin(std::numbers::pi * cutoffNorm * t);
+                angC = std::cos(std::numbers::pi * cutoffNorm * t);
+            }
+            const auto shiftedSinc = [&](double dm, double sinShift, double cosShift) {
+                const double x = cutoffNorm * (t - dm); // dm may be negative
+                if (std::abs(x) < 1e-12)
+                    return 1.0;
+                // sin(pi*c*(t - dm)) = sin(pi*c*t)cos(pi*c*dm) - cos(..)sin(..)
+                return (angS * cosShift - angC * sinShift) / (std::numbers::pi * x);
+            };
+            double v = a[0] * cutoffNorm * shiftedSinc(0.0, 0.0, 1.0);
             for (std::size_t m = 1; m <= M; ++m) {
                 const double dm = static_cast<double>(m);
                 v += 0.5 * a[m] * cutoffNorm *
-                     (sinc(cutoffNorm * (t - dm)) + sinc(cutoffNorm * (t + dm)));
+                     (shiftedSinc(dm, sn[m], cs[m]) + shiftedSinc(-dm, -sn[m], cs[m]));
             }
             const double u = (static_cast<double>(i) - center) / center;
             fine[i] = v * besselI0(beta * std::sqrt(std::max(0.0, 1.0 - u * u))) / i0Beta;
+            const double nextS = angS * stepC + angC * stepS;
+            angC = angC * stepC - angS * stepS;
+            angS = nextS;
         }
         // ANCHOR: pw_comp_rect
         // Rect convolution as a running sum: exact zeros at every k*fs.
@@ -257,14 +294,22 @@ inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhase
         build();
         // Probe the built passband by direct DFT (cos projection about the
         // composite's symmetry center, (L*total - 1)/2 == nc/2) and fold the
-        // deviation into the tilt.
+        // deviation into the tilt. One rotator per probe frequency: two libm
+        // calls each instead of one per tap (rotator drift over ~2^14 steps
+        // is ~1e-12, five orders below the ripple being measured).
         const double center = 0.5 * static_cast<double>(nc);
         for (std::size_t j = 0; j < kProbe; ++j) {
             const double f = passbandNorm * static_cast<double>(j + 1) / kProbe;
+            const double th = 2.0 * std::numbers::pi * f / static_cast<double>(L);
+            const double thC = std::cos(th), thS = std::sin(th);
+            double rc = std::cos(th * -center), rs = std::sin(th * -center);
             double acc = 0.0;
-            for (std::size_t i = 0; i < nc; ++i)
-                acc += h[i] * std::cos(2.0 * std::numbers::pi * f *
-                                       (static_cast<double>(i) - center) / static_cast<double>(L));
+            for (std::size_t i = 0; i < nc; ++i) {
+                acc += h[i] * rc;
+                const double nrc = rc * thC - rs * thS;
+                rs = rs * thC + rc * thS;
+                rc = nrc;
+            }
             probe[j] = std::abs(acc) / static_cast<double>(L);
         }
         for (std::size_t g = 0; g < kGrid; ++g) {
