@@ -64,23 +64,25 @@ TEST(Polyphase, FractionalDelayAccuracyBalanced) {
     const srt::PolyphaseFilterBank<float> bank(srt::FilterSpec::balanced(), kFs);
     // Error budget: this absolute-error sweep sees BOTH the inter-phase
     // interpolation floor and the prototype's in-spec passband ripple (a
-    // gain deviation of r dB reads here as 20*log10(10^(r/20)-1), i.e.
-    // -75 dB for the 0.003 dB the compensated designs measure near their
-    // passband edge). These gates therefore pin the documented +/-0.01 dB
-    // passband contract, not the plain Kaiser's incidental +/-0.0001 dB
-    // flatness the old, tighter numbers leaned on. Alignment bugs still
-    // fail loudly: a half-fine-sample delay error measures -72 dB at
-    // 1 kHz alone, 23 dB over this gate.
+    // gain deviation of r dB reads here as 20*log10(10^(r/20)-1): the
+    // +/-0.01 dB passband CONTRACT corresponds to -58.7 dB, and the
+    // compensated designs' measured ripple (one correction pass, sized by
+    // the M33 constructor budget) reads -70/-87 dB at the passband edge
+    // for balanced/transparent. These gates sit between measured and the
+    // contract bound — pinning the contract, not the plain Kaiser's
+    // incidental +/-0.0001 dB flatness the original numbers leaned on.
+    // Alignment bugs still fail loudly: a half-fine-sample delay error
+    // measures -72 dB at 1 kHz alone, 23 dB over that gate.
     EXPECT_LT(maxErrorDb(bank, 997.0), -95.0);
     EXPECT_LT(maxErrorDb(bank, 4000.0), -95.0);
     EXPECT_LT(maxErrorDb(bank, 10000.0), -95.0);
-    EXPECT_LT(maxErrorDb(bank, 19000.0), -72.0);
+    EXPECT_LT(maxErrorDb(bank, 19000.0), -65.0);
 }
 
 TEST(Polyphase, FractionalDelayAccuracyTransparent) {
     const srt::PolyphaseFilterBank<float> bank(srt::FilterSpec::transparent(), kFs);
     EXPECT_LT(maxErrorDb(bank, 997.0), -104.0);
-    EXPECT_LT(maxErrorDb(bank, 19000.0), -94.0);
+    EXPECT_LT(maxErrorDb(bank, 19000.0), -80.0);
 }
 
 TEST(Polyphase, MuWrapIsContinuousWithWindowShift) {

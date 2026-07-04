@@ -156,9 +156,13 @@ inline void solveDense(std::span<double> m, std::span<double> rhs, std::span<dou
 /// (-2.64 dB at 20 kHz) is cancelled by tilting the design target by
 /// 1/sinc(f/fs), expressed as a short cosine series in f — which in time is a
 /// weighted sum of the brickwall kernel at small integer shifts, so the whole
-/// design stays closed-form: no FFT, no dependency. Two correction passes
+/// design stays closed-form: no FFT, no dependency. One correction pass
 /// (measure the built passband by direct DFT, fold the deviation back into
-/// the tilt) hold every preset's ripple within +/-0.003 dB.
+/// the tilt) holds every preset's ripple within +/-0.005 dB, a >=2x margin
+/// on the spec. (A second pass buys ~1 dB of margin for another kernel
+/// build plus probe sweep — real money on soft-double targets, where every
+/// design flop is a libcall; the pass count and probe count below are
+/// sized by the M33 instruction-count ledger in docs/PERFORMANCE.md.)
 ///
 /// \param h            output, length L*T for the TOTAL taps per phase T; the
 ///                     sinc design uses T-1 taps and the rect supplies the
@@ -185,7 +189,7 @@ inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhase
     const std::size_t M = std::min<std::size_t>(14, (td - 1) / 5);
 
     constexpr std::size_t kGrid = 1001; // fit grid over f/fs in [0, 0.5]
-    constexpr std::size_t kProbe = 48;  // passband correction probes
+    constexpr std::size_t kProbe = 24;  // passband correction probes
     std::vector<double> target(kGrid), a(M + 1), fine(n), probe(kProbe);
     for (std::size_t g = 0; g < kGrid; ++g) {
         const double f = 0.5 * static_cast<double>(g) / static_cast<double>(kGrid - 1);
@@ -289,7 +293,7 @@ inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhase
             h[i] *= gain;
     };
 
-    for (int pass = 0; pass < 2; ++pass) {
+    for (int pass = 0; pass < 1; ++pass) {
         fitCosineSeries();
         build();
         // Probe the built passband by direct DFT (cos projection about the

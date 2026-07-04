@@ -320,6 +320,7 @@ jobs:
           --build-dir build-m55 --plugin /tmp/libinsncount.so
 
       - name: Build M33 workloads
+        if: ${{ !cancelled() }}
         run: >
           cmake -B build-m33
           -DCMAKE_BUILD_TYPE=Release
@@ -329,6 +330,7 @@ jobs:
           && cmake --build build-m33 -j 4
 
       - name: Ratchet M33
+        if: ${{ !cancelled() }}
         run: >
           python3 scripts/icount.py --target m33
           --build-dir build-m33 --plugin /tmp/libinsncount.so
@@ -336,7 +338,12 @@ jobs:
       # Neither Debian's nor the CodeLinaro toolchain's qemu-hexagon enables
       # TCG plugins, so the Hexagon leg builds its own from the pinned QEMU
       # release (linux-user target only, ~4 min, cached thereafter).
+      # The remaining ratchet steps run even if an earlier target failed
+      # (each target's numbers are independent evidence; stopping at the
+      # first failure forces a serial harvest when baselines legitimately
+      # move). The job still fails if any step failed.
       - name: Cache plugin-enabled qemu-hexagon
+        if: ${{ !cancelled() }}
         id: qemu-hex
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
@@ -344,7 +351,7 @@ jobs:
           key: qemu-hexagon-plugins-${{ env.QEMU_SRC_URL }}-1
 
       - name: Build plugin-enabled qemu-hexagon
-        if: steps.qemu-hex.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.qemu-hex.outputs.cache-hit != 'true' }}
         run: |
           curl -sfLo /tmp/qemu-src.tar.xz "$QEMU_SRC_URL"
           actual=$(sha256sum /tmp/qemu-src.tar.xz | cut -d' ' -f1)
@@ -361,6 +368,7 @@ jobs:
           cp build/qemu-hexagon ~/qemu-hexagon-plugins/
 
       - name: Cache Hexagon toolchain
+        if: ${{ !cancelled() }}
         id: cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
@@ -370,6 +378,7 @@ jobs:
           key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
 
       - name: Ratchet Hexagon
+        if: ${{ !cancelled() }}
         run: |
           if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
             mkdir -p ~/hexagon && cd ~/hexagon
