@@ -6,3 +6,4 @@ CMakeUserPresets.json
 .idea/
 .claude/
 book/book/
+__pycache__/

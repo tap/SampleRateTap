@@ -59,7 +59,11 @@ builds the shared library if missing). A second notebook,
 [notebooks/asrc_block_size_study.ipynb](notebooks/asrc_block_size_study.ipynb),
 measures how processing block size (32 / 64 / 240 frames) trades latency
 against servo observability — including per-impulse latency-breathing
-measurements and a calibrated FM/wideband quality decomposition.
+measurements and a calibrated FM/wideband quality decomposition. A third,
+[notebooks/asrc_rbj_analysis.ipynb](notebooks/asrc_rbj_analysis.ipynb),
+verifies the quantitative design feedback from the June 2026 music-dsp
+thread (image-S/N vs phase count, tap budgets, zeros-at-k·fs) against the
+shipped filters, with every result assertion-pinned.
 
 For real hardware there are three more entry points:
 `examples/alsa_bridge.cpp` (two ALSA devices on their real crystals — the
