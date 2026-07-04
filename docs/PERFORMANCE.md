@@ -123,9 +123,13 @@ table is already enforced by test thresholds.
   bottleneck. Cut to one correction pass and 24 probes (ripple margin
   still >=2.2x on every preset, re-verified; two passband-edge
   fractional-delay gates re-pinned against the +/-0.01 dB contract).
-  Embedded icount scenarios include construction, so baselines shift
-  above the +/-3% two-sided ratchet; regenerated from CI logs with this
-  entry as the justification, per the algorithm-change rule.
+  Final measured construction deltas, constant across all seven
+  scenarios per target: M55 +16.1M (hardware FP64), Hexagon +131.3M,
+  M33 +928.7M (both soft-FP64) instructions. Embedded icount baselines
+  regenerated from CI logs with this entry as the justification, per the
+  algorithm-change rule; the two-sided ratchet flagged both directions
+  during the process (the M55 leg failed as 'IMPROVED beyond tolerance'
+  when the one-pass reduction landed on top of the two-pass baselines).
 
 ## Known debt
 
