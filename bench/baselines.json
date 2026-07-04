@@ -18,12 +18,12 @@
     "pipeline_q31": 566751937
   },
   "m55": {
-    "kernel_float": 99468474,
-    "kernel_q15": 181994196,
-    "kernel_q31": 210789622,
-    "pipeline12_q15": 387876968,
-    "pipeline_float": 92751177,
-    "pipeline_q15": 127446817,
-    "pipeline_q31": 162708581
+    "kernel_float": 133145094,
+    "kernel_q15": 215670698,
+    "kernel_q31": 244466129,
+    "pipeline12_q15": 421465961,
+    "pipeline_float": 126437587,
+    "pipeline_q15": 161031125,
+    "pipeline_q31": 196389634
   }
 }
