@@ -95,8 +95,7 @@ and measured traces by `scripts/book_figures.py`, and every chapter ends
 with runnable commands that reproduce its claims.
 
 Read it at **<https://tap.github.io/SampleRateTap/>** (published from
-`main` by the `book-pages` workflow; note the site is public even though
-this repository is private), or build it locally with
+`main` by the `book-pages` workflow), or build it locally with
 [mdBook](https://rust-lang.github.io/mdBook/) (CI pins v0.4.40):
 
 ```sh
@@ -321,13 +320,13 @@ Executed instructions per fixed workload (`bench/icount/`), measured under QEMU 
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `kernel_float` | 1,897,321,329 | 99,468,474 | 339,027,222 |
-| `kernel_q15` | 587,096,252 | 181,994,196 | 102,819,852 |
-| `kernel_q31` | 634,168,961 | 210,789,622 | 110,455,141 |
-| `pipeline12_q15` | 962,613,655 | 387,876,968 | 378,858,793 |
-| `pipeline_float` | 1,856,735,553 | 92,751,177 | 335,912,671 |
-| `pipeline_q15` | 484,146,844 | 127,446,817 | 119,847,854 |
-| `pipeline_q31` | 566,751,937 | 162,708,581 | 120,694,199 |
+| `kernel_float` | 1,897,321,329 | 133,145,094 | 339,027,222 |
+| `kernel_q15` | 587,096,252 | 215,670,698 | 102,819,852 |
+| `kernel_q31` | 634,168,961 | 244,466,129 | 110,455,141 |
+| `pipeline12_q15` | 962,613,655 | 421,465,961 | 378,858,793 |
+| `pipeline_float` | 1,856,735,553 | 126,437,587 | 335,912,671 |
+| `pipeline_q15` | 484,146,844 | 161,031,125 | 119,847,854 |
+| `pipeline_q31` | 566,751,937 | 196,389,634 | 120,694,199 |
 <!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->
