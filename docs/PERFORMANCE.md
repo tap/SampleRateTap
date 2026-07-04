@@ -116,12 +116,31 @@ table is already enforced by test thresholds.
   libm sin/cos calls in the design loops. Rewritten trig-lite before
   ratifying any baseline: angle addition over precomputed shift constants
   for the tilted kernel, rotators for the probe DFT, Chebyshev recurrence
-  for the fit basis — ~3k libm calls remain. Embedded icount scenarios
-  include construction, so baselines still shift above the +/-3% two-sided
-  ratchet; regenerated from the trig-lite run's logs with this entry as
-  the justification, per the algorithm-change rule.
+  for the fit basis — ~3k libm calls remain. That priced the M55 at
+  +33.7M; the M33 then priced the same design at +1.90G per scenario,
+  because on a soft-FP64 target every double flop is a ~140-instruction
+  libcall and the design ran ~14M flops — libm was never the M33's
+  bottleneck. Cut to one correction pass and 24 probes (ripple margin
+  still >=2.2x on every preset, re-verified; two passband-edge
+  fractional-delay gates re-pinned against the +/-0.01 dB contract).
+  Embedded icount scenarios include construction, so baselines shift
+  above the +/-3% two-sided ratchet; regenerated from CI logs with this
+  entry as the justification, per the algorithm-change rule.
 
 ## Known debt
+
+- **Constructor cost on soft-FP64 targets, and ratchet sensitivity.** The
+  compensated design costs ~7M double flops at construction — pennies on
+  hosts and the M55 (hardware FP64), but ~1G instructions on the QEMU
+  M33 (soft-double libcalls): seconds of boot on an M33-class part, and
+  a large share of each M33 icount scenario's total, which dilutes the
+  +/-3% gate's sensitivity to hot-path regressions on that target.
+  Mitigations queued: split construction into its own ratcheted scenario
+  (streaming = full minus construct-only, restoring per-frame
+  sensitivity and making constructor cost a first-class number); note
+  the real RP2350 routes double arithmetic through the DCP coprocessor,
+  so the QEMU soft-double figure overstates real Pico 2 boot cost —
+  pico2_cyccnt can measure the truth on hardware.
 
 - **MSVC /W4 triage outstanding**: the Windows CI leg builds with
   `SRT_WERROR=OFF` until the /W4 output has been triaged (ci.yml carries
