@@ -109,10 +109,17 @@ table is already enforced by test thresholds.
   notebooks/asrc_rbj_analysis.ipynb). Audio-path cost: zero — same T, same
   kernels, same loop trip counts. Constructor cost: roughly 3x the design
   transcendentals (three kernel builds plus ~100 direct-DFT passband
-  probes), still constructor-only and off the audio path. Embedded icount
-  scenarios include construction, so baselines shift above the +/-3%
-  two-sided ratchet on short scenarios; regenerated with this entry as the
-  justification, per the algorithm-change rule.
+  probes), still constructor-only and off the audio path. The first CI run
+  measured the naive form at +225.4M instructions per scenario on the M55
+  (constant across all seven scenarios to within 0.1M — the audio path's
+  own counts are unchanged, which is the constant-delta signature): ~2M
+  libm sin/cos calls in the design loops. Rewritten trig-lite before
+  ratifying any baseline: angle addition over precomputed shift constants
+  for the tilted kernel, rotators for the probe DFT, Chebyshev recurrence
+  for the fit basis — ~3k libm calls remain. Embedded icount scenarios
+  include construction, so baselines still shift above the +/-3% two-sided
+  ratchet; regenerated from the trig-lite run's logs with this entry as
+  the justification, per the algorithm-change rule.
 
 ## Known debt
 
