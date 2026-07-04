@@ -45,12 +45,19 @@ double responseDb(const std::vector<double>& h, std::size_t numPhases, double fs
 }
 
 void checkPrototypeMeetsSpec(const srt::FilterSpec& spec, double fs) {
-    const std::size_t n = std::bit_ceil(spec.numPhases) * spec.tapsPerPhase;
+    const std::size_t phases = std::bit_ceil(spec.numPhases);
+    const std::size_t n = phases * spec.tapsPerPhase;
     std::vector<double> h(n);
     const double cutoffNorm = (spec.passbandHz + spec.stopbandHz) / fs;
-    designPrototype(h, std::bit_ceil(spec.numPhases), cutoffNorm, kaiserBeta(spec.stopbandAttenDb));
+    if (spec.imageZeros)
+        designPrototypeCompensated(h, phases, cutoffNorm, kaiserBeta(spec.stopbandAttenDb),
+                                   spec.passbandHz / fs);
+    else
+        designPrototype(h, phases, cutoffNorm, kaiserBeta(spec.stopbandAttenDb));
 
-    // Passband: flat within +/-0.01 dB up to the passband edge.
+    // Passband: flat within +/-0.01 dB up to the passband edge. For the
+    // compensated designs this is the claim the droop pre-compensation
+    // exists to defend (the raw rect would sag -2.64 dB at 20 kHz).
     for (double f = 0.0; f <= spec.passbandHz; f += 500.0)
         EXPECT_NEAR(responseDb(h, spec.numPhases, fs, f), 0.0, 0.01)
             << "passband deviation at " << f << " Hz";
@@ -60,6 +67,14 @@ void checkPrototypeMeetsSpec(const srt::FilterSpec& spec, double fs) {
     for (double f = spec.stopbandHz; f <= 3.0 * fs; f += 250.0)
         EXPECT_LT(responseDb(h, spec.numPhases, fs, f), -(spec.stopbandAttenDb - 1.0))
             << "stopband leakage at " << f << " Hz";
+
+    // Transmission zeros at every k*fs: exact in exact arithmetic, so demand
+    // far below the rated stopband (double rounding measures ~-300 dB).
+    if (spec.imageZeros) {
+        for (int k = 1; k <= 3; ++k)
+            EXPECT_LT(responseDb(h, spec.numPhases, fs, static_cast<double>(k) * fs), -150.0)
+                << "missing transmission zero at " << k << "*fs";
+    }
 }
 
 TEST(Kaiser, FastPrototypeMeetsSpec) {
@@ -72,6 +87,17 @@ TEST(Kaiser, BalancedPrototypeMeetsSpec) {
 
 TEST(Kaiser, TransparentPrototypeMeetsSpec) {
     checkPrototypeMeetsSpec(srt::FilterSpec::transparent(), 48000.0);
+}
+
+TEST(Kaiser, EconomyPrototypeMeetsSpec) {
+    checkPrototypeMeetsSpec(srt::FilterSpec::economy(), 48000.0);
+}
+
+// The compensated presets must also hold their specs at scaled rates (the
+// 16 kHz deployment path): normalized design, same numbers.
+TEST(Kaiser, CompensatedSpecsHoldAt16k) {
+    checkPrototypeMeetsSpec(srt::FilterSpec::balanced().scaledTo(16000.0), 16000.0);
+    checkPrototypeMeetsSpec(srt::FilterSpec::economy().scaledTo(16000.0), 16000.0);
 }
 
 } // namespace

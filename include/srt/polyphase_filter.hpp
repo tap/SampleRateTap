@@ -78,14 +78,27 @@ struct FilterSpec {
     double passbandHz = 20000.0;    ///< edge of the flat passband
     double stopbandHz = 28000.0;    ///< first image to suppress (fs - passband)
     double stopbandAttenDb = 120.0; ///< prototype stopband attenuation target
+    // ANCHOR: pw_image_zeros
+    /// Places transmission zeros at every integer multiple of the sample
+    /// rate (droop pre-compensated; see designPrototypeCompensated). Images
+    /// of low-frequency program energy — where real audio concentrates —
+    /// land on those zeros, deepening their rejection by 10-20 dB at no
+    /// runtime cost: the rect that creates the zeros spends the last of the
+    /// same tapsPerPhase budget (design uses T-1 taps + 1). Worst-case
+    /// single-sine numbers near Nyquist are unchanged. Requires
+    /// tapsPerPhase >= 8. On by default for every preset except fast().
+    bool imageZeros = true;
+    // ANCHOR_END: pw_image_zeros
 
     /// Small/cheap: ~96 dB prototype, ~0.33 ms group delay at 48 kHz.
+    /// Plain windowed-sinc design (no k*fs zeros) — the legacy budget tier.
     static FilterSpec fast() noexcept {
         return {.numPhases = 128,
                 .tapsPerPhase = 32,
                 .passbandHz = 18000.0,
                 .stopbandHz = 30000.0,
-                .stopbandAttenDb = 96.0};
+                .stopbandAttenDb = 96.0,
+                .imageZeros = false};
     }
     /// Default: flat to 20 kHz, >=120 dB images, ~0.5 ms group delay at 48 kHz.
     static FilterSpec balanced() noexcept { return {}; }
@@ -97,6 +110,23 @@ struct FilterSpec {
                 .stopbandHz = 26000.0,
                 .stopbandAttenDb = 140.0};
     }
+    // ANCHOR: pw_economy
+    /// Program-weighted economy: two-thirds the per-sample compute and
+    /// ~0.16 ms less group delay than balanced(). The worst-case single-sine
+    /// floor near Nyquist is 96 dB-class (this preset trades exactly that),
+    /// but the k*fs zeros hold low/mid-band folded images at balanced-class
+    /// depth where program energy actually lives, and L=512 keeps the
+    /// inter-phase interpolation floor at the 120 dB tier. Measured by the
+    /// program-weighted multitone metric in test_asrc_program.cpp; the whole
+    /// trade is the book's epilogue chapter.
+    static FilterSpec economy() noexcept {
+        return {.numPhases = 512,
+                .tapsPerPhase = 32,
+                .passbandHz = 18000.0,
+                .stopbandHz = 30000.0,
+                .stopbandAttenDb = 96.0};
+    }
+    // ANCHOR_END: pw_economy
     // ANCHOR_END: bank_spec
 
     /// This spec with the band edges rescaled from the 48 kHz design rate
@@ -138,6 +168,8 @@ public:
         : phases_(std::bit_ceil(spec.numPhases)), taps_(spec.tapsPerPhase) {
         if (sampleRateHz <= 0.0 || taps_ < 4 || phases_ < 2)
             throw std::invalid_argument("PolyphaseFilterBank: bad FilterSpec");
+        if (spec.imageZeros && taps_ < 8)
+            throw std::invalid_argument("PolyphaseFilterBank: imageZeros needs tapsPerPhase >= 8");
         if (spec.passbandHz <= 0.0 || spec.stopbandHz <= spec.passbandHz ||
             spec.stopbandHz > sampleRateHz)
             throw std::invalid_argument("PolyphaseFilterBank: bad band edges");
@@ -145,8 +177,13 @@ public:
         const std::size_t n = phases_ * taps_;
         std::vector<double> proto(n);
         const double cutoffNorm = (spec.passbandHz + spec.stopbandHz) / sampleRateHz;
-        detail::designPrototype(proto, phases_, cutoffNorm,
-                                detail::kaiserBeta(spec.stopbandAttenDb));
+        if (spec.imageZeros)
+            detail::designPrototypeCompensated(proto, phases_, cutoffNorm,
+                                               detail::kaiserBeta(spec.stopbandAttenDb),
+                                               spec.passbandHz / sampleRateHz);
+        else
+            detail::designPrototype(proto, phases_, cutoffNorm,
+                                    detail::kaiserBeta(spec.stopbandAttenDb));
 
         table_.resize((phases_ + 1) * taps_);
         for (std::size_t p = 0; p <= phases_; ++p) {

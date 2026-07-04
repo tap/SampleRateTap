@@ -102,6 +102,18 @@ from `bench/baselines.json`, and the icount-ratchet CI job regenerates it
 and fails on any diff — those published numbers cannot go stale. The SNR
 table is already enforced by test thresholds.
 
+- [x] **Compensated prototype design (imageZeros)** — quality change, not
+  a perf hypothesis, recorded here for the ratchet ledger: every preset
+  except `fast` now designs with transmission zeros at k*fs (droop
+  pre-compensated, equal tap budget; see the book's epilogue and
+  notebooks/asrc_rbj_analysis.ipynb). Audio-path cost: zero — same T, same
+  kernels, same loop trip counts. Constructor cost: roughly 3x the design
+  transcendentals (three kernel builds plus ~100 direct-DFT passband
+  probes), still constructor-only and off the audio path. Embedded icount
+  scenarios include construction, so baselines shift above the +/-3%
+  two-sided ratchet on short scenarios; regenerated with this entry as the
+  justification, per the algorithm-change rule.
+
 ## Known debt
 
 - **MSVC /W4 triage outstanding**: the Windows CI leg builds with

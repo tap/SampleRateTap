@@ -35,6 +35,7 @@ add_executable(srt_tests
     test_fixed_point.cpp
     test_servo.cpp
     test_asrc_lock.cpp
+    test_asrc_program.cpp
     test_asrc_quality.cpp
     test_asrc_quality_16k.cpp
     test_fade.cpp
