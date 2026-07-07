@@ -11,6 +11,8 @@
 /// documented error convention ("check srt_create for NULL") otherwise
 /// invites a crash on exactly the path where the caller forgot to check.
 // ANCHOR_END: abi_doc
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
 #include <cstddef>
 #include <cstdint>
 #include <new>
@@ -23,12 +25,12 @@ struct SrtHandle; // opaque
 }
 
 namespace {
-srt::AsyncSampleRateConverter* impl(SrtHandle* h) noexcept {
-    return reinterpret_cast<srt::AsyncSampleRateConverter*>(h);
-}
-const srt::AsyncSampleRateConverter* impl(const SrtHandle* h) noexcept {
-    return reinterpret_cast<const srt::AsyncSampleRateConverter*>(h);
-}
+    srt::async_sample_rate_converter* impl(SrtHandle* h) noexcept {
+        return reinterpret_cast<srt::async_sample_rate_converter*>(h);
+    }
+    const srt::async_sample_rate_converter* impl(const SrtHandle* h) noexcept {
+        return reinterpret_cast<const srt::async_sample_rate_converter*>(h);
+    }
 } // namespace
 // ANCHOR_END: abi_impl
 
@@ -40,19 +42,20 @@ unsigned srt_version(void) noexcept {
 
 // ANCHOR: abi_create
 /// preset: 0 = fast, 1 = balanced, 2 = transparent.
-SrtHandle* srt_create(double sampleRateHz, std::size_t channels, std::size_t targetLatencyFrames,
+SrtHandle* srt_create(double sample_rate_hz, std::size_t channels, std::size_t target_latency_frames,
                       int preset) noexcept {
-    srt::Config cfg;
-    cfg.sampleRateHz = sampleRateHz;
-    cfg.channels = channels;
-    if (targetLatencyFrames != 0)
-        cfg.targetLatencyFrames = targetLatencyFrames;
-    cfg.filter = preset == 0   ? srt::FilterSpec::fast()
-                 : preset == 2 ? srt::FilterSpec::transparent()
-                               : srt::FilterSpec::balanced();
+    srt::config cfg;
+    cfg.sample_rate_hz = sample_rate_hz;
+    cfg.channels       = channels;
+    if (target_latency_frames != 0)
+        cfg.target_latency_frames = target_latency_frames;
+    cfg.filter = preset == 0   ? srt::filter_spec::fast()
+                 : preset == 2 ? srt::filter_spec::transparent()
+                               : srt::filter_spec::balanced();
     try {
-        return reinterpret_cast<SrtHandle*>(new srt::AsyncSampleRateConverter(cfg));
-    } catch (...) {
+        return reinterpret_cast<SrtHandle*>(new srt::async_sample_rate_converter(cfg));
+    }
+    catch (...) {
         return nullptr;
     }
 }
@@ -73,29 +76,29 @@ std::size_t srt_pull(SrtHandle* h, float* interleaved, std::size_t frames) noexc
 // ANCHOR_END: abi_null
 
 /// out[0]=state (0 Filling, 1 Acquiring, 2 Locked), out[1]=ppm,
-/// out[2]=fifoFillFrames, out[3]=underruns, out[4]=overruns, out[5]=resyncs.
+/// out[2]=fifo_fill_frames, out[3]=underruns, out[4]=overruns, out[5]=resyncs.
 void srt_status(const SrtHandle* h, double out[6]) noexcept {
     if (!h) {
         for (int i = 0; i < 6; ++i)
             out[i] = 0.0;
         return;
     }
-    const srt::Status s = impl(h)->status();
-    out[0] = static_cast<double>(static_cast<int>(s.state));
-    out[1] = s.ppm;
-    out[2] = s.fifoFillFrames;
-    out[3] = static_cast<double>(s.underruns);
-    out[4] = static_cast<double>(s.overruns);
-    out[5] = static_cast<double>(s.resyncs);
+    const srt::converter_status s = impl(h)->status();
+    out[0]                        = static_cast<double>(static_cast<int>(s.state));
+    out[1]                        = s.ppm;
+    out[2]                        = s.fifo_fill_frames;
+    out[3]                        = static_cast<double>(s.underruns);
+    out[4]                        = static_cast<double>(s.overruns);
+    out[5]                        = static_cast<double>(s.resyncs);
 }
 
 double srt_designed_latency_seconds(const SrtHandle* h) noexcept {
-    return h ? impl(h)->designedLatencySeconds() : 0.0;
+    return h ? impl(h)->designed_latency_seconds() : 0.0;
 }
 
 void srt_reset_from_consumer(SrtHandle* h) noexcept {
     if (h)
-        impl(h)->resetFromConsumer();
+        impl(h)->reset_from_consumer();
 }
 
 } // extern "C"
