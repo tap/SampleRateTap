@@ -237,7 +237,7 @@ Negative results are worth exactly what you write down about them.
 
 For months the Hexagon leg was the quiet one. Then a hardening PR added
 the library's first `EXPECT_THROW` tests — constructor validation,
-`Config::validated()` throwing on nonsense configurations — and the
+`config::validated()` throwing on nonsense configurations — and the
 Hexagon leg turned red in a way no other platform did. The constructor
 throws correctly. The `EXPECT_THROW` machinery is standing by to catch.
 And the exception never arrives: **this static-musl toolchain
@@ -265,7 +265,7 @@ limitation, three moves in one commit:
    cannot test is the *unwinding*, not the *validating*.
 2. **Record it where deployers look.** The Known-debt ledger in
    `docs/PERFORMANCE.md` gets an entry with the deployment rule stated as
-   a rule: on this toolchain configuration, an invalid `Config` is
+   a rule: on this toolchain configuration, an invalid `config` is
    **fatal** — validate inputs *before* constructing, because the
    constructor's throw will take the process down rather than propagate.
    The toolchain file itself carries the same caveat, so the next person

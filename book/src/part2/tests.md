@@ -29,7 +29,7 @@ Here is the convention, straight from the top of the quality suite
 // Thresholds sit 4-7 dB under measured performance (135/120/113/106 dB for
 // balanced at 997/6k/12k/19.5k; 133/108 dB for transparent). The residual at
 // high frequencies is dominated by the linear interpolation between adjacent
-// phase-table rows, which falls ~12 dB per doubling of numPhases and rises
+// phase-table rows, which falls ~12 dB per doubling of num_phases and rises
 // ~12 dB per octave of signal frequency.
 ```
 
@@ -37,7 +37,7 @@ And a representative enforcement:
 
 ```cpp
 TEST(AsrcQuality, Balanced997Hz) {
-    EXPECT_GT(measureSnrDb(srt::FilterSpec::balanced(), 997.0), 128.0);
+    EXPECT_GT(measure_snr_db(srt::filter_spec::balanced(), 997.0), 128.0);
 }
 ```
 
@@ -64,7 +64,7 @@ and lands outside the slack.
 
 The comment carries a second load worth noticing: it explains *where the
 residual comes from* (phase-table interpolation, with its 12 dB scaling laws
-in both `numPhases` and signal frequency). That converts the threshold table
+in both `num_phases` and signal frequency). That converts the threshold table
 from arbitrary constants into a checkable physical model — when the 16 kHz
 suite was added later, its expectations could be *predicted* from the same
 model (the residual depends on the normalized frequency f/fs, so tones at
@@ -108,11 +108,11 @@ and one loop:
 ```
 
 This is discrete-event simulation reduced to its minimum. Two virtual
-clocks, `tIn` and `tOut`, advance in *virtual time*: a producer event pushes
-`chunkIn` frames and advances `tIn` by `chunkIn / fsIn`; a consumer event
-pulls `chunkOut` frames and advances `tOut` by `chunkOut / fsOut`; whichever
-clock is behind fires next. With `fsIn = 48 000 × (1 + 200 ppm)` and
-`fsOut = 48 000`, the producer naturally lands one extra sample every 5 000
+clocks, `t_in` and `t_out`, advance in *virtual time*: a producer event pushes
+`chunk_in` frames and advances `t_in` by `chunk_in / fs_in`; a consumer event
+pulls `chunk_out` frames and advances `t_out` by `chunk_out / fs_out`; whichever
+clock is behind fires next. With `fs_in = 48 000 × (1 + 200 ppm)` and
+`fs_out = 48 000`, the producer naturally lands one extra sample every 5 000
 — the exact asynchrony a real capture/playback pair exhibits, with zero
 dependence on the host scheduler. Runs are exactly reproducible: same
 sequence of pushes and pulls, same occupancy trajectory seen by the servo,
@@ -133,12 +133,12 @@ Why determinism beats realism for regression work:
   audio moving multi-frame bursts at the other), and it changes converter
   behavior: the servo promotes to its low-bandwidth Quiet stage only when
   occupancy is observed at fine granularity. The quality suites run
-  `chunkIn = chunkOut = 1` to reach the Quiet stage; the multichannel short
+  `chunk_in = chunk_out = 1` to reach the Quiet stage; the multichannel short
   variants run `chunk = 8` deliberately, to certify the Track stage that
   block-fed deployments actually live in. In a real-threads test,
   granularity would be an accident of scheduling; here it is an axis of the
   test matrix.
-- **Slow clock dynamics are testable at all.** `fsInScale` lets a test ramp
+- **Slow clock dynamics are testable at all.** `fs_in_scale` lets a test ramp
   the input rate — the lock suite sweeps drift ramps and asserts the servo
   follows without unlocking — which on real hardware would require a
   programmable oscillator and a lab.
@@ -170,7 +170,7 @@ instrument (`tests/support/sine_analysis.h`) is a least-squares sine fit:
 model the output window as `a·sin(ωi) + b·cos(ωi) + c`, solve the 3×3
 normal equations for the best-fit fundamental, subtract it *exactly*, and
 call everything that remains — harmonics, images, servo noise, quantization
-— the residual. `snrDb()` is then the fitted fundamental's power over the
+— the residual. `snr_db()` is then the fitted fundamental's power over the
 residual's.
 
 Why a fit instead of an FFT? Because subtraction is exact and windows are
@@ -183,19 +183,19 @@ converter produces. (The notebooks meet the same problem with the same
 answer, plus a notch — that chapter tells the ~60 dB horror story that
 motivates the extra guard.)
 
-One refinement matters enough to justify its own function. `fitSine`
-requires the frequency; `fitSineTracked` *finds* it, starting from the
+One refinement matters enough to justify its own function. `fit_sine`
+requires the frequency; `fit_sine_tracked` *finds* it, starting from the
 nominal value:
 
 ```cpp
     for (int iter = 0; iter < 4; ++iter) {
-        const SineFit a = fitSine(x.first(half), f);
-        const SineFit b = fitSine(x.subspan(half), f);
+        const SineFit a = fit_sine(x.first(half), f);
+        const SineFit b = fit_sine(x.subspan(half), f);
         // b.phase is relative to the second half's start; predict it from a.
-        const double twoPi = 2.0 * std::numbers::pi;
-        const double predicted = a.phase + twoPi * f * static_cast<double>(half);
-        const double dphi = std::remainder(b.phase - predicted, twoPi);
-        f += dphi / (twoPi * static_cast<double>(half));
+        const double two_pi = 2.0 * std::numbers::pi;
+        const double predicted = a.phase + two_pi * f * static_cast<double>(half);
+        const double dphi = std::remainder(b.phase - predicted, two_pi);
+        f += dphi / (two_pi * static_cast<double>(half));
     }
 ```
 
@@ -221,7 +221,7 @@ that hole with a guard on the tracker itself:
 
 ```cpp
     // The tracked frequency must still match the true clock ratio closely.
-    EXPECT_NEAR(fit.freqNorm / nuOutExpected, 1.0, 2e-6);
+    EXPECT_NEAR(fit.freq_norm / nu_out_expected, 1.0, 2e-6);
 ```
 
 The fit may refine the frequency, but only within 2 ppm of what the clock
@@ -354,7 +354,7 @@ widened the pattern to `AsrcQuality*` (no dot). Look back at the filter
 string and you can now read its dots as deliberate: `MultiChannel.*` —
 *with* the literal dot — excludes exactly the `MultiChannel` suite while
 keeping `MultiChannelShort` in, which the comment beside it calls out as the
-only on-target coverage of the N-channel deinterleave and wide-MAC dotRow
+only on-target coverage of the N-channel deinterleave and wide-MAC dot_row
 paths. The same character is a bug in one line and a scalpel in the next;
 the difference is whether its meaning was chosen.
 

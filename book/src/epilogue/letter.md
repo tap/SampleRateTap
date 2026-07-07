@@ -263,8 +263,8 @@ ctest --test-dir build -R 'ProgramWeighted' --output-on-failure
 ctest --test-dir build -R 'FractionalDelay' --output-on-failure
 ```
 
-And one experiment in the spirit of the thread: change `imageZeros` to
-`false` in `FilterSpec::economy()` and rerun `ProgramWeighted` — the
+And one experiment in the spirit of the thread: change `image_zeros` to
+`false` in `filter_spec::economy()` and rerun `ProgramWeighted` — the
 program-weighted number collapses toward the mid-90s while the worst-case
 sine barely moves. That difference *is* RBJ's argument, measured; the
 preset is just the argument, shipped.

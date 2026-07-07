@@ -10,7 +10,7 @@ lowpass, oversampled 256× against the input rate. This chapter is about a
 data structure. Per output sample, the converter's budget is one dot
 product of 48 multiply-accumulates — not 12,288 — and the fractional
 position μ arrives with 2⁻⁶⁴-sample resolution, demanding a filter for a
-delay the table cannot possibly enumerate. `PolyphaseFilterBank` is the
+delay the table cannot possibly enumerate. `polyphase_filter_bank` is the
 arrangement of those 12,288 numbers that makes the right 48 of them, for
 *any* μ, a matter of two pointer offsets and a linear blend. Almost
 everything interesting about it is in the layout: one extra row nobody
@@ -183,7 +183,7 @@ can enforce.
 ## Quantization happens here, once
 
 The table's element type is not `double` — it is
-`SampleTraits<S>::Coeff`, and the constructor's `makeCoeff(v)` is the
+`sample_traits<S>::Coeff`, and the constructor's `make_coeff(v)` is the
 single point where the design-precision prototype becomes datapath
 coefficients. Quantizing once at build time, rather than converting on the
 fly, means the hot path reads exactly what it dots and the quantization
@@ -203,7 +203,7 @@ chapter; here is what the *bank* needs you to know):
   peak (center) tap at ≈ 1.0, and 1.0 does not fit a pure fractional
   format whose ceiling is 1 − 2⁻¹⁵. Rather than rescale the filter (and
   move the problem into output gain), each fixed-point format trades its
-  top precision bit for range. `makeCoeff` rounds half-away-from-zero and
+  top precision bit for range. `make_coeff` rounds half-away-from-zero and
   saturates, so even a tap of exactly 1.0000…1 from design rounding
   becomes the format's max instead of wrapping to −1 — a wraparound there
   would be a −∞ dB event, not a noise-floor one.
@@ -221,10 +221,10 @@ are allowed and cheap. This is necessary and insufficient, and the gap
 between those two words is an audit story worth retelling precisely.
 
 Every check in the constructor is a comparison. Feed the converter a
-`Config` whose `sampleRateHz` is NaN — one uninitialized field in caller
-code — and every comparison is *false*: `sampleRateHz <= 0.0`? False.
-`stopbandHz > sampleRateHz`? False. The constructor sails through,
-`cutoffNorm` goes NaN, `designPrototype` dutifully computes 12,288 NaN
+`config` whose `sample_rate_hz` is NaN — one uninitialized field in caller
+code — and every comparison is *false*: `sample_rate_hz <= 0.0`? False.
+`stopband_hz > sample_rate_hz`? False. The constructor sails through,
+`cutoff_norm` goes NaN, `design_prototype` dutifully computes 12,288 NaN
 coefficients (recall the previous chapter: the Bessel iteration cap exists
 so even *this* terminates), and the object constructs successfully. The
 converter then runs, produces NaN audio forever, and never throws, never
@@ -235,8 +235,8 @@ comparisons cannot express:
 
 - **finiteness of every double in the config** — the only guard NaN cannot
   slip, because it is `std::isfinite`, not an ordering;
-- **the band-edge sum rule**: `passbandHz + stopbandHz ≤ sampleRateHz`.
-  The bank alone accepts `stopbandHz` up to the sample rate, but the
+- **the band-edge sum rule**: `passband_hz + stopband_hz ≤ sample_rate_hz`.
+  The bank alone accepts `stopband_hz` up to the sample rate, but the
   cutoff is *centered* at `(pass + stop)/fs` — let the sum exceed fs and
   the anti-image cutoff lands above the input Nyquist, a filter that
   passes the very images it exists to kill, while every local check still
@@ -247,7 +247,7 @@ comparisons cannot express:
 All of it is pinned by `ConfigValidation.RejectsSilentMisbehavior` — each
 formerly-constructible pathology now `EXPECT_THROW`s — and, just as
 deliberately, by two `EXPECT_NO_THROW`s: the rate-scaling factory
-`Config::forSampleRate` produces specs sitting *exactly on* the sum-rule
+`config::for_sample_rate` produces specs sitting *exactly on* the sum-rule
 boundary (passband + stopband == fs up to rounding), and a validation rule
 that rejected its own library's presets would be a different bug. The
 division of labor is a pattern to copy: the class rejects what it can
@@ -271,7 +271,7 @@ containment*: everything that can throw (`bad_alloc`,
 is unconditionally valid — there is no half-designed state for the hot
 path to trip over.
 
-**`std::bit_ceil` for L.** The constructor rounds `numPhases` up to a
+**`std::bit_ceil` for L.** The constructor rounds `num_phases` up to a
 power of two rather than validating it, and the reason lives in the
 resampler's fast path: the Q0.64 phase accumulator selects the row by
 taking the top log₂ L bits of a 64-bit fraction — one shift — and the
@@ -282,7 +282,7 @@ guarantees it while giving any spec at least the resolution it asked for.
 Rounding up rather than throwing is deliberate policy: more phases is
 strictly better along the quality axis, so a spec of 200 phases quietly
 becomes 256 rather than a setup error. The same power-of-two guarantee is
-what lets `blendRowPhase` recover log₂ L with `std::countr_zero` instead
+what lets `blend_row_phase` recover log₂ L with `std::countr_zero` instead
 of storing it.
 
 **The accessor surface is four functions, and their shapes are load-bearing:**
@@ -296,7 +296,7 @@ consume rows through `SRT_RESTRICT`-qualified pointer parameters (that
 no-alias promise is worth measured percentage points; see the
 vectorization-audit chapter), and a span would be unpacked back to a
 pointer at every call site while implying a bounds story the hot path
-cannot afford to check. The domain quietly includes `p == numPhases()` —
+cannot afford to check. The domain quietly includes `p == num_phases()` —
 the extra row is a first-class citizen of the API, which is exactly how
 `interpolate()` gets to be branch-free:
 
@@ -306,7 +306,7 @@ the extra row is a first-class citizen of the API, which is exactly how
 
 Note the one guard that *does* exist — clamping `p` when μ rounds up to
 exactly L — protects against a floating-point edge of the *caller's* μ,
-not of the table; and `groupDelaySamples()` reports `(L·T − 1)/(2L)`, the
+not of the table; and `group_delay_samples()` reports `(L·T − 1)/(2L)`, the
 true center of the linear-phase prototype in input samples, which is
 "T/2" only to the resolution of the 1/(2L) half-step that the kernel
 accuracy tests must account for when they compute the expected analytic
@@ -321,11 +321,11 @@ delay. The bank knows its own delay exactly; approximations are for prose.
 | L = 256 default | 128 / 512 | −12 dB residual per doubling vs table size; 48 KB meets the 105 dB @ 19.5 kHz budget; presets bracket it both ways |
 | **Extra row L** | wrap to row 0 + branch; clamp μ | branch-free hot loop; μ-wrap/whole-sample slip exactly continuous; costs 192 bytes |
 | Tap-reversed rows | reversed iteration per sample | reversal paid once at build; forward contiguous dot is what vectorizers and SMLALD pair-loads require |
-| Quantize via `makeCoeff` at build | convert coefficients on the fly | error becomes a fixed, testable property of the object; hot path reads storage type directly |
+| Quantize via `make_coeff` at build | convert coefficients on the fly | error becomes a fixed, testable property of the object; hot path reads storage type directly |
 | Q1.14 / Q1.30 coefficients | Q0.15 / Q0.31 | peak tap ≈ 1.0 by DC normalization; headroom bit beats wraparound at the table's largest value |
 | Throw in constructor + converter `validated()` | validate in one place | the class can only check local comparisons; NaN defeats comparisons — finiteness and the band-edge *sum* rule are composition-level invariants (audit F2) |
 | Immutable after construction | resettable/redesignable bank | cross-thread reads need no sync; allocation and throws confined to setup; no invalid intermediate states |
-| `std::bit_ceil(numPhases)` | reject non-power-of-two | phase-bit row indexing requires 2ᵏ; rounding up is strictly quality-positive |
+| `std::bit_ceil(num_phases)` | reject non-power-of-two | phase-bit row indexing requires 2ᵏ; rounding up is strictly quality-positive |
 | Raw `const Coeff*` accessor | `std::span` row | kernels take restrict pointers; span adds implied checking the per-sample path cannot spend |
 
 ## Verify it yourself

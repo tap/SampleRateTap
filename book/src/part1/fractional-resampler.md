@@ -11,7 +11,7 @@ Somebody has to turn "consume 1.000 000 2 input frames per output frame"
 into actual audio, forever, without drift, without glitches at the moments
 the books balance, and within a per-sample cycle budget that must hold on
 a Xeon and on a DSP with no double-precision FPU. That somebody is
-`FractionalResampler`, the streaming engine at the bottom of
+`fractional_resampler`, the streaming engine at the bottom of
 `polyphase_filter.h`. It owns three things: the **history** (the last T
 input frames of every channel, kept where the filter can reach them), the
 **phase** (where between two input samples the next output lands), and the
@@ -144,15 +144,15 @@ slip detector**, for both signs of ε, with no comparisons against 1.0 or
 0.0 anywhere:
 
 - **ε ≥ 0** (input clock fast; the window must occasionally hurry). The
-  fraction creeps upward by `epsU` each sample. When the true position
-  would cross 1.0, the 64-bit add wraps: `m = phase_ + epsU` comes out
+  fraction creeps upward by `eps_u` each sample. When the true position
+  would cross 1.0, the 64-bit add wraps: `m = phase_ + eps_u` comes out
   *smaller* than `phase_`, which is otherwise impossible for a positive
   increment. That wrap **is** the forward slip: consume one *extra* input
   frame (`advance = 2` — the regular frame plus the slipped one), and the
   wrapped `m` is already the correct new fraction, because mod-2⁶⁴
   arithmetic subtracted exactly the 1.0 that the extra frame consumed.
 - **ε < 0** (input clock slow; the window must occasionally wait).
-  `epsU` is the two's-complement reinterpretation of a negative `epsFix`
+  `eps_u` is the two's-complement reinterpretation of a negative `eps_fix`
   — a huge unsigned number — so the same add normally wraps every
   sample, and *not* wrapping is the anomaly: `m > phase_` means the
   fraction dipped below 0.0. That is the backward slip: consume **no**
@@ -179,7 +179,7 @@ bounds the output's *second difference* by the analytic bound A·ω² of a
 clean sine — a discontinuity detector that would trip on any window
 mis-step at any slip.
 
-Note also what happens between the `appendOne` calls and `phase_ = m`:
+Note also what happens between the `append_one` calls and `phase_ = m`:
 if the source runs dry midway through an `advance = 2` slip, the function
 returns with the history advanced by one frame but the phase *not*
 updated. History and phase are now one frame apart — a state the class
@@ -197,7 +197,7 @@ The top log₂ L bits *are* the phase-row index; the bits below, shifted
 up, *are* the intra-phase blend fraction. No multiply by L, no floor, no
 subtract — the Q0.64 representation makes the split between "which row"
 and "how far between rows" a matter of bit fields. One conversion to the
-datapath's blend-factor type per output frame (`blendFactorFromQ64`:
+datapath's blend-factor type per output frame (`blend_factor_from_q64`:
 single-precision for float, integer for Q15/Q31) is all that remains of
 the floating-point phase math. The fused mono form is the same bit
 surgery around the same blend-and-mac loop:
@@ -241,14 +241,14 @@ With phase in hand, each output frame takes one of three routes:
 {{#include ../../../include/srt/polyphase_filter.h:rs_dispatch}}
 ```
 
-Mono takes the fused `interpolatePhase` — no scratch-row traffic for a
+Mono takes the fused `interpolate_phase` — no scratch-row traffic for a
 single channel (with one exception: Q15 on SMLALD-capable Cortex-M cores
 routes mono through blend + dot too, because the dual-MAC loop lives in
-`dotRow`; the two paths are bit-exact by construction, which is what
+`dot_row`; the two paths are bit-exact by construction, which is what
 makes that rerouting a non-event). Low channel counts blend once into
 `row_` and dot per channel over planar histories — the C1 shape. High
 channel counts on hosts take the frame-major branch, which is the next
-section but one. Note the branch condition `kChannelParallel &&
+section but one. Note the branch condition `k_channel_parallel &&
 frameMajor_`: the first operand is `constexpr`, so on embedded targets
 the entire branch constant-folds away. That is not tidiness — a runtime
 flag in this loop measured **+6–8%** on the M55 instruction ratchet
@@ -259,7 +259,7 @@ before the compile-time gate restored every embedded scenario to exactly
 
 The filter needs the newest T frames of every channel, contiguous,
 oldest-first, per channel. Input arrives interleaved, in whatever chunks
-the FIFO happens to hold. Between those two facts sits `appendOne`:
+the FIFO happens to hold. Between those two facts sits `append_one`:
 
 ```cpp
 {{#include ../../../include/srt/polyphase_filter.h:rs_append}}
@@ -267,7 +267,7 @@ the FIFO happens to hold. Between those two facts sits `appendOne`:
 
 Three mechanisms, each with an RT-safety argument:
 
-**Chunked staging.** Frames are pulled from the caller-supplied `popFn`
+**Chunked staging.** Frames are pulled from the caller-supplied `pop_fn`
 in bulk (the converter passes 16-frame chunks) into the interleaved
 `scratch_` buffer, then peeled off one frame at a time as the window
 advances. Bulk pops amortize the ring's index synchronization across
@@ -275,12 +275,12 @@ many frames — the cached-index design from two chapters ago does its
 best work when you ask it for blocks — while the resampler still
 consumes with single-frame granularity, because slips need exactly-one
 extra frame on demand. Frames staged in scratch have left the ring but
-not yet entered the filter, which is why `bufferedFrames()` exists: the
+not yet entered the filter, which is why `buffered_frames()` exists: the
 servo's occupancy observable must count them or the estimate would carry
 a chunk-sized bias.
 
 **Bounded compaction.** Histories are not ring buffers; they are flat
-arrays with a moving end index, sized `taps + chunkFrames`. When the end
+arrays with a moving end index, sized `taps + chunk_frames`. When the end
 hits capacity, `memmove` slides the newest T − 1 frames back to the
 front and synthesis continues. Why copy at all, when a circular buffer
 would avoid it? Because the *filter* needs a contiguous window every
@@ -288,7 +288,7 @@ sample: a ring would either split the dot product at the wrap seam
 (a branch and a second loop in the hottest code in the library) or copy
 into a linear scratch every frame — a memmove per *sample* instead of
 one per *chunk*. The flat layout pays T − 1 frames of copy once per
-`chunkFrames` appends: bounded, branch-predictable, allocation-free —
+`chunk_frames` appends: bounded, branch-predictable, allocation-free —
 worst-case cost is fixed at construction time, which is the entire
 definition of RT-safe this library uses. `process()` is `noexcept`, no
 locks, no allocation; every buffer was sized in the constructor, which
@@ -315,12 +315,12 @@ products, and the float dot product has a vectorization problem you can
 now state precisely: its accumulation order is contractual (strict
 per-channel double accumulation — reassociating it changes output bits),
 so the *tap axis* may not be vectorized without breaking bit-exactness.
-The C2 audit verified GCC obeys: float `dotRow` compiles scalar, by
+The C2 audit verified GCC obeys: float `dot_row` compiles scalar, by
 design.
 
 But nobody said anything about the *channel* axis. Channels are
 independent accumulators; computing eight of them in lockstep, one tap
-at a time, keeps every channel's tap order identical to `dotRow`'s while
+at a time, keeps every channel's tap order identical to `dot_row`'s while
 filling SIMD lanes with channels instead of taps. That requires the
 history to deliver all channels of tap t contiguously — the frame-major
 layout — and a register-blocked kernel:
@@ -352,12 +352,12 @@ edge measured rather than assumed:
 And one lesson worth carrying out of context: the first channel-parallel
 attempt — accumulators in a plain array the compiler kept in memory —
 measured **2.8× slower than planar**. Register-block or don't bother;
-`dotTileFrameMajor`'s `constexpr`-size tiles of 8/4/2/1 are that lesson
+`dot_tile_frame_major`'s `constexpr`-size tiles of 8/4/2/1 are that lesson
 in code form.
 
 ## The contract: prime, process, and the one-frame lie
 
-`FractionalResampler` is deliberately not foolproof; it is *fast*, and
+`fractional_resampler` is deliberately not foolproof; it is *fast*, and
 its safety is a documented protocol that the converter — its only
 in-tree caller — upholds. The documentation is the code's own:
 
@@ -399,7 +399,7 @@ count drops by one exactly as μ wraps from ~1 to ~0, and the sum crosses
 smoothly. Without μ in the observable, every slip would inject a
 one-frame staircase into the servo's error at the beat frequency —
 manufacturing the very sawtooth the previous chapter spent three filter
-poles suppressing. `bufferedFrames()` completes the accounting for the
+poles suppressing. `buffered_frames()` completes the accounting for the
 staged scratch. Two accessors, and the sensor the whole control system
 reads is honest to sub-sample resolution.
 
@@ -411,7 +411,7 @@ reads is honest to sub-sample resolution.
 | Slips by unsigned wraparound | compare/floor against 1.0 and 0.0 | the mod-2⁶⁴ result *is* the corrected fraction; both slip directions fall out of one add |
 | Blend once per frame + per-channel dot | fused interpolate per channel | N×(blend+dot) → blend + N×dot; bit-exact by identical per-tap order; stereo −36% wall-clock (C1) |
 | Flat history + bounded memmove compaction | circular history | the dot needs a contiguous window every sample; one bounded copy per chunk beats a seam branch per sample |
-| Chunked popFn staging | pop one frame at a time | amortizes ring synchronization; staged frames stay visible to the servo via `bufferedFrames()` |
+| Chunked pop_fn staging | pop one frame at a time | amortizes ring synchronization; staged frames stay visible to the servo via `buffered_frames()` |
 | Frame-major + channel-parallel dots (float, ≥4ch, hosts) | vectorize the float tap axis | tap-axis SIMD changes accumulation order = output bits; the channel axis is free and bit-exact (−38…−42% at 8–16ch) |
 | Compile-time mode gate | runtime `if (frameMajor_)` alone | a hot-loop runtime flag cost +6–8% M55 instructions; `constexpr` restored embedded codegen to 0.00% |
 | Documented preconditions + `reset()` | internal auto-repair of dry slips | the failure needs a reprime anyway (stale window); a repair path would be untestable dead weight on the hot path |

@@ -34,7 +34,7 @@ real one is:
 
 Two phases, ~30 s each:
 
-| Phase | Config | Rates | Why |
+| Phase | config | Rates | Why |
 |---|---|---|---|
 | A | Q15 stereo `balanced()` | 48 kHz out, +200 ppm in | the config the README calls tight on one core |
 | B | Q15 12-channel, `balanced()` band edges and servo scaled ×16/48 | 16 kHz out, +200 ppm in | the reference-microphone/AVB 12-channel shape at its deployment rate |

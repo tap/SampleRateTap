@@ -21,7 +21,7 @@ The ring also serves a second master, and this is the design's quiet
 novelty: its **occupancy is the control system's sensor**. The clock servo
 (next chapter) estimates the rate mismatch between the two crystals
 entirely from how full this buffer is. That is why the class exposes exact
-`readAvailable()` and a consumer-side `discard()` — operations a generic
+`read_available()` and a consumer-side `discard()` — operations a generic
 SPSC queue wouldn't bother with — and why "approximately full" isn't good
 enough anywhere in this file: a biased occupancy reading would become a
 biased frequency estimate.
@@ -254,7 +254,7 @@ A summary of the decisions, several of which recur throughout the library:
 
 ```sh
 # Sequential semantics, wraparound, discard accounting:
-ctest --test-dir build -R SpscRing --output-on-failure
+ctest --test-dir build -R spsc_ring --output-on-failure
 
 # The two-thread counting-sequence stress (built when threads exist):
 ctest --test-dir build -R TwoThreadStress --output-on-failure
@@ -262,7 +262,7 @@ ctest --test-dir build -R TwoThreadStress --output-on-failure
 # The same stress under ThreadSanitizer (as CI runs it):
 cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DCMAKE_CXX_FLAGS="-fsanitize=thread" -DSRT_BUILD_EXAMPLES=OFF
-cmake --build build-tsan -j && ctest --test-dir build-tsan -R SpscRing
+cmake --build build-tsan -j && ctest --test-dir build-tsan -R spsc_ring
 
 # Break it on purpose: change memory_order_release to relaxed in write(),
 # rebuild the TSan variant, and watch the stress test report the race.

@@ -254,7 +254,7 @@ even that number survives translation to time.
 
 The project's calibration path for the gap is hardware, and it ships in the
 repository: `examples/pico2_cyccnt/` is a flashable RP2350 firmware that
-runs the *same* `runPipeline` workload as the icount scenarios — 32-frame
+runs the *same* `run_pipeline` workload as the icount scenarios — 32-frame
 push/pull blocks, 997 Hz sine, 1 000 warm-up and 2 000 measured iterations
 — timed per block with the Cortex-M33's DWT.CYCCNT cycle counter, printing
 mean/p99/max cycles per block, cycles per frame, and the fraction of a

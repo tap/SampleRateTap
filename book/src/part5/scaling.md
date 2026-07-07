@@ -18,7 +18,7 @@ The three rules, stated up front:
    channel group; channel count is then a nearly-free multiplier on the
    dot product.
 2. **Rates**: every configuration field denominated in absolute hertz must
-   scale with the sample rate — start from `Config::forSampleRate()`.
+   scale with the sample rate — start from `config::for_sample_rate()`.
 3. **Blocks**: the FIFO setpoint must exceed the pull block size (the
    converter now enforces this) and the servo's unlock threshold must
    clear the block-quantization sawtooth; coarse blocks also move you into
@@ -26,7 +26,7 @@ The three rules, stated up front:
 
 ## Channels: coherence is free, so don't pay for it
 
-`Config::channels` is a runtime count with no architectural limit — mono
+`config::channels` is a runtime count with no architectural limit — mono
 through 7.1.4 and beyond. The design rule is about instance boundaries:
 **one instance per clock domain**. If a 12-channel AVB stream and a stereo
 monitor feed arrive on the *same* recovered clock, they are one domain and
@@ -120,9 +120,9 @@ you haven't verified reaches the code is coverage you don't have.
 ## Rates: hertz-denominated defaults are a 48 kHz assumption
 
 The library's defaults read as innocently portable — until you notice
-which fields carry units. `FilterSpec::balanced()` places the passband
+which fields carry units. `filter_spec::balanced()` places the passband
 edge at 20,000 Hz and the first image to suppress at 28,000 Hz;
-`ServoConfig` sets loop bandwidths of 10/1/0.05 Hz and smoother corners of
+`servo_config` sets loop bandwidths of 10/1/0.05 Hz and smoother corners of
 50/5/0.5 Hz. Every one of those is an *absolute frequency chosen for
 48 kHz operation*, and the two misconfigurations they invite fail in
 instructively different ways.
@@ -130,7 +130,7 @@ instructively different ways.
 The filter misconfiguration fails loudly, by design. Default band edges at
 a 16 kHz rate would put the anti-image cutoff far above the input Nyquist
 — a filter that passes images wholesale — and the constructor's validation
-rejects the geometry outright (`passbandHz + stopbandHz` must not exceed
+rejects the geometry outright (`passband_hz + stopband_hz` must not exceed
 the sample rate), so you cannot ship it by accident. The servo
 misconfiguration is the dangerous one, because nothing forces you to
 notice: scale the filter (you must, to construct at all), keep the default
@@ -150,16 +150,16 @@ openly: roughly 32 dB below the 48 kHz figures at every tone, falling
 scale. Nothing was wrong with the filter; the *control loop* was mistuned
 by a factor of three because its tuning was written in hertz.
 
-The remedy is the `scaledTo` trio, and the factory that applies it:
+The remedy is the `scaled_to` trio, and the factory that applies it:
 
 ```cpp
-srt::Config cfg = srt::Config::forSampleRate(16000.0);
+srt::config cfg = srt::config::for_sample_rate(16000.0);
 cfg.channels = ...;            // then adjust as usual
 ```
 
-`FilterSpec::scaledTo` multiplies the band edges by `fs/48000` — same L
+`filter_spec::scaled_to` multiplies the band edges by `fs/48000` — same L
 and T, so the same table size and per-frame cost, with the identical
-response at every *normalized* frequency. `ServoConfig::scaledTo` does the
+response at every *normalized* frequency. `servo_config::scaled_to` does the
 same to the six bandwidth/corner fields, keeping the loop identical in
 per-sample terms — and scales the two hold times *inversely*, so the
 promotion gates wait the same number of loop time constants rather than
@@ -167,7 +167,7 @@ the same number of wall-clock seconds. (That last refinement postdates the
 first hand-scaled fix; re-measured, it changed nothing within noise, and
 the test asserting it exists so the equivalence stays checked rather than
 remembered.) Frame-denominated fields — lock and unlock thresholds,
-`targetLatencyFrames`, ppm limits — are rate-invariant and stay put,
+`target_latency_frames`, ppm limits — are rate-invariant and stay put,
 though their *duration* in milliseconds scales inversely with the rate.
 
 `tests/test_asrc_quality_16k.cpp` runs the full quality methodology
@@ -204,21 +204,21 @@ occupancy never grazes the pull size even at the bottom of the block-beat
 sawtooth, and bounded by FIFO capacity:
 
 ```cpp
-const std::size_t needed = frames + std::max<std::size_t>(frames / 2, kPopChunkFrames);
-const std::size_t newTarget =
-    std::clamp(needed, cfg_.targetLatencyFrames, maxTargetFrames_);
+const std::size_t needed = frames + std::max<std::size_t>(frames / 2, k_pop_chunk_frames);
+const std::size_t new_target =
+    std::clamp(needed, cfg_.target_latency_frames, maxTargetFrames_);
 ```
 
 Configurations that already satisfy the rule are left exactly as
 configured; the servo slews to a raised setpoint glitch-free (integrator
 kept — the clocks haven't changed, only the target). The cost is not
-hidden: latency follows the raised setpoint, `designedLatencySeconds()`
-reports it, and `Status::effectiveTargetLatencyFrames` differs from the
+hidden: latency follows the raised setpoint, `designed_latency_seconds()`
+reports it, and `converter_status::effective_target_latency_frames` differs from the
 configured value exactly when the adaptation has occurred — a field worth
 plotting in deployment telemetry, because it is the converter telling you
 your latency budget and your callback size disagree. Capacity bounds the
 raise: the default ring (a 1024-frame floor) accommodates pull blocks up
-to ~340 frames; larger callbacks need `fifoFrames` sized explicitly.
+to ~340 frames; larger callbacks need `fifo_frames` sized explicitly.
 
 ### The soft one: what a coarse count can tell a servo
 
@@ -253,7 +253,7 @@ accident, and the limitations section of the README sketches the eventual
 answer (per-block timestamps for sub-sample phase observation).
 
 One more block-denominated rule closes the loop with the previous
-chapter. The servo's `unlockThresholdFrames` (default 24) is the
+chapter. The servo's `unlock_threshold_frames` (default 24) is the
 excursion that demotes a stage; block-quantized occupancy legitimately
 excursions by about half a block without the clocks having moved. The
 guidance in `pi_servo.h` — keep the threshold comfortably above half
@@ -266,16 +266,16 @@ schedule, at the beat frequency, forever.
 
 The axes compose, so a deployment configures them in dependency order:
 
-1. Start from `Config::forSampleRate(rate)` — never raw defaults at a
+1. Start from `config::for_sample_rate(rate)` — never raw defaults at a
    non-48 kHz rate.
 2. Set `channels` to the full width of each clock domain's stream; one
    instance per domain.
-3. Set `targetLatencyFrames` above your pull block *and* your worst
+3. Set `target_latency_frames` above your pull block *and* your worst
    push/pull jitter excursion (the dual-core firmware's 144-frame
    setpoint against a 2 ms logging stall is the worked example); set
-   `fifoFrames` explicitly past ~340-frame callbacks.
-4. Raise `unlockThresholdFrames` above ~1.5× your transfer block.
-5. Then watch `Status::effectiveTargetLatencyFrames` and the resync
+   `fifo_frames` explicitly past ~340-frame callbacks.
+4. Raise `unlock_threshold_frames` above ~1.5× your transfer block.
+5. Then watch `converter_status::effective_target_latency_frames` and the resync
    counters in production — they are the converter's own opinion of
    whether steps 3 and 4 were done right.
 
@@ -292,8 +292,8 @@ ctest --test-dir build -R MultiChannel --output-on-failure
 ctest --test-dir build -R AsrcQuality16k --output-on-failure
 
 # The -32 dB failure itself, reproduced: in test_asrc_quality_16k.cpp,
-# keep Config::forSampleRate(kFs) but overwrite the servo with unscaled
-# defaults (cfg.servo = srt::ServoConfig{};) — the converter still builds
+# keep config::for_sample_rate(k_fs) but overwrite the servo with unscaled
+# defaults (cfg.servo = srt::servo_config{};) — the converter still builds
 # and locks, and every threshold fails by ~30 dB, falling 6 dB per octave
 # of tone frequency: the FM signature. (Restoring the unscaled *filter*
 # instead fails fast: the constructor rejects band edges above the input
@@ -304,8 +304,8 @@ ctest --test-dir build -R AsrcQuality16k --output-on-failure
 jupyter nbconvert --execute notebooks/asrc_block_size_study.ipynb
 
 # The feasibility rule live: run the drifting-clocks example, then rerun
-# with cfg.targetLatencyFrames set below kChunk in the source — the
-# adaptive raise reports itself in effectiveTargetLatencyFrames instead
+# with cfg.target_latency_frames set below k_chunk in the source — the
+# adaptive raise reports itself in effective_target_latency_frames instead
 # of dropping out:
 ./build/examples/drifting_clocks
 ```

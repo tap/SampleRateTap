@@ -64,9 +64,9 @@ seven operations:
 ```
 
 Every operation the datapath performs on samples is named here: convert a
-designed coefficient to storage form (`makeCoeff`), convert the fractional
-position to the blend representation (`makeBlendFactor`,
-`blendFactorFromQ64`), the multiply-accumulate (`mac`), the adjacent-phase
+designed coefficient to storage form (`make_coeff`), convert the fractional
+position to the blend representation (`make_blend_factor`,
+`blend_factor_from_q64`), the multiply-accumulate (`mac`), the adjacent-phase
 coefficient blend (`blend`), the accumulator-to-sample conversion
 (`finalize`), and silence. The polyphase chapter's `interpolate()` is written
 entirely in this vocabulary:
@@ -97,7 +97,7 @@ candidate.
 Virtual dispatch also answers a question nobody asked. Dynamic dispatch
 buys the ability to choose the implementation *at run time* — but a
 converter's sample type is fixed at the moment you write
-`AsyncSampleRateConverterQ15`. Paying the vtable price for flexibility that
+`async_sample_rate_converter_q15`. Paying the vtable price for flexibility that
 is never exercised is the definition of the wrong tool.
 
 ### Why not CRTP
@@ -115,7 +115,7 @@ requiring your character type to inherit from something: the type being
 customized is not yours to modify.
 
 The cost of the traits approach is one level of naming indirection
-(`SampleTraits<S>::mac` instead of `x.mac`), which a `using Tr =` alias
+(`sample_traits<S>::mac` instead of `x.mac`), which a `using Tr =` alias
 reduces to nothing. The benefit is that the whole mechanism evaporates at
 compile time: every call in this file is a `static` member function,
 resolved by the template machinery, inlined by any compiler at any
@@ -177,12 +177,12 @@ Q15 converter measures **~77 dB SNR** on a half-scale 997 Hz sine across a
 +200 ppm clock crossing (`tests/test_fixed_point.cpp` prints it; the CI
 threshold sits at 73 dB), and that number is the *format's* floor, not the
 converter's. The same trade at 32 bits gives Q1.30 coefficients
-(`makeCoeff` scales by 2³⁰), where the quantization floor is so far down
+(`make_coeff` scales by 2³⁰), where the quantization floor is so far down
 that the Q31 path measures **133 dB** — statistically the float datapath's
 own 135 dB.
 
 The two unit tests pinning the scale factors are almost insultingly simple,
-and that is their virtue: `Q15::makeCoeff(1.0) == 16384` is the sentence
+and that is their virtue: `Q15::make_coeff(1.0) == 16384` is the sentence
 "the peak tap fits" written as an assertion.
 
 ## The accumulation story: exact until the last line
@@ -229,7 +229,7 @@ answers the objection with scale: the bias exists only on exact half values
 and is a fraction of one sub-LSB rounding step, orders below the Q15 noise
 floor that the 77 dB measurement already includes. Half-even costs extra
 operations per output sample to fix an error you cannot measure. The
-`clampSat` around it is the saturation that makes hot signals *clip*
+`clamp_sat` around it is the saturation that makes hot signals *clip*
 instead of wrap — and wrapping is the catastrophic failure mode:
 
 ```cpp
@@ -318,13 +318,13 @@ write in prose. This book's build system exists because of that sentence.
 (The Q31 blend uses a Q20 fraction rather than Q15 — since the product runs
 in `int64_t` anyway, the six extra fraction bits are free.)
 
-## `blendFactorFromQ64`: feeding the integer phase
+## `blend_factor_from_q64`: feeding the integer phase
 
 One trait remains, and it earns its keep on exactly one class of hardware.
 The C3 optimization (Part III) replaced the resampler's `double` phase
 accumulator with a Q0.64 integer — after which the *only* floating-point
 left on the fixed-point per-sample path was the conversion of the phase
-fraction into a blend factor. `blendFactorFromQ64` closes that hole. The
+fraction into a blend factor. `blend_factor_from_q64` closes that hole. The
 Q15 version is a single shift — the top 15 bits of the fraction *are* the
 Q15 blend factor:
 
@@ -363,17 +363,17 @@ the file *enforce* it:
 ```
 
 The datapath templates constrain themselves with it —
-`template <SampleType S> class BasicAsyncSampleRateConverter` — and the
+`template <sample_type S> class basic_async_sample_rate_converter` — and the
 payoff is the shape of the failure. Instantiate the converter with
 `double` (no specialization exists) and, without the concept, the error
 would surface wherever the template machinery first touched the undefined
 traits — some line deep inside `interpolate()`, wearing five frames of
 instantiation context. With the concept, the compiler rejects
-`BasicAsyncSampleRateConverter<double>` *at the declaration you wrote*,
+`basic_async_sample_rate_converter<double>` *at the declaration you wrote*,
 and its diagnostic walks the `requires`-expression clause by clause: which
 operation is missing, what signature it expected. The concept turns "a
 missing operation somewhere" into a checklist. Write a partial
-`SampleTraits<MyType>` — say, everything but `blendFactorFromQ64` — and
+`sample_traits<MyType>` — say, everything but `blend_factor_from_q64` — and
 the error names exactly that member.
 
 Note the return-type constraints (`-> std::same_as<...>`) are doing real
@@ -400,7 +400,7 @@ Cost: zero, everywhere except the compiler's own microseconds.
 | Q31 products pre-shifted to Q45 | full 62-bit products | 48 taps of 2⁶¹ ≈ 2⁶⁶·⁶ overflows `int64_t` ~12×; truncation cost < 1/200 output LSB, measured invisible |
 | Round-half-up in `finalize` | round-half-even | the bias is sub-sub-LSB; half-even costs real per-sample work to fix an unmeasurable error |
 | `int64_t` blend product | `int32_t` (it *almost* fits) | 0.005% worst-case margin — recomputed by audit from a comment that claimed 5% |
-| `SampleType` concept + self-`static_assert`s | let instantiation errors happen | failures surface at the declaration, itemized per missing operation |
+| `sample_type` concept + self-`static_assert`s | let instantiation errors happen | failures surface at the declaration, itemized per missing operation |
 
 ## Verify it yourself
 
@@ -418,11 +418,11 @@ ctest --test-dir build -R FixedPoint --output-on-failure
 python3 -c "print(32767*65535, 2**31-1, 1 - 32767*65535/(2**31-1))"
 
 # Break it on purpose, three ways:
-#  1. In makeCoeff (Q15), change 16384.0 to 32768.0 — the peak tap saturates
+#  1. In make_coeff (Q15), change 16384.0 to 32768.0 — the peak tap saturates
 #     and DcGainIsUnityQ15 fails its ±4 tolerance.
-#  2. In finalize (Q15), delete clampSat and cast directly — the full-scale
+#  2. In finalize (Q15), delete clamp_sat and cast directly — the full-scale
 #     sine test detects wraparound as a blown second difference.
-#  3. Instantiate srt::BasicAsyncSampleRateConverter<double> anywhere and
+#  3. Instantiate srt::basic_async_sample_rate_converter<double> anywhere and
 #     read the concept diagnostic: every missing operation, by name, at the
 #     line you wrote.
 ```
