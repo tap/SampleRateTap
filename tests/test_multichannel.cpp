@@ -25,36 +25,36 @@
 
 namespace {
 
-    constexpr double kFs  = 48000.0;
-    constexpr double kEps = 200e-6;
-    constexpr double kAmp = 0.4;
+    constexpr double k_k_fs  = 48000.0;
+    constexpr double k_k_eps = 200e-6;
+    constexpr double k_k_amp = 0.4;
 
     /// Distinct, non-harmonically-related tone per channel, all inside the flat
     /// passband for up to 16 channels (max 600 + 731*15 = 11565 Hz).
-    double channelFreqHz(std::size_t c) {
+    double channel_freq_hz(std::size_t c) {
         return 600.0 + 731.0 * static_cast<double>(c);
     }
 
     template <typename S>
-    S makeSample(double v) {
+    S make_sample(double v) {
         if constexpr (std::is_floating_point_v<S>)
             return static_cast<S>(v);
         else
-            return srt::detail::roundSat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return srt::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
     }
 
     template <typename S>
-    double toFloatNorm(S v) {
+    double to_float_norm(S v) {
         if constexpr (std::is_floating_point_v<S>)
             return static_cast<double>(v);
         else
             return static_cast<double>(v) / (static_cast<double>(std::numeric_limits<S>::max()) + 1.0);
     }
 
-    struct ChannelReport {
-        double amplitude        = 0.0;
-        double snrDb            = 0.0;
-        double worstCrosstalkDb = -300.0; ///< worst other-channel tone, dB rel. own
+    struct channel_report {
+        double amplitude          = 0.0;
+        double snr_db             = 0.0;
+        double worst_crosstalk_db = -300.0; ///< worst other-channel tone, dB rel. own
     };
 
     /// Runs `channels` distinct tones through one converter across a +200 ppm
@@ -63,64 +63,64 @@ namespace {
     /// transfer reaches the Quiet servo stage); chunk = 8 is AVB Class A-like
     /// granularity for the Track-stage short variant.
     template <typename S>
-    std::vector<ChannelReport> measureIndependence(std::size_t channels, double totalSeconds, double windowSeconds,
-                                                   std::size_t chunk) {
-        srt::Config cfg;
+    std::vector<channel_report> measure_independence(std::size_t channels, double total_seconds, double window_seconds,
+                                                     std::size_t chunk) {
+        srt::config cfg;
         cfg.channels = channels;
-        srt::BasicAsyncSampleRateConverter<S> asrc(cfg);
-        srt_test::TwoClockSimT<S>             sim{.asrc     = asrc,
-                                                  .fsIn     = kFs * (1.0 + kEps),
-                                                  .fsOut    = kFs,
-                                                  .channels = channels,
-                                                  .chunkIn  = chunk,
-                                                  .chunkOut = chunk};
-        sim.genCh = [&](std::uint64_t i, std::size_t c) {
-            const double w = 2.0 * std::numbers::pi * channelFreqHz(c) / kFs;
+        srt::basic_async_sample_rate_converter<S> asrc(cfg);
+        srt_test::two_clock_sim_t<S>              sim{.asrc      = asrc,
+                                                      .fs_in     = k_k_fs * (1.0 + k_k_eps),
+                                                      .fs_out    = k_k_fs,
+                                                      .channels  = channels,
+                                                      .chunk_in  = chunk,
+                                                      .chunk_out = chunk};
+        sim.gen_ch = [&](std::uint64_t i, std::size_t c) {
+            const double w = 2.0 * std::numbers::pi * channel_freq_hz(c) / k_k_fs;
             // Per-channel phase offsets decorrelate the channel waveforms.
-            return makeSample<S>(kAmp * std::sin(w * static_cast<double>(i) + 0.7 * static_cast<double>(c)));
+            return make_sample<S>(k_k_amp * std::sin(w * static_cast<double>(i) + 0.7 * static_cast<double>(c)));
         };
 
         std::vector<S> tail;
-        tail.reserve(static_cast<std::size_t>(windowSeconds * kFs + 16.0) * channels);
-        sim.run(totalSeconds, [&](const S* x, std::size_t frames, double t) {
-            if (t >= totalSeconds - windowSeconds)
+        tail.reserve(static_cast<std::size_t>(window_seconds * k_k_fs + 16.0) * channels);
+        sim.run(total_seconds, [&](const S* x, std::size_t frames, double t) {
+            if (t >= total_seconds - window_seconds)
                 tail.insert(tail.end(), x, x + frames * channels);
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, srt::State::Locked);
+        EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
 
-        const std::size_t          frames = tail.size() / channels;
-        std::vector<float>         x(frames);
-        std::vector<ChannelReport> reports(channels);
+        const std::size_t           frames = tail.size() / channels;
+        std::vector<float>          x(frames);
+        std::vector<channel_report> reports(channels);
         for (std::size_t c = 0; c < channels; ++c) {
             for (std::size_t f = 0; f < frames; ++f)
-                x[f] = static_cast<float>(toFloatNorm(tail[f * channels + c]));
+                x[f] = static_cast<float>(to_float_norm(tail[f * channels + c]));
 
             // Own tone: tracked fit, then exact removal of the fitted component.
-            const double nuOwn   = channelFreqHz(c) / kFs * (1.0 + kEps);
-            const auto   own     = srt_test::fitSineTracked(x, nuOwn);
+            const double nu_own  = channel_freq_hz(c) / k_k_fs * (1.0 + k_k_eps);
+            const auto   own     = srt_test::fit_sine_tracked(x, nu_own);
             reports[c].amplitude = own.amplitude;
-            reports[c].snrDb     = srt_test::snrDb(own);
-            const double wOwn    = 2.0 * std::numbers::pi * own.freqNorm;
+            reports[c].snr_db    = srt_test::snr_db(own);
+            const double w_own   = 2.0 * std::numbers::pi * own.freq_norm;
             const double a       = own.amplitude * std::cos(own.phase);
             const double b       = own.amplitude * std::sin(own.phase);
             for (std::size_t f = 0; f < frames; ++f) {
-                const double ph = wOwn * static_cast<double>(f);
+                const double ph = w_own * static_cast<double>(f);
                 x[f] -= static_cast<float>(a * std::sin(ph) + b * std::cos(ph) + own.dc);
             }
 
             for (std::size_t k = 0; k < channels; ++k) {
                 if (k == c)
                     continue;
-                const double nuK  = channelFreqHz(k) / kFs * (1.0 + kEps);
-                const auto   leak = srt_test::fitSine(x, nuK);
+                const double nu_k = channel_freq_hz(k) / k_k_fs * (1.0 + k_k_eps);
+                const auto   leak = srt_test::fit_sine(x, nu_k);
                 const double db   = 20.0 * std::log10(leak.amplitude / own.amplitude);
-                if (db > reports[c].worstCrosstalkDb)
-                    reports[c].worstCrosstalkDb = db;
+                if (db > reports[c].worst_crosstalk_db)
+                    reports[c].worst_crosstalk_db = db;
             }
             std::printf("[ measured ] ch %2zu (%5.0f Hz): amp %.4f, SNR %6.1f dB, "
                         "worst crosstalk %7.1f dB\n",
-                        c, channelFreqHz(c), reports[c].amplitude, reports[c].snrDb, reports[c].worstCrosstalkDb);
+                        c, channel_freq_hz(c), reports[c].amplitude, reports[c].snr_db, reports[c].worst_crosstalk_db);
         }
         return reports;
     }
@@ -129,20 +129,20 @@ namespace {
     // thresholds (float floor here is interpolation noise at the per-channel
     // tone frequency; Q15's is the format's own quantization).
     TEST(MultiChannel, Independence12chFloat) {
-        const auto r = measureIndependence<float>(12, 40.0, 1.0, 1);
+        const auto r = measure_independence<float>(12, 40.0, 1.0, 1);
         for (const auto& ch : r) {
-            EXPECT_NEAR(ch.amplitude, kAmp, 0.01);
-            EXPECT_GT(ch.snrDb, 100.0);
-            EXPECT_LT(ch.worstCrosstalkDb, -100.0);
+            EXPECT_NEAR(ch.amplitude, k_k_amp, 0.01);
+            EXPECT_GT(ch.snr_db, 100.0);
+            EXPECT_LT(ch.worst_crosstalk_db, -100.0);
         }
     }
 
     TEST(MultiChannel, Independence16chQ15) {
-        const auto r = measureIndependence<std::int16_t>(16, 40.0, 1.0, 1);
+        const auto r = measure_independence<std::int16_t>(16, 40.0, 1.0, 1);
         for (const auto& ch : r) {
-            EXPECT_NEAR(ch.amplitude, kAmp, 0.01);
-            EXPECT_GT(ch.snrDb, 72.0);
-            EXPECT_LT(ch.worstCrosstalkDb, -72.0);
+            EXPECT_NEAR(ch.amplitude, k_k_amp, 0.01);
+            EXPECT_GT(ch.snr_db, 72.0);
+            EXPECT_LT(ch.worst_crosstalk_db, -72.0);
         }
     }
 
@@ -155,29 +155,29 @@ namespace {
     // audit found those tiles had zero coverage. Float, because float is the
     // channel-parallel sample type.
     TEST(MultiChannelShort, Independence5chFloat) {
-        const auto r = measureIndependence<float>(5, 4.0, 0.25, 8);
+        const auto r = measure_independence<float>(5, 4.0, 0.25, 8);
         for (const auto& ch : r) {
-            EXPECT_NEAR(ch.amplitude, kAmp, 0.05);
-            EXPECT_GT(ch.snrDb, 35.0);
-            EXPECT_LT(ch.worstCrosstalkDb, -50.0);
+            EXPECT_NEAR(ch.amplitude, k_k_amp, 0.05);
+            EXPECT_GT(ch.snr_db, 35.0);
+            EXPECT_LT(ch.worst_crosstalk_db, -50.0);
         }
     }
 
     TEST(MultiChannelShort, Independence7chFloat) {
-        const auto r = measureIndependence<float>(7, 4.0, 0.25, 8);
+        const auto r = measure_independence<float>(7, 4.0, 0.25, 8);
         for (const auto& ch : r) {
-            EXPECT_NEAR(ch.amplitude, kAmp, 0.05);
-            EXPECT_GT(ch.snrDb, 35.0);
-            EXPECT_LT(ch.worstCrosstalkDb, -50.0);
+            EXPECT_NEAR(ch.amplitude, k_k_amp, 0.05);
+            EXPECT_GT(ch.snr_db, 35.0);
+            EXPECT_LT(ch.worst_crosstalk_db, -50.0);
         }
     }
 
     TEST(MultiChannelShort, Independence12chQ15) {
-        const auto r = measureIndependence<std::int16_t>(12, 4.0, 0.25, 8);
+        const auto r = measure_independence<std::int16_t>(12, 4.0, 0.25, 8);
         for (const auto& ch : r) {
-            EXPECT_NEAR(ch.amplitude, kAmp, 0.05);
-            EXPECT_GT(ch.snrDb, 35.0);
-            EXPECT_LT(ch.worstCrosstalkDb, -45.0);
+            EXPECT_NEAR(ch.amplitude, k_k_amp, 0.05);
+            EXPECT_GT(ch.snr_db, 35.0);
+            EXPECT_LT(ch.worst_crosstalk_db, -45.0);
         }
     }
 

@@ -35,10 +35,10 @@ namespace {
     }
 
     template <typename S>
-    void kernelBench(benchmark::State& state, const srt::FilterSpec& spec) {
-        const srt::PolyphaseFilterBank<S> bank(spec, 48000.0);
-        const auto                        hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
-        double                            mu   = 0.0;
+    void kernelBench(benchmark::converter_state& state, const srt::filter_spec& spec) {
+        const srt::polyphase_filter_bank<S> bank(spec, 48000.0);
+        const auto                          hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
+        double                              mu   = 0.0;
         for (auto _ : state) {
             mu += 0.6180339887498949; // golden-ratio stride visits phases evenly
             if (mu >= 1.0)
@@ -49,15 +49,15 @@ namespace {
     }
 
     template <typename S>
-    void pipelineBench(benchmark::State& state, const srt::FilterSpec& spec, std::size_t channels) {
+    void pipelineBench(benchmark::converter_state& state, const srt::filter_spec& spec, std::size_t channels) {
         constexpr std::size_t kBlock = 128;
         srt::Config           cfg;
         cfg.channels = channels;
         cfg.filter   = spec;
         // The FIFO setpoint must exceed the pull block size (see README latency
         // notes); 2 blocks gives headroom without distorting per-frame cost.
-        cfg.targetLatencyFrames = 2 * kBlock;
-        srt::BasicAsyncSampleRateConverter<S> asrc(cfg);
+        cfg.target_latency_frames = 2 * kBlock;
+        srt::basic_async_sample_rate_converter<S> asrc(cfg);
 
         // One second of pregenerated input so signal synthesis stays out of the
         // measured region; consumed cyclically.
@@ -86,20 +86,20 @@ namespace {
     }
 
     // --- Kernel: type x preset ------------------------------------------------
-    void BM_Kernel_Float_Fast(benchmark::State& s) {
-        kernelBench<float>(s, srt::FilterSpec::fast());
+    void BM_Kernel_Float_Fast(benchmark::converter_state& s) {
+        kernelBench<float>(s, srt::filter_spec::fast());
     }
-    void BM_Kernel_Float_Balanced(benchmark::State& s) {
-        kernelBench<float>(s, srt::FilterSpec::balanced());
+    void BM_Kernel_Float_Balanced(benchmark::converter_state& s) {
+        kernelBench<float>(s, srt::filter_spec::balanced());
     }
-    void BM_Kernel_Float_Transparent(benchmark::State& s) {
-        kernelBench<float>(s, srt::FilterSpec::transparent());
+    void BM_Kernel_Float_Transparent(benchmark::converter_state& s) {
+        kernelBench<float>(s, srt::filter_spec::transparent());
     }
-    void BM_Kernel_Q15_Balanced(benchmark::State& s) {
-        kernelBench<std::int16_t>(s, srt::FilterSpec::balanced());
+    void BM_Kernel_Q15_Balanced(benchmark::converter_state& s) {
+        kernelBench<std::int16_t>(s, srt::filter_spec::balanced());
     }
-    void BM_Kernel_Q31_Balanced(benchmark::State& s) {
-        kernelBench<std::int32_t>(s, srt::FilterSpec::balanced());
+    void BM_Kernel_Q31_Balanced(benchmark::converter_state& s) {
+        kernelBench<std::int32_t>(s, srt::filter_spec::balanced());
     }
     BENCHMARK(BM_Kernel_Float_Fast);
     BENCHMARK(BM_Kernel_Float_Balanced);
@@ -108,37 +108,37 @@ namespace {
     BENCHMARK(BM_Kernel_Q31_Balanced);
 
     // --- Pipeline: type x channels (balanced), plus the transparent ceiling ---
-    void BM_Pipeline_Float_Balanced_1ch(benchmark::State& s) {
-        pipelineBench<float>(s, srt::FilterSpec::balanced(), 1);
+    void BM_Pipeline_Float_Balanced_1ch(benchmark::converter_state& s) {
+        pipelineBench<float>(s, srt::filter_spec::balanced(), 1);
     }
-    void BM_Pipeline_Float_Balanced_2ch(benchmark::State& s) {
-        pipelineBench<float>(s, srt::FilterSpec::balanced(), 2);
+    void BM_Pipeline_Float_Balanced_2ch(benchmark::converter_state& s) {
+        pipelineBench<float>(s, srt::filter_spec::balanced(), 2);
     }
-    void BM_Pipeline_Float_Balanced_8ch(benchmark::State& s) {
-        pipelineBench<float>(s, srt::FilterSpec::balanced(), 8);
+    void BM_Pipeline_Float_Balanced_8ch(benchmark::converter_state& s) {
+        pipelineBench<float>(s, srt::filter_spec::balanced(), 8);
     }
-    void BM_Pipeline_Q15_Balanced_2ch(benchmark::State& s) {
-        pipelineBench<std::int16_t>(s, srt::FilterSpec::balanced(), 2);
+    void BM_Pipeline_Q15_Balanced_2ch(benchmark::converter_state& s) {
+        pipelineBench<std::int16_t>(s, srt::filter_spec::balanced(), 2);
     }
-    void BM_Pipeline_Q31_Balanced_2ch(benchmark::State& s) {
-        pipelineBench<std::int32_t>(s, srt::FilterSpec::balanced(), 2);
+    void BM_Pipeline_Q31_Balanced_2ch(benchmark::converter_state& s) {
+        pipelineBench<std::int32_t>(s, srt::filter_spec::balanced(), 2);
     }
-    void BM_Pipeline_Float_Transparent_2ch(benchmark::State& s) {
-        pipelineBench<float>(s, srt::FilterSpec::transparent(), 2);
+    void BM_Pipeline_Float_Transparent_2ch(benchmark::converter_state& s) {
+        pipelineBench<float>(s, srt::filter_spec::transparent(), 2);
     }
     // Deployment shapes: 12 channels (7.1.4 surround), 16 (AVB stream bundling
     // reference microphones with the program feed).
-    void BM_Pipeline_Float_Balanced_12ch(benchmark::State& s) {
-        pipelineBench<float>(s, srt::FilterSpec::balanced(), 12);
+    void BM_Pipeline_Float_Balanced_12ch(benchmark::converter_state& s) {
+        pipelineBench<float>(s, srt::filter_spec::balanced(), 12);
     }
-    void BM_Pipeline_Q15_Balanced_12ch(benchmark::State& s) {
-        pipelineBench<std::int16_t>(s, srt::FilterSpec::balanced(), 12);
+    void BM_Pipeline_Q15_Balanced_12ch(benchmark::converter_state& s) {
+        pipelineBench<std::int16_t>(s, srt::filter_spec::balanced(), 12);
     }
-    void BM_Pipeline_Float_Balanced_16ch(benchmark::State& s) {
-        pipelineBench<float>(s, srt::FilterSpec::balanced(), 16);
+    void BM_Pipeline_Float_Balanced_16ch(benchmark::converter_state& s) {
+        pipelineBench<float>(s, srt::filter_spec::balanced(), 16);
     }
-    void BM_Pipeline_Q15_Balanced_16ch(benchmark::State& s) {
-        pipelineBench<std::int16_t>(s, srt::FilterSpec::balanced(), 16);
+    void BM_Pipeline_Q15_Balanced_16ch(benchmark::converter_state& s) {
+        pipelineBench<std::int16_t>(s, srt::filter_spec::balanced(), 16);
     }
     BENCHMARK(BM_Pipeline_Float_Balanced_1ch);
     BENCHMARK(BM_Pipeline_Float_Balanced_2ch);

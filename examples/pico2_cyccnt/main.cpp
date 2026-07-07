@@ -77,18 +77,18 @@ namespace {
     }
 
     template <typename S>
-    void runCase(const char* typeName, const char* presetName, const srt::FilterSpec& spec, std::size_t channels) {
+    void runCase(const char* typeName, const char* presetName, const srt::filter_spec& spec, std::size_t channels) {
         srt::Config cfg;
         cfg.channels = channels;
         cfg.filter   = spec;
 
         // Heap-constructed so allocation failure (e.g. 12ch + float on a tighter
         // build) degrades to a printed SKIP row instead of a hard fault.
-        std::unique_ptr<srt::BasicAsyncSampleRateConverter<S>> asrc;
-        std::vector<S>                                         input;
-        std::vector<S>                                         out;
+        std::unique_ptr<srt::basic_async_sample_rate_converter<S>> asrc;
+        std::vector<S>                                             input;
+        std::vector<S>                                             out;
         try {
-            asrc  = std::make_unique<srt::BasicAsyncSampleRateConverter<S>>(cfg);
+            asrc  = std::make_unique<srt::basic_async_sample_rate_converter<S>>(cfg);
             input = sineBlock<S>(kInputFrames * channels, 997.0, 0.5);
             out.resize(kBlockFrames * channels);
         }
@@ -160,14 +160,14 @@ int main() {
                 "cyc/frame", "%core@48k");
 
     for (const std::size_t ch : {std::size_t{1}, std::size_t{2}, std::size_t{12}}) {
-        runCase<std::int16_t>("q15", "fast", srt::FilterSpec::fast(), ch);
-        runCase<std::int16_t>("q15", "balanced", srt::FilterSpec::balanced(), ch);
+        runCase<std::int16_t>("q15", "fast", srt::filter_spec::fast(), ch);
+        runCase<std::int16_t>("q15", "balanced", srt::filter_spec::balanced(), ch);
     }
 #if PICO2_MEASURE_FLOAT
     // Soft FP64 accumulation: expected brutally slow on the M33 (the QEMU
     // baselines put pipeline_float at ~3.8x pipeline_q15 instructions).
-    runCase<float>("float", "fast", srt::FilterSpec::fast(), 1);
-    runCase<float>("float", "balanced", srt::FilterSpec::balanced(), 1);
+    runCase<float>("float", "fast", srt::filter_spec::fast(), 1);
+    runCase<float>("float", "balanced", srt::filter_spec::balanced(), 1);
 #endif
 
     std::printf("SRT_PICO2_DONE\n");

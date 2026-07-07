@@ -3,9 +3,9 @@
 // test_asrc_quality.cpp, configured through Config::forSampleRate — the
 // rate-scaling rule this suite originally established by hand:
 //
-//  1. FilterSpec band edges are absolute Hz and the presets assume ~48 kHz,
+//  1. filter_spec band edges are absolute Hz and the presets assume ~48 kHz,
 //     so passbandHz/stopbandHz must scale with the rate.
-//  2. ServoConfig bandwidths are absolute Hz too. The slip-sawtooth beat
+//  2. servo_config bandwidths are absolute Hz too. The slip-sawtooth beat
 //     sits at ppm * fs = 3.2 Hz instead of 9.6 Hz, so with default servo
 //     settings the 3-pole quiet smoother rejects it (16/48)^3 ~ 28.6 dB
 //     less and the measurement becomes servo-FM-limited: measured ~32 dB
@@ -30,9 +30,9 @@
 
 namespace {
 
-    constexpr double kFs  = 16000.0;
-    constexpr double kEps = 200e-6;
-    constexpr double kAmp = 0.5;
+    constexpr double k_k_fs  = 16000.0;
+    constexpr double k_k_eps = 200e-6;
+    constexpr double k_k_amp = 0.5;
 
     // Resamples a sine across a +200 ppm clock offset (sample-synchronous
     // transfer) and measures the residual after removing the fitted fundamental
@@ -40,15 +40,19 @@ namespace {
     // test_asrc_quality.cpp at fs = 16 kHz, with all rate adaptation coming
     // from Config::forSampleRate (filter band edges, servo bandwidths and
     // hold times).
-    double measureSnrDb16k(double freqHz) {
-        srt::Config cfg = srt::Config::forSampleRate(kFs);
+    double measure_snr_db16k(double freq_hz) {
+        srt::config cfg = srt::config::for_sample_rate(k_k_fs);
         cfg.channels    = 1;
-        srt::AsyncSampleRateConverter asrc(cfg);
-        srt_test::TwoClockSim         sim{
-                    .asrc = asrc, .fsIn = kFs * (1.0 + kEps), .fsOut = kFs, .channels = 1, .chunkIn = 1, .chunkOut = 1};
-        const double nuIn = freqHz / kFs;
-        sim.gen           = [&](std::uint64_t i) {
-            return static_cast<float>(kAmp * std::sin(2.0 * std::numbers::pi * nuIn * static_cast<double>(i)));
+        srt::async_sample_rate_converter asrc(cfg);
+        srt_test::two_clock_sim          sim{.asrc      = asrc,
+                                             .fs_in     = k_k_fs * (1.0 + k_k_eps),
+                                             .fs_out    = k_k_fs,
+                                             .channels  = 1,
+                                             .chunk_in  = 1,
+                                             .chunk_out = 1};
+        const double                     nu_in = freq_hz / k_k_fs;
+        sim.gen                                = [&](std::uint64_t i) {
+            return static_cast<float>(k_k_amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));
         };
         std::vector<float> tail;
         tail.reserve(16000);
@@ -63,14 +67,14 @@ namespace {
                 tail.insert(tail.end(), x, x + frames);
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, srt::State::Locked);
-        const double nuOutExpected = nuIn * (1.0 + kEps);
-        const auto   fit           = srt_test::fitSineTracked(tail, nuOutExpected);
-        EXPECT_NEAR(fit.amplitude, kAmp, 0.01);
+        EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
+        const double nu_out_expected = nu_in * (1.0 + k_k_eps);
+        const auto   fit             = srt_test::fit_sine_tracked(tail, nu_out_expected);
+        EXPECT_NEAR(fit.amplitude, k_k_amp, 0.01);
         // The tracked frequency must still match the true clock ratio closely.
-        EXPECT_NEAR(fit.freqNorm / nuOutExpected, 1.0, 2e-6);
-        const double snr = srt_test::snrDb(fit);
-        std::printf("[ measured ] %5.0f Hz: SNR %.1f dB\n", freqHz, snr);
+        EXPECT_NEAR(fit.freq_norm / nu_out_expected, 1.0, 2e-6);
+        const double snr = srt_test::snr_db(fit);
+        std::printf("[ measured ] %5.0f Hz: SNR %.1f dB\n", freq_hz, snr);
         return snr;
     }
 
@@ -84,33 +88,33 @@ namespace {
     // Fast deterministic check of the scaling rule itself (the sims below are
     // the behavioral validation).
     TEST(AsrcQuality16k, ForSampleRateScalesHzFieldsOnly) {
-        const srt::Config c = srt::Config::forSampleRate(16000.0);
-        const srt::Config d; // 48 kHz defaults
+        const srt::config c = srt::config::for_sample_rate(16000.0);
+        const srt::config d; // 48 kHz defaults
         const double      r = 16000.0 / 48000.0;
-        EXPECT_DOUBLE_EQ(c.sampleRateHz, 16000.0);
-        EXPECT_DOUBLE_EQ(c.filter.passbandHz, d.filter.passbandHz * r);
-        EXPECT_DOUBLE_EQ(c.filter.stopbandHz, d.filter.stopbandHz * r);
-        EXPECT_EQ(c.filter.numPhases, d.filter.numPhases);
-        EXPECT_EQ(c.filter.tapsPerPhase, d.filter.tapsPerPhase);
-        EXPECT_DOUBLE_EQ(c.servo.quietBandwidthHz, d.servo.quietBandwidthHz * r);
-        EXPECT_DOUBLE_EQ(c.servo.acquireSmootherHz, d.servo.acquireSmootherHz * r);
-        EXPECT_DOUBLE_EQ(c.servo.quietHoldSeconds, d.servo.quietHoldSeconds / r);
-        EXPECT_DOUBLE_EQ(c.servo.lockThresholdFrames, d.servo.lockThresholdFrames);
-        EXPECT_DOUBLE_EQ(c.servo.maxDeviationPpm, d.servo.maxDeviationPpm);
-        EXPECT_EQ(c.targetLatencyFrames, d.targetLatencyFrames);
+        EXPECT_DOUBLE_EQ(c.sample_rate_hz, 16000.0);
+        EXPECT_DOUBLE_EQ(c.filter.passband_hz, d.filter.passband_hz * r);
+        EXPECT_DOUBLE_EQ(c.filter.stopband_hz, d.filter.stopband_hz * r);
+        EXPECT_EQ(c.filter.num_phases, d.filter.num_phases);
+        EXPECT_EQ(c.filter.taps_per_phase, d.filter.taps_per_phase);
+        EXPECT_DOUBLE_EQ(c.servo.quiet_bandwidth_hz, d.servo.quiet_bandwidth_hz * r);
+        EXPECT_DOUBLE_EQ(c.servo.acquire_smoother_hz, d.servo.acquire_smoother_hz * r);
+        EXPECT_DOUBLE_EQ(c.servo.quiet_hold_seconds, d.servo.quiet_hold_seconds / r);
+        EXPECT_DOUBLE_EQ(c.servo.lock_threshold_frames, d.servo.lock_threshold_frames);
+        EXPECT_DOUBLE_EQ(c.servo.max_deviation_ppm, d.servo.max_deviation_ppm);
+        EXPECT_EQ(c.target_latency_frames, d.target_latency_frames);
     }
 
     TEST(AsrcQuality16k, Balanced333Hz) {
-        EXPECT_GT(measureSnrDb16k(333.0), 132.0);
+        EXPECT_GT(measure_snr_db16k(333.0), 132.0);
     }
     TEST(AsrcQuality16k, Balanced2kHz) {
-        EXPECT_GT(measureSnrDb16k(2000.0), 117.0);
+        EXPECT_GT(measure_snr_db16k(2000.0), 117.0);
     }
     TEST(AsrcQuality16k, Balanced4kHz) {
-        EXPECT_GT(measureSnrDb16k(4000.0), 110.0);
+        EXPECT_GT(measure_snr_db16k(4000.0), 110.0);
     }
     TEST(AsrcQuality16k, Balanced6_5kHz) {
-        EXPECT_GT(measureSnrDb16k(6500.0), 102.0);
+        EXPECT_GT(measure_snr_db16k(6500.0), 102.0);
     }
 
 } // namespace
