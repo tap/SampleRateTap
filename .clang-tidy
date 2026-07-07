@@ -23,7 +23,7 @@ HeaderFilterRegex: '.*/(include|tests)/.*'
 # The DSP math deliberately uses capitalized matrix/vector symbols (Y = SH
 # matrix, D = decoder, R = rotation, ...). Permit a leading-capital symbol with
 # an optional short subscript and _snake suffixes (Y, Yd, R9, Y_virtual). This
-# still rejects camelCase (frameCount) and multi-word PascalCase (MyBuffer).
+# Also matrix products (DtD, YtD). Still rejects camelCase (frameCount).
 # Applied below per category via <Category>IgnoredRegexp.
 CheckOptions:
   # --- Types: snake_case ---
@@ -67,13 +67,13 @@ CheckOptions:
     value: lower_case
   # Math-notation carve-out (see header): capitalized matrix/vector symbols.
   - key: readability-identifier-naming.ParameterIgnoredRegexp
-    value: '^[A-Z][a-z0-9]*(_[A-Za-z0-9]+)*$'
+    value: '^[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*$'
   - key: readability-identifier-naming.LocalVariableIgnoredRegexp
-    value: '^[A-Z][a-z0-9]*(_[A-Za-z0-9]+)*$'
+    value: '^[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*$'
   - key: readability-identifier-naming.LocalConstantIgnoredRegexp
-    value: '^[A-Z][a-z0-9]*(_[A-Za-z0-9]+)*$'
+    value: '^[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*$'
   - key: readability-identifier-naming.VariableIgnoredRegexp
-    value: '^[A-Z][a-z0-9]*(_[A-Za-z0-9]+)*$'
+    value: '^[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*$'
 
   # --- Data members: private/protected get m_; public struct fields bare ---
   - key: readability-identifier-naming.PrivateMemberCase
@@ -93,11 +93,11 @@ CheckOptions:
     value: 'm_'
   # Math-notation carve-out for capitalized matrix/vector member symbols.
   - key: readability-identifier-naming.PublicMemberIgnoredRegexp
-    value: '^[A-Z][a-z0-9]*(_[A-Za-z0-9]+)*$'
+    value: '^[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*$'
   - key: readability-identifier-naming.PrivateMemberIgnoredRegexp
-    value: '^[A-Z][a-z0-9]*(_[A-Za-z0-9]+)*$'
+    value: '^[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*$'
   - key: readability-identifier-naming.ProtectedMemberIgnoredRegexp
-    value: '^[A-Z][a-z0-9]*(_[A-Za-z0-9]+)*$'
+    value: '^[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*$'
 
   # --- Constants at namespace/class/static scope: k_ + snake_case ---
   # (constexpr/const LOCALS stay bare via LocalConstantCase above)
