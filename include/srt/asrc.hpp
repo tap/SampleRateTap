@@ -23,13 +23,13 @@ namespace srt {
     /// Converter configuration. The defaults give ~1.5 ms designed latency at
     /// 48 kHz (FIFO setpoint 48 frames + ~24 frames filter group delay; see
     /// the README latency section), transparent for clocks within +/-1000 ppm.
-    struct Config {
-        double      sampleRateHz        = 48000.0; ///< nominal rate of BOTH clock domains
-        std::size_t channels            = 2;
-        std::size_t targetLatencyFrames = 48; ///< FIFO occupancy setpoint (~1 ms at 48 kHz)
-        std::size_t fifoFrames          = 0;  ///< ring capacity; 0 => automatic
-        FilterSpec  filter{};
-        ServoConfig servo{};
+    struct config {
+        double       sample_rate_hz        = 48000.0; ///< nominal rate of BOTH clock domains
+        std::size_t  channels              = 2;
+        std::size_t  target_latency_frames = 48; ///< FIFO occupancy setpoint (~1 ms at 48 kHz)
+        std::size_t  fifo_frames           = 0;  ///< ring capacity; 0 => automatic
+        filter_spec  filter{};
+        servo_config servo{};
         // ANCHOR_END: p0_config
 
         /// Defaults adapted to a nominal rate other than 48 kHz. The filter
@@ -37,7 +37,7 @@ namespace srt {
         /// running another rate with unscaled defaults silently costs quality
         /// (measured: ~32 dB at 16 kHz, because the slip beat ppm * fs drops
         /// below the servo smoothers' rejection). This factory rescales both —
-        /// see FilterSpec::scaledTo and ServoConfig::scaledTo — and is the
+        /// see filter_spec::scaledTo and servo_config::scaledTo — and is the
         /// recommended starting point for any non-48 kHz deployment:
         ///
         ///   srt::Config cfg = srt::Config::forSampleRate(16000.0);
@@ -46,20 +46,20 @@ namespace srt {
         /// Frame-denominated fields (targetLatencyFrames, fifoFrames) are
         /// rate-invariant in frames and left alone; note their duration in
         /// milliseconds scales inversely with the rate.
-        static Config forSampleRate(double sampleRateHz) noexcept {
-            Config c;
-            c.sampleRateHz = sampleRateHz;
-            c.filter       = c.filter.scaledTo(sampleRateHz);
-            c.servo        = c.servo.scaledTo(sampleRateHz);
+        static config for_sample_rate(double sample_rate_hz) noexcept {
+            config c;
+            c.sample_rate_hz = sample_rate_hz;
+            c.filter         = c.filter.scaled_to(sample_rate_hz);
+            c.servo          = c.servo.scaled_to(sample_rate_hz);
             return c;
         }
     };
 
     /// Converter state as seen by status().
-    enum class State : int {
-        Filling,   ///< buffering input until the FIFO reaches its setpoint
-        Acquiring, ///< servo running at the wide acquisition bandwidth
-        Locked     ///< servo narrowed; steady-state tracking
+    enum class converter_state : int {
+        filling,   ///< buffering input until the FIFO reaches its setpoint
+        acquiring, ///< servo running at the wide acquisition bandwidth
+        locked     ///< servo narrowed; steady-state tracking
     };
 
     /// Snapshot of converter telemetry; safe to call from any thread.
@@ -68,20 +68,20 @@ namespace srt {
     /// genuinely lock-free on 32-bit targets) and therefore wrap at 2^32 —
     /// far beyond any plausible event count, but treat them as modular if you
     /// difference them over very long horizons.
-    struct Status {
-        State         state          = State::Filling;
-        double        ratioEstimate  = 1.0; ///< estimated f_in / f_out = 1 + epsHat
-        double        ppm            = 0.0; ///< epsHat * 1e6
-        double        fifoFillFrames = 0.0; ///< smoothed occupancy observable
-        std::uint64_t underruns      = 0;   ///< consumer ran dry (output zero-padded)
-        std::uint64_t overruns       = 0;   ///< push() calls that could not accept every
-                                            ///< offered frame (FIFO full; excess dropped)
-        std::uint64_t resyncs = 0;          ///< hard occupancy resyncs (high watermark)
+    struct converter_status {
+        converter_state state            = converter_state::filling;
+        double          ratio_estimate   = 1.0; ///< estimated f_in / f_out = 1 + epsHat
+        double          ppm              = 0.0; ///< epsHat * 1e6
+        double          fifo_fill_frames = 0.0; ///< smoothed occupancy observable
+        std::uint64_t   underruns        = 0;   ///< consumer ran dry (output zero-padded)
+        std::uint64_t   overruns         = 0;   ///< push() calls that could not accept every
+                                                ///< offered frame (FIFO full; excess dropped)
+        std::uint64_t resyncs = 0;              ///< hard occupancy resyncs (high watermark)
         /// The setpoint actually in force. Starts at Config::targetLatencyFrames
         /// and is raised automatically when pull() blocks larger than the
         /// setpoint are observed (see pull()); differs from the configured value
         /// exactly when that adaptation has occurred.
-        std::uint64_t effectiveTargetLatencyFrames = 0;
+        std::uint64_t effective_target_latency_frames = 0;
     };
 
     /// Near-unity asynchronous sample rate converter between two clock domains.
@@ -95,43 +95,44 @@ namespace srt {
     /// Real-time contract: the constructor performs all allocation and filter
     /// design and may throw; push(), pull(), status() and resetFromConsumer() are
     /// noexcept, lock-free and allocation-free.
-    template <SampleType S>
-    class BasicAsyncSampleRateConverter {
+    template <sample_type S>
+    class basic_async_sample_rate_converter {
       public:
-        explicit BasicAsyncSampleRateConverter(const Config& cfg)
-            : cfg_(validated(cfg))
-            , bank_(cfg_.filter, cfg_.sampleRateHz)
-            , resampler_(bank_, cfg_.channels, kPopChunkFrames)
-            , ring_(ringCapacityElems(cfg_, bank_.taps()))
-            , servo_(cfg_.servo, cfg_.sampleRateHz, static_cast<double>(cfg_.targetLatencyFrames))
-            , targetFrames_(cfg_.targetLatencyFrames)
-            , fillThresholdFrames_(cfg_.targetLatencyFrames + bank_.taps())
-            , highWaterFrames_(
-                  std::max(3 * cfg_.targetLatencyFrames, fillThresholdFrames_ + cfg_.targetLatencyFrames)) {
-            if (ring_.capacity() / cfg_.channels <= highWaterFrames_)
-                throw std::invalid_argument("AsyncSampleRateConverter: fifoFrames too small");
+        explicit basic_async_sample_rate_converter(const config& cfg)
+            : m_cfg(validated(cfg))
+            , m_bank(m_cfg.filter, m_cfg.sample_rate_hz)
+            , m_resampler(m_bank, m_cfg.channels, k_k_pop_chunk_frames)
+            , m_ring(ring_capacity_elems(m_cfg, m_bank.taps()))
+            , m_servo(m_cfg.servo, m_cfg.sample_rate_hz, static_cast<double>(m_cfg.target_latency_frames))
+            , m_target_frames(m_cfg.target_latency_frames)
+            , m_fill_threshold_frames(m_cfg.target_latency_frames + m_bank.taps())
+            , m_high_water_frames(
+                  std::max(3 * m_cfg.target_latency_frames, m_fill_threshold_frames + m_cfg.target_latency_frames)) {
+            if (m_ring.capacity() / m_cfg.channels <= m_high_water_frames)
+                throw std::invalid_argument("async_sample_rate_converter: fifoFrames too small");
             // Largest setpoint the FIFO capacity supports while keeping the
             // high-watermark relation; bounds the adaptive raise in pull().
-            const std::size_t capFrames = ring_.capacity() / cfg_.channels;
-            const std::size_t taps      = bank_.taps();
-            maxTargetFrames_            = std::max(cfg_.targetLatencyFrames,
-                                                   std::min((capFrames - 1) / 3, capFrames > taps + 1 ? (capFrames - taps - 1) / 2
-                                                                                                      : cfg_.targetLatencyFrames));
-            effectiveTarget_.store(static_cast<std::uint32_t>(targetFrames_), std::memory_order_relaxed);
+            const std::size_t cap_frames = m_ring.capacity() / m_cfg.channels;
+            const std::size_t taps       = m_bank.taps();
+            m_max_target_frames =
+                std::max(m_cfg.target_latency_frames,
+                         std::min((cap_frames - 1) / 3,
+                                  cap_frames > taps + 1 ? (cap_frames - taps - 1) / 2 : m_cfg.target_latency_frames));
+            m_effective_target.store(static_cast<std::uint32_t>(m_target_frames), std::memory_order_relaxed);
         }
 
-        BasicAsyncSampleRateConverter(const BasicAsyncSampleRateConverter&)            = delete;
-        BasicAsyncSampleRateConverter& operator=(const BasicAsyncSampleRateConverter&) = delete;
+        basic_async_sample_rate_converter(const basic_async_sample_rate_converter&)            = delete;
+        basic_async_sample_rate_converter& operator=(const basic_async_sample_rate_converter&) = delete;
 
         /// Producer thread: offer `frames` interleaved input frames at the input
         /// clock. Returns frames accepted; fewer than `frames` means the FIFO was
         /// full (newest data dropped, overrun counted).
         std::size_t push(const S* interleaved, std::size_t frames) noexcept {
-            const std::size_t acceptFrames = std::min(frames, ring_.writeAvailable() / cfg_.channels);
-            ring_.write(interleaved, acceptFrames * cfg_.channels);
-            if (acceptFrames < frames)
-                overruns_.fetch_add(1, std::memory_order_relaxed);
-            return acceptFrames;
+            const std::size_t accept_frames = std::min(frames, m_ring.write_available() / m_cfg.channels);
+            m_ring.write(interleaved, accept_frames * m_cfg.channels);
+            if (accept_frames < frames)
+                m_overruns.fetch_add(1, std::memory_order_relaxed);
+            return accept_frames;
         }
 
         /// Consumer thread: produce exactly `frames` interleaved output frames at
@@ -142,9 +143,9 @@ namespace srt {
         /// moment they occur.) Returns the number of frames synthesized from
         /// real input.
         std::size_t pull(S* interleaved, std::size_t frames) noexcept {
-            const std::size_t ch    = cfg_.channels;
-            const auto        popFn = [this](S* dst, std::size_t maxFrames) noexcept {
-                return ring_.read(dst, maxFrames * cfg_.channels) / cfg_.channels;
+            const std::size_t ch     = m_cfg.channels;
+            const auto        pop_fn = [this](S* dst, std::size_t max_frames) noexcept {
+                return m_ring.read(dst, max_frames * m_cfg.channels) / m_cfg.channels;
             };
 
             // ANCHOR: asrc_feasibility
@@ -155,168 +156,171 @@ namespace srt {
             // the largest observed block plus slew/sawtooth margin, bounded by
             // FIFO capacity; the servo slews to the new setpoint glitch-free
             // (integrator kept, occupancy only grows). Cost: latency follows
-            // the raised setpoint — see Status::effectiveTargetLatencyFrames.
-            if (frames > observedMaxPull_) {
-                observedMaxPull_ = frames;
+            // the raised setpoint — see converter_status::effectiveTargetLatencyFrames.
+            if (frames > m_observed_max_pull) {
+                m_observed_max_pull = frames;
                 // Margin sized to the block-beat sawtooth (~half the block) so
                 // the entry occupancy never grazes the pull size; configs that
                 // already satisfy it (e.g. the 32-frame default transfer against
                 // the 48-frame default setpoint) are left exactly as configured.
-                const std::size_t needed    = frames + std::max<std::size_t>(frames / 2, kPopChunkFrames);
-                const std::size_t newTarget = std::clamp(needed, cfg_.targetLatencyFrames, maxTargetFrames_);
-                if (newTarget > targetFrames_) {
-                    targetFrames_        = newTarget;
-                    fillThresholdFrames_ = newTarget + bank_.taps();
-                    highWaterFrames_     = std::max(3 * newTarget, fillThresholdFrames_ + newTarget);
-                    servo_.setTarget(static_cast<double>(newTarget));
-                    effectiveTarget_.store(static_cast<std::uint32_t>(newTarget), std::memory_order_relaxed);
+                const std::size_t needed     = frames + std::max<std::size_t>(frames / 2, k_k_pop_chunk_frames);
+                const std::size_t new_target = std::clamp(needed, m_cfg.target_latency_frames, m_max_target_frames);
+                if (new_target > m_target_frames) {
+                    m_target_frames         = new_target;
+                    m_fill_threshold_frames = new_target + m_bank.taps();
+                    m_high_water_frames     = std::max(3 * new_target, m_fill_threshold_frames + new_target);
+                    m_servo.set_target(static_cast<double>(new_target));
+                    m_effective_target.store(static_cast<std::uint32_t>(new_target), std::memory_order_relaxed);
                 }
             }
 
             // ANCHOR_END: asrc_feasibility
-            double occ = backlogFrames();
+            double occ = backlog_frames();
 
             // ANCHOR: asrc_filling
-            if (filling_) {
-                if (occ < static_cast<double>(fillThresholdFrames_)) {
-                    fillSilence(interleaved, frames * ch);
-                    publishStatus();
+            if (m_filling) {
+                if (occ < static_cast<double>(m_fill_threshold_frames)) {
+                    fill_silence(interleaved, frames * ch);
+                    publish_status();
                     return 0;
                 }
-                resampler_.reset();
-                resampler_.prime(popFn); // guaranteed: occ >= target + taps
-                servo_.reset(true);      // keep ppm estimate across dropouts
-                occ = backlogFrames();
-                servo_.seed(occ);
-                filling_        = false;
-                fadeFramesLeft_ = kFadeFrames;
+                m_resampler.reset();
+                m_resampler.prime(pop_fn); // guaranteed: occ >= target + taps
+                m_servo.reset(true);       // keep ppm estimate across dropouts
+                occ = backlog_frames();
+                m_servo.seed(occ);
+                m_filling          = false;
+                m_fade_frames_left = k_k_fade_frames;
             }
 
             // ANCHOR_END: asrc_filling
             // ANCHOR: asrc_resync
-            if (occ > static_cast<double>(highWaterFrames_)) { // hard resync
-                const double target = static_cast<double>(targetFrames_);
+            if (occ > static_cast<double>(m_high_water_frames)) { // hard resync
+                const double target = static_cast<double>(m_target_frames);
                 // The discard can only come from the ring; frames staged in the
                 // resampler scratch are part of occ but not discardable. Clamp,
                 // or a setpoint below the staged count drains the ring entirely
                 // and cascades straight back into Filling.
-                const std::size_t ringFrames = ring_.readAvailable() / ch;
-                const double      excess     = occ - target;
-                const std::size_t dropFrames =
-                    std::min(ringFrames, excess > 0.0 ? static_cast<std::size_t>(excess) : 0);
-                ring_.discard(dropFrames * ch);
-                resyncs_.fetch_add(1, std::memory_order_relaxed);
-                occ = backlogFrames();
-                servo_.seed(occ + resampler_.mu());
+                const std::size_t ring_frames = m_ring.read_available() / ch;
+                const double      excess      = occ - target;
+                const std::size_t drop_frames =
+                    std::min(ring_frames, excess > 0.0 ? static_cast<std::size_t>(excess) : 0);
+                m_ring.discard(drop_frames * ch);
+                m_resyncs.fetch_add(1, std::memory_order_relaxed);
+                occ = backlog_frames();
+                m_servo.seed(occ + m_resampler.mu());
             }
 
             // ANCHOR_END: asrc_resync
-            const double dt     = static_cast<double>(frames) / cfg_.sampleRateHz;
-            const double epsHat = servo_.update(occ, resampler_.mu(), dt);
+            const double dt      = static_cast<double>(frames) / m_cfg.sample_rate_hz;
+            const double eps_hat = m_servo.update(occ, m_resampler.mu(), dt);
 
             // ANCHOR: asrc_underrun
-            const std::size_t made = resampler_.process(interleaved, frames, epsHat, popFn);
-            if (fadeFramesLeft_ != 0 && made != 0)
-                applyFadeIn(interleaved, made);
+            const std::size_t made = m_resampler.process(interleaved, frames, eps_hat, pop_fn);
+            if (m_fade_frames_left != 0 && made != 0)
+                apply_fade_in(interleaved, made);
             if (made < frames) { // underrun: pad and refill
-                fillSilence(interleaved + made * ch, (frames - made) * ch);
-                underruns_.fetch_add(1, std::memory_order_relaxed);
-                filling_ = true;
-                servo_.reset(true);
+                fill_silence(interleaved + made * ch, (frames - made) * ch);
+                m_underruns.fetch_add(1, std::memory_order_relaxed);
+                m_filling = true;
+                m_servo.reset(true);
             }
-            publishStatus();
+            publish_status();
             return made;
             // ANCHOR_END: asrc_underrun
         }
 
         /// Any thread: telemetry snapshot (relaxed atomics; fields are individually
         /// coherent, not mutually).
-        Status status() const noexcept {
-            Status s;
-            s.state                        = static_cast<State>(state_.load(std::memory_order_relaxed));
-            s.ppm                          = ppm_.load(std::memory_order_relaxed);
-            s.ratioEstimate                = 1.0 + s.ppm * 1e-6;
-            s.fifoFillFrames               = fill_.load(std::memory_order_relaxed);
-            s.underruns                    = underruns_.load(std::memory_order_relaxed);
-            s.overruns                     = overruns_.load(std::memory_order_relaxed);
-            s.resyncs                      = resyncs_.load(std::memory_order_relaxed);
-            s.effectiveTargetLatencyFrames = effectiveTarget_.load(std::memory_order_relaxed);
+        converter_status status() const noexcept {
+            converter_status s;
+            s.state                           = static_cast<converter_state>(m_state.load(std::memory_order_relaxed));
+            s.ppm                             = m_ppm.load(std::memory_order_relaxed);
+            s.ratio_estimate                  = 1.0 + s.ppm * 1e-6;
+            s.fifo_fill_frames                = m_fill.load(std::memory_order_relaxed);
+            s.underruns                       = m_underruns.load(std::memory_order_relaxed);
+            s.overruns                        = m_overruns.load(std::memory_order_relaxed);
+            s.resyncs                         = m_resyncs.load(std::memory_order_relaxed);
+            s.effective_target_latency_frames = m_effective_target.load(std::memory_order_relaxed);
             return s;
         }
 
         /// Consumer thread: full restart — discard all buffered input, forget the
         /// ppm estimate, return to Filling.
-        void resetFromConsumer() noexcept {
-            ring_.discard(ring_.readAvailable());
-            resampler_.reset();
-            servo_.reset(false);
-            filling_ = true;
-            publishStatus();
+        void reset_from_consumer() noexcept {
+            m_ring.discard(m_ring.read_available());
+            m_resampler.reset();
+            m_servo.reset(false);
+            m_filling = true;
+            publish_status();
         }
 
         /// Nominal design latency: FIFO setpoint + filter group delay. Uses the
         /// effective (possibly adaptively raised) setpoint; the actual figure
         /// breathes by a fraction of a frame as the servo tracks drift.
-        double designedLatencySeconds() const noexcept {
-            return (static_cast<double>(effectiveTarget_.load(std::memory_order_relaxed)) + bank_.groupDelaySamples())
-                   / cfg_.sampleRateHz;
+        double designed_latency_seconds() const noexcept {
+            return (static_cast<double>(m_effective_target.load(std::memory_order_relaxed))
+                    + m_bank.group_delay_samples())
+                   / m_cfg.sample_rate_hz;
         }
 
-        const PolyphaseFilterBank<S>& filterBank() const noexcept { return bank_; }
+        const polyphase_filter_bank<S>& filter_bank() const noexcept { return m_bank; }
 
       private:
-        static constexpr std::size_t kPopChunkFrames = 16;
+        static constexpr std::size_t k_k_pop_chunk_frames = 16;
 
-        static std::size_t ringCapacityElems(const Config& cfg, std::size_t taps) {
-            const std::size_t fillThreshold = cfg.targetLatencyFrames + taps;
+        static std::size_t ring_capacity_elems(const config& cfg, std::size_t taps) {
+            const std::size_t fill_threshold = cfg.target_latency_frames + taps;
             // The 1024-frame floor (21 ms at 48 kHz) leaves the adaptive
             // setpoint raise enough capacity for pull blocks up to ~340 frames
             // without explicit fifoFrames sizing; larger callbacks need
             // fifoFrames set by the caller (the raise clamps to capacity).
             const std::size_t frames =
-                cfg.fifoFrames != 0 ? cfg.fifoFrames : std::max<std::size_t>(1024, 4 * fillThreshold);
+                cfg.fifo_frames != 0 ? cfg.fifo_frames : std::max<std::size_t>(1024, 4 * fill_threshold);
             return std::bit_ceil(frames * cfg.channels);
         }
 
         /// Effective backlog: FIFO occupancy plus frames staged in the resampler's
         /// pop scratch (already off the ring but not yet through the filter).
-        double backlogFrames() noexcept {
-            return static_cast<double>(ring_.readAvailable() / cfg_.channels + resampler_.bufferedFrames());
+        double backlog_frames() noexcept {
+            return static_cast<double>(m_ring.read_available() / m_cfg.channels + m_resampler.buffered_frames());
         }
 
-        void fillSilence(S* dst, std::size_t count) noexcept {
+        void fill_silence(S* dst, std::size_t count) noexcept {
             for (std::size_t i = 0; i < count; ++i)
-                dst[i] = SampleTraits<S>::silence();
+                dst[i] = sample_traits<S>::silence();
         }
 
-        static S scaleSample(S x, double g) noexcept {
+        static S scale_sample(S x, double g) noexcept {
             if constexpr (std::is_floating_point_v<S>)
                 return static_cast<S>(static_cast<double>(x) * g);
             else
-                return detail::roundSat<S>(static_cast<double>(x) * g);
+                return detail::round_sat<S>(static_cast<double>(x) * g);
         }
 
         /// Linear gain ramp over the first kFadeFrames frames after a (re)fill.
         /// Rare event and at most 64 frames, so the double math is acceptable
         /// even on FPU-less targets.
-        void applyFadeIn(S* interleaved, std::size_t madeFrames) noexcept {
-            const std::size_t n    = std::min(madeFrames, fadeFramesLeft_);
-            const std::size_t done = kFadeFrames - fadeFramesLeft_;
+        void apply_fade_in(S* interleaved, std::size_t made_frames) noexcept {
+            const std::size_t n    = std::min(made_frames, m_fade_frames_left);
+            const std::size_t done = k_k_fade_frames - m_fade_frames_left;
             for (std::size_t f = 0; f < n; ++f) {
-                const double g = static_cast<double>(done + f + 1) / static_cast<double>(kFadeFrames);
-                for (std::size_t c = 0; c < cfg_.channels; ++c) {
-                    S& x = interleaved[f * cfg_.channels + c];
-                    x    = scaleSample(x, g);
+                const double g = static_cast<double>(done + f + 1) / static_cast<double>(k_k_fade_frames);
+                for (std::size_t c = 0; c < m_cfg.channels; ++c) {
+                    S& x = interleaved[f * m_cfg.channels + c];
+                    x    = scale_sample(x, g);
                 }
             }
-            fadeFramesLeft_ -= n;
+            m_fade_frames_left -= n;
         }
 
-        void publishStatus() noexcept {
-            const State st = filling_ ? State::Filling : servo_.locked() ? State::Locked : State::Acquiring;
-            state_.store(static_cast<int>(st), std::memory_order_relaxed);
-            ppm_.store(static_cast<float>(servo_.epsHat() * 1e6), std::memory_order_relaxed);
-            fill_.store(static_cast<float>(servo_.smoothedOccupancy()), std::memory_order_relaxed);
+        void publish_status() noexcept {
+            const converter_state st = m_filling          ? converter_state::filling
+                                       : m_servo.locked() ? converter_state::locked
+                                                          : converter_state::acquiring;
+            m_state.store(static_cast<int>(st), std::memory_order_relaxed);
+            m_ppm.store(static_cast<float>(m_servo.eps_hat() * 1e6), std::memory_order_relaxed);
+            m_fill.store(static_cast<float>(m_servo.smoothed_occupancy()), std::memory_order_relaxed);
         }
 
         /// Rejects configurations that would otherwise construct successfully
@@ -325,64 +329,65 @@ namespace srt {
         /// (anti-image cutoff above input Nyquist passes images wholesale), a
         /// deviation clamp large enough to overflow the Q0.64 eps conversion
         /// (UB), and size products that overflow 32-bit size_t targets.
-        static Config validated(Config cfg) {
+        static config validated(config cfg) {
             const auto finite = [](double v) { return std::isfinite(v); };
-            if (cfg.channels == 0 || cfg.targetLatencyFrames == 0 || !finite(cfg.sampleRateHz)
-                || cfg.sampleRateHz <= 0.0)
-                throw std::invalid_argument("AsyncSampleRateConverter: bad Config");
-            const FilterSpec& f = cfg.filter;
-            if (!finite(f.passbandHz) || !finite(f.stopbandHz) || !finite(f.stopbandAttenDb)
-                || f.passbandHz + f.stopbandHz > cfg.sampleRateHz)
-                throw std::invalid_argument("AsyncSampleRateConverter: bad FilterSpec "
+            if (cfg.channels == 0 || cfg.target_latency_frames == 0 || !finite(cfg.sample_rate_hz)
+                || cfg.sample_rate_hz <= 0.0)
+                throw std::invalid_argument("async_sample_rate_converter: bad Config");
+            const filter_spec& f = cfg.filter;
+            if (!finite(f.passband_hz) || !finite(f.stopband_hz) || !finite(f.stopband_atten_db)
+                || f.passband_hz + f.stopband_hz > cfg.sample_rate_hz)
+                throw std::invalid_argument("async_sample_rate_converter: bad filter_spec "
                                             "(need passbandHz + stopbandHz <= sampleRateHz)");
-            const ServoConfig& sv = cfg.servo;
-            if (!finite(sv.acquireBandwidthHz) || !finite(sv.trackBandwidthHz) || !finite(sv.quietBandwidthHz)
-                || !finite(sv.damping) || !finite(sv.acquireSmootherHz) || !finite(sv.trackSmootherHz)
-                || !finite(sv.quietSmootherHz) || !finite(sv.lockThresholdFrames) || !finite(sv.lockHoldSeconds)
-                || !finite(sv.quietHoldSeconds) || !finite(sv.unlockThresholdFrames) || !finite(sv.maxDeviationPpm)
-                || sv.maxDeviationPpm <= 0.0
-                || sv.maxDeviationPpm > 100000.0) // |eps| stays far from the Q0.64 int64 limit
-                throw std::invalid_argument("AsyncSampleRateConverter: bad ServoConfig");
+            const servo_config& sv = cfg.servo;
+            if (!finite(sv.acquire_bandwidth_hz) || !finite(sv.track_bandwidth_hz) || !finite(sv.quiet_bandwidth_hz)
+                || !finite(sv.damping) || !finite(sv.acquire_smoother_hz) || !finite(sv.track_smoother_hz)
+                || !finite(sv.quiet_smoother_hz) || !finite(sv.lock_threshold_frames) || !finite(sv.lock_hold_seconds)
+                || !finite(sv.quiet_hold_seconds) || !finite(sv.unlock_threshold_frames)
+                || !finite(sv.max_deviation_ppm) || sv.max_deviation_ppm <= 0.0
+                || sv.max_deviation_ppm > 100000.0) // |eps| stays far from the Q0.64 int64 limit
+                throw std::invalid_argument("async_sample_rate_converter: bad servo_config");
             // Size products evaluated later must not wrap on 32-bit size_t.
-            const auto mulOk = [](std::size_t a, std::size_t b) {
+            const auto mul_ok = [](std::size_t a, std::size_t b) {
                 return b == 0 || a <= std::numeric_limits<std::size_t>::max() / b;
             };
-            const std::size_t phases = std::bit_ceil(f.numPhases);
-            if (!mulOk(phases + 1, f.tapsPerPhase) || !mulOk(cfg.targetLatencyFrames + f.tapsPerPhase, 8 * cfg.channels)
-                || !mulOk(cfg.fifoFrames, 2 * cfg.channels))
-                throw std::invalid_argument("AsyncSampleRateConverter: Config sizes overflow");
+            const std::size_t phases = std::bit_ceil(f.num_phases);
+            if (!mul_ok(phases + 1, f.taps_per_phase)
+                || !mul_ok(cfg.target_latency_frames + f.taps_per_phase, 8 * cfg.channels)
+                || !mul_ok(cfg.fifo_frames, 2 * cfg.channels))
+                throw std::invalid_argument("async_sample_rate_converter: Config sizes overflow");
             return cfg;
         }
 
-        static constexpr std::size_t kFadeFrames = 64;
+        static constexpr std::size_t k_k_fade_frames = 64;
 
-        Config                 cfg_;
-        PolyphaseFilterBank<S> bank_;
-        FractionalResampler<S> resampler_;
-        SpscRing<S>            ring_;
-        PiServo                servo_;
+        config                   m_cfg;
+        polyphase_filter_bank<S> m_bank;
+        fractional_resampler<S>  m_resampler;
+        spsc_ring<S>             m_ring;
+        pi_servo                 m_servo;
         // Consumer-thread setpoint state (see the adaptive raise in pull()).
-        std::size_t targetFrames_;
-        std::size_t fillThresholdFrames_;
-        std::size_t highWaterFrames_;
-        std::size_t maxTargetFrames_ = 0;
-        std::size_t observedMaxPull_ = 0;
-        bool        filling_         = true; // consumer-thread state; mirrored into state_
-        std::size_t fadeFramesLeft_  = 0;    // consumer-thread state
+        std::size_t m_target_frames;
+        std::size_t m_fill_threshold_frames;
+        std::size_t m_high_water_frames;
+        std::size_t m_max_target_frames = 0;
+        std::size_t m_observed_max_pull = 0;
+        bool        m_filling           = true; // consumer-thread state; mirrored into state_
+        std::size_t m_fade_frames_left  = 0;    // consumer-thread state
 
         // Telemetry is 32-bit on purpose: 64-bit atomics fall back to lock-based
         // libatomic on 32-bit targets (e.g. Hexagon), which would break the
         // lock-free contract of the hot path. float carries ~7 significant
         // digits — ample for ppm/fill observability; counters wrap at 2^32.
-        std::atomic<int>   state_{static_cast<int>(State::Filling)};
-        std::atomic<float> ppm_{0.0f};
-        std::atomic<float> fill_{0.0f};
+        std::atomic<int>   m_state{static_cast<int>(converter_state::filling)};
+        std::atomic<float> m_ppm{0.0f};
+        std::atomic<float> m_fill{0.0f};
         // Effective setpoint mirror for status()/designedLatencySeconds() from
         // any thread; written only by the consumer (32-bit: lock-free everywhere).
-        std::atomic<std::uint32_t> effectiveTarget_{0};
-        std::atomic<std::uint32_t> underruns_{0};
-        std::atomic<std::uint32_t> overruns_{0};
-        std::atomic<std::uint32_t> resyncs_{0};
+        std::atomic<std::uint32_t> m_effective_target{0};
+        std::atomic<std::uint32_t> m_underruns{0};
+        std::atomic<std::uint32_t> m_overruns{0};
+        std::atomic<std::uint32_t> m_resyncs{0};
 
         static_assert(std::atomic<int>::is_always_lock_free && std::atomic<float>::is_always_lock_free
                           && std::atomic<std::uint32_t>::is_always_lock_free,
@@ -390,11 +395,11 @@ namespace srt {
     };
 
     /// The float converter.
-    using AsyncSampleRateConverter = BasicAsyncSampleRateConverter<float>;
-    /// Q15 fixed-point converter (int16_t samples; see SampleTraits<int16_t>).
-    using AsyncSampleRateConverterQ15 = BasicAsyncSampleRateConverter<std::int16_t>;
-    /// Q31 fixed-point converter (int32_t samples; see SampleTraits<int32_t>).
-    using AsyncSampleRateConverterQ31 = BasicAsyncSampleRateConverter<std::int32_t>;
+    using async_sample_rate_converter = basic_async_sample_rate_converter<float>;
+    /// Q15 fixed-point converter (int16_t samples; see sample_traits<int16_t>).
+    using async_sample_rate_converter_q15 = basic_async_sample_rate_converter<std::int16_t>;
+    /// Q31 fixed-point converter (int32_t samples; see sample_traits<int32_t>).
+    using async_sample_rate_converter_q31 = basic_async_sample_rate_converter<std::int32_t>;
 
 } // namespace srt
 

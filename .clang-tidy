@@ -17,7 +17,7 @@ Checks: >
 # // NOLINTBEGIN(readability-identifier-naming) markers from their generators.
 # NOTE: clang-tidy uses llvm::Regex, which has NO negative lookahead — a
 # '^(?!...)' pattern silently matches nothing and disables the check.
-HeaderFilterRegex: '.*/include/.*'
+HeaderFilterRegex: '.*/(include|tests)/.*'
 
 # --- Linear-algebra notation carve-out --------------------------------------
 # The DSP math deliberately uses capitalized matrix/vector symbols (Y = SH
@@ -34,6 +34,10 @@ CheckOptions:
   - key: readability-identifier-naming.UnionCase
     value: lower_case
   - key: readability-identifier-naming.EnumCase
+    value: lower_case
+  - key: readability-identifier-naming.EnumConstantCase
+    value: lower_case
+  - key: readability-identifier-naming.ScopedEnumConstantCase
     value: lower_case
   - key: readability-identifier-naming.TypeAliasCase
     value: lower_case

@@ -25,12 +25,12 @@ namespace srt::detail {
     /// Modified Bessel function of the first kind, order zero, by power series.
     /// Converges for all practical Kaiser betas (|x| < ~40); terms are added until
     /// they no longer contribute at double precision.
-    inline double besselI0(double x) noexcept {
-        const double halfX = 0.5 * x;
-        double       term  = 1.0;
-        double       sum   = 1.0;
+    inline double bessel_i0(double x) noexcept {
+        const double half_x = 0.5 * x;
+        double       term   = 1.0;
+        double       sum    = 1.0;
         for (int k = 1; k < 1000; ++k) {
-            const double r = halfX / static_cast<double>(k);
+            const double r = half_x / static_cast<double>(k);
             term *= r * r;
             sum += term;
             if (term < 1e-21 * sum)
@@ -43,11 +43,11 @@ namespace srt::detail {
     // ANCHOR: kai_beta
     /// Kaiser window shape parameter for a given stopband attenuation in dB
     /// (Kaiser's published empirical fit).
-    inline double kaiserBeta(double attenDb) noexcept {
-        if (attenDb > 50.0)
-            return 0.1102 * (attenDb - 8.7);
-        if (attenDb > 21.0)
-            return 0.5842 * std::pow(attenDb - 21.0, 0.4) + 0.07886 * (attenDb - 21.0);
+    inline double kaiser_beta(double atten_db) noexcept {
+        if (atten_db > 50.0)
+            return 0.1102 * (atten_db - 8.7);
+        if (atten_db > 21.0)
+            return 0.5842 * std::pow(atten_db - 21.0, 0.4) + 0.07886 * (atten_db - 21.0);
         return 0.0;
     }
     // ANCHOR_END: kai_beta
@@ -59,12 +59,12 @@ namespace srt::detail {
     /// \param transWidthNorm transition width normalized to the *input* sample rate
     ///                       (e.g. 8 kHz transition at 48 kHz -> 8000/48000)
     /// \return estimated taps per polyphase phase: N = (A - 8) / (2.285 * 2*pi * df)
-    inline std::size_t estimateTaps(double attenDb, double transWidthNorm) noexcept {
+    inline std::size_t estimate_taps(double atten_db, double trans_width_norm) noexcept {
         // Clamp pathological inputs (attenDb < 8, non-positive width): the raw
         // formula goes negative/infinite there and casting that to size_t is UB.
-        if (!(transWidthNorm > 0.0))
+        if (!(trans_width_norm > 0.0))
             return 4;
-        const double n = (attenDb - 8.0) / (2.285 * 2.0 * std::numbers::pi * transWidthNorm);
+        const double n = (atten_db - 8.0) / (2.285 * 2.0 * std::numbers::pi * trans_width_norm);
         return n > 4.0 ? static_cast<std::size_t>(std::ceil(n)) : 4;
     }
     // ANCHOR_END: kai_estimate
@@ -93,19 +93,20 @@ namespace srt::detail {
     ///
     /// The result is normalized so that sum(h) == L, giving each polyphase branch a
     /// DC gain of ~1 (deviation bounded by the stopband leakage).
-    inline void designPrototype(std::span<double> h, std::size_t numPhases, double cutoffNorm, double beta) noexcept {
-        const std::size_t n      = h.size();
-        const double      center = 0.5 * static_cast<double>(n - 1);
-        const double      i0Beta = besselI0(beta);
-        double            sum    = 0.0;
+    inline void design_prototype(std::span<double> h, std::size_t num_phases, double cutoff_norm,
+                                 double beta) noexcept {
+        const std::size_t n       = h.size();
+        const double      center  = 0.5 * static_cast<double>(n - 1);
+        const double      i0_beta = bessel_i0(beta);
+        double            sum     = 0.0;
         for (std::size_t i = 0; i < n; ++i) {
-            const double t = (static_cast<double>(i) - center) / static_cast<double>(numPhases);
+            const double t = (static_cast<double>(i) - center) / static_cast<double>(num_phases);
             const double u = (static_cast<double>(i) - center) / center; // window argument, [-1, 1]
-            const double w = besselI0(beta * std::sqrt(std::max(0.0, 1.0 - u * u))) / i0Beta;
-            h[i]           = cutoffNorm * sinc(cutoffNorm * t) * w;
+            const double w = bessel_i0(beta * std::sqrt(std::max(0.0, 1.0 - u * u))) / i0_beta;
+            h[i]           = cutoff_norm * sinc(cutoff_norm * t) * w;
             sum += h[i];
         }
-        const double gain = static_cast<double>(numPhases) / sum;
+        const double gain = static_cast<double>(num_phases) / sum;
         for (auto& v : h)
             v *= gain;
     }
@@ -114,7 +115,7 @@ namespace srt::detail {
     /// Solves the dense n x n system m * out = rhs in place (Gaussian elimination
     /// with partial pivoting; row-major m). Small systems only — the compensated
     /// design below solves at most 15 unknowns.
-    inline void solveDense(std::span<double> m, std::span<double> rhs, std::span<double> out, std::size_t n) noexcept {
+    inline void solve_dense(std::span<double> m, std::span<double> rhs, std::span<double> out, std::size_t n) noexcept {
         std::vector<std::size_t> order(n);
         for (std::size_t i = 0; i < n; ++i)
             order[i] = i;
@@ -175,9 +176,9 @@ namespace srt::detail {
     /// direct-DFT probes); still constructor-only, off the audio path. Allocates
     /// workspace; may throw std::bad_alloc.
     // ANCHOR_END: pw_comp_design
-    inline void designPrototypeCompensated(std::span<double> h, std::size_t numPhases, double cutoffNorm, double beta,
-                                           double passbandNorm) {
-        const std::size_t L     = numPhases;
+    inline void design_prototype_compensated(std::span<double> h, std::size_t num_phases, double cutoff_norm,
+                                             double beta, double passband_norm) {
+        const std::size_t L     = num_phases;
         const std::size_t total = h.size() / L; // total taps per phase (with rect)
         const std::size_t td    = total - 1;    // sinc-design taps per phase
         const std::size_t n     = L * td;       // fine-grid design length
@@ -186,24 +187,24 @@ namespace srt::detail {
         // ~1e-4, capped so the shifted kernels stay well inside short windows.
         const std::size_t M = std::min<std::size_t>(14, (td - 1) / 5);
 
-        constexpr std::size_t kGrid  = 1001; // fit grid over f/fs in [0, 0.5]
-        constexpr std::size_t kProbe = 24;   // passband correction probes
-        std::vector<double>   target(kGrid), a(M + 1), fine(n), probe(kProbe);
-        for (std::size_t g = 0; g < kGrid; ++g) {
-            const double f  = 0.5 * static_cast<double>(g) / static_cast<double>(kGrid - 1);
+        constexpr std::size_t k_grid  = 1001; // fit grid over f/fs in [0, 0.5]
+        constexpr std::size_t k_probe = 24;   // passband correction probes
+        std::vector<double>   target(k_grid), a(M + 1), fine(n), probe(k_probe);
+        for (std::size_t g = 0; g < k_grid; ++g) {
+            const double f  = 0.5 * static_cast<double>(g) / static_cast<double>(k_grid - 1);
             const double pf = std::numbers::pi * f;
             target[g]       = f < 1e-9 ? 1.0 : pf / std::sin(pf); // 1/sinc(f/fs)
         }
 
-        const auto fitCosineSeries = [&] {
+        const auto fit_cosine_series = [&] {
             // Weighted LS of target on cos(2*pi*m*f): exact where flatness is
             // specified (the passband, heavy weight), merely tracked above it.
             // Basis by Chebyshev recurrence: cos(m x) from the two previous
             // orders, one real cosine per grid point.
             std::vector<double> nm((M + 1) * (M + 1), 0.0), rhs(M + 1, 0.0), basis(M + 1);
-            for (std::size_t g = 0; g < kGrid; ++g) {
-                const double f  = 0.5 * static_cast<double>(g) / static_cast<double>(kGrid - 1);
-                const double w2 = f <= passbandNorm + 0.02 ? 1e8 : 1.0; // (weight 1e4)^2
+            for (std::size_t g = 0; g < k_grid; ++g) {
+                const double f  = 0.5 * static_cast<double>(g) / static_cast<double>(k_grid - 1);
+                const double w2 = f <= passband_norm + 0.02 ? 1e8 : 1.0; // (weight 1e4)^2
                 const double c1 = std::cos(2.0 * std::numbers::pi * f);
                 basis[0]        = 1.0;
                 if (M >= 1)
@@ -216,7 +217,7 @@ namespace srt::detail {
                     rhs[r] += w2 * basis[r] * target[g];
                 }
             }
-            solveDense(nm, rhs, a, M + 1);
+            solve_dense(nm, rhs, a, M + 1);
         };
 
         const auto build = [&] {
@@ -236,39 +237,39 @@ namespace srt::detail {
             // the per-tap angle advance by a unit rotator, re-synced with real
             // libm calls every 4096 taps to bound drift far below the design's
             // own accuracy floor.
-            const double        center = 0.5 * static_cast<double>(n);
-            const double        i0Beta = besselI0(beta);
+            const double        center  = 0.5 * static_cast<double>(n);
+            const double        i0_beta = bessel_i0(beta);
             std::vector<double> cs(M + 1), sn(M + 1);
             for (std::size_t m = 0; m <= M; ++m) {
-                cs[m] = std::cos(std::numbers::pi * cutoffNorm * static_cast<double>(m));
-                sn[m] = std::sin(std::numbers::pi * cutoffNorm * static_cast<double>(m));
+                cs[m] = std::cos(std::numbers::pi * cutoff_norm * static_cast<double>(m));
+                sn[m] = std::sin(std::numbers::pi * cutoff_norm * static_cast<double>(m));
             }
-            const double step  = std::numbers::pi * cutoffNorm / static_cast<double>(L);
-            const double stepC = std::cos(step), stepS = std::sin(step);
-            double       angS = 0.0, angC = 1.0; // sin/cos(pi*c*t_i), re-synced below
+            const double step   = std::numbers::pi * cutoff_norm / static_cast<double>(L);
+            const double step_c = std::cos(step), step_s = std::sin(step);
+            double       ang_s = 0.0, ang_c = 1.0; // sin/cos(pi*c*t_i), re-synced below
             for (std::size_t i = 0; i < n; ++i) {
                 const double t = (static_cast<double>(i) - center) / static_cast<double>(L);
                 if (i % 4096 == 0) {
-                    angS = std::sin(std::numbers::pi * cutoffNorm * t);
-                    angC = std::cos(std::numbers::pi * cutoffNorm * t);
+                    ang_s = std::sin(std::numbers::pi * cutoff_norm * t);
+                    ang_c = std::cos(std::numbers::pi * cutoff_norm * t);
                 }
-                const auto shiftedSinc = [&](double dm, double sinShift, double cosShift) {
-                    const double x = cutoffNorm * (t - dm); // dm may be negative
+                const auto shifted_sinc = [&](double dm, double sin_shift, double cos_shift) {
+                    const double x = cutoff_norm * (t - dm); // dm may be negative
                     if (std::abs(x) < 1e-12)
                         return 1.0;
                     // sin(pi*c*(t - dm)) = sin(pi*c*t)cos(pi*c*dm) - cos(..)sin(..)
-                    return (angS * cosShift - angC * sinShift) / (std::numbers::pi * x);
+                    return (ang_s * cos_shift - ang_c * sin_shift) / (std::numbers::pi * x);
                 };
-                double v = a[0] * cutoffNorm * shiftedSinc(0.0, 0.0, 1.0);
+                double v = a[0] * cutoff_norm * shifted_sinc(0.0, 0.0, 1.0);
                 for (std::size_t m = 1; m <= M; ++m) {
                     const double dm = static_cast<double>(m);
-                    v += 0.5 * a[m] * cutoffNorm * (shiftedSinc(dm, sn[m], cs[m]) + shiftedSinc(-dm, -sn[m], cs[m]));
+                    v += 0.5 * a[m] * cutoff_norm * (shifted_sinc(dm, sn[m], cs[m]) + shifted_sinc(-dm, -sn[m], cs[m]));
                 }
-                const double u     = (static_cast<double>(i) - center) / center;
-                fine[i]            = v * besselI0(beta * std::sqrt(std::max(0.0, 1.0 - u * u))) / i0Beta;
-                const double nextS = angS * stepC + angC * stepS;
-                angC               = angC * stepC - angS * stepS;
-                angS               = nextS;
+                const double u      = (static_cast<double>(i) - center) / center;
+                fine[i]             = v * bessel_i0(beta * std::sqrt(std::max(0.0, 1.0 - u * u))) / i0_beta;
+                const double next_s = ang_s * step_c + ang_c * step_s;
+                ang_c               = ang_c * step_c - ang_s * step_s;
+                ang_s               = next_s;
             }
             // ANCHOR: pw_comp_rect
             // Rect convolution as a running sum: exact zeros at every k*fs.
@@ -291,7 +292,7 @@ namespace srt::detail {
         };
 
         for (int pass = 0; pass < 1; ++pass) {
-            fitCosineSeries();
+            fit_cosine_series();
             build();
             // Probe the built passband by direct DFT (cos projection about the
             // composite's symmetry center, (L*total - 1)/2 == nc/2) and fold the
@@ -299,32 +300,32 @@ namespace srt::detail {
             // calls each instead of one per tap (rotator drift over ~2^14 steps
             // is ~1e-12, five orders below the ripple being measured).
             const double center = 0.5 * static_cast<double>(nc);
-            for (std::size_t j = 0; j < kProbe; ++j) {
-                const double f   = passbandNorm * static_cast<double>(j + 1) / kProbe;
-                const double th  = 2.0 * std::numbers::pi * f / static_cast<double>(L);
-                const double thC = std::cos(th), thS = std::sin(th);
+            for (std::size_t j = 0; j < k_probe; ++j) {
+                const double f    = passband_norm * static_cast<double>(j + 1) / k_probe;
+                const double th   = 2.0 * std::numbers::pi * f / static_cast<double>(L);
+                const double th_c = std::cos(th), th_s = std::sin(th);
                 double       rc = std::cos(th * -center), rs = std::sin(th * -center);
                 double       acc = 0.0;
                 for (std::size_t i = 0; i < nc; ++i) {
                     acc += h[i] * rc;
-                    const double nrc = rc * thC - rs * thS;
-                    rs               = rs * thC + rc * thS;
+                    const double nrc = rc * th_c - rs * th_s;
+                    rs               = rs * th_c + rc * th_s;
                     rc               = nrc;
                 }
                 probe[j] = std::abs(acc) / static_cast<double>(L);
             }
-            for (std::size_t g = 0; g < kGrid; ++g) {
-                const double f = 0.5 * static_cast<double>(g) / static_cast<double>(kGrid - 1);
-                if (f > passbandNorm)
+            for (std::size_t g = 0; g < k_grid; ++g) {
+                const double f = 0.5 * static_cast<double>(g) / static_cast<double>(k_grid - 1);
+                if (f > passband_norm)
                     continue;
                 // probe[j] sits at f = passbandNorm*(j+1)/kProbe, i.e. x = j+1
-                const double x = f / passbandNorm * kProbe - 1.0;
+                const double x = f / passband_norm * k_probe - 1.0;
                 double       d;
                 if (x <= 0.0) {
                     d = probe[0];
                 }
-                else if (x >= static_cast<double>(kProbe - 1)) {
-                    d = probe[kProbe - 1];
+                else if (x >= static_cast<double>(k_probe - 1)) {
+                    d = probe[k_probe - 1];
                 }
                 else {
                     const auto   j  = static_cast<std::size_t>(x);
@@ -334,7 +335,7 @@ namespace srt::detail {
                 target[g] /= std::max(d, 0.5);
             }
         }
-        fitCosineSeries();
+        fit_cosine_series();
         build();
     }
 

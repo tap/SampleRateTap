@@ -136,11 +136,11 @@ namespace {
             if (q0 & 1u)
                 continue;
             Snapshot s;
-            s.blocks    = g.blocks.load(std::memory_order_relaxed);
-            s.meanCyc   = g.meanCyc.load(std::memory_order_relaxed);
-            s.p99Cyc    = g.p99Cyc.load(std::memory_order_relaxed);
-            s.maxCyc    = g.maxCyc.load(std::memory_order_relaxed);
-            s.lateMaxUs = g.lateMaxUs.load(std::memory_order_relaxed);
+            s.blocks      = g.blocks.load(std::memory_order_relaxed);
+            s.mean_cyc    = g.meanCyc.load(std::memory_order_relaxed);
+            s.p99_cyc     = g.p99Cyc.load(std::memory_order_relaxed);
+            s.max_cyc     = g.maxCyc.load(std::memory_order_relaxed);
+            s.late_max_us = g.lateMaxUs.load(std::memory_order_relaxed);
             std::atomic_thread_fence(std::memory_order_acquire);
             if (g.seq.load(std::memory_order_relaxed) == q0)
                 return s;
@@ -189,17 +189,17 @@ namespace {
     // the upper edge of the histogram bucket containing the 99th percentile.
     void finalizeAndPublish(Snapshot s, std::uint64_t cycSum) {
         if (s.blocks != 0) {
-            s.meanCyc                  = static_cast<std::uint32_t>(cycSum / s.blocks);
+            s.mean_cyc                 = static_cast<std::uint32_t>(cycSum / s.blocks);
             const std::uint64_t target = static_cast<std::uint64_t>(s.blocks) * 99 / 100;
             std::uint64_t       cum    = 0;
             for (std::size_t i = 0; i < kHistBuckets; ++i) {
                 cum += gHist[i];
                 if (cum > target) {
-                    s.p99Cyc = static_cast<std::uint32_t>((i + 1) << kHistShift);
+                    s.p99_cyc = static_cast<std::uint32_t>((i + 1) << kHistShift);
                     break;
                 }
             }
-            s.p99Cyc = std::min(s.p99Cyc, s.maxCyc);
+            s.p99_cyc = std::min(s.p99Cyc, s.maxCyc);
         }
         publishSnapshot(s);
     }
@@ -247,14 +247,14 @@ namespace {
                     if (timed) {
                         cycSum += cyc;
                         ++s.blocks;
-                        s.maxCyc = std::max(s.maxCyc, cyc);
+                        s.max_cyc = std::max(s.maxCyc, cyc);
                         ++gHist[std::min<std::uint32_t>(cyc >> kHistShift, kHistBuckets - 1)];
                     }
                     // Schedule slip: if pull() ever exceeded the block period,
                     // lateness accumulates here long before the FIFO notices.
                     const std::uint64_t late = now - due;
                     if (late > s.lateMaxUs)
-                        s.lateMaxUs = static_cast<std::uint32_t>(std::min<std::uint64_t>(late, ~0u));
+                        s.late_max_us = static_cast<std::uint32_t>(std::min<std::uint64_t>(late, ~0u));
                 }
                 if (now >= nextPubUs) {
                     nextPubUs += 1000000;
@@ -301,18 +301,18 @@ namespace {
     // balanced() with band edges scaled to 16 kHz: identical L/T — same table
     // size and same per-frame cycle cost — with pass/stop at the same normalized
     // frequencies (README "Measured performance"; tests/test_asrc_quality_16k.cpp).
-    srt::FilterSpec balanced16k() {
-        srt::FilterSpec f = srt::FilterSpec::balanced();
-        f.passbandHz      = 20000.0 * 16.0 / 48.0;
-        f.stopbandHz      = 28000.0 * 16.0 / 48.0;
+    srt::filter_spec balanced16k() {
+        srt::filter_spec f = srt::filter_spec::balanced();
+        f.passband_hz      = 20000.0 * 16.0 / 48.0;
+        f.stopband_hz      = 28000.0 * 16.0 / 48.0;
         return f;
     }
 
-    const char* stateName(srt::State s) {
+    const char* stateName(srt::converter_state s) {
         switch (s) {
-        case srt::State::Filling:
+        case srt::converter_state::Filling:
             return "Filling";
-        case srt::State::Acquiring:
+        case srt::converter_state::Acquiring:
             return "Acquiring";
         default:
             return "Locked";
@@ -339,11 +339,11 @@ namespace {
         PhaseResult r;
 
         srt::Config cfg;
-        cfg.sampleRateHz        = ph.rateHz;
-        cfg.channels            = ph.channels;
-        cfg.targetLatencyFrames = kTargetLatencyFrames;
+        cfg.sample_rate_hz        = ph.rateHz;
+        cfg.channels              = ph.channels;
+        cfg.target_latency_frames = kTargetLatencyFrames;
         if (ph.scaledTo16k) {
-            // FilterSpec band edges and ServoConfig bandwidths are absolute Hz
+            // filter_spec band edges and servo_config bandwidths are absolute Hz
             // designed for ~48 kHz; both scale with the rate (README).
             cfg.filter      = balanced16k();
             const double sc = ph.rateHz / 48000.0;
@@ -410,8 +410,8 @@ namespace {
             if (off + kBlockFrames * ph.channels > input.size())
                 off = 0;
 
-            const srt::Status st = asrc->status();
-            if (!locked && st.state == srt::State::Locked) {
+            const srt::converter_status st = asrc->status();
+            if (!locked && st.state == srt::converter_state::Locked) {
                 locked    = true;
                 lockUs    = time_us_64() - tStart;
                 undAtLock = st.underruns;
@@ -449,9 +449,9 @@ namespace {
         g.stop.store(true, std::memory_order_release);
         while (!g.consumerDone.load(std::memory_order_acquire))
             tight_loop_contents();
-        const Snapshot    fin = readSnapshot();
-        const srt::Status st  = asrc->status();
-        ppmFinal              = st.ppm;
+        const Snapshot              fin = readSnapshot();
+        const srt::converter_status st  = asrc->status();
+        ppmFinal                        = st.ppm;
         g.asrc.store(nullptr, std::memory_order_release);
 
         // PASS = the deployment-shape claims, made falsifiable:

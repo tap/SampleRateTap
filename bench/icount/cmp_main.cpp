@@ -1,7 +1,7 @@
 // Deterministic fixed workload for the cross-resampler instruction-count
 // comparison (docs/COMPARISON.md). Same shape as icount_main.cpp but the
 // engine is selected at compile time and the ratio is fixed and known —
-// SampleRateTap runs its bare datapath (FractionalResampler, constant eps)
+// SampleRateTap runs its bare datapath (fractional_resampler, constant eps)
 // and libsamplerate runs src_process() with the same ratio, so the
 // comparison is engine-vs-engine with no servo on either side.
 //
@@ -45,11 +45,11 @@ namespace {
 #if SRT_CMP_ENGINE == 0
 
     double run() {
-        const srt::PolyphaseFilterBank<float> bank(srt::FilterSpec::balanced(), 48000.0);
-        srt::FractionalResampler<float>       rs(bank, kCh);
-        const auto                            input = sineInput(12000); // 0.25 s, cycled
-        std::size_t                           pos   = 0;
-        const auto                            pop   = [&](float* dst, std::size_t n) {
+        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), 48000.0);
+        srt::fractional_resampler<float>        rs(bank, kCh);
+        const auto                              input = sineInput(12000); // 0.25 s, cycled
+        std::size_t                             pos   = 0;
+        const auto                              pop   = [&](float* dst, std::size_t n) {
             const std::size_t avail = 12000 - pos;
             const std::size_t take  = n < avail ? n : avail;
             for (std::size_t i = 0; i < take * kCh; ++i)

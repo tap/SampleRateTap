@@ -40,10 +40,10 @@ namespace {
 
     template <typename S>
     double runKernel() {
-        const srt::PolyphaseFilterBank<S> bank(srt::FilterSpec::balanced(), 48000.0);
-        const auto                        hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
-        double                            sink = 0.0;
-        double                            mu   = 0.0;
+        const srt::polyphase_filter_bank<S> bank(srt::filter_spec::balanced(), 48000.0);
+        const auto                          hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
+        double                              sink = 0.0;
+        double                              mu   = 0.0;
         for (int i = 0; i < 200000; ++i) {
             mu += 0.6180339887498949;
             if (mu >= 1.0)
@@ -63,7 +63,7 @@ namespace {
         constexpr std::size_t kBlock = 32;
         srt::Config           cfg;
         cfg.channels = kCh;
-        srt::BasicAsyncSampleRateConverter<S> asrc(cfg);
+        srt::basic_async_sample_rate_converter<S> asrc(cfg);
 
         const auto     input = sineBlock<S>(12000 * kCh, 997.0, 0.5); // 0.25 s, cycled
         std::vector<S> out(kBlock * kCh);

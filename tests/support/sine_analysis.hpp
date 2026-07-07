@@ -9,18 +9,18 @@
 
 namespace srt_test {
 
-    struct SineFit {
-        double amplitude   = 0.0;
-        double phase       = 0.0;
-        double dc          = 0.0;
-        double residualRms = 0.0;
-        double freqNorm    = 0.0;
+    struct sine_fit {
+        double amplitude    = 0.0;
+        double phase        = 0.0;
+        double dc           = 0.0;
+        double residual_rms = 0.0;
+        double freq_norm    = 0.0;
     };
 
     /// Fits x[i] ~ a*sin(w i) + b*cos(w i) + c by least squares (3x3 normal
     /// equations) at the known normalized frequency, then measures the residual.
-    inline SineFit fitSine(std::span<const float> x, double freqNorm) {
-        const double w       = 2.0 * std::numbers::pi * freqNorm;
+    inline sine_fit fit_sine(std::span<const float> x, double freq_norm) {
+        const double w       = 2.0 * std::numbers::pi * freq_norm;
         double       m[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
         double       rhs[3]  = {0, 0, 0};
         for (std::size_t i = 0; i < x.size(); ++i) {
@@ -58,7 +58,7 @@ namespace srt_test {
                 v -= m[p][q] * sol[q];
             sol[col] = v / m[p][col];
         }
-        SineFit fit;
+        sine_fit fit;
         fit.amplitude = std::hypot(sol[0], sol[1]);
         fit.phase     = std::atan2(sol[1], sol[0]);
         fit.dc        = sol[2];
@@ -69,8 +69,8 @@ namespace srt_test {
             const double r = static_cast<double>(x[i]) - (sol[0] * s + sol[1] * c + sol[2]);
             sq += r * r;
         }
-        fit.residualRms = std::sqrt(sq / static_cast<double>(x.size()));
-        fit.freqNorm    = freqNorm;
+        fit.residual_rms = std::sqrt(sq / static_cast<double>(x.size()));
+        fit.freq_norm    = freq_norm;
         return fit;
     }
 
@@ -80,24 +80,24 @@ namespace srt_test {
     /// off the nominal ratio; a rigid fixed-frequency fit would book that
     /// (inaudible) offset as residual. Tracking the fundamental is standard
     /// THD-analyzer practice.
-    inline SineFit fitSineTracked(std::span<const float> x, double freqNormGuess) {
-        double            f    = freqNormGuess;
+    inline sine_fit fit_sine_tracked(std::span<const float> x, double freq_norm_guess) {
+        double            f    = freq_norm_guess;
         const std::size_t half = x.size() / 2;
         for (int iter = 0; iter < 4; ++iter) {
-            const SineFit a = fitSine(x.first(half), f);
-            const SineFit b = fitSine(x.subspan(half), f);
+            const sine_fit a = fit_sine(x.first(half), f);
+            const sine_fit b = fit_sine(x.subspan(half), f);
             // b.phase is relative to the second half's start; predict it from a.
-            const double twoPi     = 2.0 * std::numbers::pi;
-            const double predicted = a.phase + twoPi * f * static_cast<double>(half);
-            const double dphi      = std::remainder(b.phase - predicted, twoPi);
-            f += dphi / (twoPi * static_cast<double>(half));
+            const double two_pi    = 2.0 * std::numbers::pi;
+            const double predicted = a.phase + two_pi * f * static_cast<double>(half);
+            const double dphi      = std::remainder(b.phase - predicted, two_pi);
+            f += dphi / (two_pi * static_cast<double>(half));
         }
-        return fitSine(x, f);
+        return fit_sine(x, f);
     }
 
     /// Signal-to-(residual) ratio in dB for a fitted sine.
-    inline double snrDb(const SineFit& f) {
-        return 10.0 * std::log10((f.amplitude * f.amplitude * 0.5) / (f.residualRms * f.residualRms));
+    inline double snr_db(const sine_fit& f) {
+        return 10.0 * std::log10((f.amplitude * f.amplitude * 0.5) / (f.residual_rms * f.residual_rms));
     }
 
 } // namespace srt_test

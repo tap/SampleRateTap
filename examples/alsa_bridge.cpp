@@ -40,13 +40,13 @@ namespace {
         gStop.store(true, std::memory_order_relaxed);
     }
 
-    const char* stateName(srt::State s) {
+    const char* stateName(srt::converter_state s) {
         switch (s) {
-        case srt::State::Filling:
+        case srt::converter_state::Filling:
             return "Filling";
-        case srt::State::Acquiring:
+        case srt::converter_state::Acquiring:
             return "Acquiring";
-        case srt::State::Locked:
+        case srt::converter_state::Locked:
             return "Locked";
         }
         return "?";
@@ -100,9 +100,9 @@ namespace {
                 return false;
             char* end = nullptr;
             if (std::strcmp(flag, "--in") == 0)
-                a.inDev = v;
+                a.in_dev = v;
             else if (std::strcmp(flag, "--out") == 0)
-                a.outDev = v;
+                a.out_dev = v;
             else if (std::strcmp(flag, "--rate") == 0)
                 a.rate = static_cast<unsigned>(std::strtoul(v, &end, 10));
             else if (std::strcmp(flag, "--channels") == 0)
@@ -112,13 +112,13 @@ namespace {
             else if (std::strcmp(flag, "--latency") == 0)
                 a.latency = static_cast<std::size_t>(std::strtoul(v, &end, 10));
             else if (std::strcmp(flag, "--csv") == 0)
-                a.csvPath = v;
+                a.csv_path = v;
             else if (std::strcmp(flag, "--dump") == 0)
-                a.dumpPath = v;
+                a.dump_path = v;
             else if (std::strcmp(flag, "--seconds") == 0)
                 a.seconds = std::strtoul(v, &end, 10);
             else if (std::strcmp(flag, "--tone") == 0)
-                a.toneHz = std::strtod(v, &end);
+                a.tone_hz = std::strtod(v, &end);
             else {
                 std::fprintf(stderr, "%s: unknown option %s\n", argv[0], flag);
                 return false;
@@ -177,8 +177,8 @@ namespace {
             std::fprintf(stderr, "%s '%s': device cannot do %u Hz (offered %u Hz)\n", dir, name, a.rate, rate);
             return false;
         }
-        dev.periodFrames = a.period;
-        int sub          = 0;
+        dev.period_frames = a.period;
+        int sub           = 0;
         if ((err = snd_pcm_hw_params_set_period_size_near(dev.pcm, hw, &dev.periodFrames, &sub)) < 0)
             return fail("set period size", err);
         snd_pcm_uframes_t bufFrames = 4 * dev.periodFrames;
@@ -224,14 +224,15 @@ int main(int argc, char** argv) {
         return 1;
 
     srt::Config cfg;
-    cfg.sampleRateHz        = static_cast<double>(args.rate);
-    cfg.channels            = args.channels;
-    cfg.targetLatencyFrames = args.latency;
-    // Per the ServoConfig guidance: the unlock threshold must sit
+    cfg.sample_rate_hz        = static_cast<double>(args.rate);
+    cfg.channels              = args.channels;
+    cfg.target_latency_frames = args.latency;
+    // Per the servo_config guidance: the unlock threshold must sit
     // comfortably above half the transfer block, or block-quantized
     // occupancy excursions can demote the servo stage spuriously.
-    cfg.servo.unlockThresholdFrames = std::max(cfg.servo.unlockThresholdFrames, 1.5 * static_cast<double>(args.period));
-    srt::AsyncSampleRateConverter asrc(cfg);
+    cfg.servo.unlock_threshold_frames =
+        std::max(cfg.servo.unlockThresholdFrames, 1.5 * static_cast<double>(args.period));
+    srt::async_sample_rate_converter asrc(cfg);
     std::printf("designed latency: %.2f ms%s\n", asrc.designedLatencySeconds() * 1e3,
                 args.toneHz > 0.0 ? "  (tone mode: captured samples discarded)" : "");
 
