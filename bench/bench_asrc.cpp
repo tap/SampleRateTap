@@ -13,7 +13,7 @@
 
 #include <benchmark/benchmark.h>
 
-#include "srt/asrc.hpp"
+#include "srt/asrc.h"
 
 namespace {
 

@@ -30,7 +30,7 @@
 
 #include <alsa/asoundlib.h>
 
-#include "srt/srt.hpp"
+#include "srt/srt.h"
 
 namespace {
 

@@ -9,13 +9,13 @@
 
 # Part I — The machine, file by file
 
-- [Designing the filter: kaiser.hpp](part1/kaiser.md)
+- [Designing the filter: kaiser.h](part1/kaiser.md)
 - [The polyphase bank](part1/polyphase-bank.md)
-- [Sample types as a customization point: sample_traits.hpp](part1/sample-traits.md)
-- [The lock-free ring: spsc_ring.hpp](part1/spsc-ring.md)
-- [The clock servo: pi_servo.hpp](part1/pi-servo.md)
+- [Sample types as a customization point: sample_traits.h](part1/sample-traits.md)
+- [The lock-free ring: spsc_ring.h](part1/spsc-ring.md)
+- [The clock servo: pi_servo.h](part1/pi-servo.md)
 - [The fractional resampler](part1/fractional-resampler.md)
-- [Composition: asrc.hpp](part1/asrc.md)
+- [Composition: asrc.h](part1/asrc.md)
 
 # Part II — The proof system
 

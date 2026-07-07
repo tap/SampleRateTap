@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.hpp"
-#include "support/two_clock_sim.hpp"
+#include "srt/asrc.h"
+#include "support/two_clock_sim.h"
 
 namespace {
 

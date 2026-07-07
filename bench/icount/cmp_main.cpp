@@ -21,7 +21,7 @@
 #include <vector>
 
 #if SRT_CMP_ENGINE == 0
-#include "srt/polyphase_filter.hpp"
+#include "srt/polyphase_filter.h"
 #else
 #include <samplerate.h>
 #endif

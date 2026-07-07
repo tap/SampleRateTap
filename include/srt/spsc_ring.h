@@ -1,5 +1,5 @@
-/// \file spsc_ring.hpp
-/// \brief Lock-free single-producer single-consumer ring buffer.
+/// @file spsc_ring.h
+/// @brief Lock-free single-producer single-consumer ring buffer.
 ///
 /// Bulk-transfer oriented (read/write move whole blocks in at most two memcpy
 /// segments), never allocates after construction, and exposes an exact
@@ -7,8 +7,9 @@
 /// Uses the cached cross-index technique (each side caches the other side's
 /// index and refreshes it only when apparently full/empty) to minimize
 /// cache-line ping-pong between the two threads.
-#ifndef SRT_SPSC_RING_HPP
-#define SRT_SPSC_RING_HPP
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
+#pragma once
 
 #include <algorithm>
 #include <atomic>
@@ -137,5 +138,3 @@ namespace srt {
     };
 
 } // namespace srt
-
-#endif // SRT_SPSC_RING_HPP

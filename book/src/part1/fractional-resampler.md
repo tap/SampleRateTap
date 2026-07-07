@@ -12,7 +12,7 @@ into actual audio, forever, without drift, without glitches at the moments
 the books balance, and within a per-sample cycle budget that must hold on
 a Xeon and on a DSP with no double-precision FPU. That somebody is
 `FractionalResampler`, the streaming engine at the bottom of
-`polyphase_filter.hpp`. It owns three things: the **history** (the last T
+`polyphase_filter.h`. It owns three things: the **history** (the last T
 input frames of every channel, kept where the filter can reach them), the
 **phase** (where between two input samples the next output lands), and the
 **slip logic** (what happens when the phase creeps across a whole-sample
@@ -72,7 +72,7 @@ The fix is to split the kernel at its natural seam: blend once per frame
 into a scratch row, then run a plain dot product per channel.
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_dot_row}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_dot_row}}
 ```
 
 Two things about this function beyond its arithmetic. First, the comment
@@ -117,7 +117,7 @@ The C3 redesign eliminates the per-sample double entirely by changing
 what the phase *is*:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_class_doc}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_class_doc}}
 ```
 
 The fractional position lives in `phase_`, an unsigned 64-bit integer
@@ -135,7 +135,7 @@ Per `process()` call — once per block, not per sample — the servo's
 double ε̂ is converted to fixed point:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_slip}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_slip}}
 ```
 
 Walk the slip logic carefully; it is the subtlest six lines in the
@@ -190,7 +190,7 @@ resets and re-primes before processing again.
 Downstream, the phase bits feed the kernel directly:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_blend_row_phase}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_blend_row_phase}}
 ```
 
 The top log₂ L bits *are* the phase-row index; the bits below, shifted
@@ -203,7 +203,7 @@ the floating-point phase math. The fused mono form is the same bit
 surgery around the same blend-and-mac loop:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_interpolate_phase}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_interpolate_phase}}
 ```
 
 **Is 2⁻⁶⁴ enough?** Part 0 derived the timing-jitter budget for 120 dB
@@ -238,7 +238,7 @@ records the trade explicitly. x86 same-minute A/B: float −5.4%, Q15
 With phase in hand, each output frame takes one of three routes:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_dispatch}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_dispatch}}
 ```
 
 Mono takes the fused `interpolatePhase` — no scratch-row traffic for a
@@ -262,7 +262,7 @@ oldest-first, per channel. Input arrives interleaved, in whatever chunks
 the FIFO happens to hold. Between those two facts sits `appendOne`:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_append}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_append}}
 ```
 
 Three mechanisms, each with an RT-safety argument:
@@ -297,7 +297,7 @@ is allowed to throw precisely because it runs at setup time.
 **Two storage shapes.** The member block records the fork:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_members}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_members}}
 ```
 
 Planar — one delay line per channel — below the channel-parallel
@@ -326,7 +326,7 @@ history to deliver all channels of tap t contiguously — the frame-major
 layout — and a register-blocked kernel:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_dot_rows_frame_major}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_dot_rows_frame_major}}
 ```
 
 The measured C6 results, condensed (the full campaign, including the
@@ -362,7 +362,7 @@ its safety is a documented protocol that the converter — its only
 in-tree caller — upholds. The documentation is the code's own:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_process_doc}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_process_doc}}
 ```
 
 **Prime before process.** `prime()` fills the window with T real frames
@@ -387,7 +387,7 @@ servo keeping its ppm estimate and a fade-in masking the splice.
 Finally, the small read-side API that closes the control loop:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:rs_mu}}
+{{#include ../../../include/srt/polyphase_filter.h:rs_mu}}
 ```
 
 `mu()` converts the phase to double **once per pull, not per sample** —

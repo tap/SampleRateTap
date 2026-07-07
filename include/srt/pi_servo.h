@@ -1,5 +1,5 @@
-/// \file pi_servo.hpp
-/// \brief Type-2 (PI) clock-tracking servo driven by FIFO occupancy.
+/// @file pi_servo.h
+/// @brief Type-2 (PI) clock-tracking servo driven by FIFO occupancy.
 ///
 /// Loop design. The plant is the elastic FIFO: with a true rate deviation
 /// eps_true and the converter consuming (1 + epsHat) input frames per output
@@ -38,8 +38,9 @@
 /// loaded with a hold-window average of epsHat (the wide stages phase-track
 /// the sawtooth, so their instantaneous estimate wobbles; the average is the
 /// clean central value), making handoffs transient-free to first order.
-#ifndef SRT_PI_SERVO_HPP
-#define SRT_PI_SERVO_HPP
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
+#pragma once
 
 #include <algorithm>
 #include <cmath>
@@ -263,5 +264,3 @@ namespace srt {
     };
 
 } // namespace srt
-
-#endif // SRT_PI_SERVO_HPP

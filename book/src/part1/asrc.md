@@ -1,11 +1,11 @@
-# Composition: `asrc.hpp`
+# Composition: `asrc.h`
 
 > The whole is something beside the parts.
 >
 > — Aristotle, *Metaphysics*
 
 Every previous chapter built a component that is correct on its own terms.
-This chapter is about the file that has no terms of its own: `asrc.hpp`
+This chapter is about the file that has no terms of its own: `asrc.h`
 contains almost no algorithm, no mathematics, and fewer than three hundred
 lines that mostly call other files' code. It is also where the only serious
 bug in the library's history lived. Both facts have the same cause.
@@ -65,11 +65,11 @@ Acquiring or Locked — plus two exceptional transitions. Here is the filling
 and resync machinery as it ships:
 
 ```cpp
-{{#include ../../../include/srt/asrc.hpp:asrc_filling}}
+{{#include ../../../include/srt/asrc.h:asrc_filling}}
 ```
 
 ```cpp
-{{#include ../../../include/srt/asrc.hpp:asrc_resync}}
+{{#include ../../../include/srt/asrc.h:asrc_resync}}
 ```
 
 Filling exists because the resampler cannot produce its first output until
@@ -160,7 +160,7 @@ to demonstrate it.
 The fix is the first thing `pull()` now does:
 
 ```cpp
-{{#include ../../../include/srt/asrc.hpp:asrc_feasibility}}
+{{#include ../../../include/srt/asrc.h:asrc_feasibility}}
 ```
 
 The design choices inside those lines carry the interesting reasoning:
@@ -237,7 +237,7 @@ is written down.
 ## The underrun tail, end to end
 
 ```cpp
-{{#include ../../../include/srt/asrc.hpp:asrc_underrun}}
+{{#include ../../../include/srt/asrc.h:asrc_underrun}}
 ```
 
 Read this excerpt slowly and you can see the whole chapter in ten lines:

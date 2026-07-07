@@ -1,7 +1,8 @@
-/// \file polyphase_filter.hpp
-/// \brief Polyphase Kaiser-sinc filter bank and the fractional-delay resampler core.
-#ifndef SRT_POLYPHASE_FILTER_HPP
-#define SRT_POLYPHASE_FILTER_HPP
+/// @file polyphase_filter.h
+/// @brief Polyphase Kaiser-sinc filter bank and the fractional-delay resampler core.
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
+#pragma once
 
 #include <bit>
 #include <cstddef>
@@ -11,8 +12,8 @@
 #include <type_traits>
 #include <vector>
 
-#include "srt/detail/kaiser.hpp"
-#include "srt/sample_traits.hpp"
+#include "srt/detail/kaiser.h"
+#include "srt/sample_traits.h"
 
 // No-alias qualifier for the kernel hot loops: without it the compiler
 // versions the blend loop behind a runtime aliasing check (verified with
@@ -614,5 +615,3 @@ namespace srt {
     };
 
 } // namespace srt
-
-#endif // SRT_POLYPHASE_FILTER_HPP

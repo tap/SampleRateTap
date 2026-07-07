@@ -4,7 +4,7 @@
 Every figure is produced from the same sources the text cites:
 
 - the filter figures re-run the exact design math of
-  include/srt/detail/kaiser.hpp (formula-for-formula port below);
+  include/srt/detail/kaiser.h (formula-for-formula port below);
 - the servo and feasibility figures are MEASURED: this script compiles
   scripts/book_figures_trace.cpp against the current include/ tree and runs
   it in deterministic virtual time. The feasibility "before" panel compiles
@@ -93,7 +93,7 @@ def despine(ax):
         ax.spines[side].set_visible(False)
 
 
-# --- the filter design math, ported formula-for-formula from kaiser.hpp ---
+# --- the filter design math, ported formula-for-formula from kaiser.h ---
 
 def bessel_i0(x):
     x = np.asarray(x, dtype=float)
@@ -128,7 +128,7 @@ def design_prototype(num_phases, taps_per_phase, cutoff_norm, beta):
     return h * (num_phases / h.sum())
 
 
-# FilterSpec presets, verbatim from polyphase_filter.hpp.
+# FilterSpec presets, verbatim from polyphase_filter.h.
 PRESETS = [
     ("fast", 128, 32, 18000.0, 30000.0, 96.0, BLUE),
     ("balanced", 256, 48, 20000.0, 28000.0, 120.0, AQUA),

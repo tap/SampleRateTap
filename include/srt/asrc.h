@@ -1,7 +1,8 @@
-/// \file asrc.hpp
-/// \brief Top-level push/pull asynchronous sample rate converter.
-#ifndef SRT_ASRC_HPP
-#define SRT_ASRC_HPP
+/// @file asrc.h
+/// @brief Top-level push/pull asynchronous sample rate converter.
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
+#pragma once
 
 #include <algorithm>
 #include <atomic>
@@ -12,10 +13,10 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "srt/pi_servo.hpp"
-#include "srt/polyphase_filter.hpp"
-#include "srt/sample_traits.hpp"
-#include "srt/spsc_ring.hpp"
+#include "srt/pi_servo.h"
+#include "srt/polyphase_filter.h"
+#include "srt/sample_traits.h"
+#include "srt/spsc_ring.h"
 
 namespace srt {
 
@@ -412,5 +413,3 @@ namespace srt {
     using async_sample_rate_converter_q31 = basic_async_sample_rate_converter<std::int32_t>;
 
 } // namespace srt
-
-#endif // SRT_ASRC_HPP

@@ -28,7 +28,7 @@
 #include "RP2350.h"
 #include "hardware/clocks.h"
 #include "pico/stdlib.h"
-#include "srt/asrc.hpp"
+#include "srt/asrc.h"
 
 namespace {
 

@@ -19,9 +19,9 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.hpp"
-#include "support/sine_analysis.hpp"
-#include "support/two_clock_sim.hpp"
+#include "srt/asrc.h"
+#include "support/sine_analysis.h"
+#include "support/two_clock_sim.h"
 
 namespace {
 

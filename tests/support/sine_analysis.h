@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
 // Least-squares sine fitting for THD+N-style quality measurements.
-#ifndef SRT_TESTS_SINE_ANALYSIS_HPP
-#define SRT_TESTS_SINE_ANALYSIS_HPP
+#pragma once
 
 #include <cmath>
 #include <cstddef>
@@ -106,5 +107,3 @@ namespace srt_test {
     }
 
 } // namespace srt_test
-
-#endif // SRT_TESTS_SINE_ANALYSIS_HPP

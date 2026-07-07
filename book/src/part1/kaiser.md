@@ -1,4 +1,4 @@
-# Designing the filter: `kaiser.hpp`
+# Designing the filter: `kaiser.h`
 
 > The purpose of computing is insight, not numbers.
 >
@@ -35,7 +35,7 @@ interpolates exactly. The `sinc` in this file is that function, with the
 one hazard a numeric programmer would expect handled explicitly:
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.hpp:kai_sinc}}
+{{#include ../../../include/srt/detail/kaiser.h:kai_sinc}}
 ```
 
 (The 0/0 at x = 0 is a *removable* singularity — the limit is 1 — but IEEE
@@ -114,7 +114,7 @@ I₀(x) = Σₖ [ (x/2)ᵏ / k! ]²
 which converges for every finite x:
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.hpp:kai_besseli0}}
+{{#include ../../../include/srt/detail/kaiser.h:kai_besseli0}}
 ```
 
 Three details carry all the engineering.
@@ -155,7 +155,7 @@ constant *relative* accuracy, which is what the window formula's ratio
 ## `kaiserBeta`: an empirical fit, taken as published
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.hpp:kai_beta}}
+{{#include ../../../include/srt/detail/kaiser.h:kai_beta}}
 ```
 
 This is Kaiser's published fit, digit for digit — `0.1102`, `0.5842`,
@@ -182,7 +182,7 @@ harris) says taps scale linearly with attenuation and inversely with
 transition width:
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.hpp:kai_estimate}}
+{{#include ../../../include/srt/detail/kaiser.h:kai_estimate}}
 ```
 
 Note what the signature normalizes to: transition width *as a fraction of
@@ -222,7 +222,7 @@ UB, however silly the input.
 ## `designPrototype`: where all of it lands
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.hpp:kai_prototype}}
+{{#include ../../../include/srt/detail/kaiser.h:kai_prototype}}
 ```
 
 One pass, one output array, but four decisions are packed into these lines.
@@ -292,7 +292,7 @@ was rejected, and since the reasoning is a design artifact it is kept where
 refactors will trip over it:
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.hpp:kai_design_note}}
+{{#include ../../../include/srt/detail/kaiser.h:kai_design_note}}
 ```
 
 Present the alternative fairly, because it *almost* works:

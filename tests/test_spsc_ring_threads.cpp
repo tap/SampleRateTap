@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/spsc_ring.hpp"
+#include "srt/spsc_ring.h"
 
 namespace {
 
