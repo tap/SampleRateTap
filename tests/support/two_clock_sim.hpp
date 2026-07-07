@@ -44,14 +44,16 @@ namespace srt_test {
                 if (t_in <= t_out) {
                     for (std::size_t f = 0; f < chunk_in; ++f) {
                         if (gen_ch) {
-                            for (std::size_t c = 0; c < channels; ++c)
+                            for (std::size_t c = 0; c < channels; ++c) {
                                 in_buf[f * channels + c] = gen_ch(idx, c);
+                            }
                             ++idx;
                         }
                         else {
                             const S v = gen(idx++);
-                            for (std::size_t c = 0; c < channels; ++c)
+                            for (std::size_t c = 0; c < channels; ++c) {
                                 in_buf[f * channels + c] = v;
+                            }
                         }
                     }
                     asrc.push(in_buf.data(), chunk_in);

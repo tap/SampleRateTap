@@ -36,13 +36,15 @@ namespace {
         // Repeatedly write 5, read 5 so the indices wrap many times.
         for (int round = 0; round < 100; ++round) {
             std::uint32_t buf[5];
-            for (auto& v : buf)
+            for (auto& v : buf) {
                 v = seq++;
+            }
             ASSERT_EQ(r.write(buf, 5), 5u);
             std::uint32_t out[5];
             ASSERT_EQ(r.read(out, 5), 5u);
-            for (auto v : out)
+            for (auto v : out) {
                 ASSERT_EQ(v, expect++);
+            }
         }
     }
 

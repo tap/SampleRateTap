@@ -30,8 +30,9 @@ namespace {
         // by one input sample" means row L shifted one slot toward newer samples:
         // phase(L)[u] == phase(0)[u-1], with the oldest slot of row L zero.
         EXPECT_EQ(bank.phase(L)[0], 0.0f);
-        for (std::size_t u = 1; u < T; ++u)
+        for (std::size_t u = 1; u < T; ++u) {
             EXPECT_EQ(bank.phase(L)[u], bank.phase(0)[u - 1]) << "tap " << u;
+        }
     }
 
     // Worst-case fractional-delay error against the analytic sine, swept over mu.
@@ -42,8 +43,9 @@ namespace {
         const std::size_t  T  = bank.taps();
         const double       L  = static_cast<double>(bank.num_phases());
         std::vector<float> x(4 * T);
-        for (std::size_t k = 0; k < x.size(); ++k)
+        for (std::size_t k = 0; k < x.size(); ++k) {
             x[k] = static_cast<float>(std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(k)));
+        }
         double max_err = 0.0;
         for (std::size_t J = 2 * T; J < 2 * T + 8; ++J) {
             const float* hist = x.data() + J - T + 1;
@@ -91,8 +93,9 @@ namespace {
         std::vector<float>                      x(2 * T);
         std::mt19937                            rng(99);
         std::uniform_real_distribution<float>   uni(-1.0f, 1.0f);
-        for (auto& v : x)
+        for (auto& v : x) {
             v = uni(rng);
+        }
         const float* hist_old = x.data();     // window ending at x[T-1]
         const float* hist_new = x.data() + 1; // window ending at x[T]
         const float  at_wrap  = srt::interpolate(bank, hist_old, 1.0 - 1e-9);

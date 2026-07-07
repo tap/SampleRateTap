@@ -22,14 +22,16 @@ namespace {
         for (int it = 0; it < 400 && made.size() < 200; ++it) {
             asrc.push(in.data(), in.size());
             const std::size_t n = asrc.pull(out.data(), out.size());
-            for (std::size_t k = 0; k < n; ++k)
+            for (std::size_t k = 0; k < n; ++k) {
                 made.push_back(out[k]);
+            }
         }
         ASSERT_GE(made.size(), 200u);
 
         EXPECT_LT(std::abs(made[0]), 0.1f) << "first frame should be attenuated";
-        for (std::size_t k = 1; k < 64; ++k)
+        for (std::size_t k = 1; k < 64; ++k) {
             EXPECT_GE(made[k] + 1e-6f, made[k - 1]) << "ramp must be monotonic at " << k;
+        }
         EXPECT_NEAR(made[80], 0.5f, 0.01f) << "full level after the ramp";
     }
 

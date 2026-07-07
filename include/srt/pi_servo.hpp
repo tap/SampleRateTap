@@ -113,8 +113,9 @@ namespace srt {
         /// Re-arm the loop. keepIntegrator preserves the accumulated ppm estimate
         /// (the right choice after a dropout: the clocks have not changed).
         void reset(bool keep_integrator) noexcept {
-            if (!keep_integrator)
+            if (!keep_integrator) {
                 m_integ = 0.0;
+            }
             m_eps_hat = m_integ;
             seed(m_target);
             m_stage      = lock_stage::acquire;
@@ -223,13 +224,16 @@ namespace srt {
                 m_hold_timer = 0.0;
                 return false;
             }
-            if (m_hold_timer == 0.0)
+            if (m_hold_timer == 0.0) {
                 m_eps_avg = m_eps_hat;
-            else
+            }
+            else {
                 m_eps_avg += (1.0 - std::exp(-5.0 * dt / hold_seconds)) * (m_eps_hat - m_eps_avg);
+            }
             m_hold_timer += dt;
-            if (m_hold_timer < hold_seconds)
+            if (m_hold_timer < hold_seconds) {
                 return false;
+            }
             m_hold_timer = 0.0;
             return true;
         }

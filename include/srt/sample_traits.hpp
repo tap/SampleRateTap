@@ -35,10 +35,12 @@ namespace srt {
             constexpr double lo = static_cast<double>(std::numeric_limits<I>::min());
             constexpr double hi = static_cast<double>(std::numeric_limits<I>::max());
             const double     r  = v < 0.0 ? v - 0.5 : v + 0.5; // round half away from zero
-            if (r <= lo)
+            if (r <= lo) {
                 return std::numeric_limits<I>::min();
-            if (r >= hi)
+            }
+            if (r >= hi) {
                 return std::numeric_limits<I>::max();
+            }
             return static_cast<I>(r);
         }
         // ANCHOR_END: st_roundsat

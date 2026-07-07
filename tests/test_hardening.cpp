@@ -128,10 +128,12 @@ namespace {
         srt::async_sample_rate_converter asrc(cfg);
         std::vector<float>               in(32, 0.25f);
         std::vector<float>               out(64);
-        for (int i = 0; i < 8; ++i) // reach steady operation
+        for (int i = 0; i < 8; ++i) { // reach steady operation
             asrc.push(in.data(), 32), asrc.pull(out.data(), 32);
-        for (int i = 0; i < 40; ++i) // consumer stall: drive occupancy over the watermark
+        }
+        for (int i = 0; i < 40; ++i) { // consumer stall: drive occupancy over the watermark
             asrc.push(in.data(), 32);
+        }
         std::size_t made_after = 0;
         for (int i = 0; i < 8; ++i) {
             asrc.push(in.data(), 32);
@@ -164,14 +166,16 @@ namespace {
         std::vector<float>               out(2 * 8192);
         EXPECT_EQ(asrc.push(in.data(), 0), 0u);
         EXPECT_EQ(asrc.pull(out.data(), 0), 0u);
-        for (int i = 0; i < 64; ++i)
+        for (int i = 0; i < 64; ++i) {
             asrc.push(in.data(), 32);
+        }
         // Oversized pull: bounded behavior — synthesize what the backlog allows,
         // silence-pad the rest, count the underrun; every sample finite.
         const std::size_t made = asrc.pull(out.data(), 8192);
         EXPECT_LE(made, 8192u);
-        for (float v : out)
+        for (float v : out) {
             ASSERT_TRUE(std::isfinite(v));
+        }
     }
 
     // Fixed-point fade-in: test_fade.cpp covers float only; the Q15 scaleSample
@@ -186,13 +190,15 @@ namespace {
         for (int it = 0; it < 400 && made.size() < 200; ++it) {
             asrc.push(in.data(), in.size());
             const std::size_t n = asrc.pull(out.data(), out.size());
-            for (std::size_t k = 0; k < n; ++k)
+            for (std::size_t k = 0; k < n; ++k) {
                 made.push_back(out[k]);
+            }
         }
         ASSERT_GE(made.size(), 200u);
         EXPECT_LT(std::abs(made[0]), 3300) << "first frame attenuated";
-        for (std::size_t k = 1; k < 64; ++k)
+        for (std::size_t k = 1; k < 64; ++k) {
             EXPECT_GE(made[k] + 1, made[k - 1]) << "monotonic ramp at " << k;
+        }
         EXPECT_NEAR(made[80], 16384, 200) << "full level after the ramp";
     }
 
@@ -216,9 +222,11 @@ namespace {
         };
         std::vector<float> tail;
         sim.run(4.0, [&](const std::int16_t* x, std::size_t frames, double t) {
-            if (t >= 3.5)
-                for (std::size_t n = 0; n < frames; ++n)
+            if (t >= 3.5) {
+                for (std::size_t n = 0; n < frames; ++n) {
                     tail.push_back(static_cast<float>(x[n]) / 32768.0f);
+                }
+            }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
         const auto fit = srt_test::fit_sine_tracked(tail, nu * (1.0 + 200e-6));
@@ -249,14 +257,17 @@ namespace {
         };
         std::vector<double> tail;
         sim.run(1.0, [&](const std::int16_t* x, std::size_t frames, double t) {
-            if (t > 0.5)
-                for (std::size_t n = 0; n < frames; ++n)
+            if (t > 0.5) {
+                for (std::size_t n = 0; n < frames; ++n) {
                     tail.push_back(static_cast<double>(x[n]) / 32768.0);
+                }
+            }
         });
         const double omega = 2.0 * std::numbers::pi * nu;
         const double bound = 1.5 * 0.99 * omega * omega + 4.0 / 32768.0;
-        for (std::size_t n = 1; n + 1 < tail.size(); ++n)
+        for (std::size_t n = 1; n + 1 < tail.size(); ++n) {
             ASSERT_LT(std::abs(tail[n + 1] - 2.0 * tail[n] + tail[n - 1]), bound) << "n=" << n;
+        }
     }
 
 } // namespace

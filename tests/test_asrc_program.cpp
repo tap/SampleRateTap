@@ -37,8 +37,9 @@ namespace {
         tail.reserve(48000);
         const double total = 40.0; // Quiet-stage settling, as in the sine suite
         sim.run(total, [&](const float* x, std::size_t frames, double t) {
-            if (t >= total - 1.0)
+            if (t >= total - 1.0) {
                 tail.insert(tail.end(), x, x + frames);
+            }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
         EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
@@ -69,8 +70,9 @@ namespace {
         std::vector<float> tail;
         const double       total = 40.0;
         sim.run(total, [&](const float* x, std::size_t frames, double t) {
-            if (t >= total - 1.0)
+            if (t >= total - 1.0) {
                 tail.insert(tail.end(), x, x + frames);
+            }
         });
         const auto   fit = srt_test::fit_sine_tracked(tail, nu_in * (1.0 + k_k_eps));
         const double snr = srt_test::snr_db(fit);
@@ -87,10 +89,11 @@ namespace {
         std::vector<float> tail(48000);
         for (std::size_t i = 0; i < tail.size(); ++i) {
             double v = 0.0;
-            for (std::size_t k = 0; k < comb.freq_hz.size(); ++k)
+            for (std::size_t k = 0; k < comb.freq_hz.size(); ++k) {
                 v += comb.amplitude[k]
                      * std::sin(2.0 * std::numbers::pi * comb.freq_hz[k] * rho / k_k_fs * static_cast<double>(i)
                                 + comb.phase[k]);
+            }
             tail[i] = static_cast<float>(v);
         }
         const double snr = srt_test::program_weighted_snr_db(tail, comb, k_k_fs * (1.0 + k_k_eps), k_k_fs);

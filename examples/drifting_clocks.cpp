@@ -71,8 +71,9 @@ int main() {
         const auto         period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(static_cast<double>(k_k_chunk) / k_k_fs));
         while (!stop.load(std::memory_order_relaxed)) {
-            for (auto& v : buf)
+            for (auto& v : buf) {
                 v = static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(idx++)));
+            }
             asrc.push(buf.data(), k_k_chunk);
             next += period;
             std::this_thread::sleep_until(next);
