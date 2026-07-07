@@ -117,7 +117,7 @@ this is the Q0.64 phase accumulator the README describes, live from
 The fractional position lives in an unsigned 64-bit integer interpreted as
 Q0.64: all 64 bits are fraction, so the resolution is 2⁻⁶⁴ of a sample —
 forty-three binary orders of magnitude below the 2⁻²¹ the budget demands.
-The servo's rate-deviation estimate `epsHat` is converted from double to
+The servo's rate-deviation estimate `eps_hat` is converted from double to
 this fixed-point form **once per block**, and from there the per-sample
 path is pure integer arithmetic: one 64-bit addition per output sample,
 with the two slip cases — the fractional position creeping past 1.0 or
@@ -137,7 +137,7 @@ conversion of ε itself, and the accumulated position between servo updates
 is bit-exact. (The conversion is safe by construction: the servo clamps
 |ε| to about 10⁻³, so `ε · 2⁶⁴` fits comfortably in the signed 64-bit
 intermediate — the code comment above carries the argument, and the
-configuration validator refuses `maxDeviationPpm` settings that could
+configuration validator refuses `max_deviation_ppm` settings that could
 break it.)
 
 The project's performance log records what this decision measured when it
@@ -163,7 +163,7 @@ entire configuration surface, live from `include/srt/asrc.h`:
 The README's latency equation prices the defaults:
 
 ```text
-latency = targetLatencyFrames + (L·T − 1) / (2L)        [input frames]
+latency = target_latency_frames + (L·T − 1) / (2L)        [input frames]
         = 48 + (256·48 − 1)/512
         = 48 + ~24  ≈ 72 frames  ≈ 1.5 ms at 48 kHz.
 ```
@@ -177,7 +177,7 @@ frequency is delayed equally, and waveform shape is preserved — and a
 symmetric filter *must* delay the signal by half its span: with `L = 256`
 polyphase branches of `T = 48` taps each, `(L·T − 1)/(2L)` is 23.998
 input frames, ~0.50 ms. You cannot negotiate this term down at constant
-quality; you can only buy a shorter filter. `FilterSpec::fast()` does
+quality; you can only buy a shorter filter. `filter_spec::fast()` does
 exactly that, cutting group delay to about 16 frames at reduced stopband,
 and the `transparent()` preset spends the other way — 80 taps, 40 frames,
 0.83 ms — for its extra high-frequency headroom. Quality and latency,
@@ -203,9 +203,9 @@ cleverness can escape, because the geometry is simply infeasible. Rather
 than document a footgun, the converter adapts: when it observes pull
 blocks larger than the configured setpoint, it raises the effective
 setpoint to the block size plus about half a block of margin (bounded by
-FIFO capacity — callbacks above ~340 frames also need `fifoFrames` sized
+FIFO capacity — callbacks above ~340 frames also need `fifo_frames` sized
 explicitly), reports the raised value in
-`Status::effectiveTargetLatencyFrames`, and lets latency follow. The
+`converter_status::effective_target_latency_frames`, and lets latency follow. The
 latency budget, in other words, has a hard floor set by your callback
 size, and the library will spend up to that floor without asking — the
 one budget line it refuses to let you underfund. On top of the rule sits
@@ -214,7 +214,7 @@ excursion of your push/pull jitter, and the FIFO term breathes by a
 fraction of the block size as the servo tracks drift, so 1.5 ms is a
 design center, not a guarantee etched per-sample.
 
-`designedLatencySeconds()` reports the resulting figure at runtime, and
+`designed_latency_seconds()` reports the resulting figure at runtime, and
 `tests/test_latency.cpp` closes the loop the project's way: it pushes an
 impulse through a locked converter and asserts that the impulse emerges
 where the equation said it would.
@@ -333,7 +333,7 @@ cmake --build build -j
 ctest --test-dir build -R AsrcQuality --output-on-failure
 
 # The latency budget, enforced: an impulse must emerge exactly where
-# designedLatencySeconds() promises (48 + ~24 frames by default):
+# designed_latency_seconds() promises (48 + ~24 frames by default):
 ctest --test-dir build -R Latency --output-on-failure
 
 # The host compute budget (Google Benchmark; the README table's source):

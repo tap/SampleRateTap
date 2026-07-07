@@ -87,7 +87,7 @@ raw frames over UDP; the receiver Pi runs the ASRC in front of its own
 output device. The clock mismatch is receiver-sound-card vs.
 sender-sound-card, and `push()` sees bursty, jittery network delivery
 rather than smooth callback-paced blocks — good for validating the FIFO
-setpoint guidance (`targetLatencyFrames` must exceed the peak occupancy
+setpoint guidance (`target_latency_frames` must exceed the peak occupancy
 excursion of the arrival jitter) under real network conditions.
 
 ## Suggested order

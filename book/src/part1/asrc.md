@@ -13,10 +13,10 @@ Composition is where each component's assumptions meet every other
 component's guarantees, and the gaps between them are invisible from inside
 any single file.
 
-The cast, assembled: a `PolyphaseFilterBank` designed at construction, a
-`FractionalResampler` that owns the history and the phase, a `SpscRing`
-carrying interleaved frames between the two clock domains, and a `PiServo`
-turning ring occupancy into a rate estimate. `BasicAsyncSampleRateConverter`
+The cast, assembled: a `polyphase_filter_bank` designed at construction, a
+`fractional_resampler` that owns the history and the phase, a `spsc_ring`
+carrying interleaved frames between the two clock domains, and a `pi_servo`
+turning ring occupancy into a rate estimate. `basic_async_sample_rate_converter`
 wires them together and adds the four things none of them could own alone:
 a lifecycle state machine, an under/overrun policy, telemetry, and
 validation.
@@ -49,7 +49,7 @@ object that two callers animate. This is why the library contains no
 library owns threads it owns scheduling policy, priorities, and shutdown
 order, all of which belong to the application. The cost of this design is a
 sharp, documented affinity contract (push is producer-only, pull is
-consumer-only, `resetFromConsumer` is consumer-only); the C-ABI header
+consumer-only, `reset_from_consumer` is consumer-only); the C-ABI header
 restates it because FFI callers can't read C++ doc comments.
 
 `push()` is eight lines and nearly trivial — clip to free space, write,
@@ -122,7 +122,7 @@ The mechanism is embarrassingly simple once stated. A `pull(N)` must
 synthesize N frames from data *already in the backlog* — in a real
 deployment, no pushes land during the microseconds a pull executes. The
 servo, meanwhile, faithfully regulates the backlog toward
-`targetLatencyFrames`, which defaults to 48. If N is greater than 48, the
+`target_latency_frames`, which defaults to 48. If N is greater than 48, the
 servo's goal and the consumer's need are in direct contradiction: the loop
 steers occupancy *down* toward a level from which the next pull cannot be
 served. Occupancy drains at the rate clamp, hits the floor, underruns,
@@ -171,7 +171,7 @@ The design choices inside those lines carry the interesting reasoning:
   must check is how the original silent failure happened, one layer up.
   So the converter raises its *effective* setpoint to what the observed
   block requires and reports the raise through
-  `Status::effectiveTargetLatencyFrames`. Latency follows the raised
+  `converter_status::effective_target_latency_frames`. Latency follows the raised
   setpoint: the honest price, visibly labeled, instead of a dropout cycle.
 - **The margin is a half block.** Feasibility strictly needs
   `setpoint ≥ N`; equality grazes, because block-quantized occupancy
@@ -183,7 +183,7 @@ The design choices inside those lines carry the interesting reasoning:
   auto-sized FIFO's floor was raised to 1024 frames (21 ms of stereo float
   costs 8 KB — memory is the cheap resource here) so that callbacks up to
   roughly 340 frames work with zero configuration; beyond that, the
-  documentation now says plainly: size `fifoFrames` yourself.
+  documentation now says plainly: size `fifo_frames` yourself.
 - **Feasible configurations are untouched.** The 32-frame-against-48
   default keeps its exact behavior — verified not just by tests but by the
   instruction-count ratchet: every scenario on every embedded target
@@ -266,5 +266,5 @@ ctest --test-dir build -R 'Resync|Reset|Fade|EdgeCalls' --output-on-failure
 
 And one experiment worth running because it *shows you the bug*: check out
 any commit before the feasibility fix, build the lock test with
-`chunkOut = 64`, and watch a fully green library drop audio four times a
+`chunk_out = 64`, and watch a fully green library drop audio four times a
 second. Correct parts. Broken whole. That gap is what this file is for.

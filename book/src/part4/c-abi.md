@@ -209,7 +209,7 @@ function into a C caller is undefined behavior — there is no agreement
 about what unwinding even *means* across that boundary, and the practical
 result ranges from `std::terminate` to stack corruption inside a foreign
 interpreter. The converter's constructor is the one place this library
-throws (`Config` validation and allocation); the shim's job is to convert
+throws (`config` validation and allocation); the shim's job is to convert
 that exception into the ABI's error vocabulary — `NULL` — before it
 reaches the boundary. `catch (...)` rather than `catch (const
 std::exception&)` because the boundary does not care *what* was thrown;
@@ -234,7 +234,7 @@ terminates the process before the catch can run. A caller on such a target
 cannot be saved by any code positioned *after* the throw. The only
 placement that works is *before* it: **validate, then construct.** The
 deployment guidance in the debt entry says exactly this: on that
-toolchain, treat an invalid `Config` as fatal and validate inputs *before*
+toolchain, treat an invalid `config` as fatal and validate inputs *before*
 constructing — check them against the constraints the constructor
 enforces (positive finite sample rate, nonzero channels, band edges that
 sum under the rate, and the rest of `validated()`'s list) so the

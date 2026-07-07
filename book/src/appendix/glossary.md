@@ -191,7 +191,7 @@ here the PI controller that steers FIFO occupancy to the target by
 adjusting the resampling rate, thereby *becoming* the clock-ratio
 estimator.
 
-**Setpoint** — the target FIFO occupancy (`targetLatencyFrames`),
+**Setpoint** — the target FIFO occupancy (`target_latency_frames`),
 i.e. the buffering half of the latency budget. Must exceed the pull
 block and the peak jitter excursion; the converter raises its
 *effective* value when it observes otherwise.
@@ -248,7 +248,7 @@ build artifact of both Pico 2 firmware harnesses.
 events: a pull found too little data (output silence-padded, refill and
 re-lock), a push found the FIFO full (newest frames dropped), and the
 consumer-side hard discard back to the setpoint after the high watermark
-is reached. All three are counted, published in `Status`, and expected
+is reached. All three are counted, published in `converter_status`, and expected
 to be zero after lock.
 
 **VLIW (very long instruction word)** — an architecture that packs

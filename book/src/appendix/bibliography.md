@@ -27,7 +27,7 @@ iterative optimization at construction time.
 Prentice Hall, 2004.** The standard reference for polyphase decomposition
 — factoring one long prototype filter into L short branches indexed by
 fractional delay — which is the structure of the library's coefficient
-table. The tap-length estimate in `estimateTaps()` is the Kaiser/harris
+table. The tap-length estimate in `estimate_taps()` is the Kaiser/harris
 formula in the form `N = (A − 8) / (2.285 · Δω)`, applied per polyphase
 branch; the codebase credits both names, as the literature does.
 

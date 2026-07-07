@@ -60,7 +60,7 @@ The servo observes the occupancy once per `pull()` — the converter calls
 `update(occ, mu, dt)` with the raw backlog in frames, the resampler's
 current fractional position μ (so the observable `occ + mu` moves
 continuously through whole-sample slips instead of staircasing by ±1),
-and the elapsed time `dt = framesPulled / fs`.
+and the elapsed time `dt = frames_pulled / fs`.
 
 ## Why proportional control is not enough
 
@@ -110,7 +110,7 @@ the offset — a crystal warming up, drifting at 1 ppm/s — with bounded
 rather than growing error. The residual is the classic acceleration error
 `e_ss = (dε/dt · fs) / ωₙ²`, about 0.49 frames for 1 ppm/s at the 0.05 Hz
 bandwidth, and `Servo.TracksSlowDriftRampWithBoundedLag` holds the
-measured lag under one frame while `epsHat` tracks the moving truth to
+measured lag under one frame while `eps_hat` tracks the moving truth to
 2 ppm.
 
 If this structure sounds familiar, it should. Replace "FIFO occupancy"
@@ -188,7 +188,7 @@ steps. The observable is a perfect sawtooth: one push-block peak to peak,
 repeating at the *beat frequency*
 
 ```text
-f_beat = ε · fs / pushBlock      (the README's "ppm × pushRate")
+f_beat = ε · fs / push_block      (the README's "ppm × push_rate")
 ```
 
 At 200 ppm and sample-granular push that is 9.6 Hz with a one-frame tooth.
@@ -223,7 +223,7 @@ warming crystal. So the servo refuses to pick one point. It picks three.
 | **Quiet** | 0.05 Hz | 3-pole cascade, 0.5 Hz | steady state for fine-grained transfer |
 
 Each stage is the same PI structure with gains from the same
-`computeGains`, differing only in bandwidth and in how hard the
+`compute_gains`, differing only in bandwidth and in how hard the
 measurement is smoothed before the loop sees it. The update begins by
 maintaining *both* kinds of smoothed error on every call:
 
@@ -232,7 +232,7 @@ maintaining *both* kinds of smoothed error on every call:
 ```
 
 Two details here repay attention. The smoothing coefficient
-`alpha(cornerHz, dt) = 1 − exp(−2π·f·dt)` is the exact discrete step of a
+`alpha(corner_hz, dt) = 1 − exp(−2π·f·dt)` is the exact discrete step of a
 one-pole lowpass over an arbitrary interval, so the filter corners are
 honest frequencies in Hz regardless of how large or irregular the pull
 blocks are — the same property the gain formulas have via `dt` in the
@@ -332,7 +332,7 @@ time charging toward a rate estimate of thousands of ppm — a number no
 crystal pair can produce — and then, after the disturbance clears, the
 loop would have to *discharge* all of that false conviction through its
 narrow bandwidth, dragging the occupancy through a huge excursion for tens
-of seconds. Clamping the integrator at 1.5 × `maxDeviationPpm` bounds the
+of seconds. Clamping the integrator at 1.5 × `max_deviation_ppm` bounds the
 lie the loop can tell itself: the estimate can never leave the range
 physics allows, so recovery from any disturbance starts at most one clamp
 width from the truth. The output clamp then bounds what the resampler is
@@ -349,18 +349,18 @@ requires the output to saturate exactly at 1.5× the configured range.
 A feedback loop's reflex is to chase every step in its input. Some steps
 carry no information, and the API encodes each such case explicitly:
 
-- **`seed(occPlusMu)`** snaps all four smoothers onto the current
+- **`seed(occ_plus_mu)`** snaps all four smoothers onto the current
   observable. The converter calls it when the occupancy jumps *for a
   known reason* — acquisition start, a hard resync discard. Without it,
   the smoothers would report the jump as a genuine multi-frame error and
   the loop would obediently swerve.
-- **`reset(keepIntegrator=true)`** re-arms the state machine after a
+- **`reset(keep_integrator=true)`** re-arms the state machine after a
   dropout but preserves the integrator — because a dropout says nothing
   about the crystals. The ppm estimate from before the glitch is still
   the best available number, and relock becomes a formality
   (`Servo.DropoutResetKeepsPpmEstimate` pins both flavors: `true`
   preserves the estimate to 5 ppm, `false` zeroes it).
-- **`setTarget()`** moves the setpoint while keeping the integrator *and*
+- **`set_target()`** moves the setpoint while keeping the integrator *and*
   the smoothers' tracking state, so the loop slews to the new occupancy
   at its clamped rate with no discontinuity — used by the converter's
   adaptive pull-block setpoint raise, where the setpoint moves but,
@@ -404,15 +404,15 @@ The rule that fixes it is now a method, so it cannot be half-remembered:
 Every field with units of Hz scales with the rate — keeping the loop
 identical in *normalized*, per-sample terms, which is the frame the
 disturbance lives in. Every field denominated in frames or ppm
-(`lockThresholdFrames`, `unlockThresholdFrames`, `maxDeviationPpm`) is
+(`lock_threshold_frames`, `unlock_threshold_frames`, `max_deviation_ppm`) is
 already normalized and stays put. And the hold times scale *inversely*:
 a loop with a third the bandwidth has time constants three times longer,
 so waiting "2 seconds" before promoting would mean waiting a third as
 many loop time constants — the gates would fire on less evidence. The
 original hand-scaled 16 kHz configuration missed the hold-time rule;
 adding it re-measured identical within noise, and the test suite now
-covers the factory (`Config::forSampleRate`, which applies this and the
-matching `FilterSpec::scaledTo`) both structurally
+covers the factory (`config::for_sample_rate`, which applies this and the
+matching `filter_spec::scaled_to`) both structurally
 (`AsrcQuality16k.ForSampleRateScalesHzFieldsOnly` checks exactly which
 fields move) and behaviorally: through the factory, 16 kHz measures
 136.6 dB at 333 Hz — within ~1 dB of 48 kHz at the same normalized
@@ -456,7 +456,7 @@ observable (per-block timestamps for sub-sample phase observation), not
 a cleverer filter behind the same counts.
 
 The practical corollary is the config comment you may have skimmed past
-on `unlockThresholdFrames`: it must sit comfortably above **half the
+on `unlock_threshold_frames`: it must sit comfortably above **half the
 push/pull block size**, because a coarse-block sawtooth legitimately
 excursions that far with the clocks standing still. The default 24 clears
 a 32-frame transfer's ±16 with margin. Undersize it — say, 8 against
@@ -487,13 +487,13 @@ dumper against the real headers and runs exactly this scenario.*
 | Decision | Alternative rejected | Reason |
 |---|---|---|
 | PI (type-2) loop | proportional-only | P parks a ppm-dependent occupancy offset (≈23 frames at 300 ppm in Quiet); the integrator nulls it |
-| Gains derived from (f_L, ζ) via 2nd-order matching | hand-tuned constants | tuning surface is two physical numbers; `computeGains` is the textbook formula, verifiable by inspection |
+| Gains derived from (f_L, ζ) via 2nd-order matching | hand-tuned constants | tuning surface is two physical numbers; `compute_gains` is the textbook formula, verifiable by inspection |
 | Three stages | one compromise bandwidth | pull-in wants 10 Hz, sawtooth rejection wants 0.05 Hz + heavy smoothing; no single point does both |
 | Cascade error gates promotion | timer or lock-counter | asks the exact question ("could Quiet's own filtered error hold lock?"); auto-excludes coarse blocks |
 | Integrator seeded from hold-window average | reset on transition | wide stages phase-track the sawtooth; the average is the clean estimate — handoffs transient-free |
 | Integrator clamp (anti-windup) | clamp output only | disturbances must not charge the estimate past physics; recovery starts near the truth |
-| `seed()`/`reset(keepIntegrator)` API | let the loop chase every step | known-cause jumps carry no clock information; keep the knowledge, refresh the perception |
-| `scaledTo()` for other rates | reuse 48 kHz defaults | absolute-Hz constants vs a rate-proportional disturbance: measured −32 dB at 16 kHz |
+| `seed()`/`reset(keep_integrator)` API | let the loop chase every step | known-cause jumps carry no clock information; keep the knowledge, refresh the perception |
+| `scaled_to()` for other rates | reuse 48 kHz defaults | absolute-Hz constants vs a rate-proportional disturbance: measured −32 dB at 16 kHz |
 
 ## Verify it yourself
 
@@ -515,8 +515,8 @@ ctest --test-dir build -R 'AsrcQuality16k\.' --output-on-failure
 jupyter nbconvert --to notebook --execute notebooks/asrc_block_size_study.ipynb
 
 # Break it on purpose: in tests/test_asrc_quality_16k.cpp, replace
-# Config::forSampleRate(kFs) with a default-constructed Config (keeping
-# cfg.sampleRateHz = 16000.0) and watch ~32 dB vanish from every tone.
+# config::for_sample_rate(k_fs) with a default-constructed config (keeping
+# cfg.sample_rate_hz = 16000.0) and watch ~32 dB vanish from every tone.
 ```
 
 As with the ring buffer, the last item is the chapter in one line. The

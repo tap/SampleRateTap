@@ -34,19 +34,19 @@ target_link_libraries(app PRIVATE SampleRateTap::SampleRateTap)
 ```cpp
 #include <srt/srt.h>
 
-srt::Config cfg;
-cfg.sampleRateHz = 48000.0;
+srt::config cfg;
+cfg.sample_rate_hz = 48000.0;
 cfg.channels = 2;
-srt::AsyncSampleRateConverter asrc(cfg);   // allocates + designs filter; may throw
+srt::async_sample_rate_converter asrc(cfg);   // allocates + designs filter; may throw
 
 // Input-device thread (input clock):
-asrc.push(inputInterleaved, frames);       // noexcept, lock-free
+asrc.push(input_interleaved, frames);       // noexcept, lock-free
 
 // Output-device thread (output clock):
-asrc.pull(outputInterleaved, frames);      // noexcept, lock-free; silence
+asrc.pull(output_interleaved, frames);      // noexcept, lock-free; silence
                                            // until filled/locked
 
-srt::Status st = asrc.status();            // any thread: state, ppm, fill,
+srt::converter_status st = asrc.status();            // any thread: state, ppm, fill,
                                            // underruns/overruns/resyncs
 ```
 
@@ -150,7 +150,7 @@ stages with the integrator (the ppm estimate) handed across transitions:
 
 **Why three stages.** The FIFO count is quantized to whole frames (or whole
 push blocks), so the occupancy observable carries a deterministic sawtooth at
-the *beat frequency* `ppm × pushRate`. Whatever the loop passes into ε̂
+the *beat frequency* `ppm × push_rate`. Whatever the loop passes into ε̂
 frequency-modulates the audio. The Quiet stage rejects a one-frame sawtooth
 to roughly −120 dBc equivalent at 20 kHz while still tracking a 1 ppm/s
 oscillator drift ramp with under half a frame of standing error. With coarse
@@ -187,14 +187,14 @@ into a full FIFO drops the newest frames and counts an overrun.
 ## Latency
 
 ```
-latency = targetLatencyFrames + (L·T − 1)/(2L)      [input frames]
+latency = target_latency_frames + (L·T − 1)/(2L)      [input frames]
         = 48 + ~24 ≈ 72 frames ≈ 1.5 ms at 48 kHz   (defaults)
 ```
 
-`designedLatencySeconds()` reports the figure; the FIFO term breathes by a
+`designed_latency_seconds()` reports the figure; the FIFO term breathes by a
 fraction of the block size as the servo tracks drift. The filter is linear
-phase. For lower latency use `FilterSpec::fast()` (~16-frame group delay)
-and a smaller `targetLatencyFrames`.
+phase. For lower latency use `filter_spec::fast()` (~16-frame group delay)
+and a smaller `target_latency_frames`.
 
 **The setpoint must exceed the pull block size** — a pull synthesizes from
 frames already buffered, so a setpoint at or below the callback size is
@@ -202,8 +202,8 @@ infeasible and would drain into a permanent dropout cycle. The converter
 enforces this automatically: when it observes pull blocks larger than the
 configured setpoint it raises the effective setpoint (block + ~half-block
 margin, bounded by FIFO capacity) and reports the value in
-`Status::effectiveTargetLatencyFrames`; latency follows the raised
-setpoint. Callbacks above ~340 frames also need `fifoFrames` sized
+`converter_status::effective_target_latency_frames`; latency follows the raised
+setpoint. Callbacks above ~340 frames also need `fifo_frames` sized
 explicitly. The setpoint must additionally stay above the peak occupancy
 excursion of your push/pull jitter, as before.
 
@@ -229,12 +229,12 @@ signal frequency). Servo lock from a cold start takes ~1 s; a 0 → 300 ppm
 drift ramp at 10 ppm/s is tracked without unlocking.
 
 The same structure holds at other deployment rates, e.g. 16 kHz for
-reference-microphone processing — but `FilterSpec` band edges and
-`ServoConfig` bandwidths are absolute Hz designed for ~48 kHz, and running
+reference-microphone processing — but `filter_spec` band edges and
+`servo_config` bandwidths are absolute Hz designed for ~48 kHz, and running
 another rate with unscaled defaults silently costs quality (measured:
 ~32 dB at 16 kHz). Start any non-48 kHz deployment from
-`srt::Config::forSampleRate(rateHz)`, which rescales both (plus the servo
-hold times); `FilterSpec::scaledTo` / `ServoConfig::scaledTo` exist for
+`srt::config::for_sample_rate(rate_hz)`, which rescales both (plus the servo
+hold times); `filter_spec::scaled_to` / `servo_config::scaled_to` exist for
 custom presets. Measured through that factory
 (`tests/test_asrc_quality_16k.cpp`), 16 kHz matches the 48 kHz
 normalized-frequency structure: 136.6 dB at 333 Hz and 106.5 dB at 6.5 kHz,
@@ -353,14 +353,14 @@ Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 
 
 ## Sample types
 
-The datapath is templated on the sample type via `srt::SampleTraits`
+The datapath is templated on the sample type via `srt::sample_traits`
 (`include/srt/sample_traits.h`). Three formats are provided:
 
 | Type | Alias | Format | Measured SNR (997 Hz / 19.5 kHz, half scale, +200 ppm) |
 |---|---|---|---|
-| `float` | `AsyncSampleRateConverter` | float I/O, double accumulation | 135 dB / 105 dB |
-| `std::int32_t` | `AsyncSampleRateConverterQ31` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
-| `std::int16_t` | `AsyncSampleRateConverterQ15` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
+| `float` | `async_sample_rate_converter` | float I/O, double accumulation | 135 dB / 105 dB |
+| `std::int32_t` | `async_sample_rate_converter_q31` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
+| `std::int16_t` | `async_sample_rate_converter_q15` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
 
 The fixed-point datapaths have integer-only inner loops (the μ blend factor
 is converted once per output sample), making them the appropriate choice for
@@ -371,11 +371,11 @@ of operations per block).
 
 ## Limitations
 
-- Near-unity ratios only (±`maxDeviationPpm`, default 1000 ppm). No
+- Near-unity ratios only (±`max_deviation_ppm`, default 1000 ppm). No
   44.1 ↔ 48 kHz conversion.
 - The rate estimate is derived from FIFO counts only. With block-quantized
   transfer its instantaneous value wobbles at the block-beat frequency
-  (see `Status.ppm` vs. a few seconds of averaging), and ultra-quiet servo
+  (see `converter_status.ppm` vs. a few seconds of averaging), and ultra-quiet servo
   operation requires fine-grained transfer. A future version may accept
   per-block timestamps for sub-sample phase observation.
 - One producer thread and one consumer thread; construction/destruction must

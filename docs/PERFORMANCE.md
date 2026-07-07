@@ -102,7 +102,7 @@ from `bench/baselines.json`, and the icount-ratchet CI job regenerates it
 and fails on any diff — those published numbers cannot go stale. The SNR
 table is already enforced by test thresholds.
 
-- [x] **Compensated prototype design (imageZeros)** — quality change, not
+- [x] **Compensated prototype design (image_zeros)** — quality change, not
   a perf hypothesis, recorded here for the ratchet ledger: every preset
   except `fast` now designs with transmission zeros at k*fs (droop
   pre-compensated, equal tap budget; see the book's epilogue and
@@ -155,7 +155,7 @@ table is already enforced by test thresholds.
   terminates via libc++abi instead of propagating (discovered when the
   first EXPECT_THROW test reached that leg; ConfigValidation is excluded
   there). Deployment note: on this toolchain configuration, treat invalid
-  Config as fatal — validate inputs before constructing. Candidate fix:
+  config as fatal — validate inputs before constructing. Candidate fix:
   link an unwinder (-unwindlib=libunwind) in cmake/hexagon-linux-musl.cmake.
 
 ## Sequencing & status
@@ -175,12 +175,12 @@ table is already enforced by test thresholds.
   count-identical on both targets (control). Outputs unchanged
   bit-for-bit.
 - [x] **PR C2** — vectorization audit (hypothesis 2). Verified with
-  -fopt-info-vec: blendRow vectorizes (was alias-versioned; SRT_RESTRICT
-  removes the runtime check), Q15 dotRow auto-vectorizes, float dotRow is
+  -fopt-info-vec: blend_row vectorizes (was alias-versioned; SRT_RESTRICT
+  removes the runtime check), Q15 dot_row auto-vectorizes, float dot_row is
   scalar **by design** (strict double accumulation forbids reassociation;
   vectorizing requires explicit multi-accumulator partial sums, which
   changes output bits — recorded below as deferred hypothesis 5), Q31
-  dotRow is scalar (no packed 64-bit multiply in baseline ISAs). restrict
+  dot_row is scalar (no packed 64-bit multiply in baseline ISAs). restrict
   measured: M55 pipeline_float −1.35% instructions, all other scenarios
   exactly 0.00%; x86 same-state A/B −3.7% wall-clock.
 - [x] **PR C3** — Q0.64 fixed-point phase accumulator: per-sample path is
@@ -199,7 +199,7 @@ table is already enforced by test thresholds.
   !__ARM_FEATURE_MVE` so the M55 keeps its auto-vectorized loop — verified
   0.00% on every M55 and Hexagon scenario). Bit-exact by construction:
   exact int32 products, associative int64 accumulation; Q15 mono routes
-  through blendRow+dotRow on these targets to reach the dual-MAC loop.
+  through blend_row+dot_row on these targets to reach the dual-MAC loop.
   M33 pipeline_q15 −3.1%. Honest accounting: the win is bounded because
   the M33 Q15 frame cost is dominated by the coefficient blend's 64-bit
   products (`fr * diff >> 15`, one smull each) and transport, not the dot

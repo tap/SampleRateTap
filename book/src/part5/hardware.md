@@ -133,19 +133,19 @@ across that boundary; it recovers the PCM and lets the converter's
 counters record whatever backlash arrives. During a soak, the once-per-
 second status line is where you watch both layers at once.
 
-**The one configuration rule in the file is the ServoConfig rule.** The
+**The one configuration rule in the file is the servo_config rule.** The
 bridge runs with `--period` frames per ALSA transfer (default 128), and
 block-quantized transfer means the FIFO occupancy legitimately excursions
 by around half a block without the clocks having moved. The servo's
-`unlockThresholdFrames` defaults to 24 — tuned for fine-grained transfer —
+`unlock_threshold_frames` defaults to 24 — tuned for fine-grained transfer —
 so the bridge applies the documented rule in code:
 
 ```cpp
-// Per the ServoConfig guidance: the unlock threshold must sit
+// Per the servo_config guidance: the unlock threshold must sit
 // comfortably above half the transfer block, or block-quantized
 // occupancy excursions can demote the servo stage spuriously.
-cfg.servo.unlockThresholdFrames =
-    std::max(cfg.servo.unlockThresholdFrames, 1.5 * static_cast<double>(args.period));
+cfg.servo.unlock_threshold_frames =
+    std::max(cfg.servo.unlock_threshold_frames, 1.5 * static_cast<double>(args.period));
 ```
 
 Miss this and the harness would report spurious servo demotions that have
@@ -203,7 +203,7 @@ on a real RP2350, timing every block with the Cortex-M33's DWT cycle
 counter:
 
 ```cpp
-bool enableCycleCounter() {
+bool enable_cycle_counter() {
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     if (DWT->CTRL & DWT_CTRL_NOCYCCNT_Msk)
         return false; // implementation without a cycle counter
@@ -294,7 +294,7 @@ own telemetry avoided by keeping its counters 32-bit. The firmware
 `static_assert`s the lock-freedom of every cross-core type. The phase
 handoff is a single release store of the converter pointer (publishing
 every plain write the constructor performed) matched by an acquire load on
-core1; the teardown is the mirrored pair through a `consumerDone` flag, so
+core1; the teardown is the mirrored pair through a `consumer_done` flag, so
 destroying the converter cannot race core1's last `pull()`.
 
 The consumer's statistics need more than individual atomicity, though: a
@@ -305,7 +305,7 @@ updates, even when it finishes, and the reader retries until the same even
 value brackets its whole read:
 
 ```cpp
-void publishSnapshot(const Snapshot& s) {
+void publish_snapshot(const Snapshot& s) {
     const std::uint32_t q = g.seq.load(std::memory_order_relaxed);
     g.seq.store(q + 1, std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_release);
@@ -347,7 +347,7 @@ are rate-independent, phase B still delivers the real-silicon counterpart
 of the 12-channel instruction baseline. Nothing was hidden by the rate
 change — 16 kHz is that configuration's actual deployment rate (the
 next chapter's rate-scaling rules are applied in the phase B config,
-`FilterSpec` band edges and servo bandwidths scaled by 16/48) — but the
+`filter_spec` band edges and servo bandwidths scaled by 16/48) — but the
 README refuses to let you believe dual-core bought compute it didn't.
 
 Two more of the library's documented rules appear in this firmware as

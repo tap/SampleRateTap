@@ -248,7 +248,7 @@ FIFO setpoint rather than the library's 1 ms default — your first sighting
 of the latency budget bending to its environment, which is the next
 chapter's subject. Second, the converter observes the clocks only through
 whole 96-frame chunks, so its estimate of the ratio cannot firm up faster
-than the chunk-beat period `1/(ppm × chunkRate)` — about four seconds per
+than the chunk-beat period `1/(ppm × chunk_rate)` — about four seconds per
 beat cycle at 500 ppm — and the instantaneous estimate visibly wobbles at
 that beat, which is why the display shows a three-second moving average.
 The information available about two clocks is quantized by how coarsely
