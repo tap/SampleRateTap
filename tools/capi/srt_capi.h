@@ -64,4 +64,3 @@ void srt_reset_from_consumer(SrtHandle* h);
 #ifdef __cplusplus
 }
 #endif
-

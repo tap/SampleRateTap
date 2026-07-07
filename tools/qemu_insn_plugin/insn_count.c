@@ -11,11 +11,12 @@
  *   gcc -shared -fPIC $(pkg-config --cflags glib-2.0) \
  *       -I<dir with qemu-plugin.h> insn_count.c -o libinsncount.so
  */
-#include <inttypes.h>
-#include <stdint.h>
-
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
 #include <glib.h>
+#include <inttypes.h>
 #include <qemu-plugin.h>
+#include <stdint.h>
 
 QEMU_PLUGIN_EXPORT int qemu_plugin_version = QEMU_PLUGIN_VERSION;
 
@@ -27,8 +28,7 @@ static void tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb* tb) {
     size_t n = qemu_plugin_tb_n_insns(tb);
     for (size_t i = 0; i < n; i++) {
         struct qemu_plugin_insn* insn = qemu_plugin_tb_get_insn(tb, i);
-        qemu_plugin_register_vcpu_insn_exec_inline(insn, QEMU_PLUGIN_INLINE_ADD_U64, &insn_count,
-                                                   1);
+        qemu_plugin_register_vcpu_insn_exec_inline(insn, QEMU_PLUGIN_INLINE_ADD_U64, &insn_count, 1);
     }
 }
 
@@ -40,8 +40,7 @@ static void at_exit(qemu_plugin_id_t id, void* userdata) {
 }
 /* ANCHOR_END: pf_hooks */
 
-QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_t* info, int argc,
-                                           char** argv) {
+QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_t* info, int argc, char** argv) {
     (void)info;
     (void)argc;
     (void)argv;

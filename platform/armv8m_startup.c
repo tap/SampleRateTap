@@ -22,6 +22,8 @@
  * provided; any future use of others (e.g. compare-exchange) fails loudly
  * at link time.
  */
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -34,11 +36,11 @@ extern "C" {
 extern uint32_t __bss_start__, __bss_end__;
 extern uint32_t __stack_top;
 extern uint32_t __stack_limit;
-extern char __heap_start__, __heap_end__;
+extern char     __heap_start__, __heap_end__;
 
 extern void __libc_init_array(void);
 extern void initialise_monitor_handles(void);
-extern int main(int argc, char** argv);
+extern int  main(int argc, char** argv);
 extern void exit(int) __attribute__((noreturn));
 
 void* __dso_handle;
@@ -82,7 +84,7 @@ uint64_t __atomic_load_8(const volatile void* ptr, int memorder) {
 
 void __atomic_store_8(volatile void* ptr, uint64_t value, int memorder) {
     (void)memorder;
-    const uint32_t m = irqLock();
+    const uint32_t m         = irqLock();
     *(volatile uint64_t*)ptr = value;
     irqRestore(m);
 }
@@ -90,8 +92,8 @@ void __atomic_store_8(volatile void* ptr, uint64_t value, int memorder) {
 /* ANCHOR: pt_atomic_rmw */
 uint64_t __atomic_fetch_add_8(volatile void* ptr, uint64_t value, int memorder) {
     (void)memorder;
-    const uint32_t m = irqLock();
-    const uint64_t prev = *(volatile uint64_t*)ptr;
+    const uint32_t m         = irqLock();
+    const uint64_t prev      = *(volatile uint64_t*)ptr;
     *(volatile uint64_t*)ptr = prev + value;
     irqRestore(m);
     return prev;
@@ -100,8 +102,8 @@ uint64_t __atomic_fetch_add_8(volatile void* ptr, uint64_t value, int memorder) 
 
 uint64_t __atomic_exchange_8(volatile void* ptr, uint64_t value, int memorder) {
     (void)memorder;
-    const uint32_t m = irqLock();
-    const uint64_t prev = *(volatile uint64_t*)ptr;
+    const uint32_t m         = irqLock();
+    const uint64_t prev      = *(volatile uint64_t*)ptr;
     *(volatile uint64_t*)ptr = value;
     irqRestore(m);
     return prev;
