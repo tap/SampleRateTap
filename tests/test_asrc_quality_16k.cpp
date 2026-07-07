@@ -63,8 +63,9 @@ namespace {
         // above the settled residual at every tone).
         const double total = 120.0;
         sim.run(total, [&](const float* x, std::size_t frames, double t) {
-            if (t >= total - 1.0)
+            if (t >= total - 1.0) {
                 tail.insert(tail.end(), x, x + frames);
+            }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
         EXPECT_EQ(asrc.status().state, srt::converter_state::locked);

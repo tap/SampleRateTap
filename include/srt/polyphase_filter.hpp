@@ -167,22 +167,27 @@ namespace srt {
         polyphase_filter_bank(const filter_spec& spec, double sample_rate_hz)
             : m_phases(std::bit_ceil(spec.num_phases))
             , m_taps(spec.taps_per_phase) {
-            if (sample_rate_hz <= 0.0 || m_taps < 4 || m_phases < 2)
+            if (sample_rate_hz <= 0.0 || m_taps < 4 || m_phases < 2) {
                 throw std::invalid_argument("polyphase_filter_bank: bad filter_spec");
-            if (spec.image_zeros && m_taps < 8)
+            }
+            if (spec.image_zeros && m_taps < 8) {
                 throw std::invalid_argument("polyphase_filter_bank: imageZeros needs tapsPerPhase >= 8");
-            if (spec.passband_hz <= 0.0 || spec.stopband_hz <= spec.passband_hz || spec.stopband_hz > sample_rate_hz)
+            }
+            if (spec.passband_hz <= 0.0 || spec.stopband_hz <= spec.passband_hz || spec.stopband_hz > sample_rate_hz) {
                 throw std::invalid_argument("polyphase_filter_bank: bad band edges");
+            }
 
             const std::size_t   n = m_phases * m_taps;
             std::vector<double> proto(n);
             const double        cutoff_norm = (spec.passband_hz + spec.stopband_hz) / sample_rate_hz;
-            if (spec.image_zeros)
+            if (spec.image_zeros) {
                 detail::design_prototype_compensated(proto, m_phases, cutoff_norm,
                                                      detail::kaiser_beta(spec.stopband_atten_db),
                                                      spec.passband_hz / sample_rate_hz);
-            else
+            }
+            else {
                 detail::design_prototype(proto, m_phases, cutoff_norm, detail::kaiser_beta(spec.stopband_atten_db));
+            }
 
             m_table.resize((m_phases + 1) * m_taps);
             for (std::size_t p = 0; p <= m_phases; ++p) {
@@ -226,8 +231,9 @@ namespace srt {
         using tr         = sample_traits<S>;
         const double pos = mu * static_cast<double>(bank.num_phases());
         std::size_t  p   = static_cast<std::size_t>(pos);
-        if (p >= bank.num_phases()) // guards mu rounding up to exactly L
+        if (p >= bank.num_phases()) { // guards mu rounding up to exactly L
             p = bank.num_phases() - 1;
+        }
         // Converted once per output sample so fixed-point datapaths keep an
         // integer-only inner loop.
         const auto         fr = tr::make_blend_factor(pos - static_cast<double>(p));
@@ -235,8 +241,9 @@ namespace srt {
         const auto*        c1 = bank.phase(p + 1);
         typename tr::accum acc{};
         const std::size_t  taps = bank.taps();
-        for (std::size_t t = 0; t < taps; ++t)
+        for (std::size_t t = 0; t < taps; ++t) {
             acc = tr::mac(acc, hist[t], tr::blend(c0[t], c1[t], fr));
+        }
         return tr::finalize(acc);
     }
     // ANCHOR_END: bank_interpolate
@@ -251,14 +258,16 @@ namespace srt {
         using tr         = sample_traits<S>;
         const double pos = mu * static_cast<double>(bank.numPhases());
         std::size_t  p   = static_cast<std::size_t>(pos);
-        if (p >= bank.numPhases())
+        if (p >= bank.numPhases()) {
             p = bank.numPhases() - 1;
+        }
         const auto        fr   = tr::make_blend_factor(pos - static_cast<double>(p));
         const auto*       c0   = bank.phase(p);
         const auto*       c1   = bank.phase(p + 1);
         const std::size_t taps = bank.taps();
-        for (std::size_t t = 0; t < taps; ++t)
+        for (std::size_t t = 0; t < taps; ++t) {
             row[t] = tr::blend(c0[t], c1[t], fr);
+        }
     }
 
     // ANCHOR: rs_blend_row_phase
@@ -277,8 +286,9 @@ namespace srt {
         const auto*       c0   = bank.phase(p);
         const auto*       c1   = bank.phase(p + 1);
         const std::size_t taps = bank.taps();
-        for (std::size_t t = 0; t < taps; ++t)
+        for (std::size_t t = 0; t < taps; ++t) {
             row[t] = tr::blend(c0[t], c1[t], fr);
+        }
     }
     // ANCHOR_END: rs_blend_row_phase
 
@@ -294,8 +304,9 @@ namespace srt {
         const auto*        c1 = bank.phase(p + 1);
         typename tr::accum acc{};
         const std::size_t  taps = bank.taps();
-        for (std::size_t t = 0; t < taps; ++t)
+        for (std::size_t t = 0; t < taps; ++t) {
             acc = tr::mac(acc, hist[t], tr::blend(c0[t], c1[t], fr));
+        }
         return tr::finalize(acc);
     }
     // ANCHOR_END: rs_interpolate_phase
@@ -328,8 +339,9 @@ namespace srt {
         }
 #endif
         typename tr::accum acc{};
-        for (std::size_t t = 0; t < taps; ++t)
+        for (std::size_t t = 0; t < taps; ++t) {
             acc = tr::mac(acc, hist[t], row[t]);
+        }
         return tr::finalize(acc);
     }
     // ANCHOR_END: rs_dot_row
@@ -349,11 +361,13 @@ namespace srt {
         for (std::size_t t = 0; t < taps; ++t) {
             const auto            coeff = row[t];
             const S* SRT_RESTRICT frame = x + t * stride;
-            for (std::size_t k = 0; k < K; ++k)
+            for (std::size_t k = 0; k < K; ++k) {
                 acc[k] = tr::mac(acc[k], frame[k], coeff);
+            }
         }
-        for (std::size_t k = 0; k < K; ++k)
+        for (std::size_t k = 0; k < K; ++k) {
             out[k] = tr::finalize(acc[k]);
+        }
     }
     // ANCHOR_END: opt_dot_tile
 
@@ -369,8 +383,9 @@ namespace srt {
     inline void dot_rows_frame_major(const typename sample_traits<S>::coeff* SRT_RESTRICT row, const S* SRT_RESTRICT x,
                                      std::size_t taps, std::size_t channels, S* SRT_RESTRICT out) noexcept {
         std::size_t c = 0;
-        for (; c + 8 <= channels; c += 8)
+        for (; c + 8 <= channels; c += 8) {
             dot_tile_frame_major<S, 8>(row, x + c, taps, channels, out + c);
+        }
         if (c + 4 <= channels) {
             dot_tile_frame_major<S, 4>(row, x + c, taps, channels, out + c);
             c += 4;
@@ -379,8 +394,9 @@ namespace srt {
             dot_tile_frame_major<S, 2>(row, x + c, taps, channels, out + c);
             c += 2;
         }
-        if (c < channels)
+        if (c < channels) {
             dot_tile_frame_major<S, 1>(row, x + c, taps, channels, out + c);
+        }
     }
     // ANCHOR_END: rs_dot_rows_frame_major
     // ANCHOR_END: opt_dot_rows
@@ -421,10 +437,12 @@ namespace srt {
             , m_frame_major(k_k_channel_parallel && channels >= SRT_CP_MIN_CHANNELS)
             , m_hist(m_frame_major ? 1 : channels)
             , m_row(bank.taps()) {
-            if (m_channels == 0 || m_chunk == 0)
+            if (m_channels == 0 || m_chunk == 0) {
                 throw std::invalid_argument("fractional_resampler: bad config");
-            for (auto& h : m_hist)
+            }
+            for (auto& h : m_hist) {
                 h.assign(m_hist_cap * (m_frame_major ? m_channels : 1), sample_traits<S>::silence());
+            }
             reset();
         }
 
@@ -455,8 +473,9 @@ namespace srt {
         bool prime(PopFn&& pop_frames) noexcept {
             const std::size_t need = m_bank->taps();
             for (std::size_t i = 0; i < need; ++i) {
-                if (!append_one(pop_frames))
+                if (!append_one(pop_frames)) {
                     return false;
+                }
             }
             m_primed = true;
             return true;
@@ -488,15 +507,17 @@ namespace srt {
                 const std::uint64_t m       = m_phase + eps_u; // mod 2^64
                 std::size_t         advance = 1;
                 if (eps_fix >= 0) {
-                    if (m < m_phase) // wrapped past 1.0: forward slip,
-                        advance = 2; // consume one extra input frame
+                    if (m < m_phase) { // wrapped past 1.0: forward slip,
+                        advance = 2;   // consume one extra input frame
+                    }
                 }
                 else if (m > m_phase) { // wrapped below 0.0: backward slip,
                     advance = 0;        // re-use the current window
                 }
                 for (std::size_t a = 0; a < advance; ++a) {
-                    if (!append_one(pop_frames))
+                    if (!append_one(pop_frames)) {
                         return n; // dry: phase_ not advanced for this frame
+                    }
                 }
                 m_phase = m;
                 // ANCHOR_END: p0_phase_step
@@ -523,8 +544,9 @@ namespace srt {
                     // for stereo and scales with channel count.
                     blend_row_phase(*m_bank, m_row.data(), m);
                     const std::size_t taps = m_bank->taps();
-                    for (std::size_t c = 0; c < m_channels; ++c)
+                    for (std::size_t c = 0; c < m_channels; ++c) {
                         out[n * m_channels + c] = dot_row<S>(m_row.data(), window(c), taps);
+                    }
                 }
                 // ANCHOR_END: rs_dispatch
             }
@@ -540,8 +562,9 @@ namespace srt {
             if (m_scratch_pos == m_scratch_frames) {
                 m_scratch_frames = pop_frames(m_scratch.data(), m_chunk);
                 m_scratch_pos    = 0;
-                if (m_scratch_frames == 0)
+                if (m_scratch_frames == 0) {
                     return false;
+                }
             }
             if (m_end == m_hist_cap) { // compact: keep the newest T-1 frames at the front
                 const std::size_t keep = m_bank->taps() - 1;
@@ -549,8 +572,9 @@ namespace srt {
                 // targets keep their previous codegen exactly (the runtime form
                 // measured +6-8% on the M55 ratchet from hot-loop branch bloat).
                 const std::size_t w = (k_k_channel_parallel && m_frame_major) ? m_channels : 1;
-                for (auto& h : m_hist)
+                for (auto& h : m_hist) {
                     std::memmove(h.data(), h.data() + (m_end - keep) * w, keep * w * sizeof(S));
+                }
                 m_end = keep;
             }
             const S* frame = m_scratch.data() + m_scratch_pos * m_channels;
@@ -558,8 +582,9 @@ namespace srt {
                 std::memcpy(m_hist[0].data() + m_end * m_channels, frame, m_channels * sizeof(S));
             }
             else {
-                for (std::size_t c = 0; c < m_channels; ++c)
+                for (std::size_t c = 0; c < m_channels; ++c) {
                     m_hist[c][m_end] = frame[c];
+                }
             }
             ++m_end;
             ++m_scratch_pos;

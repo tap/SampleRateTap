@@ -24,9 +24,11 @@ namespace {
 
         // Locate the impulse response peak with parabolic refinement.
         std::size_t peak = 0;
-        for (std::size_t n = 0; n < out.size(); ++n)
-            if (std::abs(out[n]) > std::abs(out[peak]))
+        for (std::size_t n = 0; n < out.size(); ++n) {
+            if (std::abs(out[n]) > std::abs(out[peak])) {
                 peak = n;
+            }
+        }
         ASSERT_GT(std::abs(out[peak]), 0.5f);
         const double y0             = out[peak - 1];
         const double y1             = out[peak];

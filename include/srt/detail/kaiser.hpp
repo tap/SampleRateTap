@@ -33,8 +33,9 @@ namespace srt::detail {
             const double r = half_x / static_cast<double>(k);
             term *= r * r;
             sum += term;
-            if (term < 1e-21 * sum)
+            if (term < 1e-21 * sum) {
                 break;
+            }
         }
         return sum;
     }
@@ -44,10 +45,12 @@ namespace srt::detail {
     /// Kaiser window shape parameter for a given stopband attenuation in dB
     /// (Kaiser's published empirical fit).
     inline double kaiser_beta(double atten_db) noexcept {
-        if (atten_db > 50.0)
+        if (atten_db > 50.0) {
             return 0.1102 * (atten_db - 8.7);
-        if (atten_db > 21.0)
+        }
+        if (atten_db > 21.0) {
             return 0.5842 * std::pow(atten_db - 21.0, 0.4) + 0.07886 * (atten_db - 21.0);
+        }
         return 0.0;
     }
     // ANCHOR_END: kai_beta
@@ -62,8 +65,9 @@ namespace srt::detail {
     inline std::size_t estimate_taps(double atten_db, double trans_width_norm) noexcept {
         // Clamp pathological inputs (attenDb < 8, non-positive width): the raw
         // formula goes negative/infinite there and casting that to size_t is UB.
-        if (!(trans_width_norm > 0.0))
+        if (!(trans_width_norm > 0.0)) {
             return 4;
+        }
         const double n = (atten_db - 8.0) / (2.285 * 2.0 * std::numbers::pi * trans_width_norm);
         return n > 4.0 ? static_cast<std::size_t>(std::ceil(n)) : 4;
     }
@@ -72,8 +76,9 @@ namespace srt::detail {
     // ANCHOR: kai_sinc
     /// sin(pi x)/(pi x) with the removable singularity handled.
     inline double sinc(double x) noexcept {
-        if (std::abs(x) < 1e-12)
+        if (std::abs(x) < 1e-12) {
             return 1.0;
+        }
         const double px = std::numbers::pi * x;
         return std::sin(px) / px;
     }
@@ -107,8 +112,9 @@ namespace srt::detail {
             sum += h[i];
         }
         const double gain = static_cast<double>(num_phases) / sum;
-        for (auto& v : h)
+        for (auto& v : h) {
             v *= gain;
+        }
     }
     // ANCHOR_END: kai_prototype
 
@@ -117,28 +123,33 @@ namespace srt::detail {
     /// design below solves at most 15 unknowns.
     inline void solve_dense(std::span<double> m, std::span<double> rhs, std::span<double> out, std::size_t n) noexcept {
         std::vector<std::size_t> order(n);
-        for (std::size_t i = 0; i < n; ++i)
+        for (std::size_t i = 0; i < n; ++i) {
             order[i] = i;
+        }
         for (std::size_t col = 0; col < n; ++col) {
             std::size_t piv = col;
-            for (std::size_t r = col + 1; r < n; ++r)
-                if (std::abs(m[order[r] * n + col]) > std::abs(m[order[piv] * n + col]))
+            for (std::size_t r = col + 1; r < n; ++r) {
+                if (std::abs(m[order[r] * n + col]) > std::abs(m[order[piv] * n + col])) {
                     piv = r;
+                }
+            }
             std::swap(order[col], order[piv]);
             const std::size_t p = order[col];
             for (std::size_t r = col + 1; r < n; ++r) {
                 const std::size_t rr = order[r];
                 const double      f  = m[rr * n + col] / m[p * n + col];
-                for (std::size_t q = col; q < n; ++q)
+                for (std::size_t q = col; q < n; ++q) {
                     m[rr * n + q] -= f * m[p * n + q];
+                }
                 rhs[rr] -= f * rhs[p];
             }
         }
         for (std::size_t col = n; col-- > 0;) {
             const std::size_t p = order[col];
             double            v = rhs[p];
-            for (std::size_t q = col + 1; q < n; ++q)
+            for (std::size_t q = col + 1; q < n; ++q) {
                 v -= m[p * n + q] * out[q];
+            }
             out[col] = v / m[p * n + col];
         }
     }
@@ -207,13 +218,16 @@ namespace srt::detail {
                 const double w2 = f <= passband_norm + 0.02 ? 1e8 : 1.0; // (weight 1e4)^2
                 const double c1 = std::cos(2.0 * std::numbers::pi * f);
                 basis[0]        = 1.0;
-                if (M >= 1)
+                if (M >= 1) {
                     basis[1] = c1;
-                for (std::size_t m = 2; m <= M; ++m)
+                }
+                for (std::size_t m = 2; m <= M; ++m) {
                     basis[m] = 2.0 * c1 * basis[m - 1] - basis[m - 2];
+                }
                 for (std::size_t r = 0; r <= M; ++r) {
-                    for (std::size_t q = 0; q <= M; ++q)
+                    for (std::size_t q = 0; q <= M; ++q) {
                         nm[r * (M + 1) + q] += w2 * basis[r] * basis[q];
+                    }
                     rhs[r] += w2 * basis[r] * target[g];
                 }
             }
@@ -255,8 +269,9 @@ namespace srt::detail {
                 }
                 const auto shifted_sinc = [&](double dm, double sin_shift, double cos_shift) {
                     const double x = cutoff_norm * (t - dm); // dm may be negative
-                    if (std::abs(x) < 1e-12)
+                    if (std::abs(x) < 1e-12) {
                         return 1.0;
+                    }
                     // sin(pi*c*(t - dm)) = sin(pi*c*t)cos(pi*c*dm) - cos(..)sin(..)
                     return (ang_s * cos_shift - ang_c * sin_shift) / (std::numbers::pi * x);
                 };
@@ -276,19 +291,23 @@ namespace srt::detail {
             double run = 0.0;
             for (std::size_t i = 0; i < nc; ++i) {
                 run += i < n ? fine[i] : 0.0;
-                if (i >= L)
+                if (i >= L) {
                     run -= fine[i - L];
+                }
                 h[i] = run / static_cast<double>(L);
             }
-            for (std::size_t i = nc; i < h.size(); ++i)
+            for (std::size_t i = nc; i < h.size(); ++i) {
                 h[i] = 0.0;
+            }
             // ANCHOR_END: pw_comp_rect
             double sum = 0.0;
-            for (std::size_t i = 0; i < nc; ++i)
+            for (std::size_t i = 0; i < nc; ++i) {
                 sum += h[i];
+            }
             const double gain = static_cast<double>(L) / sum;
-            for (std::size_t i = 0; i < nc; ++i)
+            for (std::size_t i = 0; i < nc; ++i) {
                 h[i] *= gain;
+            }
         };
 
         for (int pass = 0; pass < 1; ++pass) {
@@ -316,8 +335,9 @@ namespace srt::detail {
             }
             for (std::size_t g = 0; g < k_grid; ++g) {
                 const double f = 0.5 * static_cast<double>(g) / static_cast<double>(k_grid - 1);
-                if (f > passband_norm)
+                if (f > passband_norm) {
                     continue;
+                }
                 // probe[j] sits at f = passbandNorm*(j+1)/kProbe, i.e. x = j+1
                 const double x = f / passband_norm * k_probe - 1.0;
                 double       d;

@@ -108,8 +108,9 @@ namespace srt {
             , m_fill_threshold_frames(m_cfg.target_latency_frames + m_bank.taps())
             , m_high_water_frames(
                   std::max(3 * m_cfg.target_latency_frames, m_fill_threshold_frames + m_cfg.target_latency_frames)) {
-            if (m_ring.capacity() / m_cfg.channels <= m_high_water_frames)
+            if (m_ring.capacity() / m_cfg.channels <= m_high_water_frames) {
                 throw std::invalid_argument("async_sample_rate_converter: fifoFrames too small");
+            }
             // Largest setpoint the FIFO capacity supports while keeping the
             // high-watermark relation; bounds the adaptive raise in pull().
             const std::size_t cap_frames = m_ring.capacity() / m_cfg.channels;
@@ -130,8 +131,9 @@ namespace srt {
         std::size_t push(const S* interleaved, std::size_t frames) noexcept {
             const std::size_t accept_frames = std::min(frames, m_ring.write_available() / m_cfg.channels);
             m_ring.write(interleaved, accept_frames * m_cfg.channels);
-            if (accept_frames < frames)
+            if (accept_frames < frames) {
                 m_overruns.fetch_add(1, std::memory_order_relaxed);
+            }
             return accept_frames;
         }
 
@@ -217,8 +219,9 @@ namespace srt {
 
             // ANCHOR: asrc_underrun
             const std::size_t made = m_resampler.process(interleaved, frames, eps_hat, pop_fn);
-            if (m_fade_frames_left != 0 && made != 0)
+            if (m_fade_frames_left != 0 && made != 0) {
                 apply_fade_in(interleaved, made);
+            }
             if (made < frames) { // underrun: pad and refill
                 fill_silence(interleaved + made * ch, (frames - made) * ch);
                 m_underruns.fetch_add(1, std::memory_order_relaxed);
@@ -287,15 +290,18 @@ namespace srt {
         }
 
         void fill_silence(S* dst, std::size_t count) noexcept {
-            for (std::size_t i = 0; i < count; ++i)
+            for (std::size_t i = 0; i < count; ++i) {
                 dst[i] = sample_traits<S>::silence();
+            }
         }
 
         static S scale_sample(S x, double g) noexcept {
-            if constexpr (std::is_floating_point_v<S>)
+            if constexpr (std::is_floating_point_v<S>) {
                 return static_cast<S>(static_cast<double>(x) * g);
-            else
+            }
+            else {
                 return detail::round_sat<S>(static_cast<double>(x) * g);
+            }
         }
 
         /// Linear gain ramp over the first kFadeFrames frames after a (re)fill.
@@ -332,21 +338,24 @@ namespace srt {
         static config validated(config cfg) {
             const auto finite = [](double v) { return std::isfinite(v); };
             if (cfg.channels == 0 || cfg.target_latency_frames == 0 || !finite(cfg.sample_rate_hz)
-                || cfg.sample_rate_hz <= 0.0)
+                || cfg.sample_rate_hz <= 0.0) {
                 throw std::invalid_argument("async_sample_rate_converter: bad Config");
+            }
             const filter_spec& f = cfg.filter;
             if (!finite(f.passband_hz) || !finite(f.stopband_hz) || !finite(f.stopband_atten_db)
-                || f.passband_hz + f.stopband_hz > cfg.sample_rate_hz)
+                || f.passband_hz + f.stopband_hz > cfg.sample_rate_hz) {
                 throw std::invalid_argument("async_sample_rate_converter: bad filter_spec "
                                             "(need passbandHz + stopbandHz <= sampleRateHz)");
+            }
             const servo_config& sv = cfg.servo;
             if (!finite(sv.acquire_bandwidth_hz) || !finite(sv.track_bandwidth_hz) || !finite(sv.quiet_bandwidth_hz)
                 || !finite(sv.damping) || !finite(sv.acquire_smoother_hz) || !finite(sv.track_smoother_hz)
                 || !finite(sv.quiet_smoother_hz) || !finite(sv.lock_threshold_frames) || !finite(sv.lock_hold_seconds)
                 || !finite(sv.quiet_hold_seconds) || !finite(sv.unlock_threshold_frames)
                 || !finite(sv.max_deviation_ppm) || sv.max_deviation_ppm <= 0.0
-                || sv.max_deviation_ppm > 100000.0) // |eps| stays far from the Q0.64 int64 limit
+                || sv.max_deviation_ppm > 100000.0) { // |eps| stays far from the Q0.64 int64 limit
                 throw std::invalid_argument("async_sample_rate_converter: bad servo_config");
+            }
             // Size products evaluated later must not wrap on 32-bit size_t.
             const auto mul_ok = [](std::size_t a, std::size_t b) {
                 return b == 0 || a <= std::numeric_limits<std::size_t>::max() / b;
@@ -354,8 +363,9 @@ namespace srt {
             const std::size_t phases = std::bit_ceil(f.num_phases);
             if (!mul_ok(phases + 1, f.taps_per_phase)
                 || !mul_ok(cfg.target_latency_frames + f.taps_per_phase, 8 * cfg.channels)
-                || !mul_ok(cfg.fifo_frames, 2 * cfg.channels))
+                || !mul_ok(cfg.fifo_frames, 2 * cfg.channels)) {
                 throw std::invalid_argument("async_sample_rate_converter: Config sizes overflow");
+            }
             return cfg;
         }
 

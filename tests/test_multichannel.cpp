@@ -37,18 +37,22 @@ namespace {
 
     template <typename S>
     S make_sample(double v) {
-        if constexpr (std::is_floating_point_v<S>)
+        if constexpr (std::is_floating_point_v<S>) {
             return static_cast<S>(v);
-        else
+        }
+        else {
             return srt::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+        }
     }
 
     template <typename S>
     double to_float_norm(S v) {
-        if constexpr (std::is_floating_point_v<S>)
+        if constexpr (std::is_floating_point_v<S>) {
             return static_cast<double>(v);
-        else
+        }
+        else {
             return static_cast<double>(v) / (static_cast<double>(std::numeric_limits<S>::max()) + 1.0);
+        }
     }
 
     struct channel_report {
@@ -83,8 +87,9 @@ namespace {
         std::vector<S> tail;
         tail.reserve(static_cast<std::size_t>(window_seconds * k_k_fs + 16.0) * channels);
         sim.run(total_seconds, [&](const S* x, std::size_t frames, double t) {
-            if (t >= total_seconds - window_seconds)
+            if (t >= total_seconds - window_seconds) {
                 tail.insert(tail.end(), x, x + frames * channels);
+            }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
         EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
@@ -93,8 +98,9 @@ namespace {
         std::vector<float>          x(frames);
         std::vector<channel_report> reports(channels);
         for (std::size_t c = 0; c < channels; ++c) {
-            for (std::size_t f = 0; f < frames; ++f)
+            for (std::size_t f = 0; f < frames; ++f) {
                 x[f] = static_cast<float>(to_float_norm(tail[f * channels + c]));
+            }
 
             // Own tone: tracked fit, then exact removal of the fitted component.
             const double nu_own  = channel_freq_hz(c) / k_k_fs * (1.0 + k_k_eps);
@@ -110,13 +116,15 @@ namespace {
             }
 
             for (std::size_t k = 0; k < channels; ++k) {
-                if (k == c)
+                if (k == c) {
                     continue;
+                }
                 const double nu_k = channel_freq_hz(k) / k_k_fs * (1.0 + k_k_eps);
                 const auto   leak = srt_test::fit_sine(x, nu_k);
                 const double db   = 20.0 * std::log10(leak.amplitude / own.amplitude);
-                if (db > reports[c].worst_crosstalk_db)
+                if (db > reports[c].worst_crosstalk_db) {
                     reports[c].worst_crosstalk_db = db;
+                }
             }
             std::printf("[ measured ] ch %2zu (%5.0f Hz): amp %.4f, SNR %6.1f dB, "
                         "worst crosstalk %7.1f dB\n",

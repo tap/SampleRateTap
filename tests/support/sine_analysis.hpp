@@ -28,8 +28,9 @@ namespace srt_test {
             const double c        = std::cos(w * static_cast<double>(i));
             const double basis[3] = {s, c, 1.0};
             for (int r = 0; r < 3; ++r) {
-                for (int q = 0; q < 3; ++q)
+                for (int q = 0; q < 3; ++q) {
                     m[r][q] += basis[r] * basis[q];
+                }
                 rhs[r] += basis[r] * static_cast<double>(x[i]);
             }
         }
@@ -37,16 +38,19 @@ namespace srt_test {
         int order[3] = {0, 1, 2};
         for (int col = 0; col < 3; ++col) {
             int piv = col;
-            for (int r = col + 1; r < 3; ++r)
-                if (std::abs(m[order[r]][col]) > std::abs(m[order[piv]][col]))
+            for (int r = col + 1; r < 3; ++r) {
+                if (std::abs(m[order[r]][col]) > std::abs(m[order[piv]][col])) {
                     piv = r;
+                }
+            }
             std::swap(order[col], order[piv]);
             const int p = order[col];
             for (int r = col + 1; r < 3; ++r) {
                 const int    rr = order[r];
                 const double f  = m[rr][col] / m[p][col];
-                for (int q = col; q < 3; ++q)
+                for (int q = col; q < 3; ++q) {
                     m[rr][q] -= f * m[p][q];
+                }
                 rhs[rr] -= f * rhs[p];
             }
         }
@@ -54,8 +58,9 @@ namespace srt_test {
         for (int col = 2; col >= 0; --col) {
             const int p = order[col];
             double    v = rhs[p];
-            for (int q = col + 1; q < 3; ++q)
+            for (int q = col + 1; q < 3; ++q) {
                 v -= m[p][q] * sol[q];
+            }
             sol[col] = v / m[p][col];
         }
         sine_fit fit;

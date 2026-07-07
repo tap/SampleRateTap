@@ -81,9 +81,11 @@ namespace {
         tail.reserve(48000);
         const double total = 40.0;
         sim.run(total, [&](const S* x, std::size_t frames, double t) {
-            if (t >= total - 1.0)
-                for (std::size_t n = 0; n < frames; ++n)
+            if (t >= total - 1.0) {
+                for (std::size_t n = 0; n < frames; ++n) {
                     tail.push_back(static_cast<float>(static_cast<double>(x[n]) / full_scale));
+                }
+            }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
         EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
@@ -129,14 +131,17 @@ namespace {
         };
         std::vector<double> tail;
         sim.run(8.0, [&](const std::int16_t* x, std::size_t frames, double t) {
-            if (t > 4.0)
-                for (std::size_t n = 0; n < frames; ++n)
+            if (t > 4.0) {
+                for (std::size_t n = 0; n < frames; ++n) {
                     tail.push_back(static_cast<double>(x[n]) / 32768.0);
+                }
+            }
         });
         const double omega = 2.0 * std::numbers::pi * nu;
         const double bound = 1.5 * 0.99 * omega * omega + 4.0 / 32768.0; // + quantization
-        for (std::size_t n = 1; n + 1 < tail.size(); ++n)
+        for (std::size_t n = 1; n + 1 < tail.size(); ++n) {
             ASSERT_LT(std::abs(tail[n + 1] - 2.0 * tail[n] + tail[n - 1]), bound) << "n=" << n;
+        }
     }
 
 } // namespace

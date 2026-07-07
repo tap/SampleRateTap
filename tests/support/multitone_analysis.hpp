@@ -42,17 +42,19 @@ namespace srt_test {
                 c.phase.push_back(2.0 * std::numbers::pi * 0.6180339887498949 * static_cast<double>(i * i));
                 sum += c.amplitude.back();
             }
-            for (auto& a : c.amplitude)
+            for (auto& a : c.amplitude) {
                 a *= peak_sum / sum;
+            }
             return c;
         }
 
         /// Sample of the comb at input sample index i (rate fs).
         double sample_at(std::uint64_t i, double fs) const {
             double v = 0.0;
-            for (std::size_t k = 0; k < freq_hz.size(); ++k)
+            for (std::size_t k = 0; k < freq_hz.size(); ++k) {
                 v += amplitude[k]
                      * std::sin(2.0 * std::numbers::pi * freq_hz[k] / fs * static_cast<double>(i) + phase[k]);
+            }
             return v;
         }
     };
@@ -126,17 +128,21 @@ namespace srt_test {
             }
             basis[n2 - 1] = 1.0;
             for (std::size_t r = 0; r < n2; ++r) {
-                for (std::size_t q = r; q < n2; ++q)
+                for (std::size_t q = r; q < n2; ++q) {
                     ata[r * n2 + q] += basis[r] * basis[q];
+                }
                 aty[r] += basis[r] * x[i];
             }
         }
-        for (std::size_t r = 0; r < n2; ++r)
-            for (std::size_t q = 0; q < r; ++q)
+        for (std::size_t r = 0; r < n2; ++r) {
+            for (std::size_t q = 0; q < r; ++q) {
                 ata[r * n2 + q] = ata[q * n2 + r];
+            }
+        }
         srt::detail::solve_dense(ata, aty, sol, n2);
-        for (std::size_t t = 0; t < k; ++t)
+        for (std::size_t t = 0; t < k; ++t) {
             fits[t] = tone_fit{sol[2 * t], sol[2 * t + 1]};
+        }
         double resid = 0.0;
         for (std::size_t i = 0; i < x.size(); ++i) {
             double model = sol[n2 - 1]; // DC: modeled out, in neither bucket
@@ -166,8 +172,9 @@ namespace srt_test {
         std::vector<double> work(tail.begin(), tail.end());
         const std::size_t   k = comb.freq_hz.size();
         std::vector<double> nus(k);
-        for (std::size_t t = 0; t < k; ++t)
+        for (std::size_t t = 0; t < k; ++t) {
             nus[t] = comb.freq_hz[t] / fs_out;
+        }
         std::vector<tone_fit> fits(k);
         joint_fit_residual_power(work, nus, fits);
 
@@ -192,22 +199,25 @@ namespace srt_test {
             double rho_num = 0.0, rho_den = 0.0;
             for (std::size_t t = 0; t < k; ++t) {
                 const double w = 2.0 * std::numbers::pi * nus[t];
-                for (std::size_t i = 0; i < lone.size(); ++i)
+                for (std::size_t i = 0; i < lone.size(); ++i) {
                     lone[i] = resid[i] + fits[t].a * std::sin(w * static_cast<double>(i))
                               + fits[t].b * std::cos(w * static_cast<double>(i));
+                }
                 const double refined = track_tone_freq(lone, nus[t]);
                 const double wt      = comb.amplitude[t] * nus[t];
                 rho_num += wt * wt * (refined / nus[t]);
                 rho_den += wt * wt;
             }
             const double rho = rho_num / rho_den;
-            for (std::size_t t = 0; t < k; ++t)
+            for (std::size_t t = 0; t < k; ++t) {
                 nus[t] *= rho;
+            }
             resid_power = joint_fit_residual_power(work, nus, fits);
         }
         double signal = 0.0;
-        for (const auto& f : fits)
+        for (const auto& f : fits) {
             signal += f.power();
+        }
         return 10.0 * std::log10(signal / resid_power);
     }
     // ANCHOR_END: pw_metric

@@ -26,8 +26,9 @@ namespace {
         std::size_t             tail_blocks = 0;
         sim.run(60.0, [&](const float*, std::size_t, double t) {
             const auto st = asrc.status();
-            if (t < 2.0 && st.state == srt::converter_state::locked)
+            if (t < 2.0 && st.state == srt::converter_state::locked) {
                 locked_by2s = true;
+            }
             if (t > 30.0) { // average over many block-beat cycles
                 ppm_sum += st.ppm;
                 fill_sum += st.fifo_fill_frames;
@@ -60,10 +61,12 @@ namespace {
         bool ever_locked         = false;
         sim.run(45.0, [&](const float*, std::size_t, double) {
             const auto st = asrc.status();
-            if (st.state == srt::converter_state::locked)
+            if (st.state == srt::converter_state::locked) {
                 ever_locked = true;
-            else if (ever_locked)
+            }
+            else if (ever_locked) {
                 unlocked_after_lock = true;
+            }
         });
         const auto st = asrc.status();
         EXPECT_TRUE(ever_locked);
@@ -91,8 +94,9 @@ namespace {
         };
         std::vector<float> tail;
         sim.run(8.0, [&](const float* x, std::size_t frames, double t) {
-            if (t > 4.0)
+            if (t > 4.0) {
                 tail.insert(tail.end(), x, x + frames);
+            }
         });
         ASSERT_GT(tail.size(), 100000u);
         const double omega           = 2.0 * std::numbers::pi * nu;
@@ -117,8 +121,9 @@ namespace {
 
         // Stall: push 3000 frames with no pulls (FIFO capacity is 1024 mono).
         std::vector<float> burst(3000, 0.0f);
-        for (std::size_t off = 0; off < burst.size(); off += 100)
+        for (std::size_t off = 0; off < burst.size(); off += 100) {
             asrc.push(burst.data() + off, 100);
+        }
         EXPECT_GT(asrc.status().overruns, 0u);
 
         // Resume pulling; the converter must resync and relock without underruns

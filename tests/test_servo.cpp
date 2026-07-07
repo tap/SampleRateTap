@@ -26,8 +26,9 @@ namespace {
         for (; t < 30.0; t += k_k_dt) { // locked loop is 0.05 Hz: allow it to settle
             const double eps = servo.update(plant.occ, 0.0, k_k_dt);
             plant.step(eps_true, eps);
-            if (t < 1.5 && servo.locked())
+            if (t < 1.5 && servo.locked()) {
                 locked_within1_5s = true;
+            }
         }
         EXPECT_TRUE(locked_within1_5s);
         EXPECT_TRUE(servo.locked());
@@ -40,8 +41,9 @@ namespace {
         srt::pi_servo servo(srt::servo_config{}, k_k_fs, k_k_target);
         plant         plant;
         // Settle at 0 ppm first.
-        for (double t = 0.0; t < 5.0; t += k_k_dt)
+        for (double t = 0.0; t < 5.0; t += k_k_dt) {
             plant.step(0.0, servo.update(plant.occ, 0.0, k_k_dt));
+        }
         ASSERT_TRUE(servo.locked());
         // Then ramp 1 ppm/s for 20 s (temperature-style drift).
         double max_err  = 0.0;
@@ -49,8 +51,9 @@ namespace {
         for (double t = 0.0; t < 20.0; t += k_k_dt) {
             eps_true = 1e-6 * t;
             plant.step(eps_true, servo.update(plant.occ, 0.0, k_k_dt));
-            if (t > 5.0)
+            if (t > 5.0) {
                 max_err = std::max(max_err, std::abs(plant.occ - k_k_target));
+            }
         }
         EXPECT_TRUE(servo.locked());
         // Type-2 acceleration error: e_ss = (deps/dt * fs) / wn^2 ~ 0.49 frames
@@ -94,8 +97,9 @@ namespace {
         srt::pi_servo servo(srt::servo_config{}, k_k_fs, k_k_target);
         plant         plant;
         const double  eps_true = 250e-6;
-        for (double t = 0.0; t < 6.0; t += k_k_dt)
+        for (double t = 0.0; t < 6.0; t += k_k_dt) {
             plant.step(eps_true, servo.update(plant.occ, 0.0, k_k_dt));
+        }
         ASSERT_NEAR(servo.eps_hat(), eps_true, 2e-6);
         servo.reset(true); // dropout: keep the integrator
         EXPECT_NEAR(servo.eps_hat(), eps_true, 5e-6);
