@@ -56,7 +56,7 @@ quality tier: pick the two rows adjacent to μ·L and interpolate the
 the quality knob the spec exposes:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:bank_spec}}
+{{#include ../../../include/srt/polyphase_filter.h:bank_spec}}
 ```
 
 The comment's two slopes are the design law for choosing L, and they are
@@ -96,7 +96,7 @@ Here is the file's cleverest line, and it is a line of *allocation*, not of
 algorithm:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:bank_layout}}
+{{#include ../../../include/srt/polyphase_filter.h:bank_layout}}
 ```
 
 The problem it dissolves: blending needs rows `p` and `p + 1`. For
@@ -121,7 +121,7 @@ The bank's fix: **store row L explicitly, as branch 0 advanced by one input
 sample**. It falls out of the construction loop with no special case:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:bank_build}}
+{{#include ../../../include/srt/polyphase_filter.h:bank_build}}
 ```
 
 Follow the index math for `p == phases_`: the prototype index is
@@ -288,7 +288,7 @@ of storing it.
 **The accessor surface is four functions, and their shapes are load-bearing:**
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:bank_accessors}}
+{{#include ../../../include/srt/polyphase_filter.h:bank_accessors}}
 ```
 
 `phase(p)` returns a raw `const Coeff*`, not a `std::span` — the kernels
@@ -301,7 +301,7 @@ the extra row is a first-class citizen of the API, which is exactly how
 `interpolate()` gets to be branch-free:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:bank_interpolate}}
+{{#include ../../../include/srt/polyphase_filter.h:bank_interpolate}}
 ```
 
 Note the one guard that *does* exist — clamping `p` when μ rounds up to

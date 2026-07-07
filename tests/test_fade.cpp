@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.hpp"
+#include "srt/asrc.h"
 
 namespace {
 

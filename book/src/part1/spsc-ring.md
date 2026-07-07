@@ -1,4 +1,4 @@
-# The lock-free ring: `spsc_ring.hpp`
+# The lock-free ring: `spsc_ring.h`
 
 > Time is what keeps everything from happening at once.
 >
@@ -29,7 +29,7 @@ biased frequency estimate.
 Here is the entire contract:
 
 ```cpp
-{{#include ../../../include/srt/spsc_ring.hpp:contract}}
+{{#include ../../../include/srt/spsc_ring.h:contract}}
 ```
 
 Forty lines of comment and assertion before any logic. Three things deserve
@@ -83,7 +83,7 @@ in the file:
 Read the producer side with that lens:
 
 ```cpp
-{{#include ../../../include/srt/spsc_ring.hpp:write}}
+{{#include ../../../include/srt/spsc_ring.h:write}}
 ```
 
 The two `memcpy` calls happen *before* the `release` store of the new head.
@@ -91,7 +91,7 @@ That ordering — data first, then the index that publishes it — is the
 entire correctness argument for the data path. Symmetrically:
 
 ```cpp
-{{#include ../../../include/srt/spsc_ring.hpp:read}}
+{{#include ../../../include/srt/spsc_ring.h:read}}
 ```
 
 The consumer `acquire`-loads `head_` (inside the cache-refresh branch,
@@ -157,7 +157,7 @@ store.
 The member layout enforces the same philosophy at the hardware level:
 
 ```cpp
-{{#include ../../../include/srt/spsc_ring.hpp:layout}}
+{{#include ../../../include/srt/spsc_ring.h:layout}}
 ```
 
 Producer-owned state (`head_`, `tailCache_`), consumer-owned state

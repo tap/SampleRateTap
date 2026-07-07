@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
 // Program-weighted multitone metric: a deterministic pink-weighted tone
 // comb and the residual measurement that scores a converter against it.
 //
@@ -9,8 +11,7 @@
 // single sines, so this header supplies the instrument: K log-spaced tones
 // with pink (equal-energy-per-octave) amplitudes, and a fit-subtract
 // residual over the converted tail. See the book's epilogue chapter.
-#ifndef SRT_TESTS_MULTITONE_ANALYSIS_HPP
-#define SRT_TESTS_MULTITONE_ANALYSIS_HPP
+#pragma once
 
 #include <cmath>
 #include <cstddef>
@@ -19,8 +20,8 @@
 #include <span>
 #include <vector>
 
-#include "srt/detail/kaiser.hpp" // detail::solveDense for the joint LS
-#include "support/sine_analysis.hpp"
+#include "srt/detail/kaiser.h" // detail::solveDense for the joint LS
+#include "support/sine_analysis.h"
 
 namespace srt_test {
 
@@ -223,5 +224,3 @@ namespace srt_test {
     // ANCHOR_END: pw_metric
 
 } // namespace srt_test
-
-#endif // SRT_TESTS_MULTITONE_ANALYSIS_HPP

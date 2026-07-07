@@ -87,7 +87,7 @@ design target by 1/sinc(f/fs) so the composite comes out flat *and*
 zeroed:
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.hpp:pw_comp_design}}
+{{#include ../../../include/srt/detail/kaiser.h:pw_comp_design}}
 ```
 
 Two implementation details earned their scars. The cosine-series trick is
@@ -98,7 +98,7 @@ rect is applied as a running sum *after* windowing, which makes the zeros
 exact in the discrete composite:
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.hpp:pw_comp_rect}}
+{{#include ../../../include/srt/detail/kaiser.h:pw_comp_rect}}
 ```
 
 One bug in between is worth its paragraph, because the test suite caught
@@ -115,7 +115,7 @@ thing diagnoses the bug for you.
 Every preset except `fast` now ships this design:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:pw_image_zeros}}
+{{#include ../../../include/srt/polyphase_filter.h:pw_image_zeros}}
 ```
 
 At *equal tap count*, `balanced`'s passband stays flat to ±0.003 dB, its
@@ -158,14 +158,14 @@ log-spaced 60 Hz–16 kHz, amplitudes pink (equal energy per octave — the
 long-run average of real program), phases chosen for bounded crest:
 
 ```cpp
-{{#include ../../../tests/support/multitone_analysis.hpp:pw_comb}}
+{{#include ../../../tests/support/multitone_analysis.h:pw_comb}}
 ```
 
 The measurement fits every tone jointly and calls everything left over —
 aliases, servo FM, noise — the residual:
 
 ```cpp
-{{#include ../../../tests/support/multitone_analysis.hpp:pw_metric}}
+{{#include ../../../tests/support/multitone_analysis.h:pw_metric}}
 ```
 
 The instrument fought back twice, and both fights are preserved in its
@@ -196,7 +196,7 @@ With the instrument in place, the suggestion could finally become a
 shippable preset:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:pw_economy}}
+{{#include ../../../include/srt/polyphase_filter.h:pw_economy}}
 ```
 
 And the promise could be measured instead of asserted:

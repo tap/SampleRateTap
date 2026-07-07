@@ -256,7 +256,7 @@ One more block-denominated rule closes the loop with the previous
 chapter. The servo's `unlockThresholdFrames` (default 24) is the
 excursion that demotes a stage; block-quantized occupancy legitimately
 excursions by about half a block without the clocks having moved. The
-guidance in `pi_servo.hpp` — keep the threshold comfortably above half
+guidance in `pi_servo.h` — keep the threshold comfortably above half
 the block — is applied literally in the ALSA bridge (`1.5 ×` the period),
 and ignoring it produces the most confusing failure on this axis: a
 converter that locks, runs cleanly, and "spuriously" demotes itself on

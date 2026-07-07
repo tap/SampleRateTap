@@ -5,8 +5,8 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/detail/kaiser.hpp"
-#include "srt/polyphase_filter.hpp"
+#include "srt/detail/kaiser.h"
+#include "srt/polyphase_filter.h"
 
 namespace {
 

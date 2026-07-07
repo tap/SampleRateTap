@@ -108,10 +108,10 @@ So the fractional position µ must be carried to about 21 fractional bits
 before timing quantization alone could threaten 120 dB. Here is what the
 library actually does, in the inner loop of the fractional resampler —
 this is the Q0.64 phase accumulator the README describes, live from
-`include/srt/polyphase_filter.hpp`:
+`include/srt/polyphase_filter.h`:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.hpp:p0_phase_step}}
+{{#include ../../../include/srt/polyphase_filter.h:p0_phase_step}}
 ```
 
 The fractional position lives in an unsigned 64-bit integer interpreted as
@@ -154,10 +154,10 @@ toward.
 
 Latency is the easiest budget to state and the easiest to spend by
 accident. Here is where every frame of it is decided — the converter's
-entire configuration surface, live from `include/srt/asrc.hpp`:
+entire configuration surface, live from `include/srt/asrc.h`:
 
 ```cpp
-{{#include ../../../include/srt/asrc.hpp:p0_config}}
+{{#include ../../../include/srt/asrc.h:p0_config}}
 ```
 
 The README's latency equation prices the defaults:
@@ -296,7 +296,7 @@ measured cost of ignoring it (−34.7 dB), and three budgets with numbers
 attached. Part I walks the library's headers in dependency order, and the
 tour is really the budget ledger read line by line:
 
-`kaiser.hpp` is the quality budget's opening entry — the 120 dB stopband
+`kaiser.h` is the quality budget's opening entry — the 120 dB stopband
 that made the 8 ps derivation's target, purchased with a windowed-sinc
 design whose tap count is the latency and compute budgets' first expense.
 The polyphase bank spends memory to make one branch-pair evaluation per
@@ -304,13 +304,13 @@ output sample possible at all, and its `L = 256` branch count is sized by
 the interpolation-residual rule the README quotes (−12 dB per doubling of
 `L`, +12 dB per octave of signal frequency) — the reason the measured
 table slopes from 135 dB at 997 Hz to 105 dB at 19.5 kHz.
-`sample_traits.hpp` is the compute budget's answer to the M33 column
+`sample_traits.h` is the compute budget's answer to the M33 column
 above: the Q15/Q31 datapaths as a customization point rather than a fork.
-`spsc_ring.hpp` holds the latency budget physically — its occupancy *is*
-the 48-frame line item — and doubles as the servo's sensor. `pi_servo.hpp`
+`spsc_ring.h` holds the latency budget physically — its occupancy *is*
+the 48-frame line item — and doubles as the servo's sensor. `pi_servo.h`
 polices the quality budget's FM account, rejecting the occupancy sawtooth
 to the −120 dBc figure this chapter bounded. The fractional resampler
-carries the Q0.64 accumulator you have already read. And `asrc.hpp`
+carries the Q0.64 accumulator you have already read. And `asrc.h`
 composes the whole, enforcing the feasibility rule so the latency budget
 can never be underfunded into a dropout cycle.
 

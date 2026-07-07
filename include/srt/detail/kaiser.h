@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
 // ANCHOR: kai_design_note
-/// \file kaiser.hpp
+/// \file kaiser.h
 /// \brief Kaiser-window FIR prototype design for the polyphase interpolation bank.
 ///
 /// Design note — runtime vs constexpr: the prototype tables run 12K-33K taps and
@@ -10,8 +12,7 @@
 /// takes well under 10 ms, runs once in a constructor, and is off the audio path,
 /// so all design math here is plain runtime double precision.
 // ANCHOR_END: kai_design_note
-#ifndef SRT_DETAIL_KAISER_HPP
-#define SRT_DETAIL_KAISER_HPP
+#pragma once
 
 #include <cmath>
 #include <cstddef>
@@ -360,5 +361,3 @@ namespace srt::detail {
     }
 
 } // namespace srt::detail
-
-#endif // SRT_DETAIL_KAISER_HPP

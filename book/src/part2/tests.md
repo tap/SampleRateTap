@@ -88,7 +88,7 @@ legitimately varies by platform" still needs a human to re-pin.
 ## The two-clock simulator
 
 Every quality number above comes from the same experimental rig, and it fits
-in a page of header (`tests/support/two_clock_sim.hpp`). The problem it
+in a page of header (`tests/support/two_clock_sim.h`). The problem it
 solves: the converter's whole reason to exist is that *two independent
 clocks* drive it, but tests that use two real threads and real timers are
 nondeterministic — schedulers differ, load differs, and a 0.2 dB shift in a
@@ -98,13 +98,13 @@ want the clocks without the threads.
 The rig is a struct of knobs:
 
 ```cpp
-{{#include ../../../tests/support/two_clock_sim.hpp:pf_knobs}}
+{{#include ../../../tests/support/two_clock_sim.h:pf_knobs}}
 ```
 
 and one loop:
 
 ```cpp
-{{#include ../../../tests/support/two_clock_sim.hpp:pf_run}}
+{{#include ../../../tests/support/two_clock_sim.h:pf_run}}
 ```
 
 This is discrete-event simulation reduced to its minimum. Two virtual
@@ -166,7 +166,7 @@ how you measure your transient instead of your converter.
 
 The simulator produces a signal; something must turn it into a decibel
 figure, and at 135 dB the instrument is the hard part. The suite's
-instrument (`tests/support/sine_analysis.hpp`) is a least-squares sine fit:
+instrument (`tests/support/sine_analysis.h`) is a least-squares sine fit:
 model the output window as `a·sin(ωi) + b·cos(ωi) + c`, solve the 3×3
 normal equations for the best-fit fundamental, subtract it *exactly*, and
 call everything that remains — harmonics, images, servo noise, quantization

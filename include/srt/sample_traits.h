@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
 // ANCHOR: st_overview
-/// \file sample_traits.hpp
+/// \file sample_traits.h
 /// \brief Sample-type customization point for the resampling datapath.
 ///
 /// The datapath (polyphase_filter_bank, the interpolation kernel,
@@ -16,8 +18,7 @@
 /// sample type (control path and one-time init, not the audio path), so the
 /// fixed-point datapaths contain no floating-point inner loops.
 // ANCHOR_END: st_overview
-#ifndef SRT_SAMPLE_TRAITS_HPP
-#define SRT_SAMPLE_TRAITS_HPP
+#pragma once
 
 #include <cmath>
 #include <concepts>
@@ -240,5 +241,3 @@ namespace srt {
     // ANCHOR_END: st_concept
 
 } // namespace srt
-
-#endif // SRT_SAMPLE_TRAITS_HPP

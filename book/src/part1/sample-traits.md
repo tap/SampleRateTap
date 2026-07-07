@@ -1,4 +1,4 @@
-# Sample types as a customization point: `sample_traits.hpp`
+# Sample types as a customization point: `sample_traits.h`
 
 > Form is exactly emptiness; emptiness is exactly form.
 >
@@ -31,7 +31,7 @@ exactly as wide as they are, and two places where the file's own comments
 record hard-won corrections. The two stories are one file:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_overview}}
+{{#include ../../../include/srt/sample_traits.h:st_overview}}
 ```
 
 Three sample types, and a division of labor worth pausing on: the clock
@@ -45,7 +45,7 @@ would be effort spent where the profile isn't.
 The customization point is a class template with no primary definition:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_primary}}
+{{#include ../../../include/srt/sample_traits.h:st_primary}}
 ```
 
 Leaving the primary template *undefined* is deliberate. A defined primary
@@ -60,7 +60,7 @@ simplest and shows the complete vocabulary — three associated types and
 seven operations:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_float}}
+{{#include ../../../include/srt/sample_traits.h:st_float}}
 ```
 
 Every operation the datapath performs on samples is named here: convert a
@@ -156,7 +156,7 @@ precisely at the row where the response matters most.
 So the coefficients trade one precision bit for one headroom bit:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_q15_coeff}}
+{{#include ../../../include/srt/sample_traits.h:st_q15_coeff}}
 ```
 
 with the conversion doing round-half-away-from-zero and saturating at the
@@ -164,7 +164,7 @@ integer limits (the *design* is checked separately; saturation here is a
 belt against future filter specs, not an expected event):
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_roundsat}}
+{{#include ../../../include/srt/sample_traits.h:st_roundsat}}
 ```
 
 What did the traded bit cost? Quantizing coefficients to Q14 puts the
@@ -190,7 +190,7 @@ and that is their virtue: `Q15::makeCoeff(1.0) == 16384` is the sentence
 Here is the Q15 multiply-accumulate:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_q15_mac}}
+{{#include ../../../include/srt/sample_traits.h:st_q15_mac}}
 ```
 
 Two things are chosen here. The product is computed in `int32_t` — a
@@ -218,7 +218,7 @@ blended-row rewrite could both be verified *bit-exact* rather than
 All of the rounding budget is spent in one place:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_q15_finalize}}
+{{#include ../../../include/srt/sample_traits.h:st_q15_finalize}}
 ```
 
 The accumulator holds a Q29 value (Q0.15 sample × Q1.14 coefficient); the
@@ -256,7 +256,7 @@ accumulator worth having on the targets this path exists for.
 So each product gives up 16 bits *before* joining the sum:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_q31_mac}}
+{{#include ../../../include/srt/sample_traits.h:st_q31_mac}}
 ```
 
 Now redo the bound: Q45 products have worst-case magnitude 2⁴⁵, and
@@ -277,7 +277,7 @@ The full specialization, for reference — note the doc comment carries the
 same overflow argument, so the file survives without the book:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_q31}}
+{{#include ../../../include/srt/sample_traits.h:st_q31}}
 ```
 
 ## The blend, and the comment that was wrong by three orders of magnitude
@@ -287,7 +287,7 @@ rows (the polyphase chapter explains why; the residual falls ~12 dB per
 doubling of the phase count). In Q15 it looks like this:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_q15_blend}}
+{{#include ../../../include/srt/sample_traits.h:st_q15_blend}}
 ```
 
 That comment has a history, and the history is this book's whole
@@ -329,13 +329,13 @@ Q15 version is a single shift — the top 15 bits of the fraction *are* the
 Q15 blend factor:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_q15_q64}}
+{{#include ../../../include/srt/sample_traits.h:st_q15_q64}}
 ```
 
 The float version is subtler:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_blend_q64_float}}
+{{#include ../../../include/srt/sample_traits.h:st_blend_q64_float}}
 ```
 
 Why reduce to 24 bits first? Because a `float` significand holds exactly
@@ -359,7 +359,7 @@ Everything above defines the customization point; the last twenty lines of
 the file *enforce* it:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.hpp:st_concept}}
+{{#include ../../../include/srt/sample_traits.h:st_concept}}
 ```
 
 The datapath templates constrain themselves with it —

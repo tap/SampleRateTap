@@ -32,7 +32,7 @@ target_link_libraries(app PRIVATE SampleRateTap::SampleRateTap)
 ```
 
 ```cpp
-#include <srt/srt.hpp>
+#include <srt/srt.h>
 
 srt::Config cfg;
 cfg.sampleRateHz = 48000.0;
@@ -78,7 +78,7 @@ one-clock-domain-per-core RP2350 deployment, self-validating).
 
 **Consuming the library**: `add_subdirectory` or `FetchContent` only —
 there are no install/package rules yet. Version 0.1.0 (`SRT_VERSION_*` in
-`srt/srt.hpp`, `srt_version()` over the C ABI); pre-1.0, the API may
+`srt/srt.h`, `srt_version()` over the C ABI); pre-1.0, the API may
 still change between versions.
 
 ## The book
@@ -354,7 +354,7 @@ Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 
 ## Sample types
 
 The datapath is templated on the sample type via `srt::SampleTraits`
-(`include/srt/sample_traits.hpp`). Three formats are provided:
+(`include/srt/sample_traits.h`). Three formats are provided:
 
 | Type | Alias | Format | Measured SNR (997 Hz / 19.5 kHz, half scale, +200 ppm) |
 |---|---|---|---|

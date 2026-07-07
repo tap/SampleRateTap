@@ -1,7 +1,7 @@
 // Trace dumper for the book's measured figures (scripts/book_figures.py).
 //
 // Runs the converter in deterministic virtual time — the same event-driven
-// two-clock scheme as tests/support/two_clock_sim.hpp — and prints one CSV
+// two-clock scheme as tests/support/two_clock_sim.h — and prints one CSV
 // row per pull: t,fill,state,ppm,underruns. book_figures.py compiles this
 // file twice, once against the current include/ tree and once against the
 // tree of the last pre-feasibility-fix commit, so the before/after figure
@@ -15,7 +15,7 @@
 #include <numbers>
 #include <vector>
 
-#include <srt/asrc.hpp>
+#include <srt/asrc.h>
 
 int main(int argc, char** argv) {
     if (argc < 5) {

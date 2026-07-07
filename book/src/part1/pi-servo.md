@@ -1,4 +1,4 @@
-# The clock servo: `pi_servo.hpp`
+# The clock servo: `pi_servo.h`
 
 > A governor is a part of a machine by means of which the velocity of the machine is kept nearly uniform, notwithstanding variations in the driving-power or the resistance.
 >
@@ -146,7 +146,7 @@ tabulates — and read off the gains:
 The code computes exactly this, nothing more:
 
 ```cpp
-{{#include ../../../include/srt/pi_servo.hpp:sv_gains}}
+{{#include ../../../include/srt/pi_servo.h:sv_gains}}
 ```
 
 Note the division by `fs_` in both gains: the plant's gain is fs, so the
@@ -164,7 +164,7 @@ Here is the full tuning surface, with the defaults that suit a 48 kHz
 near-unity converter:
 
 ```cpp
-{{#include ../../../include/srt/pi_servo.hpp:sv_config}}
+{{#include ../../../include/srt/pi_servo.h:sv_config}}
 ```
 
 Three bandwidths, three smoother corners, and a small state machine's
@@ -228,7 +228,7 @@ measurement is smoothed before the loop sees it. The update begins by
 maintaining *both* kinds of smoothed error on every call:
 
 ```cpp
-{{#include ../../../include/srt/pi_servo.hpp:sv_update_smooth}}
+{{#include ../../../include/srt/pi_servo.h:sv_update_smooth}}
 ```
 
 Two details here repay attention. The smoothing coefficient
@@ -265,7 +265,7 @@ is a step input injected into your own loop. Here is the whole state
 machine:
 
 ```cpp
-{{#include ../../../include/srt/pi_servo.hpp:sv_update_stages}}
+{{#include ../../../include/srt/pi_servo.h:sv_update_stages}}
 ```
 
 Reading it as a protocol: promotion out of Acquire requires the *fast*
@@ -291,7 +291,7 @@ Quiet." The physics writes it.
 Both promotions share their hold logic, and it does double duty:
 
 ```cpp
-{{#include ../../../include/srt/pi_servo.hpp:sv_hold}}
+{{#include ../../../include/srt/pi_servo.h:sv_hold}}
 ```
 
 While the hold window runs, the servo is not just waiting — it is
@@ -320,7 +320,7 @@ data.
 The last lines of `update()` are the PI itself:
 
 ```cpp
-{{#include ../../../include/srt/pi_servo.hpp:sv_update_out}}
+{{#include ../../../include/srt/pi_servo.h:sv_update_out}}
 ```
 
 The clamp appears twice, and the first one — on the integrator, not just
@@ -343,7 +343,7 @@ requires the output to saturate exactly at 1.5× the configured range.
 ## Knowing when not to chase: `seed()` and `reset()`
 
 ```cpp
-{{#include ../../../include/srt/pi_servo.hpp:sv_reset}}
+{{#include ../../../include/srt/pi_servo.h:sv_reset}}
 ```
 
 A feedback loop's reflex is to chase every step in its input. Some steps
@@ -398,7 +398,7 @@ absolute-Hz constants said, against a disturbance that had moved.
 The rule that fixes it is now a method, so it cannot be half-remembered:
 
 ```cpp
-{{#include ../../../include/srt/pi_servo.hpp:sv_scaled_to}}
+{{#include ../../../include/srt/pi_servo.h:sv_scaled_to}}
 ```
 
 Every field with units of Hz scales with the rate — keeping the loop

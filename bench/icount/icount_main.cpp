@@ -17,7 +17,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "srt/asrc.hpp"
+#include "srt/asrc.h"
 
 namespace {
 

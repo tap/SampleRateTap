@@ -21,8 +21,8 @@
 #include <samplerate.h>
 #include <soxr.h>
 
-#include "srt/polyphase_filter.hpp"
-#include "srt/sample_traits.hpp"
+#include "srt/polyphase_filter.h"
+#include "srt/sample_traits.h"
 
 namespace {
 

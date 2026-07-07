@@ -19,8 +19,9 @@
  * targets) — declare foreign types accordingly.
  */
 /* ANCHOR_END: abi_contract */
-#ifndef SRT_CAPI_H
-#define SRT_CAPI_H
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
+#pragma once
 
 #include <stddef.h>
 
@@ -64,4 +65,3 @@ void srt_reset_from_consumer(SrtHandle* h);
 }
 #endif
 
-#endif /* SRT_CAPI_H */

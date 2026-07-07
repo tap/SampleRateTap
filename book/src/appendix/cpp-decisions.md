@@ -44,7 +44,7 @@ the project is not top-level, and the warning flags live on a separate
 What was rejected is the conventional pair: a compiled static/shared
 library, and a packaged install with exported config files. The costs of
 header-only are real and were accepted knowingly. Every translation unit
-that includes `srt/srt.hpp` re-parses and re-instantiates the templates —
+that includes `srt/srt.h` re-parses and re-instantiates the templates —
 compile time is paid repeatedly. There is no ABI boundary, so there is
 nothing to version at link time and no way to ship a fixed `.so` to a
 customer who cannot rebuild (the C ABI shim in section 15 exists precisely
@@ -120,7 +120,7 @@ the same trust-nothing reflex as the ring's lock-free asserts.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| templates constrained by the `SampleType` concept | virtual `ISampleOps`; CRTP wrappers | per-type associated types (`Accum`, `BlendFactor`) are impossible to express virtually; builtins can't inherit; hot loops must inline and vectorize | `include/srt/sample_traits.hpp` (concept + `static_assert`s); `include/srt/asrc.hpp` aliases; README platform notes (19× soft-double) |
+| templates constrained by the `SampleType` concept | virtual `ISampleOps`; CRTP wrappers | per-type associated types (`Accum`, `BlendFactor`) are impossible to express virtually; builtins can't inherit; hot loops must inline and vectorize | `include/srt/sample_traits.h` (concept + `static_assert`s); `include/srt/asrc.h` aliases; README platform notes (19× soft-double) |
 
 ## 3. A traits struct as the customization point
 
@@ -166,7 +166,7 @@ implement it.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `SampleTraits<T>` struct, undefined primary template | ADL free functions; member policies on sample classes | customization is chiefly associated types; builtins have no ADL namespace and can't have members; missing specialization = clean compile error | `include/srt/sample_traits.hpp` |
+| `SampleTraits<T>` struct, undefined primary template | ADL free functions; member policies on sample classes | customization is chiefly associated types; builtins have no ADL namespace and can't have members; missing specialization = clean compile error | `include/srt/sample_traits.h` |
 
 ## 4. The real-time contract: exceptions at setup, `noexcept` forever after
 
@@ -212,13 +212,13 @@ toolchain quirk would have been a field failure.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| all allocation + throwing in the constructor; `noexcept`/lock-free/allocation-free hot path | `init()` + error codes; exceptions anywhere near audio | invalid objects unrepresentable; RT contract is the product; Hexagon's no-unwind toolchain proved the value of confining throws to setup | `include/srt/asrc.hpp` (class comment, `validated()`); README bullets; `docs/PERFORMANCE.md` Known debt; commit "Hexagon: exclude ConfigValidation" |
+| all allocation + throwing in the constructor; `noexcept`/lock-free/allocation-free hot path | `init()` + error codes; exceptions anywhere near audio | invalid objects unrepresentable; RT contract is the product; Hexagon's no-unwind toolchain proved the value of confining throws to setup | `include/srt/asrc.h` (class comment, `validated()`); README bullets; `docs/PERFORMANCE.md` Known debt; commit "Hexagon: exclude ConfigValidation" |
 
 ## 5. Runtime filter design, not `constexpr` tables
 
 A modern-C++ reflex says the Kaiser-windowed prototype — pure math on
 compile-time-known presets — should be a `constexpr` table. The library
-computes it at runtime, in the constructor, and `kaiser.hpp` opens with
+computes it at runtime, in the constructor, and `kaiser.h` opens with
 the reason, arithmetic included:
 
 ```cpp
@@ -253,7 +253,7 @@ costs.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| filter designed at runtime in the constructor | `constexpr` coefficient tables | 12K–33K taps × transcendentals ≈ minutes of interpreted compile time per TU vs <10 ms once at runtime; needs pre-C++26 hand-rolled constexpr math; runtime `FilterSpec` must work anyway | `include/srt/detail/kaiser.hpp` header comment |
+| filter designed at runtime in the constructor | `constexpr` coefficient tables | 12K–33K taps × transcendentals ≈ minutes of interpreted compile time per TU vs <10 ms once at runtime; needs pre-C++26 hand-rolled constexpr math; runtime `FilterSpec` must work anyway | `include/srt/detail/kaiser.h` header comment |
 
 ## 6. `<bit>` over hand-rolled bit tricks; masks over modulo
 
@@ -261,7 +261,7 @@ Everywhere the library needs power-of-two arithmetic it reaches for
 C++20's `<bit>`: `std::bit_ceil` rounds the ring capacity up
 (`SpscRing`'s constructor), rounds the phase count up
 (`PolyphaseFilterBank`), and sizes the FIFO (`ringCapacityElems` in
-`asrc.hpp`); `std::countr_zero` recovers log₂(L) in the phase-indexed
+`asrc.h`); `std::countr_zero` recovers log₂(L) in the phase-indexed
 kernels so the polyphase branch is the top bits of the Q0.64 phase word:
 
 ```cpp
@@ -285,14 +285,14 @@ proves the wraparound benign. The polyphase table's L being a power of
 two is what lets the Q0.64 phase word split into branch index and blend
 fraction by pure shifts, with no division and no double arithmetic on the
 per-sample path (the phase-accumulator comment in
-`polyphase_filter.hpp`). A general-modulo design would put an integer
+`polyphase_filter.h`). A general-modulo design would put an integer
 divide — tens of cycles on the M-class cores, and a serialization point
 everywhere — inside the tightest loops the library owns, to support
 capacities nobody asked for.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `std::bit_ceil` / `std::countr_zero`; power-of-two capacities indexed by mask | hand-rolled bit tricks; arbitrary sizes with `%` | specified edge cases, single instructions, intent named; masks keep divides and doubles off the per-sample path | `include/srt/spsc_ring.hpp` ctor + class comment; `include/srt/polyphase_filter.hpp` (`blendRowPhase`, `interpolatePhase`, `ringCapacityElems`) |
+| `std::bit_ceil` / `std::countr_zero`; power-of-two capacities indexed by mask | hand-rolled bit tricks; arbitrary sizes with `%` | specified edge cases, single instructions, intent named; masks keep divides and doubles off the per-sample path | `include/srt/spsc_ring.h` ctor + class comment; `include/srt/polyphase_filter.h` (`blendRowPhase`, `interpolatePhase`, `ringCapacityElems`) |
 
 ## 7. Memory orderings chosen to be exactly sufficient
 
@@ -303,7 +303,7 @@ library carries an explicit ordering argument, and each ordering is the
 publishes data, `acquire` on the load that consumes a foreign index,
 `relaxed` on a thread's loads of its own index — and `relaxed` on all
 telemetry, whose fields are documented as "individually coherent, not
-mutually" (`status()` in `asrc.hpp`).
+mutually" (`status()` in `asrc.h`).
 
 The rejected alternative is `seq_cst`-by-default — writing
 `head_.store(x)` and letting the strongest ordering paper over the
@@ -323,7 +323,7 @@ merely changing a default.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| explicit, minimal orderings on every atomic | `seq_cst` defaults | weaker barriers on ARM where it matters; each annotation documents exactly why it exists; TSan-checked in CI | `include/srt/spsc_ring.hpp`; `include/srt/asrc.hpp` telemetry; the ring chapter's "What was rejected" |
+| explicit, minimal orderings on every atomic | `seq_cst` defaults | weaker barriers on ARM where it matters; each annotation documents exactly why it exists; TSan-checked in CI | `include/srt/spsc_ring.h`; `include/srt/asrc.h` telemetry; the ring chapter's "What was rejected" |
 
 ## 8. `alignas(64)`, not `std::hardware_destructive_interference_size`
 
@@ -358,7 +358,7 @@ appendix's opening theme in miniature.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `alignas(kCacheLine)` with `kCacheLine = 64` | `std::hardware_destructive_interference_size` | the standard constant varies with tuning flags → ODR/ABI fragility in a header; GCC warns; 64 is right everywhere shipped | `include/srt/spsc_ring.hpp` member layout comment |
+| `alignas(kCacheLine)` with `kCacheLine = 64` | `std::hardware_destructive_interference_size` | the standard constant varies with tuning flags → ODR/ABI fragility in a header; GCC warns; 64 is right everywhere shipped | `include/srt/spsc_ring.h` member layout comment |
 
 ## 9. 32-bit telemetry atomics
 
@@ -402,7 +402,7 @@ frame of fill — observability, not metrology.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `atomic<uint32_t>`/`atomic<float>` telemetry, wrap documented | 64-bit atomic counters/doubles | 64-bit atomics lock via libatomic on 32-bit targets, silently voiding the lock-free contract; 32-bit range/precision suffices and is asserted | `include/srt/asrc.hpp` telemetry members + `static_assert`; `Status` doc comment |
+| `atomic<uint32_t>`/`atomic<float>` telemetry, wrap documented | 64-bit atomic counters/doubles | 64-bit atomics lock via libatomic on 32-bit targets, silently voiding the lock-free contract; 32-bit range/precision suffices and is asserted | `include/srt/asrc.h` telemetry members + `static_assert`; `Status` doc comment |
 
 ## 10. Designated initializers as API
 
@@ -441,7 +441,7 @@ points in that space.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| aggregate configs + designated initializers | positional constructors; builder chains | named fields make adjacent-double swaps impossible; defaults stay declarative; declaration-order enforcement | `include/srt/polyphase_filter.hpp` (`FilterSpec` presets); `include/srt/asrc.hpp` (`Config`); `include/srt/pi_servo.hpp` (`ServoConfig`) |
+| aggregate configs + designated initializers | positional constructors; builder chains | named fields make adjacent-double swaps impossible; defaults stay declarative; declaration-order enforcement | `include/srt/polyphase_filter.h` (`FilterSpec` presets); `include/srt/asrc.h` (`Config`); `include/srt/pi_servo.h` (`ServoConfig`) |
 
 ## 11. `SRT_RESTRICT`: a portable `__restrict__`, adopted on measurement
 
@@ -477,7 +477,7 @@ rather than a raw keyword.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `SRT_RESTRICT` macro on kernel pointers | nothing (alias-versioned loops); structural non-aliasing proofs | verified with `-fopt-info-vec`, measured: M55 float −1.35% insns, x86 −3.7% wall-clock; states a true invariant | `include/srt/polyphase_filter.hpp` macro + comment; `docs/PERFORMANCE.md` C2 |
+| `SRT_RESTRICT` macro on kernel pointers | nothing (alias-versioned loops); structural non-aliasing proofs | verified with `-fopt-info-vec`, measured: M55 float −1.35% insns, x86 −3.7% wall-clock; states a true invariant | `include/srt/polyphase_filter.h` macro + comment; `docs/PERFORMANCE.md` C2 |
 
 ## 12. Compile-time feature gates — and the measured cost of a runtime one
 
@@ -518,7 +518,7 @@ again" into "provably byte-identical again."
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| preprocessor + `constexpr` flags + `if constexpr` gates | runtime mode flags | a runtime bool in the hot loop measured +6–8% on the M55 ratchet; compile-time gates keep non-participating targets' codegen byte-identical (0.00%) | `include/srt/polyphase_filter.hpp` (`SRT_Q15_SMLALD`, `SRT_CHANNEL_PARALLEL`, `kChannelParallel`, `appendOne` comment); `docs/PERFORMANCE.md` C4/C6 |
+| preprocessor + `constexpr` flags + `if constexpr` gates | runtime mode flags | a runtime bool in the hot loop measured +6–8% on the M55 ratchet; compile-time gates keep non-participating targets' codegen byte-identical (0.00%) | `include/srt/polyphase_filter.h` (`SRT_Q15_SMLALD`, `SRT_CHANNEL_PARALLEL`, `kChannelParallel`, `appendOne` comment); `docs/PERFORMANCE.md` C4/C6 |
 
 ## 13. `std::function` in the simulator, templated callables in the library
 
@@ -556,7 +556,7 @@ exactly one production callable is nothing.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| templated `PopFn&&` in the library; `std::function` only in test config | `std::function` on the hot path; templates in test fixtures | hot path needs inlining, no allocation, honest `noexcept`; tests need runtime reassignment and don't care about a type-erased call | `include/srt/polyphase_filter.hpp` (`process`, `prime`); `include/srt/asrc.hpp` (`popFn` lambda); `tests/support/two_clock_sim.hpp` |
+| templated `PopFn&&` in the library; `std::function` only in test config | `std::function` on the hot path; templates in test fixtures | hot path needs inlining, no allocation, honest `noexcept`; tests need runtime reassignment and don't care about a type-erased call | `include/srt/polyphase_filter.h` (`process`, `prime`); `include/srt/asrc.h` (`popFn` lambda); `tests/support/two_clock_sim.h` |
 
 ## 14. `std::vector` everywhere, custom allocators nowhere
 
@@ -587,7 +587,7 @@ behind `operator new`) is still a fine place to get memory from.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `std::vector` storage, default allocator | allocator/PMR parameters; fixed arrays; arenas | allocation is construction-only by contract, so allocators optimize a non-problem at the cost of infecting every signature; sizes are runtime config | `include/srt/spsc_ring.hpp`, `polyphase_filter.hpp`, `asrc.hpp` (members); RT contract in section 4 |
+| `std::vector` storage, default allocator | allocator/PMR parameters; fixed arrays; arenas | allocation is construction-only by contract, so allocators optimize a non-problem at the cost of infecting every signature; sizes are runtime config | `include/srt/spsc_ring.h`, `polyphase_filter.h`, `asrc.h` (members); RT contract in section 4 |
 
 ## 15. The C ABI: opaque handles, `reinterpret_cast`, and `impl()` outside `extern "C"`
 
@@ -660,7 +660,7 @@ is using *right now*.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| deleted copy (and hence move) on ring and converter | default/deep copies | two live threads reference the object by identity; a copy duplicates state but not the clock relationship; atomics aren't copyable | `include/srt/spsc_ring.hpp`, `include/srt/asrc.hpp` |
+| deleted copy (and hence move) on ring and converter | default/deep copies | two live threads reference the object by identity; a copy duplicates state but not the clock relationship; atomics aren't copyable | `include/srt/spsc_ring.h`, `include/srt/asrc.h` |
 
 ## 17. Rejected wholesale, with reasons
 
@@ -696,7 +696,7 @@ that cannot unwind at all.
 **`std::jthread` (or any thread) in the library.** The library owns *no*
 threads. It is a passive object with a two-agent contract — "one producer
 thread calls push() at the input clock; one consumer thread calls pull()
-at the output clock" (`asrc.hpp`) — and the threads belong to the caller,
+at the output clock" (`asrc.h`) — and the threads belong to the caller,
 because they already exist: they are the audio device callbacks. Spawning
 threads would also be unbuildable on half the CI matrix; the bare-metal
 targets have no `std::thread` at all, which is why even the *tests*
@@ -717,11 +717,11 @@ the measured |diff| ≤ 41 adjacent-phase delta of section 18.
 | Rejected | Reason | Evidence |
 |---|---|---|
 | `std::simd` | not in C++20; per-target measured intrinsics (kept or deleted by number) beat portable abstraction | `docs/PERFORMANCE.md` C4/C5 |
-| coroutines | hard-RT synchronous callbacks; no async model fits | `include/srt/asrc.hpp` thread contract |
-| CRTP mixins | concept + traits already give static dispatch without inheritance shape | `include/srt/sample_traits.hpp` |
+| coroutines | hard-RT synchronous callbacks; no async model fits | `include/srt/asrc.h` thread contract |
+| CRTP mixins | concept + traits already give static dispatch without inheritance shape | `include/srt/sample_traits.h` |
 | audio-path exceptions | RT contract; Hexagon cannot unwind | section 4 |
-| `std::jthread` in the library | passive two-agent object; caller owns the (callback) threads; bare metal has none | `include/srt/asrc.hpp`; `tests/CMakeLists.txt` Threads probe |
-| virtual pluggable filters | filter is a parameter space, not a plugin point; would cost kernel inlining and table invariants | `include/srt/polyphase_filter.hpp` (`FilterSpec`) |
+| `std::jthread` in the library | passive two-agent object; caller owns the (callback) threads; bare metal has none | `include/srt/asrc.h`; `tests/CMakeLists.txt` Threads probe |
+| virtual pluggable filters | filter is a parameter space, not a plugin point; would cost kernel inlining and table invariants | `include/srt/polyphase_filter.h` (`FilterSpec`) |
 
 ## 18. The meta-decision: comments that show their arithmetic
 
@@ -731,7 +731,7 @@ is about prose. Its comments do not narrate ("increment the index");
 they state constraints and record arithmetic at the point where the code
 depends on them. The Q15 traits comment derives the accumulator budget
 ("48-80 taps add ~6-7 bits — no overflow, no intermediate rounding"). The
-`kaiser.hpp` note quantifies the constexpr rejection (section 5). The
+`kaiser.h` note quantifies the constexpr rejection (section 5). The
 resampler's eps conversion documents its own safety margin ("|eps| is
 servo-clamped to ~1e-3, so eps * 2^64 fits int64 comfortably"). The
 `appendOne` compaction comment carries the +6–8% scar of section 12.
@@ -747,7 +747,7 @@ worst-case adjacent-phase delta. The audit did the multiplication —
 32767 × 65535 = 2,147,385,345, which sits 0.005% under `INT32_MAX`, not
 5% — and the commit's own summary records the fix: "Q15 blend margin
 comment corrected (0.005%, not ~5%)." The corrected comment in
-`sample_traits.hpp` now shows the numbers and the measurement
+`sample_traits.h` now shows the numbers and the measurement
 (real deltas: |diff| ≤ 41 on the transparent table) and draws the
 conclusion the wrong margin obscured: "a margin that thin is not an
 invariant worth relying on silently" — which is precisely why the code

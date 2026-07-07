@@ -25,7 +25,7 @@
 #include <thread>
 #include <vector>
 
-#include "srt/srt.hpp"
+#include "srt/srt.h"
 
 namespace {
 

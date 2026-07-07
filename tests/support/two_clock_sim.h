@@ -1,14 +1,15 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 SampleRateTap contributors
 // Deterministic single-threaded simulation of two independent clock domains
 // driving one converter. Producer and consumer events are interleaved by
 // next-event virtual time, so runs are exactly reproducible.
-#ifndef SRT_TESTS_TWO_CLOCK_SIM_HPP
-#define SRT_TESTS_TWO_CLOCK_SIM_HPP
+#pragma once
 
 #include <cstdint>
 #include <functional>
 #include <vector>
 
-#include "srt/asrc.hpp"
+#include "srt/asrc.h"
 
 namespace srt_test {
 
@@ -72,5 +73,3 @@ namespace srt_test {
     using two_clock_sim = two_clock_sim_t<float>;
 
 } // namespace srt_test
-
-#endif // SRT_TESTS_TWO_CLOCK_SIM_HPP

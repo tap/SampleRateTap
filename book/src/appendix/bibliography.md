@@ -16,7 +16,7 @@ draw on.
 **J. F. Kaiser, "Nonrecursive digital filter design using the I₀-sinh
 window function," *Proc. IEEE Int. Symp. Circuits and Systems*, 1974.**
 The origin of the Kaiser window and of the two empirical fits the library
-evaluates verbatim in `include/srt/detail/kaiser.hpp`: stopband
+evaluates verbatim in `include/srt/detail/kaiser.h`: stopband
 attenuation → window shape parameter β, and the attenuation/transition-
 width → filter-length estimate. The project took the closed forms exactly
 as published — the value of the Kaiser window here is precisely that its

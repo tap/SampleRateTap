@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <new>
 
-#include "srt/srt.hpp"
+#include "srt/srt.h"
 
 // ANCHOR: abi_impl
 extern "C" {

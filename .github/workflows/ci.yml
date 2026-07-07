@@ -498,10 +498,10 @@ jobs:
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q clang-format-18
           clang-format-18 --dry-run --Werror \
-            include/srt/*.hpp include/srt/detail/*.hpp \
+            include/srt/*.h include/srt/detail/*.h \
             bench/*.cpp bench/icount/*.cpp bench/compare/*.cpp \
             tools/capi/*.cpp tools/qemu_insn_plugin/*.c \
-            tests/*.cpp tests/support/*.hpp examples/*.cpp platform/*.c
+            tests/*.cpp tests/support/*.h examples/*.cpp platform/*.c
 
   # The book (book/) quotes library code via mdBook anchor includes; this
   # gate makes a refactor that orphans an excerpt fail CI, the same
