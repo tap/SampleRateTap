@@ -126,14 +126,14 @@ namespace srt {
         // deliberately avoided: it is ABI-fragile and warns on GCC). The
         // read-only members (buf_, mask_) lead so they share a line with each
         // other, not with either side's mutable state.
-        static constexpr std::size_t k_k_cache_line = 64;
+        static constexpr std::size_t k_cache_line = 64;
 
         std::vector<T> m_buf;
         std::size_t    m_mask;
-        alignas(k_k_cache_line) std::atomic<std::size_t> m_head{0}; // written by producer
-        alignas(k_k_cache_line) std::size_t m_tail_cache{0};        // producer's view of tail
-        alignas(k_k_cache_line) std::atomic<std::size_t> m_tail{0}; // written by consumer
-        alignas(k_k_cache_line) std::size_t m_head_cache{0};        // consumer's view of head
+        alignas(k_cache_line) std::atomic<std::size_t> m_head{0}; // written by producer
+        alignas(k_cache_line) std::size_t m_tail_cache{0};        // producer's view of tail
+        alignas(k_cache_line) std::atomic<std::size_t> m_tail{0}; // written by consumer
+        alignas(k_cache_line) std::size_t m_head_cache{0};        // consumer's view of head
         // ANCHOR_END: layout
     };
 

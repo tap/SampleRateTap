@@ -17,7 +17,7 @@
 
 namespace {
 
-    constexpr double k_k_fs = 48000.0;
+    constexpr double k_fs = 48000.0;
 
     // Audit finding F1: with defaults, any pull block larger than the 48-frame
     // setpoint used to drain into a permanent underrun limit cycle (64-frame
@@ -39,8 +39,8 @@ namespace {
         }
         srt::async_sample_rate_converter asrc(cfg);
         srt_test::two_clock_sim          sim{.asrc      = asrc,
-                                             .fs_in     = k_k_fs * (1.0 + 200e-6),
-                                             .fs_out    = k_k_fs,
+                                             .fs_in     = k_fs * (1.0 + 200e-6),
+                                             .fs_out    = k_fs,
                                              .channels  = 1,
                                              .chunk_in  = 32,
                                              .chunk_out = pull_block};
@@ -76,7 +76,7 @@ namespace {
         srt::config cfg;
         cfg.channels = 1;
         srt::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_k_fs * (1.0 + 200e-6), .fs_out = k_k_fs, .channels = 1};
+        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         sim.run(5.0, [](const float*, std::size_t, double) {});
         // 32-frame pulls against the 48-frame default were always feasible;
         // the adaptation must not inflate latency for them.
@@ -148,12 +148,12 @@ namespace {
         srt::config cfg;
         cfg.channels = 1;
         srt::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_k_fs * (1.0 + 200e-6), .fs_out = k_k_fs, .channels = 1};
+        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         sim.run(5.0, [](const float*, std::size_t, double) {});
         ASSERT_EQ(asrc.status().state, srt::converter_state::locked);
         asrc.reset_from_consumer();
         EXPECT_EQ(asrc.status().state, srt::converter_state::filling);
-        srt_test::two_clock_sim sim2{.asrc = asrc, .fs_in = k_k_fs * (1.0 + 200e-6), .fs_out = k_k_fs, .channels = 1};
+        srt_test::two_clock_sim sim2{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         sim2.run(5.0, [](const float*, std::size_t, double) {});
         EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
     }
@@ -209,14 +209,10 @@ namespace {
         srt::config cfg;
         cfg.channels = 1;
         srt::async_sample_rate_converter_q15    asrc(cfg);
-        srt_test::two_clock_sim_t<std::int16_t> sim{.asrc      = asrc,
-                                                    .fs_in     = k_k_fs * (1.0 + 200e-6),
-                                                    .fs_out    = k_k_fs,
-                                                    .channels  = 1,
-                                                    .chunk_in  = 8,
-                                                    .chunk_out = 8};
-        const double                            nu = 997.0 / k_k_fs;
-        sim.gen                                    = [&](std::uint64_t i) {
+        srt_test::two_clock_sim_t<std::int16_t> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
+        const double nu = 997.0 / k_fs;
+        sim.gen         = [&](std::uint64_t i) {
             return srt::detail::round_sat<std::int16_t>(
                 0.5 * 32767.0 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
         };
@@ -244,14 +240,10 @@ namespace {
         srt::config cfg;
         cfg.channels = 1;
         srt::async_sample_rate_converter_q15    asrc(cfg);
-        srt_test::two_clock_sim_t<std::int16_t> sim{.asrc      = asrc,
-                                                    .fs_in     = k_k_fs * (1.0 + 500e-6),
-                                                    .fs_out    = k_k_fs,
-                                                    .channels  = 1,
-                                                    .chunk_in  = 8,
-                                                    .chunk_out = 8};
-        const double                            nu = 1000.0 / k_k_fs;
-        sim.gen                                    = [&](std::uint64_t i) {
+        srt_test::two_clock_sim_t<std::int16_t> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
+        const double nu = 1000.0 / k_fs;
+        sim.gen         = [&](std::uint64_t i) {
             return srt::detail::round_sat<std::int16_t>(
                 0.99 * 32767.0 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
         };

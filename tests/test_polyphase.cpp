@@ -9,10 +9,10 @@
 
 namespace {
 
-    constexpr double k_k_fs = 48000.0;
+    constexpr double k_fs = 48000.0;
 
     TEST(Polyphase, DcGainIsUnityAcrossMu) {
-        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), k_k_fs);
+        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), k_fs);
         std::vector<float>                      ones(bank.taps(), 1.0f);
         std::mt19937                            rng(7);
         std::uniform_real_distribution<double>  uni(0.0, 1.0);
@@ -23,7 +23,7 @@ namespace {
     }
 
     TEST(Polyphase, ExtraRowEqualsPhaseZeroAdvancedOneTap) {
-        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), k_k_fs);
+        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), k_fs);
         const std::size_t                       L = bank.num_phases();
         const std::size_t                       T = bank.taps();
         // Rows are stored tap-reversed over an oldest-first window, so "advanced
@@ -39,7 +39,7 @@ namespace {
     // The interpolated output at fractional position mu corresponds to input time
     // tau = J - T/2 + mu + 1/(2L) where J is the newest sample index in the window.
     double max_error_db(const srt::polyphase_filter_bank<float>& bank, double freq_hz) {
-        const double       nu = freq_hz / k_k_fs;
+        const double       nu = freq_hz / k_fs;
         const std::size_t  T  = bank.taps();
         const double       L  = static_cast<double>(bank.num_phases());
         std::vector<float> x(4 * T);
@@ -61,7 +61,7 @@ namespace {
     }
 
     TEST(Polyphase, FractionalDelayAccuracyBalanced) {
-        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), k_k_fs);
+        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), k_fs);
         // Error budget: this absolute-error sweep sees BOTH the inter-phase
         // interpolation floor and the prototype's in-spec passband ripple (a
         // gain deviation of r dB reads here as 20*log10(10^(r/20)-1): the
@@ -80,7 +80,7 @@ namespace {
     }
 
     TEST(Polyphase, FractionalDelayAccuracyTransparent) {
-        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::transparent(), k_k_fs);
+        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::transparent(), k_fs);
         EXPECT_LT(max_error_db(bank, 997.0), -104.0);
         EXPECT_LT(max_error_db(bank, 19000.0), -80.0);
     }
@@ -88,7 +88,7 @@ namespace {
     TEST(Polyphase, MuWrapIsContinuousWithWindowShift) {
         // interpolate(hist, mu -> 1) must equal interpolate(hist shifted by one
         // newer sample, mu = 0): the whole-sample slip invariant.
-        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), k_k_fs);
+        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), k_fs);
         const std::size_t                       T = bank.taps();
         std::vector<float>                      x(2 * T);
         std::mt19937                            rng(99);

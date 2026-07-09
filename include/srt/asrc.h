@@ -102,7 +102,7 @@ namespace srt {
         explicit basic_async_sample_rate_converter(const config& cfg)
             : m_cfg(validated(cfg))
             , m_bank(m_cfg.filter, m_cfg.sample_rate_hz)
-            , m_resampler(m_bank, m_cfg.channels, k_k_pop_chunk_frames)
+            , m_resampler(m_bank, m_cfg.channels, k_pop_chunk_frames)
             , m_ring(ring_capacity_elems(m_cfg, m_bank.taps()))
             , m_servo(m_cfg.servo, m_cfg.sample_rate_hz, static_cast<double>(m_cfg.target_latency_frames))
             , m_target_frames(m_cfg.target_latency_frames)
@@ -166,7 +166,7 @@ namespace srt {
                 // the entry occupancy never grazes the pull size; configs that
                 // already satisfy it (e.g. the 32-frame default transfer against
                 // the 48-frame default setpoint) are left exactly as configured.
-                const std::size_t needed     = frames + std::max<std::size_t>(frames / 2, k_k_pop_chunk_frames);
+                const std::size_t needed     = frames + std::max<std::size_t>(frames / 2, k_pop_chunk_frames);
                 const std::size_t new_target = std::clamp(needed, m_cfg.target_latency_frames, m_max_target_frames);
                 if (new_target > m_target_frames) {
                     m_target_frames         = new_target;
@@ -193,7 +193,7 @@ namespace srt {
                 occ = backlog_frames();
                 m_servo.seed(occ);
                 m_filling          = false;
-                m_fade_frames_left = k_k_fade_frames;
+                m_fade_frames_left = k_fade_frames;
             }
 
             // ANCHOR_END: asrc_filling
@@ -271,7 +271,7 @@ namespace srt {
         const polyphase_filter_bank<S>& filter_bank() const noexcept { return m_bank; }
 
       private:
-        static constexpr std::size_t k_k_pop_chunk_frames = 16;
+        static constexpr std::size_t k_pop_chunk_frames = 16;
 
         static std::size_t ring_capacity_elems(const config& cfg, std::size_t taps) {
             const std::size_t fill_threshold = cfg.target_latency_frames + taps;
@@ -310,9 +310,9 @@ namespace srt {
         /// even on FPU-less targets.
         void apply_fade_in(S* interleaved, std::size_t made_frames) noexcept {
             const std::size_t n    = std::min(made_frames, m_fade_frames_left);
-            const std::size_t done = k_k_fade_frames - m_fade_frames_left;
+            const std::size_t done = k_fade_frames - m_fade_frames_left;
             for (std::size_t f = 0; f < n; ++f) {
-                const double g = static_cast<double>(done + f + 1) / static_cast<double>(k_k_fade_frames);
+                const double g = static_cast<double>(done + f + 1) / static_cast<double>(k_fade_frames);
                 for (std::size_t c = 0; c < m_cfg.channels; ++c) {
                     S& x = interleaved[f * m_cfg.channels + c];
                     x    = scale_sample(x, g);
@@ -370,7 +370,7 @@ namespace srt {
             return cfg;
         }
 
-        static constexpr std::size_t k_k_fade_frames = 64;
+        static constexpr std::size_t k_fade_frames = 64;
 
         config                   m_cfg;
         polyphase_filter_bank<S> m_bank;

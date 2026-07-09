@@ -470,7 +470,7 @@ namespace srt {
       public:
         /// Frame-major channel-parallel mode is compiled in only on CP targets
         /// and only for floating-point samples (see SRT_CHANNEL_PARALLEL).
-        static constexpr bool k_k_channel_parallel = SRT_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
+        static constexpr bool k_channel_parallel = SRT_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
 
         /// Allocates histories and the pop scratch buffer; setup time only.
         fractional_resampler(const polyphase_filter_bank<S>& bank, std::size_t channels, std::size_t chunk_frames = 64)
@@ -479,7 +479,7 @@ namespace srt {
             , m_chunk(chunk_frames)
             , m_hist_cap(bank.taps() + chunk_frames)
             , m_scratch(chunk_frames * channels)
-            , m_frame_major(k_k_channel_parallel && channels >= SRT_CP_MIN_CHANNELS)
+            , m_frame_major(k_channel_parallel && channels >= SRT_CP_MIN_CHANNELS)
             , m_hist(m_frame_major ? 1 : channels)
             , m_row(bank.taps()) {
             if (m_channels == 0 || m_chunk == 0) {
@@ -575,7 +575,7 @@ namespace srt {
                 if (m_channels == 1 && !k_prefer_dot_row) { // fused blend+mac; no scratch traffic
                     out[n] = interpolate_phase(*m_bank, window(0), m);
                 }
-                else if (k_k_channel_parallel && m_frame_major) { // constant-folds away off-host
+                else if (k_channel_parallel && m_frame_major) { // constant-folds away off-host
                     // High channel counts: one blend, then all channels' dots in
                     // a single channel-parallel pass over the frame-major window.
                     blend_row_phase(*m_bank, m_row.data(), m);
@@ -616,14 +616,14 @@ namespace srt {
                 // Samples per frame slot; the gate is compile-time so non-CP
                 // targets keep their previous codegen exactly (the runtime form
                 // measured +6-8% on the M55 ratchet from hot-loop branch bloat).
-                const std::size_t w = (k_k_channel_parallel && m_frame_major) ? m_channels : 1;
+                const std::size_t w = (k_channel_parallel && m_frame_major) ? m_channels : 1;
                 for (auto& h : m_hist) {
                     std::memmove(h.data(), h.data() + (m_end - keep) * w, keep * w * sizeof(S));
                 }
                 m_end = keep;
             }
             const S* frame = m_scratch.data() + m_scratch_pos * m_channels;
-            if (k_k_channel_parallel && m_frame_major) { // frames stay interleaved: one contiguous copy
+            if (k_channel_parallel && m_frame_major) { // frames stay interleaved: one contiguous copy
                 std::memcpy(m_hist[0].data() + m_end * m_channels, frame, m_channels * sizeof(S));
             }
             else {
