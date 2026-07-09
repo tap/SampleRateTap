@@ -34,13 +34,13 @@
 
 namespace {
 
-    std::atomic<bool> gStop{false};
+    std::atomic<bool> g_stop{false};
 
-    void onSigint(int) {
-        gStop.store(true, std::memory_order_relaxed);
+    void on_sigint(int) {
+        g_stop.store(true, std::memory_order_relaxed);
     }
 
-    const char* stateName(srt::converter_state s) {
+    const char* state_name(srt::converter_state s) {
         switch (s) {
         case srt::converter_state::filling:
             return "Filling";
@@ -52,7 +52,7 @@ namespace {
         return "?";
     }
 
-    struct Args {
+    struct cli_args {
         const char*       in_dev    = "default";
         const char*       out_dev   = "default";
         unsigned          rate      = 48000;
@@ -72,7 +72,7 @@ namespace {
                     "  --rate <hz>      nominal sample rate of both devices (default 48000)\n"
                     "  --channels <n>   channel count (default 2)\n"
                     "  --period <n>     frames per ALSA period (default 128)\n"
-                    "  --latency <n>    converter targetLatencyFrames (default 96)\n"
+                    "  --latency <n>    converter target_latency_frames (default 96)\n"
                     "  --csv <path>     append per-second telemetry CSV\n"
                     "  --dump <path>    write post-ASRC interleaved float stream raw\n"
                     "  --seconds <n>    run time in seconds (default 0 = until SIGINT)\n"
@@ -81,7 +81,7 @@ namespace {
                     prog);
     }
 
-    bool parseArgs(int argc, char** argv, Args& a) {
+    bool parse_args(int argc, char** argv, cli_args& a) {
         const auto value = [&](int& i) -> const char* {
             if (i + 1 >= argc) {
                 std::fprintf(stderr, "%s: missing value for %s\n", argv[0], argv[i]);
@@ -131,21 +131,21 @@ namespace {
         return true;
     }
 
-    struct AlsaDevice {
+    struct alsa_device {
         snd_pcm_t*        pcm           = nullptr;
         snd_pcm_format_t  format        = SND_PCM_FORMAT_UNKNOWN;
         snd_pcm_uframes_t period_frames = 0;
 
-        AlsaDevice()                             = default;
-        AlsaDevice(const AlsaDevice&)            = delete;
-        AlsaDevice& operator=(const AlsaDevice&) = delete;
-        ~AlsaDevice() {
+        alsa_device()                              = default;
+        alsa_device(const alsa_device&)            = delete;
+        alsa_device& operator=(const alsa_device&) = delete;
+        ~alsa_device() {
             if (pcm != nullptr)
                 snd_pcm_close(pcm);
         }
     };
 
-    bool openDevice(AlsaDevice& dev, const char* name, snd_pcm_stream_t stream, const Args& a) {
+    bool open_device(alsa_device& dev, const char* name, snd_pcm_stream_t stream, const cli_args& a) {
         const char* dir = stream == SND_PCM_STREAM_CAPTURE ? "capture" : "playback";
         int         err = snd_pcm_open(&dev.pcm, name, stream, 0);
         if (err < 0) {
@@ -181,14 +181,14 @@ namespace {
         int sub           = 0;
         if ((err = snd_pcm_hw_params_set_period_size_near(dev.pcm, hw, &dev.period_frames, &sub)) < 0)
             return fail("set period size", err);
-        snd_pcm_uframes_t bufFrames = 4 * dev.period_frames;
-        if ((err = snd_pcm_hw_params_set_buffer_size_near(dev.pcm, hw, &bufFrames)) < 0)
+        snd_pcm_uframes_t buf_frames = 4 * dev.period_frames;
+        if ((err = snd_pcm_hw_params_set_buffer_size_near(dev.pcm, hw, &buf_frames)) < 0)
             return fail("set buffer size", err);
         if ((err = snd_pcm_hw_params(dev.pcm, hw)) < 0)
             return fail("hw_params commit", err);
         std::printf("%s '%s': %s, %u Hz, %u ch, period %lu, buffer %lu\n", dir, name, snd_pcm_format_name(dev.format),
                     rate, a.channels, static_cast<unsigned long>(dev.period_frames),
-                    static_cast<unsigned long>(bufFrames));
+                    static_cast<unsigned long>(buf_frames));
         return true;
     }
 
@@ -207,8 +207,8 @@ namespace {
 } // namespace
 
 int main(int argc, char** argv) {
-    Args args;
-    if (!parseArgs(argc, argv, args)) {
+    cli_args args;
+    if (!parse_args(argc, argv, args)) {
         usage(argv[0]);
         return 2;
     }
@@ -217,10 +217,10 @@ int main(int argc, char** argv) {
         return 2;
     }
 
-    AlsaDevice in;
-    AlsaDevice out;
-    if (!openDevice(in, args.in_dev, SND_PCM_STREAM_CAPTURE, args)
-        || !openDevice(out, args.out_dev, SND_PCM_STREAM_PLAYBACK, args))
+    alsa_device in;
+    alsa_device out;
+    if (!open_device(in, args.in_dev, SND_PCM_STREAM_CAPTURE, args)
+        || !open_device(out, args.out_dev, SND_PCM_STREAM_PLAYBACK, args))
         return 1;
 
     srt::config cfg;
@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::signal(SIGINT, onSigint);
+    std::signal(SIGINT, on_sigint);
 
     std::thread capture([&] {
         const std::size_t         ch     = args.channels;
@@ -263,14 +263,14 @@ int main(int argc, char** argv) {
         std::vector<float>        buf(period * ch);
         double                    phase = 0.0;
         const double              dphi  = 2.0 * std::numbers::pi * args.tone_hz / static_cast<double>(args.rate);
-        while (!gStop.load(std::memory_order_relaxed)) {
+        while (!g_stop.load(std::memory_order_relaxed)) {
             void* dst =
                 in.format == SND_PCM_FORMAT_S16_LE ? static_cast<void*>(raw.data()) : static_cast<void*>(buf.data());
             const snd_pcm_sframes_t n = snd_pcm_readi(in.pcm, dst, period);
             if (n < 0) {
                 if (snd_pcm_recover(in.pcm, static_cast<int>(n), 1) < 0) {
                     std::fprintf(stderr, "capture failed: %s\n", snd_strerror(static_cast<int>(n)));
-                    gStop.store(true, std::memory_order_relaxed);
+                    g_stop.store(true, std::memory_order_relaxed);
                     return;
                 }
                 continue;
@@ -300,18 +300,18 @@ int main(int argc, char** argv) {
         const snd_pcm_uframes_t   period = out.period_frames;
         std::vector<float>        buf(period * ch);
         std::vector<std::int16_t> raw(period * ch);
-        bool                      dumpFailed = false;
-        while (!gStop.load(std::memory_order_relaxed)) {
+        bool                      dump_failed = false;
+        while (!g_stop.load(std::memory_order_relaxed)) {
             asrc.pull(buf.data(), period); // silence-pads while filling/underrun
-            if (dump != nullptr && !dumpFailed
+            if (dump != nullptr && !dump_failed
                 && std::fwrite(buf.data(), sizeof(float), period * ch, dump) != period * ch) {
                 std::fprintf(stderr, "dump write failed; disabling --dump\n");
-                dumpFailed = true;
+                dump_failed = true;
             }
             if (out.format == SND_PCM_FORMAT_S16_LE)
                 floatToS16(buf.data(), raw.data(), period * ch);
             snd_pcm_uframes_t done = 0;
-            while (done < period && !gStop.load(std::memory_order_relaxed)) {
+            while (done < period && !g_stop.load(std::memory_order_relaxed)) {
                 const void*             src = out.format == SND_PCM_FORMAT_S16_LE
                                                   ? static_cast<const void*>(raw.data() + done * ch)
                                                   : static_cast<const void*>(buf.data() + done * ch);
@@ -319,7 +319,7 @@ int main(int argc, char** argv) {
                 if (n < 0) {
                     if (snd_pcm_recover(out.pcm, static_cast<int>(n), 1) < 0) {
                         std::fprintf(stderr, "playback failed: %s\n", snd_strerror(static_cast<int>(n)));
-                        gStop.store(true, std::memory_order_relaxed);
+                        g_stop.store(true, std::memory_order_relaxed);
                         return;
                     }
                     continue;
@@ -332,19 +332,19 @@ int main(int argc, char** argv) {
 
     using clock   = std::chrono::steady_clock;
     const auto t0 = clock::now();
-    for (unsigned long sec = 1; !gStop.load(std::memory_order_relaxed); ++sec) {
+    for (unsigned long sec = 1; !g_stop.load(std::memory_order_relaxed); ++sec) {
         std::this_thread::sleep_until(t0 + std::chrono::seconds(sec));
-        if (gStop.load(std::memory_order_relaxed))
+        if (g_stop.load(std::memory_order_relaxed))
             break;
         const auto st = asrc.status();
         std::printf("t=%6lus  state=%-9s  ppm=%+8.2f  fill=%8.1f  under=%llu over=%llu "
                     "resync=%llu\n",
-                    sec, stateName(st.state), st.ppm, st.fifo_fill_frames,
+                    sec, state_name(st.state), st.ppm, st.fifo_fill_frames,
                     static_cast<unsigned long long>(st.underruns), static_cast<unsigned long long>(st.overruns),
                     static_cast<unsigned long long>(st.resyncs));
         std::fflush(stdout);
         if (csv != nullptr) {
-            std::fprintf(csv, "%lu,%s,%.3f,%.2f,%llu,%llu,%llu\n", sec, stateName(st.state), st.ppm,
+            std::fprintf(csv, "%lu,%s,%.3f,%.2f,%llu,%llu,%llu\n", sec, state_name(st.state), st.ppm,
                          st.fifo_fill_frames, static_cast<unsigned long long>(st.underruns),
                          static_cast<unsigned long long>(st.overruns), static_cast<unsigned long long>(st.resyncs));
             std::fflush(csv);
@@ -352,7 +352,7 @@ int main(int argc, char** argv) {
         if (args.seconds != 0 && sec >= args.seconds)
             break;
     }
-    gStop.store(true, std::memory_order_relaxed);
+    g_stop.store(true, std::memory_order_relaxed);
 
     capture.join();
     playback.join();

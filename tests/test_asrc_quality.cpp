@@ -11,9 +11,9 @@
 
 namespace {
 
-    constexpr double k_k_fs  = 48000.0;
-    constexpr double k_k_eps = 200e-6;
-    constexpr double k_k_amp = 0.5;
+    constexpr double k_fs  = 48000.0;
+    constexpr double k_eps = 200e-6;
+    constexpr double k_amp = 0.5;
 
     // Resamples a sine across a +200 ppm clock offset (sample-synchronous
     // transfer) and measures the residual after removing the fitted fundamental
@@ -24,15 +24,11 @@ namespace {
         cfg.channels = 1;
         cfg.filter   = spec;
         srt::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim          sim{.asrc      = asrc,
-                                             .fs_in     = k_k_fs * (1.0 + k_k_eps),
-                                             .fs_out    = k_k_fs,
-                                             .channels  = 1,
-                                             .chunk_in  = 1,
-                                             .chunk_out = 1};
-        const double                     nu_in = freq_hz / k_k_fs;
-        sim.gen                                = [&](std::uint64_t i) {
-            return static_cast<float>(k_k_amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));
+        srt_test::two_clock_sim          sim{
+                     .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        const double nu_in = freq_hz / k_fs;
+        sim.gen            = [&](std::uint64_t i) {
+            return static_cast<float>(k_amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));
         };
         std::vector<float> tail;
         tail.reserve(48000);
@@ -46,9 +42,9 @@ namespace {
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
         EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
-        const double nu_out_expected = nu_in * (1.0 + k_k_eps);
+        const double nu_out_expected = nu_in * (1.0 + k_eps);
         const auto   fit             = srt_test::fit_sine_tracked(tail, nu_out_expected);
-        EXPECT_NEAR(fit.amplitude, k_k_amp, 0.01);
+        EXPECT_NEAR(fit.amplitude, k_amp, 0.01);
         // The tracked frequency must still match the true clock ratio closely.
         EXPECT_NEAR(fit.freq_norm / nu_out_expected, 1.0, 2e-6);
         const double snr = srt_test::snr_db(fit);

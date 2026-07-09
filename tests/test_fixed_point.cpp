@@ -12,8 +12,8 @@
 
 namespace {
 
-    constexpr double k_k_fs  = 48000.0;
-    constexpr double k_k_eps = 200e-6;
+    constexpr double k_fs  = 48000.0;
+    constexpr double k_eps = 200e-6;
 
     using q15 = srt::sample_traits<std::int16_t>;
     using q31 = srt::sample_traits<std::int32_t>;
@@ -42,7 +42,7 @@ namespace {
     // the property survives fixed point exactly: measured 0 LSB deviation over
     // a 256-point mu sweep for both formats (tolerance 1 for safety only).
     TEST(FixedPoint, DcGainIsUnityQ15) {
-        const srt::polyphase_filter_bank<std::int16_t> bank(srt::filter_spec::balanced(), k_k_fs);
+        const srt::polyphase_filter_bank<std::int16_t> bank(srt::filter_spec::balanced(), k_fs);
         std::vector<std::int16_t>                      dc(bank.taps(), 32767);
         for (int i = 0; i < 16; ++i) {
             const double mu = static_cast<double>(i) / 16.0;
@@ -51,7 +51,7 @@ namespace {
     }
 
     TEST(FixedPoint, DcGainIsUnityQ31) {
-        const srt::polyphase_filter_bank<std::int32_t> bank(srt::filter_spec::balanced(), k_k_fs);
+        const srt::polyphase_filter_bank<std::int32_t> bank(srt::filter_spec::balanced(), k_fs);
         std::vector<std::int32_t>                      dc(bank.taps(), 2147483647);
         for (int i = 0; i < 16; ++i) {
             const double mu = static_cast<double>(i) / 16.0;
@@ -63,7 +63,7 @@ namespace {
     // exactly k_coeff_scale (the largest-remainder correction in the bank ctor).
     template <typename S>
     void check_row_sums_exact() {
-        const srt::polyphase_filter_bank<S> bank(srt::filter_spec::balanced(), k_k_fs);
+        const srt::polyphase_filter_bank<S> bank(srt::filter_spec::balanced(), k_fs);
         const auto                          scale = static_cast<std::int64_t>(srt::sample_traits<S>::k_coeff_scale);
         for (std::size_t p = 0; p < bank.num_phases(); ++p) {
             std::int64_t sum = 0;
@@ -87,15 +87,11 @@ namespace {
         srt::config cfg;
         cfg.channels = 1;
         srt::basic_async_sample_rate_converter<S> asrc(cfg);
-        srt_test::two_clock_sim_t<S>              sim{.asrc      = asrc,
-                                                      .fs_in     = k_k_fs * (1.0 + k_k_eps),
-                                                      .fs_out    = k_k_fs,
-                                                      .channels  = 1,
-                                                      .chunk_in  = 1,
-                                                      .chunk_out = 1};
-        const double                              nu_in      = freq_hz / k_k_fs;
-        const double                              full_scale = static_cast<double>(std::numeric_limits<S>::max());
-        sim.gen                                              = [&](std::uint64_t i) {
+        srt_test::two_clock_sim_t<S>              sim{
+                         .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        const double nu_in      = freq_hz / k_fs;
+        const double full_scale = static_cast<double>(std::numeric_limits<S>::max());
+        sim.gen                 = [&](std::uint64_t i) {
             const double v = amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i));
             return srt::detail::round_sat<S>(v * full_scale);
         };
@@ -111,7 +107,7 @@ namespace {
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
         EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
-        const auto fit = srt_test::fit_sine_tracked(tail, nu_in * (1.0 + k_k_eps));
+        const auto fit = srt_test::fit_sine_tracked(tail, nu_in * (1.0 + k_eps));
         EXPECT_NEAR(fit.amplitude, amp, 0.01);
         const double snr = srt_test::snr_db(fit);
         std::printf("[ measured ] %5.0f Hz, %d-bit fixed: SNR %.1f dB\n", freq_hz, int(sizeof(S) * 8), snr);
@@ -140,14 +136,10 @@ namespace {
         srt::config cfg;
         cfg.channels = 1;
         srt::async_sample_rate_converter_q15    asrc(cfg);
-        srt_test::two_clock_sim_t<std::int16_t> sim{.asrc      = asrc,
-                                                    .fs_in     = k_k_fs * (1.0 + 500e-6),
-                                                    .fs_out    = k_k_fs,
-                                                    .channels  = 1,
-                                                    .chunk_in  = 1,
-                                                    .chunk_out = 1};
-        const double                            nu = 1000.0 / k_k_fs;
-        sim.gen                                    = [&](std::uint64_t i) {
+        srt_test::two_clock_sim_t<std::int16_t> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        const double nu = 1000.0 / k_fs;
+        sim.gen         = [&](std::uint64_t i) {
             return srt::detail::round_sat<std::int16_t>(
                 0.99 * 32767.0 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
         };

@@ -9,7 +9,7 @@
 
 namespace {
 
-    constexpr double k_k_fs = 48000.0;
+    constexpr double k_fs = 48000.0;
 
     srt::config mono_config() {
         srt::config cfg;
@@ -19,7 +19,7 @@ namespace {
 
     TEST(AsrcLock, LocksAndHoldsAtConstantOffset) {
         srt::async_sample_rate_converter asrc(mono_config());
-        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_k_fs * (1.0 + 200e-6), .fs_out = k_k_fs, .channels = 1};
+        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         bool                    locked_by2s = false;
         double                  ppm_sum     = 0.0;
         double                  fill_sum    = 0.0;
@@ -53,7 +53,7 @@ namespace {
     TEST(AsrcLock, TracksDriftRampWithoutUnlocking) {
         srt::async_sample_rate_converter asrc(mono_config());
         srt_test::two_clock_sim          sim{
-                     .asrc = asrc, .fs_in = k_k_fs, .fs_out = k_k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+                     .asrc = asrc, .fs_in = k_fs, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         // Input clock drifts 0 -> +300 ppm over 30 s (10 ppm/s, far faster than
         // real oscillator wander), then holds for the loop to reconverge.
         sim.fs_in_scale          = [](double t) { return 1.0 + 300e-6 * std::min(t, 30.0) / 30.0; };
@@ -81,15 +81,11 @@ namespace {
         // sine's second difference is bounded by A*omega^2; any window-shift
         // discontinuity would blow far past that bound.
         srt::async_sample_rate_converter asrc(mono_config());
-        srt_test::two_clock_sim          sim{.asrc      = asrc,
-                                             .fs_in     = k_k_fs * (1.0 + 500e-6),
-                                             .fs_out    = k_k_fs,
-                                             .channels  = 1,
-                                             .chunk_in  = 1,
-                                             .chunk_out = 1};
-        const double                     amp = 0.5;
-        const double                     nu  = 1000.0 / k_k_fs;
-        sim.gen                              = [&](std::uint64_t i) {
+        srt_test::two_clock_sim          sim{
+                     .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        const double amp = 0.5;
+        const double nu  = 1000.0 / k_fs;
+        sim.gen          = [&](std::uint64_t i) {
             return static_cast<float>(amp * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
         };
         std::vector<float> tail;
@@ -115,7 +111,7 @@ namespace {
         // Producer keeps pushing while the consumer stops pulling: occupancy blows
         // through the high watermark, the converter hard-resyncs, then relocks.
         srt::async_sample_rate_converter asrc(mono_config());
-        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_k_fs * (1.0 + 100e-6), .fs_out = k_k_fs, .channels = 1};
+        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 100e-6), .fs_out = k_fs, .channels = 1};
         sim.run(10.0, [&](const float*, std::size_t, double) {});
         ASSERT_EQ(asrc.status().state, srt::converter_state::locked);
 
@@ -128,7 +124,7 @@ namespace {
 
         // Resume pulling; the converter must resync and relock without underruns
         // turning permanent.
-        srt_test::two_clock_sim resume{.asrc = asrc, .fs_in = k_k_fs * (1.0 + 100e-6), .fs_out = k_k_fs, .channels = 1};
+        srt_test::two_clock_sim resume{.asrc = asrc, .fs_in = k_fs * (1.0 + 100e-6), .fs_out = k_fs, .channels = 1};
         resume.run(10.0, [&](const float*, std::size_t, double) {});
         const auto st = asrc.status();
         EXPECT_EQ(st.state, srt::converter_state::locked);
