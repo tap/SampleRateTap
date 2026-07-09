@@ -335,8 +335,8 @@ namespace srt {
                 acc = __smlald(static_cast<int16x2_t>(h), static_cast<int16x2_t>(r), acc);
             }
             for (; t < taps; ++t) // odd-tap tail; every preset is even
-                acc = Tr::mac(acc, hist[t], row[t]);
-            return Tr::finalize(acc);
+                acc = tr::mac(acc, hist[t], row[t]);
+            return tr::finalize(acc);
         }
 #endif
         typename tr::accum acc{};
