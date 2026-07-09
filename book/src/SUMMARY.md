@@ -49,3 +49,4 @@
 [Appendix A: The C++ decision log](appendix/cpp-decisions.md)
 [Appendix B: Glossary](appendix/glossary.md)
 [Appendix C: Annotated bibliography](appendix/bibliography.md)
+[Appendix D: The two budgets](appendix/two-budgets.md)

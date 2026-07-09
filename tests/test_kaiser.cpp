@@ -99,6 +99,30 @@ namespace {
 
     // The compensated presets must also hold their specs at scaled rates (the
     // 16 kHz deployment path): normalized design, same numbers.
+    // The k*fs transmission zeros ARE branch-DC uniformity, stated in the
+    // frequency domain: with exact zeros, every polyphase branch's coefficient
+    // sum is identical (measured spread 1.8e-15 -- machine epsilon -- vs 4.7e-6
+    // for the plain fast() design, whose spread is its stopband leakage at fs).
+    TEST(Kaiser, CompensatedBranchSumsAreUniform) {
+        const auto          spec   = srt::filter_spec::balanced();
+        const std::size_t   phases = std::bit_ceil(spec.num_phases);
+        std::vector<double> h(phases * spec.taps_per_phase);
+        design_prototype_compensated(h, phases, (spec.passband_hz + spec.stopband_hz) / 48000.0,
+                                     kaiser_beta(spec.stopband_atten_db), spec.passband_hz / 48000.0);
+        double lo = 1e9;
+        double hi = -1e9;
+        for (std::size_t p = 0; p < phases; ++p) {
+            double sum = 0.0;
+            for (std::size_t t = 0; t < spec.taps_per_phase; ++t) {
+                sum += h[t * phases + p];
+            }
+            lo = std::min(lo, sum);
+            hi = std::max(hi, sum);
+        }
+        EXPECT_LT(hi - lo, 1e-12);
+        EXPECT_NEAR(lo, 1.0, 1e-9);
+    }
+
     TEST(Kaiser, CompensatedSpecsHoldAt16k) {
         check_prototype_meets_spec(srt::filter_spec::balanced().scaled_to(16000.0), 16000.0);
         check_prototype_meets_spec(srt::filter_spec::economy().scaled_to(16000.0), 16000.0);

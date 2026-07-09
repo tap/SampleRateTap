@@ -75,6 +75,9 @@ namespace srt {
 
         /// Convert a double-precision designed coefficient to storage form.
         static coeff make_coeff(double c) noexcept { return static_cast<coeff>(c); }
+        /// Coefficient units per 1.0 (used by the bank's row-sum-preserving
+        /// quantization; unity for floating storage, where no correction runs).
+        static constexpr double k_coeff_scale = 1.0;
 
         /// Convert the intra-phase fraction (in [0,1)) once per output sample.
         static blend_factor make_blend_factor(double fr) noexcept { return static_cast<blend_factor>(fr); }
@@ -127,6 +130,7 @@ namespace srt {
         static coeff make_coeff(double c) noexcept {
             return detail::round_sat<coeff>(c * 16384.0); // Q1.14
         }
+        static constexpr double k_coeff_scale = 16384.0; // Q1.14 units per 1.0
         // ANCHOR_END: st_q15_coeff
 
         static blend_factor make_blend_factor(double fr) noexcept {
@@ -189,6 +193,7 @@ namespace srt {
         static coeff make_coeff(double c) noexcept {
             return detail::round_sat<coeff>(c * 1073741824.0); // Q1.30
         }
+        static constexpr double k_coeff_scale = 1073741824.0; // Q1.30 units per 1.0
 
         static blend_factor make_blend_factor(double fr) noexcept {
             return static_cast<blend_factor>(fr * 1048576.0); // Q20

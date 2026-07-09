@@ -36,16 +36,17 @@ namespace {
         EXPECT_EQ(q31::finalize(-(std::int64_t{1} << 60)), -2147483648LL);
     }
 
+    // "Note that for DC, this should get you infinite S/N ratio... for every
+    // phase or fractional delay, the FIR coefficients must add to 1."
+    //  -- R. Bristow-Johnson, music-dsp. With row-sum-preserving quantization
+    // the property survives fixed point exactly: measured 0 LSB deviation over
+    // a 256-point mu sweep for both formats (tolerance 1 for safety only).
     TEST(FixedPoint, DcGainIsUnityQ15) {
         const srt::polyphase_filter_bank<std::int16_t> bank(srt::filter_spec::balanced(), k_k_fs);
         std::vector<std::int16_t>                      dc(bank.taps(), 32767);
         for (int i = 0; i < 16; ++i) {
             const double mu = static_cast<double>(i) / 16.0;
-            // 12 LSB = a -0.003 dB branch-gain deviation: per-tap rounding of
-            // the compensated (rect-smoothed) rows biases a few LSB further
-            // than the plain Kaiser rows did — still 3x inside the +/-0.01 dB
-            // passband contract (37 LSB at this scale).
-            EXPECT_NEAR(srt::interpolate(bank, dc.data(), mu), 32767, 12) << "mu=" << mu;
+            EXPECT_NEAR(srt::interpolate(bank, dc.data(), mu), 32767, 1) << "mu=" << mu;
         }
     }
 
@@ -54,8 +55,29 @@ namespace {
         std::vector<std::int32_t>                      dc(bank.taps(), 2147483647);
         for (int i = 0; i < 16; ++i) {
             const double mu = static_cast<double>(i) / 16.0;
-            EXPECT_NEAR(srt::interpolate(bank, dc.data(), mu), 2147483647.0, 256.0) << "mu=" << mu;
+            EXPECT_NEAR(srt::interpolate(bank, dc.data(), mu), 2147483647.0, 1.0) << "mu=" << mu;
         }
+    }
+
+    // The mechanism behind the previous two tests: every quantized row sums to
+    // exactly k_coeff_scale (the largest-remainder correction in the bank ctor).
+    template <typename S>
+    void check_row_sums_exact() {
+        const srt::polyphase_filter_bank<S> bank(srt::filter_spec::balanced(), k_k_fs);
+        const auto                          scale = static_cast<std::int64_t>(srt::sample_traits<S>::k_coeff_scale);
+        for (std::size_t p = 0; p < bank.num_phases(); ++p) {
+            std::int64_t sum = 0;
+            for (std::size_t t = 0; t < bank.taps(); ++t) {
+                sum += bank.phase(p)[t];
+            }
+            ASSERT_EQ(sum, scale) << "row " << p;
+        }
+    }
+    TEST(FixedPoint, RowSumsAreExactQ15) {
+        check_row_sums_exact<std::int16_t>();
+    }
+    TEST(FixedPoint, RowSumsAreExactQ31) {
+        check_row_sums_exact<std::int32_t>();
     }
 
     // End-to-end quality across a +200 ppm clock crossing, like the float suite:

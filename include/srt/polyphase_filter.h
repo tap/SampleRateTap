@@ -191,12 +191,56 @@ namespace srt {
             }
 
             m_table.resize((m_phases + 1) * m_taps);
-            for (std::size_t p = 0; p <= m_phases; ++p) {
+            std::vector<double> remainder(m_taps);
+            for (std::size_t p = 0; p < m_phases; ++p) {
+                coeff*       row       = m_table.data() + p * m_taps;
+                double       exact_sum = 0.0;
+                std::int64_t quant_sum = 0;
                 for (std::size_t t = 0; t < m_taps; ++t) {
-                    const std::size_t m                    = t * m_phases + p; // prototype index of (branch p, tap t)
-                    const double      v                    = (m < n) ? proto[m] : 0.0;
-                    m_table[p * m_taps + (m_taps - 1 - t)] = sample_traits<S>::make_coeff(v);
+                    const std::size_t m       = t * m_phases + p; // prototype index of (branch p, tap t)
+                    const double      v       = (m < n) ? proto[m] : 0.0;
+                    const double      scaled  = v * sample_traits<S>::k_coeff_scale;
+                    const coeff       q       = sample_traits<S>::make_coeff(v);
+                    row[m_taps - 1 - t]       = q;
+                    remainder[m_taps - 1 - t] = scaled - static_cast<double>(q);
+                    exact_sum += scaled;
+                    quant_sum += static_cast<std::int64_t>(q);
                 }
+                if constexpr (!std::is_floating_point_v<coeff>) {
+                    // ANCHOR: pw_row_sum
+                    // Row-sum-preserving quantization ("the coefficients of every
+                    // phase must add to one" — R. Bristow-Johnson, music-dsp). In
+                    // double the image_zeros designs make every branch's DC sum
+                    // identical to machine epsilon (the k*fs zeros ARE branch-DC
+                    // uniformity, stated in frequency), but independent per-tap
+                    // rounding rebroke it by several LSB. Distribute each row's
+                    // total rounding residual to the taps that were rounded
+                    // furthest from it (largest-remainder method): every row then
+                    // sums to llround(exact * scale), so DC gain deviates by at
+                    // most one coefficient LSB across all mu.
+                    std::int64_t residual = static_cast<std::int64_t>(std::llround(exact_sum)) - quant_sum;
+                    while (residual != 0) {
+                        const double sgn  = residual > 0 ? 1.0 : -1.0;
+                        std::size_t  best = 0;
+                        for (std::size_t u = 1; u < m_taps; ++u) {
+                            if (sgn * remainder[u] > sgn * remainder[best]) {
+                                best = u;
+                            }
+                        }
+                        row[best] = static_cast<coeff>(row[best] + (residual > 0 ? 1 : -1));
+                        remainder[best] -= sgn;
+                        residual -= residual > 0 ? 1 : -1;
+                    }
+                    // ANCHOR_END: pw_row_sum
+                }
+            }
+            // The extra row L is row 0 advanced one input sample; copy it from
+            // the QUANTIZED row 0 so the mu-wrap continuity invariant holds
+            // bit-exactly even after the row-sum correction above.
+            coeff* row_l = m_table.data() + m_phases * m_taps;
+            row_l[0]     = coeff{0};
+            for (std::size_t u = 1; u < m_taps; ++u) {
+                row_l[u] = m_table[u - 1];
             }
         }
         // ANCHOR_END: bank_build

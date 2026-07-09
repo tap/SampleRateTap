@@ -227,6 +227,37 @@ recorded in the notebook as an honest draw, with the multichannel case
 still settled by C1's measurements. Not every good question has a
 portable answer; the record is the deliverable.
 
+## Postscript: the script arrives
+
+A week after the exchange, his MATLAB script did arrive — updated the same
+day so the Kaiser-windowed method got the sinc² zeros too, and validated,
+by his own report, at R=512 and N=32: the exact shape of `economy()`. With
+it came one more claim, stated with his usual precision: *"for DC, this
+should get you infinite S/N ratio... for every phase or fractional delay,
+the FIR coefficients must add to 1."*
+
+Checked, and better than checked. In double precision the property falls
+out of the rect construction *automatically*: the compensated designs'
+branch sums are uniform to a spread of 1.8×10⁻¹⁵ — machine epsilon —
+because zeros at k·fs and branch-DC uniformity are the same fact stated in
+two domains (the plain design's 4.7×10⁻⁶ spread is its stopband leakage at
+fs, visible from the other side). But his accompanying warning — that
+16-bit coefficient quantization needs "tricky things" — turned out to be
+pointing at a live defect: independent per-tap rounding was re-breaking
+the property by several LSB, a bias this suite had measured and papered
+over with a widened tolerance earlier in this very chapter's story. The
+tricky thing is row-sum-preserving quantization:
+
+```cpp
+{{#include ../../../include/srt/polyphase_filter.h:pw_row_sum}}
+```
+
+After it, the measured result is the one his claim demanded: a DC input
+passes through the Q15 and Q31 converters **bit-exactly at every
+fractional delay** — zero LSB of deviation over a 256-point μ sweep — and
+`FixedPoint.RowSumsAreExact*` pins every row's sum to exactly one, in
+coefficient units, forever. Infinite S/N at DC, delivered in 16 bits.
+
 ## What this chapter is actually about
 
 Strip the DSP away and the shape of the episode is this: an expert
@@ -261,6 +292,10 @@ ctest --test-dir build -R 'ProgramWeighted' --output-on-failure
 
 # The half-sample alignment sentinel that caught the rect-centering bug:
 ctest --test-dir build -R 'FractionalDelay' --output-on-failure
+
+# The postscript's claims: branch-DC uniformity at machine epsilon, exact
+# fixed-point row sums, bit-exact DC at every fractional delay:
+ctest --test-dir build -R 'BranchSums|RowSums|DcGain' --output-on-failure
 ```
 
 And one experiment in the spirit of the thread: change `image_zeros` to
