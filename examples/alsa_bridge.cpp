@@ -42,27 +42,27 @@ namespace {
 
     const char* stateName(srt::converter_state s) {
         switch (s) {
-        case srt::converter_state::Filling:
+        case srt::converter_state::filling:
             return "Filling";
-        case srt::converter_state::Acquiring:
+        case srt::converter_state::acquiring:
             return "Acquiring";
-        case srt::converter_state::Locked:
+        case srt::converter_state::locked:
             return "Locked";
         }
         return "?";
     }
 
     struct Args {
-        const char*       inDev    = "default";
-        const char*       outDev   = "default";
-        unsigned          rate     = 48000;
-        unsigned          channels = 2;
-        snd_pcm_uframes_t period   = 128;
-        std::size_t       latency  = 96;
-        const char*       csvPath  = nullptr;
-        const char*       dumpPath = nullptr;
-        unsigned long     seconds  = 0;   // 0 = run until SIGINT
-        double            toneHz   = 0.0; // 0 = pass captured audio through
+        const char*       in_dev    = "default";
+        const char*       out_dev   = "default";
+        unsigned          rate      = 48000;
+        unsigned          channels  = 2;
+        snd_pcm_uframes_t period    = 128;
+        std::size_t       latency   = 96;
+        const char*       csv_path  = nullptr;
+        const char*       dump_path = nullptr;
+        unsigned long     seconds   = 0;   // 0 = run until SIGINT
+        double            tone_hz   = 0.0; // 0 = pass captured audio through
     };
 
     void usage(const char* prog) {
@@ -132,9 +132,9 @@ namespace {
     }
 
     struct AlsaDevice {
-        snd_pcm_t*        pcm          = nullptr;
-        snd_pcm_format_t  format       = SND_PCM_FORMAT_UNKNOWN;
-        snd_pcm_uframes_t periodFrames = 0;
+        snd_pcm_t*        pcm           = nullptr;
+        snd_pcm_format_t  format        = SND_PCM_FORMAT_UNKNOWN;
+        snd_pcm_uframes_t period_frames = 0;
 
         AlsaDevice()                             = default;
         AlsaDevice(const AlsaDevice&)            = delete;
@@ -179,15 +179,15 @@ namespace {
         }
         dev.period_frames = a.period;
         int sub           = 0;
-        if ((err = snd_pcm_hw_params_set_period_size_near(dev.pcm, hw, &dev.periodFrames, &sub)) < 0)
+        if ((err = snd_pcm_hw_params_set_period_size_near(dev.pcm, hw, &dev.period_frames, &sub)) < 0)
             return fail("set period size", err);
-        snd_pcm_uframes_t bufFrames = 4 * dev.periodFrames;
+        snd_pcm_uframes_t bufFrames = 4 * dev.period_frames;
         if ((err = snd_pcm_hw_params_set_buffer_size_near(dev.pcm, hw, &bufFrames)) < 0)
             return fail("set buffer size", err);
         if ((err = snd_pcm_hw_params(dev.pcm, hw)) < 0)
             return fail("hw_params commit", err);
         std::printf("%s '%s': %s, %u Hz, %u ch, period %lu, buffer %lu\n", dir, name, snd_pcm_format_name(dev.format),
-                    rate, a.channels, static_cast<unsigned long>(dev.periodFrames),
+                    rate, a.channels, static_cast<unsigned long>(dev.period_frames),
                     static_cast<unsigned long>(bufFrames));
         return true;
     }
@@ -219,11 +219,11 @@ int main(int argc, char** argv) {
 
     AlsaDevice in;
     AlsaDevice out;
-    if (!openDevice(in, args.inDev, SND_PCM_STREAM_CAPTURE, args)
-        || !openDevice(out, args.outDev, SND_PCM_STREAM_PLAYBACK, args))
+    if (!openDevice(in, args.in_dev, SND_PCM_STREAM_CAPTURE, args)
+        || !openDevice(out, args.out_dev, SND_PCM_STREAM_PLAYBACK, args))
         return 1;
 
-    srt::Config cfg;
+    srt::config cfg;
     cfg.sample_rate_hz        = static_cast<double>(args.rate);
     cfg.channels              = args.channels;
     cfg.target_latency_frames = args.latency;
@@ -231,25 +231,25 @@ int main(int argc, char** argv) {
     // comfortably above half the transfer block, or block-quantized
     // occupancy excursions can demote the servo stage spuriously.
     cfg.servo.unlock_threshold_frames =
-        std::max(cfg.servo.unlockThresholdFrames, 1.5 * static_cast<double>(args.period));
+        std::max(cfg.servo.unlock_threshold_frames, 1.5 * static_cast<double>(args.period));
     srt::async_sample_rate_converter asrc(cfg);
-    std::printf("designed latency: %.2f ms%s\n", asrc.designedLatencySeconds() * 1e3,
-                args.toneHz > 0.0 ? "  (tone mode: captured samples discarded)" : "");
+    std::printf("designed latency: %.2f ms%s\n", asrc.designed_latency_seconds() * 1e3,
+                args.tone_hz > 0.0 ? "  (tone mode: captured samples discarded)" : "");
 
     std::FILE* csv = nullptr;
-    if (args.csvPath != nullptr) {
-        csv = std::fopen(args.csvPath, "a");
+    if (args.csv_path != nullptr) {
+        csv = std::fopen(args.csv_path, "a");
         if (csv == nullptr) {
-            std::fprintf(stderr, "cannot open CSV file '%s'\n", args.csvPath);
+            std::fprintf(stderr, "cannot open CSV file '%s'\n", args.csv_path);
             return 1;
         }
         std::fprintf(csv, "time_s,state,ppm,fill,underruns,overruns,resyncs\n");
     }
     std::FILE* dump = nullptr;
-    if (args.dumpPath != nullptr) {
-        dump = std::fopen(args.dumpPath, "wb");
+    if (args.dump_path != nullptr) {
+        dump = std::fopen(args.dump_path, "wb");
         if (dump == nullptr) {
-            std::fprintf(stderr, "cannot open dump file '%s'\n", args.dumpPath);
+            std::fprintf(stderr, "cannot open dump file '%s'\n", args.dump_path);
             return 1;
         }
     }
@@ -258,11 +258,11 @@ int main(int argc, char** argv) {
 
     std::thread capture([&] {
         const std::size_t         ch     = args.channels;
-        const snd_pcm_uframes_t   period = in.periodFrames;
+        const snd_pcm_uframes_t   period = in.period_frames;
         std::vector<std::int16_t> raw(period * ch);
         std::vector<float>        buf(period * ch);
         double                    phase = 0.0;
-        const double              dphi  = 2.0 * std::numbers::pi * args.toneHz / static_cast<double>(args.rate);
+        const double              dphi  = 2.0 * std::numbers::pi * args.tone_hz / static_cast<double>(args.rate);
         while (!gStop.load(std::memory_order_relaxed)) {
             void* dst =
                 in.format == SND_PCM_FORMAT_S16_LE ? static_cast<void*>(raw.data()) : static_cast<void*>(buf.data());
@@ -278,7 +278,7 @@ int main(int argc, char** argv) {
             const auto frames = static_cast<std::size_t>(n);
             if (frames == 0)
                 continue;
-            if (args.toneHz > 0.0) { // tone mode: keep the device pacing, swap the payload
+            if (args.tone_hz > 0.0) { // tone mode: keep the device pacing, swap the payload
                 for (std::size_t f = 0; f < frames; ++f) {
                     const auto v = static_cast<float>(0.5 * std::sin(phase));
                     phase += dphi;
@@ -297,7 +297,7 @@ int main(int argc, char** argv) {
 
     std::thread playback([&] {
         const std::size_t         ch     = args.channels;
-        const snd_pcm_uframes_t   period = out.periodFrames;
+        const snd_pcm_uframes_t   period = out.period_frames;
         std::vector<float>        buf(period * ch);
         std::vector<std::int16_t> raw(period * ch);
         bool                      dumpFailed = false;
@@ -339,13 +339,14 @@ int main(int argc, char** argv) {
         const auto st = asrc.status();
         std::printf("t=%6lus  state=%-9s  ppm=%+8.2f  fill=%8.1f  under=%llu over=%llu "
                     "resync=%llu\n",
-                    sec, stateName(st.state), st.ppm, st.fifoFillFrames, static_cast<unsigned long long>(st.underruns),
-                    static_cast<unsigned long long>(st.overruns), static_cast<unsigned long long>(st.resyncs));
+                    sec, stateName(st.state), st.ppm, st.fifo_fill_frames,
+                    static_cast<unsigned long long>(st.underruns), static_cast<unsigned long long>(st.overruns),
+                    static_cast<unsigned long long>(st.resyncs));
         std::fflush(stdout);
         if (csv != nullptr) {
-            std::fprintf(csv, "%lu,%s,%.3f,%.2f,%llu,%llu,%llu\n", sec, stateName(st.state), st.ppm, st.fifoFillFrames,
-                         static_cast<unsigned long long>(st.underruns), static_cast<unsigned long long>(st.overruns),
-                         static_cast<unsigned long long>(st.resyncs));
+            std::fprintf(csv, "%lu,%s,%.3f,%.2f,%llu,%llu,%llu\n", sec, stateName(st.state), st.ppm,
+                         st.fifo_fill_frames, static_cast<unsigned long long>(st.underruns),
+                         static_cast<unsigned long long>(st.overruns), static_cast<unsigned long long>(st.resyncs));
             std::fflush(csv);
         }
         if (args.seconds != 0 && sec >= args.seconds)
