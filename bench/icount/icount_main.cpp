@@ -26,7 +26,7 @@ namespace {
         if constexpr (std::is_floating_point_v<S>)
             return static_cast<S>(v);
         else
-            return srt::detail::roundSat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return srt::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
     }
 
     template <typename S>
@@ -61,7 +61,7 @@ namespace {
     double runPipeline() {
         constexpr std::size_t kCh    = SRT_SC_CH;
         constexpr std::size_t kBlock = 32;
-        srt::Config           cfg;
+        srt::config           cfg;
         cfg.channels = kCh;
         srt::basic_async_sample_rate_converter<S> asrc(cfg);
 

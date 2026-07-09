@@ -73,7 +73,7 @@ namespace {
     };
 
     template <typename S>
-    void srtBench(benchmark::converter_state& state, const srt::filter_spec& spec, std::size_t channels) {
+    void srtBench(benchmark::State& state, const srt::filter_spec& spec, std::size_t channels) {
         const srt::polyphase_filter_bank<S> bank(spec, 48000.0);
         srt::fractional_resampler<S>        rs(bank, channels);
         InputTap                            inFloat(48000, channels);
@@ -86,8 +86,8 @@ namespace {
                 if constexpr (std::is_floating_point_v<S>)
                     buf[i] = tmp[i];
                 else
-                    buf[i] = srt::detail::roundSat<S>(static_cast<double>(tmp[i])
-                                                      * static_cast<double>(std::numeric_limits<S>::max()));
+                    buf[i] = srt::detail::round_sat<S>(static_cast<double>(tmp[i])
+                                                       * static_cast<double>(std::numeric_limits<S>::max()));
             }
         }
         std::size_t pos = 0;
@@ -113,7 +113,7 @@ namespace {
         state.SetItemsProcessed(static_cast<std::int64_t>(state.iterations()) * kBlock);
     }
 
-    void lsrBench(benchmark::converter_state& state, int converter, std::size_t channels) {
+    void lsrBench(benchmark::State& state, int converter, std::size_t channels) {
         int        err = 0;
         SRC_STATE* src = src_new(converter, static_cast<int>(channels), &err);
         if (src == nullptr) {
@@ -144,7 +144,7 @@ namespace {
         state.SetItemsProcessed(frames);
     }
 
-    void soxrBench(benchmark::converter_state& state, unsigned long recipe, std::size_t channels) {
+    void soxrBench(benchmark::State& state, unsigned long recipe, std::size_t channels) {
         soxr_error_t              err = nullptr;
         const soxr_io_spec_t      io  = soxr_io_spec(SOXR_FLOAT32_I, SOXR_FLOAT32_I);
         const soxr_quality_spec_t q   = soxr_quality_spec(recipe, 0);
@@ -175,31 +175,31 @@ namespace {
     }
 
     // --- ~120 dB tier: mono / stereo / 8ch -------------------------------------
-    void BM_SRT_Balanced_1ch(benchmark::converter_state& s) {
+    void BM_SRT_Balanced_1ch(benchmark::State& s) {
         srtBench<float>(s, srt::filter_spec::balanced(), 1);
     }
-    void BM_SRT_Balanced_2ch(benchmark::converter_state& s) {
+    void BM_SRT_Balanced_2ch(benchmark::State& s) {
         srtBench<float>(s, srt::filter_spec::balanced(), 2);
     }
-    void BM_SRT_Balanced_8ch(benchmark::converter_state& s) {
+    void BM_SRT_Balanced_8ch(benchmark::State& s) {
         srtBench<float>(s, srt::filter_spec::balanced(), 8);
     }
-    void BM_LSR_Medium_1ch(benchmark::converter_state& s) {
+    void BM_LSR_Medium_1ch(benchmark::State& s) {
         lsrBench(s, SRC_SINC_MEDIUM_QUALITY, 1);
     }
-    void BM_LSR_Medium_2ch(benchmark::converter_state& s) {
+    void BM_LSR_Medium_2ch(benchmark::State& s) {
         lsrBench(s, SRC_SINC_MEDIUM_QUALITY, 2);
     }
-    void BM_LSR_Medium_8ch(benchmark::converter_state& s) {
+    void BM_LSR_Medium_8ch(benchmark::State& s) {
         lsrBench(s, SRC_SINC_MEDIUM_QUALITY, 8);
     }
-    void BM_SOXR_HQ_1ch(benchmark::converter_state& s) {
+    void BM_SOXR_HQ_1ch(benchmark::State& s) {
         soxrBench(s, SOXR_HQ, 1);
     }
-    void BM_SOXR_HQ_2ch(benchmark::converter_state& s) {
+    void BM_SOXR_HQ_2ch(benchmark::State& s) {
         soxrBench(s, SOXR_HQ, 2);
     }
-    void BM_SOXR_HQ_8ch(benchmark::converter_state& s) {
+    void BM_SOXR_HQ_8ch(benchmark::State& s) {
         soxrBench(s, SOXR_HQ, 8);
     }
     BENCHMARK(BM_SRT_Balanced_1ch);
@@ -213,13 +213,13 @@ namespace {
     BENCHMARK(BM_SOXR_HQ_8ch);
 
     // --- ~140 dB tier, stereo ---------------------------------------------------
-    void BM_SRT_Transparent_2ch(benchmark::converter_state& s) {
+    void BM_SRT_Transparent_2ch(benchmark::State& s) {
         srtBench<float>(s, srt::filter_spec::transparent(), 2);
     }
-    void BM_LSR_Best_2ch(benchmark::converter_state& s) {
+    void BM_LSR_Best_2ch(benchmark::State& s) {
         lsrBench(s, SRC_SINC_BEST_QUALITY, 2);
     }
-    void BM_SOXR_VHQ_2ch(benchmark::converter_state& s) {
+    void BM_SOXR_VHQ_2ch(benchmark::State& s) {
         soxrBench(s, SOXR_VHQ, 2);
     }
     BENCHMARK(BM_SRT_Transparent_2ch);
@@ -228,7 +228,7 @@ namespace {
 
     // --- Fixed-point (no competitor analog; libsamplerate and soxr are
     // float-only engines — this is the row embedded targets actually run) ------
-    void BM_SRT_Q15_Balanced_2ch(benchmark::converter_state& s) {
+    void BM_SRT_Q15_Balanced_2ch(benchmark::State& s) {
         srtBench<std::int16_t>(s, srt::filter_spec::balanced(), 2);
     }
     BENCHMARK(BM_SRT_Q15_Balanced_2ch);
