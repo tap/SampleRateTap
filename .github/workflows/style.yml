@@ -7,10 +7,9 @@ on: [push, pull_request]
 
 jobs:
   drift:
-    # TapHouse v2 (pinned by commit SHA until the v2 tag is created).
-    uses: tap/taphouse/.github/workflows/drift-check.yml@ff71d8146754e5e35374cfe0d191e0983219da3b
+    uses: tap/taphouse/.github/workflows/drift-check.yml@v2
     with:
-      ref: ff71d8146754e5e35374cfe0d191e0983219da3b
+      ref: v2
 
   clang-tidy:
     runs-on: ubuntu-latest
