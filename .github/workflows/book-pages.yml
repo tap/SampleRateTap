@@ -1,4 +1,5 @@
-# Publishes the book to GitHub Pages on every push to main.
+# Publishes the book (at /) and the Doxygen API reference (at /api/) to
+# GitHub Pages on every push to main.
 #
 # The site is PUBLIC (https://tap.github.io/SampleRateTap/) even though the
 # repository is private; it contains the book's code excerpts by design.
@@ -11,6 +12,7 @@ on:
     branches: [main]
     paths:
       - "book/**"
+      - "docs/**"
       - "include/**"
       - "platform/**"
       - "tests/support/**"
@@ -42,6 +44,9 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
+      - name: Install Doxygen + Graphviz
+        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+
       - name: Install mdBook (pinned)
         run: |
           curl -sfLo /tmp/mdbook.tar.gz "$MDBOOK_URL"
@@ -51,13 +56,23 @@ jobs:
           fi
           tar -xzf /tmp/mdbook.tar.gz -C /tmp
 
-      - name: Build (warnings are errors)
+      - name: Build the book (warnings are errors)
         run: |
           /tmp/mdbook build book 2>&1 | tee /tmp/book-build.log
           if grep -qiE 'warning|error' /tmp/book-build.log; then
             echo "::error::mdbook reported warnings/errors"
             exit 1
           fi
+
+      - name: Build the API reference
+        run: doxygen docs/Doxyfile
+
+      - name: Compose the Pages site (book at /, API at /api/)
+        run: |
+          mkdir -p site
+          cp -r book/book/. site/
+          mkdir -p site/api
+          cp -r docs/html/. site/api/
 
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
@@ -67,7 +82,7 @@ jobs:
       - name: Upload site
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: book/book
+          path: site
 
       - name: Deploy
         id: deployment
