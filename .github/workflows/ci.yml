@@ -493,15 +493,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      # Pinned major version: formatting output can differ across releases.
-      - name: Check formatting
+      # Run the TapHouse pre-commit hook — the same pinned clang-format
+      # developers get from `pre-commit install` (.pre-commit-config.yaml), so
+      # local and CI share one version AND one file scope (all C/C++ minus
+      # third_party) by construction. pipx is preinstalled on the runner.
+      - name: Check formatting (pre-commit)
         run: |
-          sudo apt-get update -q && sudo apt-get install -y -q clang-format-18
-          clang-format-18 --dry-run --Werror \
-            include/srt/*.h include/srt/detail/*.h \
-            bench/*.cpp bench/icount/*.cpp bench/compare/*.cpp \
-            tools/capi/*.cpp tools/qemu_insn_plugin/*.c \
-            tests/*.cpp tests/support/*.h examples/*.cpp platform/*.c
+          pipx install pre-commit
+          pre-commit run --all-files --show-diff-on-failure
 
   # The book (book/) quotes library code via mdBook anchor includes; this
   # gate makes a refactor that orphans an excerpt fail CI, the same

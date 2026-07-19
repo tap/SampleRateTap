@@ -19,26 +19,25 @@
 
 int main(int argc, char** argv) {
     if (argc < 5) {
-        std::fprintf(stderr, "usage: %s pullBlock pushBlock ppm seconds [dropStart dropDur]\n",
-                     argv[0]);
+        std::fprintf(stderr, "usage: %s pullBlock pushBlock ppm seconds [dropStart dropDur]\n", argv[0]);
         return 2;
     }
     const std::size_t pullBlock = static_cast<std::size_t>(std::atol(argv[1]));
     const std::size_t pushBlock = static_cast<std::size_t>(std::atol(argv[2]));
-    const double ppm = std::atof(argv[3]);
-    const double seconds = std::atof(argv[4]);
-    const double dropStart = argc > 5 ? std::atof(argv[5]) : -1.0;
-    const double dropDur = argc > 6 ? std::atof(argv[6]) : 0.0;
+    const double      ppm       = std::atof(argv[3]);
+    const double      seconds   = std::atof(argv[4]);
+    const double      dropStart = argc > 5 ? std::atof(argv[5]) : -1.0;
+    const double      dropDur   = argc > 6 ? std::atof(argv[6]) : 0.0;
 
     srt::Config cfg;
     cfg.channels = 1;
     srt::AsyncSampleRateConverter conv(cfg);
 
-    const double fsOut = cfg.sampleRateHz;
-    const double fsIn = fsOut * (1.0 + ppm * 1e-6); // producer's crystal
+    const double       fsOut = cfg.sampleRateHz;
+    const double       fsIn  = fsOut * (1.0 + ppm * 1e-6); // producer's crystal
     std::vector<float> in(pushBlock), out(pullBlock);
 
-    double tPush = 0.0, tPull = 0.0, phase = 0.0;
+    double       tPush = 0.0, tPull = 0.0, phase = 0.0;
     const double dPhase = 2.0 * std::numbers::pi * 997.0 / fsIn;
     std::puts("t,fill,state,ppm,underruns");
     while (tPull < seconds) {
@@ -56,8 +55,8 @@ int main(int argc, char** argv) {
         conv.pull(out.data(), pullBlock);
         tPull += static_cast<double>(pullBlock) / fsOut;
         const srt::Status s = conv.status();
-        std::printf("%.6f,%.2f,%d,%.2f,%llu\n", tPull, s.fifoFillFrames, static_cast<int>(s.state),
-                    s.ppm, static_cast<unsigned long long>(s.underruns));
+        std::printf("%.6f,%.2f,%d,%.2f,%llu\n", tPull, s.fifoFillFrames, static_cast<int>(s.state), s.ppm,
+                    static_cast<unsigned long long>(s.underruns));
     }
     return 0;
 }
