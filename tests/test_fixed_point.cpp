@@ -43,7 +43,7 @@ namespace {
     // a 256-point mu sweep for both formats (tolerance 1 for safety only).
     TEST(FixedPoint, DcGainIsUnityQ15) {
         const tap::samplerate::polyphase_filter_bank<std::int16_t> bank(tap::samplerate::filter_spec::balanced(), k_fs);
-        std::vector<std::int16_t>                      dc(bank.taps(), 32767);
+        std::vector<std::int16_t>                                  dc(bank.taps(), 32767);
         for (int i = 0; i < 16; ++i) {
             const double mu = static_cast<double>(i) / 16.0;
             EXPECT_NEAR(tap::samplerate::interpolate(bank, dc.data(), mu), 32767, 1) << "mu=" << mu;
@@ -52,7 +52,7 @@ namespace {
 
     TEST(FixedPoint, DcGainIsUnityQ31) {
         const tap::samplerate::polyphase_filter_bank<std::int32_t> bank(tap::samplerate::filter_spec::balanced(), k_fs);
-        std::vector<std::int32_t>                      dc(bank.taps(), 2147483647);
+        std::vector<std::int32_t>                                  dc(bank.taps(), 2147483647);
         for (int i = 0; i < 16; ++i) {
             const double mu = static_cast<double>(i) / 16.0;
             EXPECT_NEAR(tap::samplerate::interpolate(bank, dc.data(), mu), 2147483647.0, 1.0) << "mu=" << mu;
@@ -64,7 +64,7 @@ namespace {
     template <typename S>
     void check_row_sums_exact() {
         const tap::samplerate::polyphase_filter_bank<S> bank(tap::samplerate::filter_spec::balanced(), k_fs);
-        const auto                          scale = static_cast<std::int64_t>(tap::samplerate::sample_traits<S>::k_coeff_scale);
+        const auto scale = static_cast<std::int64_t>(tap::samplerate::sample_traits<S>::k_coeff_scale);
         for (std::size_t p = 0; p < bank.num_phases(); ++p) {
             std::int64_t sum = 0;
             for (std::size_t t = 0; t < bank.taps(); ++t) {
@@ -87,8 +87,8 @@ namespace {
         tap::samplerate::config cfg;
         cfg.channels = 1;
         tap::samplerate::basic_async_sample_rate_converter<S> asrc(cfg);
-        srt_test::two_clock_sim_t<S>              sim{
-                         .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        srt_test::two_clock_sim_t<S>                          sim{
+                                     .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu_in      = freq_hz / k_fs;
         const double full_scale = static_cast<double>(std::numeric_limits<S>::max());
         sim.gen                 = [&](std::uint64_t i) {
@@ -135,9 +135,9 @@ namespace {
         // second difference at the analytic bound for a clean sine.
         tap::samplerate::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter_q15    asrc(cfg);
-        srt_test::two_clock_sim_t<std::int16_t> sim{
-            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        tap::samplerate::async_sample_rate_converter_q15 asrc(cfg);
+        srt_test::two_clock_sim_t<std::int16_t>          sim{
+                     .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu = 1000.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
             return tap::samplerate::detail::round_sat<std::int16_t>(

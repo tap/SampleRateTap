@@ -19,10 +19,10 @@ namespace {
 
     TEST(Servo, LocksFromConstantOffsetAndNullsError) {
         tap::samplerate::pi_servo servo(tap::samplerate::servo_config{}, k_fs, k_target);
-        plant         plant;
-        const double  eps_true          = 300e-6;
-        bool          locked_within1_5s = false;
-        double        t                 = 0.0;
+        plant                     plant;
+        const double              eps_true          = 300e-6;
+        bool                      locked_within1_5s = false;
+        double                    t                 = 0.0;
         for (; t < 30.0; t += k_dt) { // locked loop is 0.05 Hz: allow it to settle
             const double eps = servo.update(plant.occ, 0.0, k_dt);
             plant.step(eps_true, eps);
@@ -39,7 +39,7 @@ namespace {
 
     TEST(Servo, TracksSlowDriftRampWithBoundedLag) {
         tap::samplerate::pi_servo servo(tap::samplerate::servo_config{}, k_fs, k_target);
-        plant         plant;
+        plant                     plant;
         // Settle at 0 ppm first.
         for (double t = 0.0; t < 5.0; t += k_dt) {
             plant.step(0.0, servo.update(plant.occ, 0.0, k_dt));
@@ -64,8 +64,8 @@ namespace {
 
     TEST(Servo, BandwidthSwitchIsTransientFree) {
         tap::samplerate::pi_servo servo(tap::samplerate::servo_config{}, k_fs, k_target);
-        plant         plant;
-        const double  eps_true = 200e-6;
+        plant                     plant;
+        const double              eps_true = 200e-6;
         // Run until just locked.
         double t = 0.0;
         while (!servo.locked() && t < 5.0) {
@@ -95,8 +95,8 @@ namespace {
 
     TEST(Servo, DropoutResetKeepsPpmEstimate) {
         tap::samplerate::pi_servo servo(tap::samplerate::servo_config{}, k_fs, k_target);
-        plant         plant;
-        const double  eps_true = 250e-6;
+        plant                     plant;
+        const double              eps_true = 250e-6;
         for (double t = 0.0; t < 6.0; t += k_dt) {
             plant.step(eps_true, servo.update(plant.occ, 0.0, k_dt));
         }

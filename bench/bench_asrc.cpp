@@ -37,8 +37,8 @@ namespace {
     template <typename S>
     void kernelBench(benchmark::State& state, const tap::samplerate::filter_spec& spec) {
         const tap::samplerate::polyphase_filter_bank<S> bank(spec, 48000.0);
-        const auto                          hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
-        double                              mu   = 0.0;
+        const auto                                      hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
+        double                                          mu   = 0.0;
         for (auto _ : state) {
             mu += 0.6180339887498949; // golden-ratio stride visits phases evenly
             if (mu >= 1.0)
@@ -50,8 +50,8 @@ namespace {
 
     template <typename S>
     void pipelineBench(benchmark::State& state, const tap::samplerate::filter_spec& spec, std::size_t channels) {
-        constexpr std::size_t kBlock = 128;
-        tap::samplerate::config           cfg;
+        constexpr std::size_t   kBlock = 128;
+        tap::samplerate::config cfg;
         cfg.channels = channels;
         cfg.filter   = spec;
         // The FIFO setpoint must exceed the pull block size (see README latency

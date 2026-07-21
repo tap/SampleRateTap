@@ -52,8 +52,8 @@ namespace {
 
     TEST(AsrcLock, TracksDriftRampWithoutUnlocking) {
         tap::samplerate::async_sample_rate_converter asrc(mono_config());
-        srt_test::two_clock_sim          sim{
-                     .asrc = asrc, .fs_in = k_fs, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        srt_test::two_clock_sim                      sim{
+                                 .asrc = asrc, .fs_in = k_fs, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         // Input clock drifts 0 -> +300 ppm over 30 s (10 ppm/s, far faster than
         // real oscillator wander), then holds for the loop to reconverge.
         sim.fs_in_scale          = [](double t) { return 1.0 + 300e-6 * std::min(t, 30.0) / 30.0; };
@@ -81,8 +81,8 @@ namespace {
         // sine's second difference is bounded by A*omega^2; any window-shift
         // discontinuity would blow far past that bound.
         tap::samplerate::async_sample_rate_converter asrc(mono_config());
-        srt_test::two_clock_sim          sim{
-                     .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        srt_test::two_clock_sim                      sim{
+                                 .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double amp = 0.5;
         const double nu  = 1000.0 / k_fs;
         sim.gen          = [&](std::uint64_t i) {

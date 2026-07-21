@@ -84,12 +84,12 @@ void srt_status(const SrtHandle* h, double out[6]) noexcept {
         return;
     }
     const tap::samplerate::converter_status s = impl(h)->status();
-    out[0]                        = static_cast<double>(static_cast<int>(s.state));
-    out[1]                        = s.ppm;
-    out[2]                        = s.fifo_fill_frames;
-    out[3]                        = static_cast<double>(s.underruns);
-    out[4]                        = static_cast<double>(s.overruns);
-    out[5]                        = static_cast<double>(s.resyncs);
+    out[0]                                    = static_cast<double>(static_cast<int>(s.state));
+    out[1]                                    = s.ppm;
+    out[2]                                    = s.fifo_fill_frames;
+    out[3]                                    = static_cast<double>(s.underruns);
+    out[4]                                    = static_cast<double>(s.overruns);
+    out[5]                                    = static_cast<double>(s.resyncs);
 }
 
 double srt_designed_latency_seconds(const SrtHandle* h) noexcept {

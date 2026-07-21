@@ -28,9 +28,9 @@ namespace {
         cfg.channels = 1;
         cfg.filter   = spec;
         tap::samplerate::async_sample_rate_converter asrc(cfg);
-        const double                     fs_in = k_fs * (1.0 + k_eps);
-        srt_test::two_clock_sim          sim{
-                     .asrc = asrc, .fs_in = fs_in, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        const double                                 fs_in = k_fs * (1.0 + k_eps);
+        srt_test::two_clock_sim                      sim{
+                                 .asrc = asrc, .fs_in = fs_in, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const auto comb = srt_test::tone_comb::pink(24, 60.0, 16000.0, 0.9);
         sim.gen         = [&](std::uint64_t i) { return static_cast<float>(comb.sample_at(i, fs_in)); };
         std::vector<float> tail;
@@ -57,8 +57,8 @@ namespace {
         cfg.channels = 1;
         cfg.filter   = spec;
         tap::samplerate::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim          sim{
-                     .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        srt_test::two_clock_sim                      sim{
+                                 .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu_in = freq_hz / k_fs;
         sim.gen            = [&](std::uint64_t i) {
             return static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));

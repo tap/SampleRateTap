@@ -76,7 +76,7 @@ namespace {
     void srtBench(benchmark::State& state, const tap::samplerate::filter_spec& spec, std::size_t channels) {
         const tap::samplerate::polyphase_filter_bank<S> bank(spec, 48000.0);
         tap::samplerate::fractional_resampler<S>        rs(bank, channels);
-        InputTap                            inFloat(48000, channels);
+        InputTap                                        inFloat(48000, channels);
         // Requantize the shared float source once at setup for fixed-point runs.
         std::vector<S> buf(48000 * channels);
         {
@@ -86,8 +86,8 @@ namespace {
                 if constexpr (std::is_floating_point_v<S>)
                     buf[i] = tmp[i];
                 else
-                    buf[i] = tap::samplerate::detail::round_sat<S>(static_cast<double>(tmp[i])
-                                                       * static_cast<double>(std::numeric_limits<S>::max()));
+                    buf[i] = tap::samplerate::detail::round_sat<S>(
+                        static_cast<double>(tmp[i]) * static_cast<double>(std::numeric_limits<S>::max()));
             }
         }
         std::size_t pos = 0;

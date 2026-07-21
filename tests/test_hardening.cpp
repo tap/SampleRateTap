@@ -38,12 +38,12 @@ namespace {
             cfg.servo.unlock_threshold_frames = static_cast<double>(pull_block) * 1.5;
         }
         tap::samplerate::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim          sim{.asrc      = asrc,
-                                             .fs_in     = k_fs * (1.0 + 200e-6),
-                                             .fs_out    = k_fs,
-                                             .channels  = 1,
-                                             .chunk_in  = 32,
-                                             .chunk_out = pull_block};
+        srt_test::two_clock_sim                      sim{.asrc      = asrc,
+                                                         .fs_in     = k_fs * (1.0 + 200e-6),
+                                                         .fs_out    = k_fs,
+                                                         .channels  = 1,
+                                                         .chunk_in  = 32,
+                                                         .chunk_out = pull_block};
         sim.gen = [](std::uint64_t i) { return static_cast<float>(0.5 * std::sin(0.13 * static_cast<double>(i))); };
         // Coarse blocks keep the servo in Track, where instantaneous ppm swings
         // with the block-beat FM — average it, as the 48 kHz lock test does.
@@ -114,8 +114,10 @@ namespace {
         }
         // The rate-scaling factory sits exactly on the band-edge sum boundary
         // (passband + stopband == fs up to rounding); it must keep constructing.
-        EXPECT_NO_THROW(tap::samplerate::async_sample_rate_converter{tap::samplerate::config::for_sample_rate(16000.0)});
-        EXPECT_NO_THROW(tap::samplerate::async_sample_rate_converter{tap::samplerate::config::for_sample_rate(44100.0)});
+        EXPECT_NO_THROW(
+            tap::samplerate::async_sample_rate_converter{tap::samplerate::config::for_sample_rate(16000.0)});
+        EXPECT_NO_THROW(
+            tap::samplerate::async_sample_rate_converter{tap::samplerate::config::for_sample_rate(44100.0)});
     }
 
     // Audit finding F3: with a setpoint below the resampler's staged-scratch
@@ -126,8 +128,8 @@ namespace {
         cfg.channels              = 1;
         cfg.target_latency_frames = 4;
         tap::samplerate::async_sample_rate_converter asrc(cfg);
-        std::vector<float>               in(32, 0.25f);
-        std::vector<float>               out(64);
+        std::vector<float>                           in(32, 0.25f);
+        std::vector<float>                           out(64);
         for (int i = 0; i < 8; ++i) { // reach steady operation
             asrc.push(in.data(), 32), asrc.pull(out.data(), 32);
         }
@@ -162,8 +164,8 @@ namespace {
         tap::samplerate::config cfg;
         cfg.channels = 2;
         tap::samplerate::async_sample_rate_converter asrc(cfg);
-        std::vector<float>               in(2 * 4096, 0.1f);
-        std::vector<float>               out(2 * 8192);
+        std::vector<float>                           in(2 * 4096, 0.1f);
+        std::vector<float>                           out(2 * 8192);
         EXPECT_EQ(asrc.push(in.data(), 0), 0u);
         EXPECT_EQ(asrc.pull(out.data(), 0), 0u);
         for (int i = 0; i < 64; ++i) {
@@ -184,9 +186,9 @@ namespace {
         tap::samplerate::config cfg;
         cfg.channels = 1;
         tap::samplerate::async_sample_rate_converter_q15 asrc(cfg);
-        std::vector<std::int16_t>            in(32, 16384);
-        std::vector<std::int16_t>            out(32);
-        std::vector<std::int16_t>            made;
+        std::vector<std::int16_t>                        in(32, 16384);
+        std::vector<std::int16_t>                        out(32);
+        std::vector<std::int16_t>                        made;
         for (int it = 0; it < 400 && made.size() < 200; ++it) {
             asrc.push(in.data(), in.size());
             const std::size_t n = asrc.pull(out.data(), out.size());
@@ -208,9 +210,9 @@ namespace {
     TEST(QuickQuality, Q15Tone997) {
         tap::samplerate::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter_q15    asrc(cfg);
-        srt_test::two_clock_sim_t<std::int16_t> sim{
-            .asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
+        tap::samplerate::async_sample_rate_converter_q15 asrc(cfg);
+        srt_test::two_clock_sim_t<std::int16_t>          sim{
+                     .asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
         const double nu = 997.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
             return tap::samplerate::detail::round_sat<std::int16_t>(
@@ -239,9 +241,9 @@ namespace {
         // wide-MAC (SMLALD) target previously never saw near-full-scale input.
         tap::samplerate::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter_q15    asrc(cfg);
-        srt_test::two_clock_sim_t<std::int16_t> sim{
-            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
+        tap::samplerate::async_sample_rate_converter_q15 asrc(cfg);
+        srt_test::two_clock_sim_t<std::int16_t>          sim{
+                     .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
         const double nu = 1000.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
             return tap::samplerate::detail::round_sat<std::int16_t>(

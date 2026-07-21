@@ -77,7 +77,8 @@ namespace {
     }
 
     template <typename S>
-    void runCase(const char* typeName, const char* presetName, const tap::samplerate::filter_spec& spec, std::size_t channels) {
+    void runCase(const char* typeName, const char* presetName, const tap::samplerate::filter_spec& spec,
+                 std::size_t channels) {
         tap::samplerate::Config cfg;
         cfg.channels = channels;
         cfg.filter   = spec;
@@ -85,8 +86,8 @@ namespace {
         // Heap-constructed so allocation failure (e.g. 12ch + float on a tighter
         // build) degrades to a printed SKIP row instead of a hard fault.
         std::unique_ptr<tap::samplerate::basic_async_sample_rate_converter<S>> asrc;
-        std::vector<S>                                             input;
-        std::vector<S>                                             out;
+        std::vector<S>                                                         input;
+        std::vector<S>                                                         out;
         try {
             asrc  = std::make_unique<tap::samplerate::basic_async_sample_rate_converter<S>>(cfg);
             input = sineBlock<S>(kInputFrames * channels, 997.0, 0.5);
