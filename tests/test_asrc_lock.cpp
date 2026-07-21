@@ -11,14 +11,14 @@ namespace {
 
     constexpr double k_fs = 48000.0;
 
-    srt::config mono_config() {
-        srt::config cfg;
+    tap::samplerate::config mono_config() {
+        tap::samplerate::config cfg;
         cfg.channels = 1;
         return cfg;
     }
 
     TEST(AsrcLock, LocksAndHoldsAtConstantOffset) {
-        srt::async_sample_rate_converter asrc(mono_config());
+        tap::samplerate::async_sample_rate_converter asrc(mono_config());
         srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         bool                    locked_by2s = false;
         double                  ppm_sum     = 0.0;
@@ -26,7 +26,7 @@ namespace {
         std::size_t             tail_blocks = 0;
         sim.run(60.0, [&](const float*, std::size_t, double t) {
             const auto st = asrc.status();
-            if (t < 2.0 && st.state == srt::converter_state::locked) {
+            if (t < 2.0 && st.state == tap::samplerate::converter_state::locked) {
                 locked_by2s = true;
             }
             if (t > 30.0) { // average over many block-beat cycles
@@ -37,7 +37,7 @@ namespace {
         });
         const auto st = asrc.status();
         EXPECT_TRUE(locked_by2s);
-        EXPECT_EQ(st.state, srt::converter_state::locked);
+        EXPECT_EQ(st.state, tap::samplerate::converter_state::locked);
         EXPECT_EQ(st.underruns, 0u);
         EXPECT_EQ(st.overruns, 0u);
         EXPECT_EQ(st.resyncs, 0u);
@@ -51,7 +51,7 @@ namespace {
     }
 
     TEST(AsrcLock, TracksDriftRampWithoutUnlocking) {
-        srt::async_sample_rate_converter asrc(mono_config());
+        tap::samplerate::async_sample_rate_converter asrc(mono_config());
         srt_test::two_clock_sim          sim{
                      .asrc = asrc, .fs_in = k_fs, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         // Input clock drifts 0 -> +300 ppm over 30 s (10 ppm/s, far faster than
@@ -61,7 +61,7 @@ namespace {
         bool ever_locked         = false;
         sim.run(45.0, [&](const float*, std::size_t, double) {
             const auto st = asrc.status();
-            if (st.state == srt::converter_state::locked) {
+            if (st.state == tap::samplerate::converter_state::locked) {
                 ever_locked = true;
             }
             else if (ever_locked) {
@@ -80,7 +80,7 @@ namespace {
         // At +500 ppm a forward slip happens every 2000 output samples. A clean
         // sine's second difference is bounded by A*omega^2; any window-shift
         // discontinuity would blow far past that bound.
-        srt::async_sample_rate_converter asrc(mono_config());
+        tap::samplerate::async_sample_rate_converter asrc(mono_config());
         srt_test::two_clock_sim          sim{
                      .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double amp = 0.5;
@@ -110,10 +110,10 @@ namespace {
     TEST(AsrcLock, RecoversFromConsumerStall) {
         // Producer keeps pushing while the consumer stops pulling: occupancy blows
         // through the high watermark, the converter hard-resyncs, then relocks.
-        srt::async_sample_rate_converter asrc(mono_config());
+        tap::samplerate::async_sample_rate_converter asrc(mono_config());
         srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 100e-6), .fs_out = k_fs, .channels = 1};
         sim.run(10.0, [&](const float*, std::size_t, double) {});
-        ASSERT_EQ(asrc.status().state, srt::converter_state::locked);
+        ASSERT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
 
         // Stall: push 3000 frames with no pulls (FIFO capacity is 1024 mono).
         std::vector<float> burst(3000, 0.0f);
@@ -127,7 +127,7 @@ namespace {
         srt_test::two_clock_sim resume{.asrc = asrc, .fs_in = k_fs * (1.0 + 100e-6), .fs_out = k_fs, .channels = 1};
         resume.run(10.0, [&](const float*, std::size_t, double) {});
         const auto st = asrc.status();
-        EXPECT_EQ(st.state, srt::converter_state::locked);
+        EXPECT_EQ(st.state, tap::samplerate::converter_state::locked);
         EXPECT_GE(st.resyncs, 1u);
     }
 

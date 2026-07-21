@@ -25,7 +25,7 @@
 #include <cstdint>
 #include <limits>
 
-namespace srt {
+namespace tap::samplerate {
 
     namespace detail {
 
@@ -245,4 +245,4 @@ namespace srt {
     static_assert(sample_type<std::int32_t>);
     // ANCHOR_END: st_concept
 
-} // namespace srt
+} // namespace tap::samplerate

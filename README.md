@@ -34,10 +34,10 @@ target_link_libraries(app PRIVATE SampleRateTap::SampleRateTap)
 ```cpp
 #include <srt/srt.h>
 
-srt::config cfg;
+tap::samplerate::config cfg;
 cfg.sample_rate_hz = 48000.0;
 cfg.channels = 2;
-srt::async_sample_rate_converter asrc(cfg);   // allocates + designs filter; may throw
+tap::samplerate::async_sample_rate_converter asrc(cfg);   // allocates + designs filter; may throw
 
 // Input-device thread (input clock):
 asrc.push(input_interleaved, frames);       // noexcept, lock-free
@@ -46,7 +46,7 @@ asrc.push(input_interleaved, frames);       // noexcept, lock-free
 asrc.pull(output_interleaved, frames);      // noexcept, lock-free; silence
                                            // until filled/locked
 
-srt::converter_status st = asrc.status();            // any thread: state, ppm, fill,
+tap::samplerate::converter_status st = asrc.status();            // any thread: state, ppm, fill,
                                            // underruns/overruns/resyncs
 ```
 
@@ -233,7 +233,7 @@ reference-microphone processing — but `filter_spec` band edges and
 `servo_config` bandwidths are absolute Hz designed for ~48 kHz, and running
 another rate with unscaled defaults silently costs quality (measured:
 ~32 dB at 16 kHz). Start any non-48 kHz deployment from
-`srt::config::for_sample_rate(rate_hz)`, which rescales both (plus the servo
+`tap::samplerate::config::for_sample_rate(rate_hz)`, which rescales both (plus the servo
 hold times); `filter_spec::scaled_to` / `servo_config::scaled_to` exist for
 custom presets. Measured through that factory
 (`tests/test_asrc_quality_16k.cpp`), 16 kHz matches the 48 kHz
@@ -353,7 +353,7 @@ Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 
 
 ## Sample types
 
-The datapath is templated on the sample type via `srt::sample_traits`
+The datapath is templated on the sample type via `tap::samplerate::sample_traits`
 (`include/srt/sample_traits.h`). Three formats are provided:
 
 | Type | Alias | Format | Measured SNR (997 Hz / 19.5 kHz, half scale, +200 ppm) |

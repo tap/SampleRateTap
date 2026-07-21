@@ -14,9 +14,9 @@
 namespace srt_test {
 
     // ANCHOR: pf_knobs
-    template <srt::sample_type S>
+    template <tap::samplerate::sample_type S>
     struct two_clock_sim_t {
-        srt::basic_async_sample_rate_converter<S>& asrc;
+        tap::samplerate::basic_async_sample_rate_converter<S>& asrc;
         double                                     fs_in;  ///< input-domain event rate (true input sample rate)
         double                                     fs_out; ///< output-domain event rate (true output sample rate)
         std::size_t                                channels  = 1;

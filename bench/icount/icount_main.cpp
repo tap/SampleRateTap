@@ -26,7 +26,7 @@ namespace {
         if constexpr (std::is_floating_point_v<S>)
             return static_cast<S>(v);
         else
-            return srt::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return tap::samplerate::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
     }
 
     template <typename S>
@@ -40,7 +40,7 @@ namespace {
 
     template <typename S>
     double runKernel() {
-        const srt::polyphase_filter_bank<S> bank(srt::filter_spec::balanced(), 48000.0);
+        const tap::samplerate::polyphase_filter_bank<S> bank(tap::samplerate::filter_spec::balanced(), 48000.0);
         const auto                          hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
         double                              sink = 0.0;
         double                              mu   = 0.0;
@@ -48,7 +48,7 @@ namespace {
             mu += 0.6180339887498949;
             if (mu >= 1.0)
                 mu -= 1.0;
-            sink += static_cast<double>(srt::interpolate(bank, hist.data(), mu));
+            sink += static_cast<double>(tap::samplerate::interpolate(bank, hist.data(), mu));
         }
         return sink;
     }
@@ -61,9 +61,9 @@ namespace {
     double runPipeline() {
         constexpr std::size_t kCh    = SRT_SC_CH;
         constexpr std::size_t kBlock = 32;
-        srt::config           cfg;
+        tap::samplerate::config           cfg;
         cfg.channels = kCh;
-        srt::basic_async_sample_rate_converter<S> asrc(cfg);
+        tap::samplerate::basic_async_sample_rate_converter<S> asrc(cfg);
 
         const auto     input = sineBlock<S>(12000 * kCh, 997.0, 0.5); // 0.25 s, cycled
         std::vector<S> out(kBlock * kCh);

@@ -20,7 +20,7 @@
 #include <span>
 #include <vector>
 
-namespace srt::detail {
+namespace tap::samplerate::detail {
 
     // ANCHOR: kai_besseli0
     /// Modified Bessel function of the first kind, order zero, by power series.
@@ -360,4 +360,4 @@ namespace srt::detail {
         build();
     }
 
-} // namespace srt::detail
+} // namespace tap::samplerate::detail

@@ -37,7 +37,7 @@ And a representative enforcement:
 
 ```cpp
 TEST(AsrcQuality, Balanced997Hz) {
-    EXPECT_GT(measure_snr_db(srt::filter_spec::balanced(), 997.0), 128.0);
+    EXPECT_GT(measure_snr_db(tap::samplerate::filter_spec::balanced(), 997.0), 128.0);
 }
 ```
 

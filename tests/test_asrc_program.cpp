@@ -23,11 +23,11 @@ namespace {
     // 24 pink-weighted tones, 60 Hz - 16 kHz, through a +200 ppm offset; the
     // residual after removing every tone is everything the converter got wrong,
     // weighted the way real program material weights it.
-    double measure_program_snr_db(const srt::filter_spec& spec) {
-        srt::config cfg;
+    double measure_program_snr_db(const tap::samplerate::filter_spec& spec) {
+        tap::samplerate::config cfg;
         cfg.channels = 1;
         cfg.filter   = spec;
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         const double                     fs_in = k_fs * (1.0 + k_eps);
         srt_test::two_clock_sim          sim{
                      .asrc = asrc, .fs_in = fs_in, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
@@ -42,7 +42,7 @@ namespace {
             }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
+        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
         const double snr = srt_test::program_weighted_snr_db(tail, comb, fs_in, k_fs);
         std::printf("[ measured ] program-weighted (24 pink tones), %zu phases x %zu taps: %.1f dB\n", spec.num_phases,
                     spec.taps_per_phase, snr);
@@ -52,11 +52,11 @@ namespace {
 
     // Worst-case single sine near Nyquist, for the honesty line in economy()'s
     // documentation: this preset trades exactly this number.
-    double measure_sine_snr_db(const srt::filter_spec& spec, double freq_hz) {
-        srt::config cfg;
+    double measure_sine_snr_db(const tap::samplerate::filter_spec& spec, double freq_hz) {
+        tap::samplerate::config cfg;
         cfg.channels = 1;
         cfg.filter   = spec;
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         srt_test::two_clock_sim          sim{
                      .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu_in = freq_hz / k_fs;
@@ -106,12 +106,12 @@ namespace {
     // while its worst-case sine near Nyquist honestly reads ~96 dB-class.
     TEST(ProgramWeighted, BalancedBaseline) {
         // Measured 134.5 dB.
-        EXPECT_GT(measure_program_snr_db(srt::filter_spec::balanced()), 128.0);
+        EXPECT_GT(measure_program_snr_db(tap::samplerate::filter_spec::balanced()), 128.0);
     }
     TEST(ProgramWeighted, EconomyNearBalanced) {
         // Measured 131.6 dB — 2.9 dB under balanced at 2/3 the per-sample
         // compute. This single number is the preset's reason to exist.
-        const double eco = measure_program_snr_db(srt::filter_spec::economy());
+        const double eco = measure_program_snr_db(tap::samplerate::filter_spec::economy());
         EXPECT_GT(eco, 125.0);
     }
     TEST(ProgramWeighted, EconomyWorstCaseSineIsDocumented) {
@@ -119,7 +119,7 @@ namespace {
         // "96 dB-class"; the extra gap to 77 dB at 19.5 kHz is the L=512
         // interpolation floor at 0.40625 of the sample rate plus the design's
         // transition starting at 18 kHz.)
-        EXPECT_GT(measure_sine_snr_db(srt::filter_spec::economy(), 19500.0), 70.0);
+        EXPECT_GT(measure_sine_snr_db(tap::samplerate::filter_spec::economy(), 19500.0), 70.0);
     }
 
 } // namespace

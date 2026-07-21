@@ -19,7 +19,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace srt {
+namespace tap::samplerate {
 
     // ANCHOR: contract
     /// Lock-free SPSC ring buffer of trivially copyable elements.
@@ -137,4 +137,4 @@ namespace srt {
         // ANCHOR_END: layout
     };
 
-} // namespace srt
+} // namespace tap::samplerate

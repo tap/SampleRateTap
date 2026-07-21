@@ -15,8 +15,8 @@ namespace {
     constexpr double k_fs  = 48000.0;
     constexpr double k_eps = 200e-6;
 
-    using q15 = srt::sample_traits<std::int16_t>;
-    using q31 = srt::sample_traits<std::int32_t>;
+    using q15 = tap::samplerate::sample_traits<std::int16_t>;
+    using q31 = tap::samplerate::sample_traits<std::int32_t>;
 
     TEST(FixedPoint, CoefficientConversionRoundsAndSaturates) {
         EXPECT_EQ(q15::make_coeff(0.0), 0);
@@ -42,20 +42,20 @@ namespace {
     // the property survives fixed point exactly: measured 0 LSB deviation over
     // a 256-point mu sweep for both formats (tolerance 1 for safety only).
     TEST(FixedPoint, DcGainIsUnityQ15) {
-        const srt::polyphase_filter_bank<std::int16_t> bank(srt::filter_spec::balanced(), k_fs);
+        const tap::samplerate::polyphase_filter_bank<std::int16_t> bank(tap::samplerate::filter_spec::balanced(), k_fs);
         std::vector<std::int16_t>                      dc(bank.taps(), 32767);
         for (int i = 0; i < 16; ++i) {
             const double mu = static_cast<double>(i) / 16.0;
-            EXPECT_NEAR(srt::interpolate(bank, dc.data(), mu), 32767, 1) << "mu=" << mu;
+            EXPECT_NEAR(tap::samplerate::interpolate(bank, dc.data(), mu), 32767, 1) << "mu=" << mu;
         }
     }
 
     TEST(FixedPoint, DcGainIsUnityQ31) {
-        const srt::polyphase_filter_bank<std::int32_t> bank(srt::filter_spec::balanced(), k_fs);
+        const tap::samplerate::polyphase_filter_bank<std::int32_t> bank(tap::samplerate::filter_spec::balanced(), k_fs);
         std::vector<std::int32_t>                      dc(bank.taps(), 2147483647);
         for (int i = 0; i < 16; ++i) {
             const double mu = static_cast<double>(i) / 16.0;
-            EXPECT_NEAR(srt::interpolate(bank, dc.data(), mu), 2147483647.0, 1.0) << "mu=" << mu;
+            EXPECT_NEAR(tap::samplerate::interpolate(bank, dc.data(), mu), 2147483647.0, 1.0) << "mu=" << mu;
         }
     }
 
@@ -63,8 +63,8 @@ namespace {
     // exactly k_coeff_scale (the largest-remainder correction in the bank ctor).
     template <typename S>
     void check_row_sums_exact() {
-        const srt::polyphase_filter_bank<S> bank(srt::filter_spec::balanced(), k_fs);
-        const auto                          scale = static_cast<std::int64_t>(srt::sample_traits<S>::k_coeff_scale);
+        const tap::samplerate::polyphase_filter_bank<S> bank(tap::samplerate::filter_spec::balanced(), k_fs);
+        const auto                          scale = static_cast<std::int64_t>(tap::samplerate::sample_traits<S>::k_coeff_scale);
         for (std::size_t p = 0; p < bank.num_phases(); ++p) {
             std::int64_t sum = 0;
             for (std::size_t t = 0; t < bank.taps(); ++t) {
@@ -82,18 +82,18 @@ namespace {
 
     // End-to-end quality across a +200 ppm clock crossing, like the float suite:
     // resample a sine, fit and remove the fundamental, measure the residual.
-    template <srt::sample_type S>
+    template <tap::samplerate::sample_type S>
     double measure_snr_db(double freq_hz, double amp) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
-        srt::basic_async_sample_rate_converter<S> asrc(cfg);
+        tap::samplerate::basic_async_sample_rate_converter<S> asrc(cfg);
         srt_test::two_clock_sim_t<S>              sim{
                          .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu_in      = freq_hz / k_fs;
         const double full_scale = static_cast<double>(std::numeric_limits<S>::max());
         sim.gen                 = [&](std::uint64_t i) {
             const double v = amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i));
-            return srt::detail::round_sat<S>(v * full_scale);
+            return tap::samplerate::detail::round_sat<S>(v * full_scale);
         };
         std::vector<float> tail; // normalized to [-1, 1] for the analysis helpers
         tail.reserve(48000);
@@ -106,7 +106,7 @@ namespace {
             }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
+        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
         const auto fit = srt_test::fit_sine_tracked(tail, nu_in * (1.0 + k_eps));
         EXPECT_NEAR(fit.amplitude, amp, 0.01);
         const double snr = srt_test::snr_db(fit);
@@ -133,14 +133,14 @@ namespace {
         // Drive at 99% of full scale: any internal overflow/wraparound would
         // produce gross discontinuities; saturating finalize must keep the
         // second difference at the analytic bound for a clean sine.
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
-        srt::async_sample_rate_converter_q15    asrc(cfg);
+        tap::samplerate::async_sample_rate_converter_q15    asrc(cfg);
         srt_test::two_clock_sim_t<std::int16_t> sim{
             .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu = 1000.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
-            return srt::detail::round_sat<std::int16_t>(
+            return tap::samplerate::detail::round_sat<std::int16_t>(
                 0.99 * 32767.0 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
         };
         std::vector<double> tail;

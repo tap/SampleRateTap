@@ -153,7 +153,7 @@ by a factor of three because its tuning was written in hertz.
 The remedy is the `scaled_to` trio, and the factory that applies it:
 
 ```cpp
-srt::config cfg = srt::config::for_sample_rate(16000.0);
+tap::samplerate::config cfg = tap::samplerate::config::for_sample_rate(16000.0);
 cfg.channels = ...;            // then adjust as usual
 ```
 
@@ -293,7 +293,7 @@ ctest --test-dir build -R AsrcQuality16k --output-on-failure
 
 # The -32 dB failure itself, reproduced: in test_asrc_quality_16k.cpp,
 # keep config::for_sample_rate(k_fs) but overwrite the servo with unscaled
-# defaults (cfg.servo = srt::servo_config{};) — the converter still builds
+# defaults (cfg.servo = tap::samplerate::servo_config{};) — the converter still builds
 # and locks, and every threshold fails by ~30 dB, falling 6 dB per octave
 # of tone frequency: the FM signature. (Restoring the unscaled *filter*
 # instead fails fast: the constructor rejects band edges above the input
