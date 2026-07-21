@@ -25,7 +25,7 @@ namespace {
     // its effective setpoint to the observed block; these runs must lock with
     // zero underruns and report the raise.
     void run_feasibility(std::size_t pull_block) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
         // Lock-stage promotion gates compare smoothed occupancy error against
         // frame thresholds; with very coarse blocks the block-quantization
@@ -37,7 +37,7 @@ namespace {
             cfg.servo.lock_threshold_frames   = static_cast<double>(pull_block) / 8.0;
             cfg.servo.unlock_threshold_frames = static_cast<double>(pull_block) * 1.5;
         }
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         srt_test::two_clock_sim          sim{.asrc      = asrc,
                                              .fs_in     = k_fs * (1.0 + 200e-6),
                                              .fs_out    = k_fs,
@@ -56,7 +56,7 @@ namespace {
             }
         });
         const auto st = asrc.status();
-        EXPECT_EQ(st.state, srt::converter_state::locked) << "pull=" << pull_block;
+        EXPECT_EQ(st.state, tap::samplerate::converter_state::locked) << "pull=" << pull_block;
         EXPECT_EQ(st.underruns, 0u) << "pull=" << pull_block;
         EXPECT_GT(st.effective_target_latency_frames, 48u) << "pull=" << pull_block;
         EXPECT_NEAR(ppm_sum / static_cast<double>(blocks), 200.0, 25.0) << "pull=" << pull_block;
@@ -73,9 +73,9 @@ namespace {
     }
 
     TEST(Feasibility, SmallPullsKeepConfiguredSetpoint) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         sim.run(5.0, [](const float*, std::size_t, double) {});
         // 32-frame pulls against the 48-frame default were always feasible;
@@ -87,45 +87,45 @@ namespace {
     // silently (NaN coefficient tables, image-passing filters, UB-range eps).
     TEST(ConfigValidation, RejectsSilentMisbehavior) {
         {
-            srt::config c;
+            tap::samplerate::config c;
             c.sample_rate_hz = std::numeric_limits<double>::quiet_NaN();
-            EXPECT_THROW(srt::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
         }
         {
-            srt::config c; // anti-image cutoff above input Nyquist
+            tap::samplerate::config c; // anti-image cutoff above input Nyquist
             c.filter.passband_hz = 23000.0;
             c.filter.stopband_hz = 47000.0;
-            EXPECT_THROW(srt::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
         }
         {
-            srt::config c; // eps * 2^64 would overflow int64 in the phase path
+            tap::samplerate::config c; // eps * 2^64 would overflow int64 in the phase path
             c.servo.max_deviation_ppm = 400000.0;
-            EXPECT_THROW(srt::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
         }
         {
-            srt::config c;
+            tap::samplerate::config c;
             c.servo.quiet_bandwidth_hz = std::numeric_limits<double>::infinity();
-            EXPECT_THROW(srt::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
         }
         {
-            srt::config c;
+            tap::samplerate::config c;
             c.fifo_frames = 64; // below the high-watermark capacity requirement
-            EXPECT_THROW(srt::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
         }
         // The rate-scaling factory sits exactly on the band-edge sum boundary
         // (passband + stopband == fs up to rounding); it must keep constructing.
-        EXPECT_NO_THROW(srt::async_sample_rate_converter{srt::config::for_sample_rate(16000.0)});
-        EXPECT_NO_THROW(srt::async_sample_rate_converter{srt::config::for_sample_rate(44100.0)});
+        EXPECT_NO_THROW(tap::samplerate::async_sample_rate_converter{tap::samplerate::config::for_sample_rate(16000.0)});
+        EXPECT_NO_THROW(tap::samplerate::async_sample_rate_converter{tap::samplerate::config::for_sample_rate(44100.0)});
     }
 
     // Audit finding F3: with a setpoint below the resampler's staged-scratch
     // size (16 frames), a hard resync used to drain the ring entirely and
     // cascade straight back into Filling.
     TEST(Resync, SmallSetpointRecovers) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels              = 1;
         cfg.target_latency_frames = 4;
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         std::vector<float>               in(32, 0.25f);
         std::vector<float>               out(64);
         for (int i = 0; i < 8; ++i) { // reach steady operation
@@ -145,23 +145,23 @@ namespace {
     }
 
     TEST(Reset, ConsumerResetRelocks) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         sim.run(5.0, [](const float*, std::size_t, double) {});
-        ASSERT_EQ(asrc.status().state, srt::converter_state::locked);
+        ASSERT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
         asrc.reset_from_consumer();
-        EXPECT_EQ(asrc.status().state, srt::converter_state::filling);
+        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::filling);
         srt_test::two_clock_sim sim2{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         sim2.run(5.0, [](const float*, std::size_t, double) {});
-        EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
+        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
     }
 
     TEST(EdgeCalls, ZeroLengthAndOversized) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 2;
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         std::vector<float>               in(2 * 4096, 0.1f);
         std::vector<float>               out(2 * 8192);
         EXPECT_EQ(asrc.push(in.data(), 0), 0u);
@@ -181,9 +181,9 @@ namespace {
     // Fixed-point fade-in: test_fade.cpp covers float only; the Q15 scaleSample
     // branch (round-and-saturate) was untested.
     TEST(FadeQ15, OutputRampsAfterFill) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
-        srt::async_sample_rate_converter_q15 asrc(cfg);
+        tap::samplerate::async_sample_rate_converter_q15 asrc(cfg);
         std::vector<std::int16_t>            in(32, 16384);
         std::vector<std::int16_t>            out(32);
         std::vector<std::int16_t>            made;
@@ -206,14 +206,14 @@ namespace {
     // suites and the Hexagon leg, whose exclusion filters keep out every long
     // quality suite — leaving those targets without any on-target SNR check).
     TEST(QuickQuality, Q15Tone997) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
-        srt::async_sample_rate_converter_q15    asrc(cfg);
+        tap::samplerate::async_sample_rate_converter_q15    asrc(cfg);
         srt_test::two_clock_sim_t<std::int16_t> sim{
             .asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
         const double nu = 997.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
-            return srt::detail::round_sat<std::int16_t>(
+            return tap::samplerate::detail::round_sat<std::int16_t>(
                 0.5 * 32767.0 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
         };
         std::vector<float> tail;
@@ -237,14 +237,14 @@ namespace {
         // 1 s near-full-scale variant of FixedPoint.FullScaleSineDoesNotWrapQ15,
         // sized for emulation and named so the bare-metal filter keeps it: the
         // wide-MAC (SMLALD) target previously never saw near-full-scale input.
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
-        srt::async_sample_rate_converter_q15    asrc(cfg);
+        tap::samplerate::async_sample_rate_converter_q15    asrc(cfg);
         srt_test::two_clock_sim_t<std::int16_t> sim{
             .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
         const double nu = 1000.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
-            return srt::detail::round_sat<std::int16_t>(
+            return tap::samplerate::detail::round_sat<std::int16_t>(
                 0.99 * 32767.0 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
         };
         std::vector<double> tail;

@@ -11,9 +11,9 @@ namespace {
     constexpr double k_fs = 48000.0;
 
     TEST(Latency, ImpulseDelayMatchesDesignedLatency) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         srt_test::two_clock_sim          sim{
                      .asrc = asrc, .fs_in = k_fs, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const std::uint64_t impulse_index = 24000; // 0.5 s in, well past acquisition
@@ -43,9 +43,9 @@ namespace {
     }
 
     TEST(Latency, DesignedLatencyConsistency) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = 1;
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         const double                     group_delay = asrc.filter_bank().group_delay_samples();
         EXPECT_NEAR(group_delay, 24.0, 0.1); // ~T/2 for balanced (T = 48)
         EXPECT_NEAR(asrc.designed_latency_seconds(),

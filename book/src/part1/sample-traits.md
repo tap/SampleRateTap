@@ -422,7 +422,7 @@ python3 -c "print(32767*65535, 2**31-1, 1 - 32767*65535/(2**31-1))"
 #     and DcGainIsUnityQ15 fails its ±4 tolerance.
 #  2. In finalize (Q15), delete clamp_sat and cast directly — the full-scale
 #     sine test detects wraparound as a blown second difference.
-#  3. Instantiate srt::basic_async_sample_rate_converter<double> anywhere and
+#  3. Instantiate tap::samplerate::basic_async_sample_rate_converter<double> anywhere and
 #     read the concept diagnostic: every missing operation, by name, at the
 #     line you wrote.
 ```

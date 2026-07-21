@@ -600,8 +600,8 @@ the conversion is a `reinterpret_cast` in a pair of helpers:
 extern "C" { struct SrtHandle; } // opaque
 
 namespace {
-srt::async_sample_rate_converter* impl(SrtHandle* h) noexcept { ... }
-const srt::async_sample_rate_converter* impl(const SrtHandle* h) noexcept { ... }
+tap::samplerate::async_sample_rate_converter* impl(SrtHandle* h) noexcept { ... }
+const tap::samplerate::async_sample_rate_converter* impl(const SrtHandle* h) noexcept { ... }
 }
 ```
 

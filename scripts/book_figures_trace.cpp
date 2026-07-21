@@ -29,9 +29,9 @@ int main(int argc, char** argv) {
     const double      dropStart = argc > 5 ? std::atof(argv[5]) : -1.0;
     const double      dropDur   = argc > 6 ? std::atof(argv[6]) : 0.0;
 
-    srt::Config cfg;
+    tap::samplerate::Config cfg;
     cfg.channels = 1;
-    srt::AsyncSampleRateConverter conv(cfg);
+    tap::samplerate::AsyncSampleRateConverter conv(cfg);
 
     const double       fsOut = cfg.sampleRateHz;
     const double       fsIn  = fsOut * (1.0 + ppm * 1e-6); // producer's crystal
@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
         }
         conv.pull(out.data(), pullBlock);
         tPull += static_cast<double>(pullBlock) / fsOut;
-        const srt::Status s = conv.status();
+        const tap::samplerate::Status s = conv.status();
         std::printf("%.6f,%.2f,%d,%.2f,%llu\n", tPull, s.fifoFillFrames, static_cast<int>(s.state), s.ppm,
                     static_cast<unsigned long long>(s.underruns));
     }

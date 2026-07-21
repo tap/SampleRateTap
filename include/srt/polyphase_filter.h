@@ -64,7 +64,7 @@
 #define SRT_CP_MIN_CHANNELS 4
 #endif
 
-namespace srt {
+namespace tap::samplerate {
 
     // ANCHOR: bank_spec
     /// Specification of the interpolation prototype filter.
@@ -658,4 +658,4 @@ namespace srt {
         bool m_primed = false;
     };
 
-} // namespace srt
+} // namespace tap::samplerate

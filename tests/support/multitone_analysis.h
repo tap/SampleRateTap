@@ -140,7 +140,7 @@ namespace srt_test {
                 ata[r * n2 + q] = ata[q * n2 + r];
             }
         }
-        srt::detail::solve_dense(ata, aty, sol, n2);
+        tap::samplerate::detail::solve_dense(ata, aty, sol, n2);
         for (std::size_t t = 0; t < k; ++t) {
             fits[t] = tone_fit{sol[2 * t], sol[2 * t + 1]};
         }

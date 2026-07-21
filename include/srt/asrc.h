@@ -18,7 +18,7 @@
 #include "srt/sample_traits.h"
 #include "srt/spsc_ring.h"
 
-namespace srt {
+namespace tap::samplerate {
 
     // ANCHOR: p0_config
     /// Converter configuration. The defaults give ~1.5 ms designed latency at
@@ -41,7 +41,7 @@ namespace srt {
         /// see filter_spec::scaledTo and servo_config::scaledTo — and is the
         /// recommended starting point for any non-48 kHz deployment:
         ///
-        ///   srt::Config cfg = srt::Config::forSampleRate(16000.0);
+        ///   tap::samplerate::Config cfg = tap::samplerate::Config::forSampleRate(16000.0);
         ///   cfg.channels = ...;            // then adjust as usual
         ///
         /// Frame-denominated fields (targetLatencyFrames, fifoFrames) are
@@ -412,4 +412,4 @@ namespace srt {
     /// Q31 fixed-point converter (int32_t samples; see sample_traits<int32_t>).
     using async_sample_rate_converter_q31 = basic_async_sample_rate_converter<std::int32_t>;
 
-} // namespace srt
+} // namespace tap::samplerate

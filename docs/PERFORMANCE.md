@@ -10,7 +10,7 @@ the hot path follow it.
 |---|---|---|
 | Throughput | ns per output frame, steady-state `pull()`+`push()`, reported as ×realtime at 48 kHz | host (Google Benchmark) |
 | Tail latency | p99/max per-call time for `pull(128)` over long runs — the RT budget lives in the tail, not the mean | host |
-| Kernel cost | `srt::interpolate()` in isolation (≈ all datapath cycles: taps × channels MACs) | host |
+| Kernel cost | `tap::samplerate::interpolate()` in isolation (≈ all datapath cycles: taps × channels MACs) | host |
 | Embedded cost | **executed instructions** per output frame via QEMU TCG plugins — deterministic to the instruction, noise-free, well-correlated with real cost for scalar code | Hexagon (qemu-user), Cortex-M55 and Cortex-M33 (qemu-system) |
 
 Cycle-accurate embedded numbers require vendor simulators (Hexagon SDK

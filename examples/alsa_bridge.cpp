@@ -40,13 +40,13 @@ namespace {
         g_stop.store(true, std::memory_order_relaxed);
     }
 
-    const char* state_name(srt::converter_state s) {
+    const char* state_name(tap::samplerate::converter_state s) {
         switch (s) {
-        case srt::converter_state::filling:
+        case tap::samplerate::converter_state::filling:
             return "Filling";
-        case srt::converter_state::acquiring:
+        case tap::samplerate::converter_state::acquiring:
             return "Acquiring";
-        case srt::converter_state::locked:
+        case tap::samplerate::converter_state::locked:
             return "Locked";
         }
         return "?";
@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
         || !open_device(out, args.out_dev, SND_PCM_STREAM_PLAYBACK, args))
         return 1;
 
-    srt::config cfg;
+    tap::samplerate::config cfg;
     cfg.sample_rate_hz        = static_cast<double>(args.rate);
     cfg.channels              = args.channels;
     cfg.target_latency_frames = args.latency;
@@ -232,7 +232,7 @@ int main(int argc, char** argv) {
     // occupancy excursions can demote the servo stage spuriously.
     cfg.servo.unlock_threshold_frames =
         std::max(cfg.servo.unlock_threshold_frames, 1.5 * static_cast<double>(args.period));
-    srt::async_sample_rate_converter asrc(cfg);
+    tap::samplerate::async_sample_rate_converter asrc(cfg);
     std::printf("designed latency: %.2f ms%s\n", asrc.designed_latency_seconds() * 1e3,
                 args.tone_hz > 0.0 ? "  (tone mode: captured samples discarded)" : "");
 

@@ -41,9 +41,9 @@ namespace {
     // from Config::forSampleRate (filter band edges, servo bandwidths and
     // hold times).
     double measure_snr_db16k(double freq_hz) {
-        srt::config cfg = srt::config::for_sample_rate(k_fs);
+        tap::samplerate::config cfg = tap::samplerate::config::for_sample_rate(k_fs);
         cfg.channels    = 1;
-        srt::async_sample_rate_converter asrc(cfg);
+        tap::samplerate::async_sample_rate_converter asrc(cfg);
         srt_test::two_clock_sim          sim{
                      .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu_in = freq_hz / k_fs;
@@ -64,7 +64,7 @@ namespace {
             }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
+        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
         const double nu_out_expected = nu_in * (1.0 + k_eps);
         const auto   fit             = srt_test::fit_sine_tracked(tail, nu_out_expected);
         EXPECT_NEAR(fit.amplitude, k_amp, 0.01);
@@ -85,8 +85,8 @@ namespace {
     // Fast deterministic check of the scaling rule itself (the sims below are
     // the behavioral validation).
     TEST(AsrcQuality16k, ForSampleRateScalesHzFieldsOnly) {
-        const srt::config c = srt::config::for_sample_rate(16000.0);
-        const srt::config d; // 48 kHz defaults
+        const tap::samplerate::config c = tap::samplerate::config::for_sample_rate(16000.0);
+        const tap::samplerate::config d; // 48 kHz defaults
         const double      r = 16000.0 / 48000.0;
         EXPECT_DOUBLE_EQ(c.sample_rate_hz, 16000.0);
         EXPECT_DOUBLE_EQ(c.filter.passband_hz, d.filter.passband_hz * r);

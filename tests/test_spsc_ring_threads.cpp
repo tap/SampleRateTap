@@ -13,7 +13,7 @@ namespace {
 
     TEST(spsc_ring, TwoThreadStressPreservesSequence) {
         constexpr std::uint64_t       k_total = 10'000'000;
-        srt::spsc_ring<std::uint32_t> ring(1024);
+        tap::samplerate::spsc_ring<std::uint32_t> ring(1024);
 
         std::thread producer([&] {
             std::mt19937                               rng(12345);

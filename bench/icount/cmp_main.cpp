@@ -45,8 +45,8 @@ namespace {
 #if SRT_CMP_ENGINE == 0
 
     double run() {
-        const srt::polyphase_filter_bank<float> bank(srt::filter_spec::balanced(), 48000.0);
-        srt::fractional_resampler<float>        rs(bank, kCh);
+        const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::balanced(), 48000.0);
+        tap::samplerate::fractional_resampler<float>        rs(bank, kCh);
         const auto                              input = sineInput(12000); // 0.25 s, cycled
         std::size_t                             pos   = 0;
         const auto                              pop   = [&](float* dst, std::size_t n) {

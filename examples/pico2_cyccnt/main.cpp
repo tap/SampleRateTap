@@ -64,7 +64,7 @@ namespace {
         if constexpr (std::is_floating_point_v<S>)
             return static_cast<S>(v);
         else
-            return srt::detail::roundSat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return tap::samplerate::detail::roundSat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
     }
 
     template <typename S>
@@ -77,18 +77,18 @@ namespace {
     }
 
     template <typename S>
-    void runCase(const char* typeName, const char* presetName, const srt::filter_spec& spec, std::size_t channels) {
-        srt::Config cfg;
+    void runCase(const char* typeName, const char* presetName, const tap::samplerate::filter_spec& spec, std::size_t channels) {
+        tap::samplerate::Config cfg;
         cfg.channels = channels;
         cfg.filter   = spec;
 
         // Heap-constructed so allocation failure (e.g. 12ch + float on a tighter
         // build) degrades to a printed SKIP row instead of a hard fault.
-        std::unique_ptr<srt::basic_async_sample_rate_converter<S>> asrc;
+        std::unique_ptr<tap::samplerate::basic_async_sample_rate_converter<S>> asrc;
         std::vector<S>                                             input;
         std::vector<S>                                             out;
         try {
-            asrc  = std::make_unique<srt::basic_async_sample_rate_converter<S>>(cfg);
+            asrc  = std::make_unique<tap::samplerate::basic_async_sample_rate_converter<S>>(cfg);
             input = sineBlock<S>(kInputFrames * channels, 997.0, 0.5);
             out.resize(kBlockFrames * channels);
         }
@@ -160,14 +160,14 @@ int main() {
                 "cyc/frame", "%core@48k");
 
     for (const std::size_t ch : {std::size_t{1}, std::size_t{2}, std::size_t{12}}) {
-        runCase<std::int16_t>("q15", "fast", srt::filter_spec::fast(), ch);
-        runCase<std::int16_t>("q15", "balanced", srt::filter_spec::balanced(), ch);
+        runCase<std::int16_t>("q15", "fast", tap::samplerate::filter_spec::fast(), ch);
+        runCase<std::int16_t>("q15", "balanced", tap::samplerate::filter_spec::balanced(), ch);
     }
 #if PICO2_MEASURE_FLOAT
     // Soft FP64 accumulation: expected brutally slow on the M33 (the QEMU
     // baselines put pipeline_float at ~3.8x pipeline_q15 instructions).
-    runCase<float>("float", "fast", srt::filter_spec::fast(), 1);
-    runCase<float>("float", "balanced", srt::filter_spec::balanced(), 1);
+    runCase<float>("float", "fast", tap::samplerate::filter_spec::fast(), 1);
+    runCase<float>("float", "balanced", tap::samplerate::filter_spec::balanced(), 1);
 #endif
 
     std::printf("SRT_PICO2_DONE\n");

@@ -34,13 +34,13 @@ namespace {
     constexpr std::size_t k_chunk        = 96;
     constexpr double      k_run_seconds  = 20.0;
 
-    const char* state_name(srt::converter_state s) {
+    const char* state_name(tap::samplerate::converter_state s) {
         switch (s) {
-        case srt::converter_state::filling:
+        case tap::samplerate::converter_state::filling:
             return "Filling";
-        case srt::converter_state::acquiring:
+        case tap::samplerate::converter_state::acquiring:
             return "Acquiring";
-        case srt::converter_state::locked:
+        case tap::samplerate::converter_state::locked:
             return "Locked";
         }
         return "?";
@@ -49,12 +49,12 @@ namespace {
 } // namespace
 
 int main() {
-    srt::config cfg;
+    tap::samplerate::config cfg;
     cfg.channels                      = 1;
     cfg.target_latency_frames         = 960; // 20 ms: room for OS scheduling jitter
     cfg.servo.lock_threshold_frames   = 4.0;
     cfg.servo.unlock_threshold_frames = 96.0;
-    srt::async_sample_rate_converter asrc(cfg);
+    tap::samplerate::async_sample_rate_converter asrc(cfg);
 
     std::printf("drifting_clocks: producer 48000.0 Hz, consumer %+.0f ppm, %g s\n", k_consumer_ppm, k_run_seconds);
     std::printf("designed latency: %.2f ms\n", asrc.designed_latency_seconds() * 1e3);
@@ -114,7 +114,7 @@ int main() {
     // The producer pushes at exactly 48000 Hz and the consumer pulls 500 ppm
     // fast, so the converter must consume input slower than unity: -500 ppm.
     std::printf("\nfinal: state=%s ppm(avg)=%+.2f (expected ~%+.0f)\n", state_name(st.state), ppm_avg, -k_consumer_ppm);
-    const bool ok = st.state == srt::converter_state::locked && std::abs(ppm_avg + k_consumer_ppm) < 150.0;
+    const bool ok = st.state == tap::samplerate::converter_state::locked && std::abs(ppm_avg + k_consumer_ppm) < 150.0;
     std::printf("%s\n", ok ? "OK" : "NOT CONVERGED (heavily loaded machine?)");
     return ok ? 0 : 1;
 }

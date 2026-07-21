@@ -47,7 +47,7 @@
 
 namespace {
 
-    using Asrc = srt::AsyncSampleRateConverterQ15;
+    using Asrc = tap::samplerate::AsyncSampleRateConverterQ15;
 
     constexpr std::size_t kBlockFrames  = 32;
     constexpr std::size_t kMaxChannels  = 12;
@@ -301,18 +301,18 @@ namespace {
     // balanced() with band edges scaled to 16 kHz: identical L/T — same table
     // size and same per-frame cycle cost — with pass/stop at the same normalized
     // frequencies (README "Measured performance"; tests/test_asrc_quality_16k.cpp).
-    srt::filter_spec balanced16k() {
-        srt::filter_spec f = srt::filter_spec::balanced();
+    tap::samplerate::filter_spec balanced16k() {
+        tap::samplerate::filter_spec f = tap::samplerate::filter_spec::balanced();
         f.passband_hz      = 20000.0 * 16.0 / 48.0;
         f.stopband_hz      = 28000.0 * 16.0 / 48.0;
         return f;
     }
 
-    const char* stateName(srt::converter_state s) {
+    const char* stateName(tap::samplerate::converter_state s) {
         switch (s) {
-        case srt::converter_state::Filling:
+        case tap::samplerate::converter_state::Filling:
             return "Filling";
-        case srt::converter_state::Acquiring:
+        case tap::samplerate::converter_state::Acquiring:
             return "Acquiring";
         default:
             return "Locked";
@@ -328,7 +328,7 @@ namespace {
         std::vector<std::int16_t> out(kInputFrames * channels);
         const double              w = 2.0 * std::numbers::pi * 997.0 / rateHz;
         for (std::size_t f = 0; f < kInputFrames; ++f) {
-            const auto v = srt::detail::roundSat<std::int16_t>(0.5 * std::sin(w * static_cast<double>(f)) * 32767.0);
+            const auto v = tap::samplerate::detail::roundSat<std::int16_t>(0.5 * std::sin(w * static_cast<double>(f)) * 32767.0);
             for (std::size_t c = 0; c < channels; ++c)
                 out[f * channels + c] = v;
         }
@@ -338,7 +338,7 @@ namespace {
     PhaseResult runPhase(const PhaseSpec& ph) {
         PhaseResult r;
 
-        srt::Config cfg;
+        tap::samplerate::Config cfg;
         cfg.sample_rate_hz        = ph.rateHz;
         cfg.channels              = ph.channels;
         cfg.target_latency_frames = kTargetLatencyFrames;
@@ -410,8 +410,8 @@ namespace {
             if (off + kBlockFrames * ph.channels > input.size())
                 off = 0;
 
-            const srt::converter_status st = asrc->status();
-            if (!locked && st.state == srt::converter_state::Locked) {
+            const tap::samplerate::converter_status st = asrc->status();
+            if (!locked && st.state == tap::samplerate::converter_state::Locked) {
                 locked    = true;
                 lockUs    = time_us_64() - tStart;
                 undAtLock = st.underruns;
@@ -450,7 +450,7 @@ namespace {
         while (!g.consumerDone.load(std::memory_order_acquire))
             tight_loop_contents();
         const Snapshot              fin = readSnapshot();
-        const srt::converter_status st  = asrc->status();
+        const tap::samplerate::converter_status st  = asrc->status();
         ppmFinal                        = st.ppm;
         g.asrc.store(nullptr, std::memory_order_release);
 

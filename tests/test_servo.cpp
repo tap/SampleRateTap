@@ -18,7 +18,7 @@ namespace {
     };
 
     TEST(Servo, LocksFromConstantOffsetAndNullsError) {
-        srt::pi_servo servo(srt::servo_config{}, k_fs, k_target);
+        tap::samplerate::pi_servo servo(tap::samplerate::servo_config{}, k_fs, k_target);
         plant         plant;
         const double  eps_true          = 300e-6;
         bool          locked_within1_5s = false;
@@ -38,7 +38,7 @@ namespace {
     }
 
     TEST(Servo, TracksSlowDriftRampWithBoundedLag) {
-        srt::pi_servo servo(srt::servo_config{}, k_fs, k_target);
+        tap::samplerate::pi_servo servo(tap::samplerate::servo_config{}, k_fs, k_target);
         plant         plant;
         // Settle at 0 ppm first.
         for (double t = 0.0; t < 5.0; t += k_dt) {
@@ -63,7 +63,7 @@ namespace {
     }
 
     TEST(Servo, BandwidthSwitchIsTransientFree) {
-        srt::pi_servo servo(srt::servo_config{}, k_fs, k_target);
+        tap::samplerate::pi_servo servo(tap::samplerate::servo_config{}, k_fs, k_target);
         plant         plant;
         const double  eps_true = 200e-6;
         // Run until just locked.
@@ -80,21 +80,21 @@ namespace {
             plant.step(eps_true, servo.update(plant.occ, 0.0, k_dt));
             max_err = std::max(max_err, std::abs(plant.occ - k_target));
         }
-        EXPECT_LT(max_err, srt::servo_config{}.lock_threshold_frames);
+        EXPECT_LT(max_err, tap::samplerate::servo_config{}.lock_threshold_frames);
         EXPECT_TRUE(servo.locked());
     }
 
     TEST(Servo, ClampsToMaxDeviation) {
-        srt::servo_config cfg;
+        tap::samplerate::servo_config cfg;
         cfg.max_deviation_ppm = 100.0;
-        srt::pi_servo servo(cfg, k_fs, k_target);
+        tap::samplerate::pi_servo servo(cfg, k_fs, k_target);
         // Huge occupancy error must saturate at 1.5x the configured range.
         const double eps = servo.update(k_target + 10000.0, 0.0, k_dt);
         EXPECT_LE(eps, 1.5 * 100e-6 + 1e-12);
     }
 
     TEST(Servo, DropoutResetKeepsPpmEstimate) {
-        srt::pi_servo servo(srt::servo_config{}, k_fs, k_target);
+        tap::samplerate::pi_servo servo(tap::samplerate::servo_config{}, k_fs, k_target);
         plant         plant;
         const double  eps_true = 250e-6;
         for (double t = 0.0; t < 6.0; t += k_dt) {

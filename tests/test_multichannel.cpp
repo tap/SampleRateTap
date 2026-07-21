@@ -41,7 +41,7 @@ namespace {
             return static_cast<S>(v);
         }
         else {
-            return srt::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return tap::samplerate::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
         }
     }
 
@@ -69,9 +69,9 @@ namespace {
     template <typename S>
     std::vector<channel_report> measure_independence(std::size_t channels, double total_seconds, double window_seconds,
                                                      std::size_t chunk) {
-        srt::config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = channels;
-        srt::basic_async_sample_rate_converter<S> asrc(cfg);
+        tap::samplerate::basic_async_sample_rate_converter<S> asrc(cfg);
         srt_test::two_clock_sim_t<S>              sim{.asrc      = asrc,
                                                       .fs_in     = k_fs * (1.0 + k_eps),
                                                       .fs_out    = k_fs,
@@ -92,7 +92,7 @@ namespace {
             }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, srt::converter_state::locked);
+        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
 
         const std::size_t           frames = tail.size() / channels;
         std::vector<float>          x(frames);
