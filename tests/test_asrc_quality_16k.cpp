@@ -42,10 +42,10 @@ namespace {
     // hold times).
     double measure_snr_db16k(double freq_hz) {
         tap::samplerate::config cfg = tap::samplerate::config::for_sample_rate(k_fs);
-        cfg.channels    = 1;
+        cfg.channels                = 1;
         tap::samplerate::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim          sim{
-                     .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        srt_test::two_clock_sim                      sim{
+                                 .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu_in = freq_hz / k_fs;
         sim.gen            = [&](std::uint64_t i) {
             return static_cast<float>(k_amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));
@@ -87,7 +87,7 @@ namespace {
     TEST(AsrcQuality16k, ForSampleRateScalesHzFieldsOnly) {
         const tap::samplerate::config c = tap::samplerate::config::for_sample_rate(16000.0);
         const tap::samplerate::config d; // 48 kHz defaults
-        const double      r = 16000.0 / 48000.0;
+        const double                  r = 16000.0 / 48000.0;
         EXPECT_DOUBLE_EQ(c.sample_rate_hz, 16000.0);
         EXPECT_DOUBLE_EQ(c.filter.passband_hz, d.filter.passband_hz * r);
         EXPECT_DOUBLE_EQ(c.filter.stopband_hz, d.filter.stopband_hz * r);

@@ -41,9 +41,9 @@ namespace {
     template <typename S>
     double runKernel() {
         const tap::samplerate::polyphase_filter_bank<S> bank(tap::samplerate::filter_spec::balanced(), 48000.0);
-        const auto                          hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
-        double                              sink = 0.0;
-        double                              mu   = 0.0;
+        const auto                                      hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
+        double                                          sink = 0.0;
+        double                                          mu   = 0.0;
         for (int i = 0; i < 200000; ++i) {
             mu += 0.6180339887498949;
             if (mu >= 1.0)
@@ -59,9 +59,9 @@ namespace {
 
     template <typename S>
     double runPipeline() {
-        constexpr std::size_t kCh    = SRT_SC_CH;
-        constexpr std::size_t kBlock = 32;
-        tap::samplerate::config           cfg;
+        constexpr std::size_t   kCh    = SRT_SC_CH;
+        constexpr std::size_t   kBlock = 32;
+        tap::samplerate::config cfg;
         cfg.channels = kCh;
         tap::samplerate::basic_async_sample_rate_converter<S> asrc(cfg);
 

@@ -72,12 +72,12 @@ namespace {
         tap::samplerate::config cfg;
         cfg.channels = channels;
         tap::samplerate::basic_async_sample_rate_converter<S> asrc(cfg);
-        srt_test::two_clock_sim_t<S>              sim{.asrc      = asrc,
-                                                      .fs_in     = k_fs * (1.0 + k_eps),
-                                                      .fs_out    = k_fs,
-                                                      .channels  = channels,
-                                                      .chunk_in  = chunk,
-                                                      .chunk_out = chunk};
+        srt_test::two_clock_sim_t<S>                          sim{.asrc      = asrc,
+                                                                  .fs_in     = k_fs * (1.0 + k_eps),
+                                                                  .fs_out    = k_fs,
+                                                                  .channels  = channels,
+                                                                  .chunk_in  = chunk,
+                                                                  .chunk_out = chunk};
         sim.gen_ch = [&](std::uint64_t i, std::size_t c) {
             const double w = 2.0 * std::numbers::pi * channel_freq_hz(c) / k_fs;
             // Per-channel phase offsets decorrelate the channel waveforms.

@@ -13,9 +13,9 @@ namespace {
 
     TEST(Polyphase, DcGainIsUnityAcrossMu) {
         const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::balanced(), k_fs);
-        std::vector<float>                      ones(bank.taps(), 1.0f);
-        std::mt19937                            rng(7);
-        std::uniform_real_distribution<double>  uni(0.0, 1.0);
+        std::vector<float>                                  ones(bank.taps(), 1.0f);
+        std::mt19937                                        rng(7);
+        std::uniform_real_distribution<double>              uni(0.0, 1.0);
         for (int i = 0; i < 64; ++i) {
             const double mu = uni(rng);
             EXPECT_NEAR(tap::samplerate::interpolate(bank, ones.data(), mu), 1.0, 1e-4) << "mu=" << mu;
@@ -24,8 +24,8 @@ namespace {
 
     TEST(Polyphase, ExtraRowEqualsPhaseZeroAdvancedOneTap) {
         const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::balanced(), k_fs);
-        const std::size_t                       L = bank.num_phases();
-        const std::size_t                       T = bank.taps();
+        const std::size_t                                   L = bank.num_phases();
+        const std::size_t                                   T = bank.taps();
         // Rows are stored tap-reversed over an oldest-first window, so "advanced
         // by one input sample" means row L shifted one slot toward newer samples:
         // phase(L)[u] == phase(0)[u-1], with the oldest slot of row L zero.
@@ -53,8 +53,9 @@ namespace {
                 const double mu       = static_cast<double>(i) / 257.0;
                 const double tau      = static_cast<double>(J) - static_cast<double>(T) / 2.0 + mu + 1.0 / (2.0 * L);
                 const double expected = std::sin(2.0 * std::numbers::pi * nu * tau);
-                const double err      = std::abs(static_cast<double>(tap::samplerate::interpolate(bank, hist, mu)) - expected);
-                max_err               = std::max(max_err, err);
+                const double err =
+                    std::abs(static_cast<double>(tap::samplerate::interpolate(bank, hist, mu)) - expected);
+                max_err = std::max(max_err, err);
             }
         }
         return 20.0 * std::log10(max_err);
@@ -89,10 +90,10 @@ namespace {
         // interpolate(hist, mu -> 1) must equal interpolate(hist shifted by one
         // newer sample, mu = 0): the whole-sample slip invariant.
         const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::balanced(), k_fs);
-        const std::size_t                       T = bank.taps();
-        std::vector<float>                      x(2 * T);
-        std::mt19937                            rng(99);
-        std::uniform_real_distribution<float>   uni(-1.0f, 1.0f);
+        const std::size_t                                   T = bank.taps();
+        std::vector<float>                                  x(2 * T);
+        std::mt19937                                        rng(99);
+        std::uniform_real_distribution<float>               uni(-1.0f, 1.0f);
         for (auto& v : x) {
             v = uni(rng);
         }

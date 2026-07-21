@@ -47,9 +47,9 @@ namespace {
     double run() {
         const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::balanced(), 48000.0);
         tap::samplerate::fractional_resampler<float>        rs(bank, kCh);
-        const auto                              input = sineInput(12000); // 0.25 s, cycled
-        std::size_t                             pos   = 0;
-        const auto                              pop   = [&](float* dst, std::size_t n) {
+        const auto                                          input = sineInput(12000); // 0.25 s, cycled
+        std::size_t                                         pos   = 0;
+        const auto                                          pop   = [&](float* dst, std::size_t n) {
             const std::size_t avail = 12000 - pos;
             const std::size_t take  = n < avail ? n : avail;
             for (std::size_t i = 0; i < take * kCh; ++i)
