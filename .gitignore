@@ -4,6 +4,8 @@ compile_commands.json
 CMakeUserPresets.json
 .vscode/
 .idea/
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 book/book/
 __pycache__/
