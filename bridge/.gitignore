@@ -8,3 +8,4 @@ CMakeUserPresets.json
 !.claude/settings.json
 !.claude/hooks/
 build_capi/
+__pycache__/
