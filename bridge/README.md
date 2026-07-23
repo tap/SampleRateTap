@@ -13,12 +13,14 @@ on the Tap family's shared FIR substrate
 float/Q15/Q31 sample-format traits, measured dot-product kernels, row-sum
 quantization, measurement instruments).
 
-> **Status: milestone M4.** The converter is in for all three sample
+> **Status: milestone M5.** The converter is in for all three sample
 > formats: float (the golden model, pinned against committed scipy
 > reference vectors sample-for-sample), Q31 (tracks float within −147 dB;
 > measures 146 dB at 997 Hz — exceeding float, whose float32 I/O is its
 > own bound), and Q15 (format-limited: pair it with `economy`, which is
-> both cheaper *and* quieter than `transparent` at 16 bits).
+> both cheaper *and* quieter than `transparent` at 16 bits). The golden
+> cross-validation against SampleRateTap's async engine at pinned
+> eps = L/M−1 agrees to −109 dB (down) / −99 dB (up) over every phase.
 > [PLAN.md](PLAN.md) is the authoritative roadmap (charter, architecture
 > decisions, milestones, acceptance criteria);
 > [HANDOFF.md](HANDOFF.md) is the original design brief it grew from.

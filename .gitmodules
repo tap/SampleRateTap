@@ -1,3 +1,6 @@
 [submodule "bridge/submodules/dsptap"]
 	path = bridge/submodules/dsptap
 	url = https://github.com/tap/dsptap
+[submodule "bridge/submodules/sampleratetap"]
+	path = bridge/submodules/sampleratetap
+	url = https://github.com/tap/sampleratetap

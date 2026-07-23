@@ -225,7 +225,14 @@ All numbers pinned (M2 design spike, 2026-07-23).
 - Exhaustive phase coverage in tests — all 147 and all 160 phases, not
   statistical sampling (began in M2: `test_phase_table.cpp` holds the
   row-sum and DC guarantees for every phase of all four tables).
-- Cross-validation agreement within the ASRC interpolation floor (§6.3).
+- Cross-validation agreement (§6.3) **measured** (M5,
+  `test_cross_validation.cpp`): SampleRateTap's `fractional_resampler` at
+  pinned eps = L/M − 1, identical plain-Kaiser prototype, zero-prepend
+  window alignment and 1/(2L)-group-delay-skew compensation — worst
+  disagreement **3.5×10⁻⁶ down (−109 dB) / 1.2×10⁻⁵ up (−99 dB)**, every
+  phase of both superblocks covered, unchanged between async L=512 and
+  L=1024 (the mu-interpolation residual sits below the one deliberate
+  filter difference, RatioTap's per-branch DC normalization).
 - Bit-exact repeatability per §3. Fixed-point parity pinned (M4,
   `test_converter_fixed_point.cpp`): **Q31 tracks the float golden model
   within 5×10⁻⁸ per sample (−147 dB)** on the reference noise, and measures
