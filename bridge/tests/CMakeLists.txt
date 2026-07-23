@@ -16,6 +16,9 @@ set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 add_executable(tap_ratio_tests
+    test_design.cpp
+    test_phase_table.cpp
+    test_schedule.cpp
     test_skeleton.cpp)
 target_link_libraries(tap_ratio_tests PRIVATE
     tap::ratio

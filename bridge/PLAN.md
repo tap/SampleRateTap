@@ -104,10 +104,10 @@ side of the ASRC:
 
 Two quality tiers behind one design path, named in the family vocabulary:
 
-| Profile | Stopband | Passband edge | Est. MACs/out (48→44.1) | Role |
-|---|---|---|---|---|
-| `economy()` — **default** | ~70 dB | 19 kHz | ~85–100 | The speed-first default. All alias products land above 20 kHz at ≤ −60 dBFS — arithmetically confined to the ultrasonic band (see HANDOFF §4) |
-| `transparent()` | 120 dB | 20 kHz | ~183 | Pristine/offline tier; also the profile whose output the book-quality claims quote |
+| Profile | Stopband | Passband edge | Taps/phase (=MACs/out) down / up | Storage f32 down / up | Role |
+|---|---|---|---|---|---|
+| `economy()` — **default** | 70 dB | 19 kHz | **78 / 44** | 44.8 / 27.5 KiB | The speed-first default. All alias products land above 20 kHz at ≤ −71 dBFS — arithmetically confined to the ultrasonic band (see HANDOFF §4) |
+| `transparent()` | 120 dB | 20 kHz | **184 / 96** | 105.7 / 60.0 KiB | Pristine/offline tier |
 
 `economy` as default is a deliberate positioning choice consistent with the
 speed-first charter; the README must state the reasoning (the §4 argument:
@@ -115,9 +115,15 @@ nothing *can* fold below 20.1 kHz going down; images land ≥ 22.05 kHz going
 up) rather than just the number, and the program-weighted measurement style
 from SampleRateTap's `economy` preset applies here too.
 
-Exact tap counts, storage sizes, and measured alias levels are pinned by the
-M2 design-spike notebook — the table above carries the handoff doc's
-estimates until then.
+Numbers pinned by the M2 design spike (`notebooks/design_spike.ipynb`,
+executed and committed; enforced in CI by `test_design.cpp`): taps are the
+minimal even counts meeting the stopband with ≥ 1 dB margin. Measured
+worst-case stopband on the shipping designs: economy −72.1 dB (down) /
+−72.8 dB (up); transparent −121.7 dB (both). Passband ripple ±0.003 dB
+(economy) / ±0.00001 dB (transparent). Q15 tables halve the storage. The
+designs additionally normalize every polyphase branch's DC sum to exactly
+1.0 (kills fs_out/L-harmonic spurs from DC/LF energy; lets fixed-point
+row-sum quantization land on format unity exactly).
 
 ## 5. The async composition (`bluetooth_bridge`)
 
@@ -200,24 +206,26 @@ v0.1 ships at M6. Nothing in M7+ blocks it.
 
 ## 8. Acceptance criteria (v0.1)
 
-Numbers marked *(spike)* are finalized by the M2 notebook; the rest are
-fixed now.
+All numbers pinned (M2 design spike, 2026-07-23).
 
-- `economy`, both directions: every alias/image product ≤ **−60 dBFS**
-  above 20 kHz; **nothing measurable below 20 kHz** above the format/
-  accumulation floor. Worst-case level pinned exactly *(spike)*.
-- `transparent`, both directions: alias/image products ≤ **−120 dB**-class
-  *(spike)*; passband flat to 20 kHz within the SampleRateTap-established
-  ripple tier.
+- `economy`, both directions: every alias/image product ≤ **−71 dBFS**
+  above 20 kHz (design floors: −72.1 dB down, −72.8 dB up); **nothing
+  measurable below 20 kHz** above the format/accumulation floor
+  (scipy-`upfirdn` preview in the spike measured the audible band at
+  −100 dBFS).
+- `transparent`, both directions: alias/image products ≤ **−121 dB**
+  (design floors −121.7 dB); passband flat to 20 kHz within ±0.00001 dB.
 - Exhaustive phase coverage in tests — all 147 and all 160 phases, not
-  statistical sampling.
+  statistical sampling (began in M2: `test_phase_table.cpp` holds the
+  row-sum and DC guarantees for every phase of all four tables).
 - Cross-validation agreement within the ASRC interpolation floor (§6.3).
 - Bit-exact repeatability per §3; Q15/Q31 parity bounds pinned.
 - RT contract: processing paths `noexcept`, allocation-free (verified under
   sanitizers); constructor-only design confirmed < 10 ms class.
-- Latency: exact `latency_frames()` figure documented per
-  direction × profile *(spike)*; linear-phase single-stage expected
-  ~45–90 input samples.
+- Latency (`latency_frames()`, linear-phase group delay in input samples):
+  economy **39** down (0.81 ms) / **22** up (0.50 ms); transparent **92**
+  down (1.92 ms) / **48** up (1.09 ms) — inside the plan's 45–90-sample
+  budget at the transparent tier, well under it at economy.
 
 ## 9. Open items
 

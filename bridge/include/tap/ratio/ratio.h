@@ -23,12 +23,16 @@
 // profiles, dot kernels, row-sum quantization, measurement instruments),
 // consumed as the submodules/dsptap submodule.
 //
-// Status: M1 skeleton — the converter lands in M2/M3. PLAN.md is the
-// authoritative roadmap; HANDOFF.md is the original design brief.
+// Status: M2 — direction/profile/design (design.h), the compile-time
+// (phase, advance) schedule (schedule.h), and the phase-major quantized
+// coefficient table (phase_table.h) are in; the engine lands in M3.
+// PLAN.md is the authoritative roadmap; HANDOFF.md is the original design
+// brief.
 #pragma once
 
-// Milestone M1: the umbrella deliberately exports only identity. Engine
-// headers are added here as they land (M2: tables + schedule, M3: engine).
+#include "tap/ratio/design.h"      // IWYU pragma: export
+#include "tap/ratio/phase_table.h" // IWYU pragma: export
+#include "tap/ratio/schedule.h"    // IWYU pragma: export
 
 #define TAP_RATIO_VERSION_MAJOR 0
 #define TAP_RATIO_VERSION_MINOR 1
