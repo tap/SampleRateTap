@@ -72,7 +72,7 @@ The fix is to split the kernel at its natural seam: blend once per frame
 into a scratch row, then run a plain dot product per channel.
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.h:rs_dot_row}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/fir_kernels.h:rs_dot_row}}
 ```
 
 Two things about this function beyond its arithmetic. First, the comment
@@ -326,7 +326,7 @@ history to deliver all channels of tap t contiguously — the frame-major
 layout — and a register-blocked kernel:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.h:rs_dot_rows_frame_major}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/fir_kernels.h:rs_dot_rows_frame_major}}
 ```
 
 The measured C6 results, condensed (the full campaign, including the

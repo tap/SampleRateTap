@@ -156,7 +156,7 @@ precisely at the row where the response matters most.
 So the coefficients trade one precision bit for one headroom bit:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.h:st_q15_coeff}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/sample_traits.h:st_q15_coeff}}
 ```
 
 with the conversion doing round-half-away-from-zero and saturating at the
@@ -164,7 +164,7 @@ integer limits (the *design* is checked separately; saturation here is a
 belt against future filter specs, not an expected event):
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.h:st_roundsat}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/sample_traits.h:st_roundsat}}
 ```
 
 What did the traded bit cost? Quantizing coefficients to Q14 puts the
@@ -190,7 +190,7 @@ and that is their virtue: `Q15::make_coeff(1.0) == 16384` is the sentence
 Here is the Q15 multiply-accumulate:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.h:st_q15_mac}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/sample_traits.h:st_q15_mac}}
 ```
 
 Two things are chosen here. The product is computed in `int32_t` — a
@@ -218,7 +218,7 @@ blended-row rewrite could both be verified *bit-exact* rather than
 All of the rounding budget is spent in one place:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.h:st_q15_finalize}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/sample_traits.h:st_q15_finalize}}
 ```
 
 The accumulator holds a Q29 value (Q0.15 sample × Q1.14 coefficient); the
@@ -256,7 +256,7 @@ accumulator worth having on the targets this path exists for.
 So each product gives up 16 bits *before* joining the sum:
 
 ```cpp
-{{#include ../../../include/srt/sample_traits.h:st_q31_mac}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/sample_traits.h:st_q31_mac}}
 ```
 
 Now redo the bound: Q45 products have worst-case magnitude 2⁴⁵, and

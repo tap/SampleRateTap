@@ -8,60 +8,27 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <span>
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
 
 #include "srt/detail/kaiser.h"
 #include "srt/sample_traits.h"
+#include "tap/dsp/fir_kernels.h"
+#include "tap/dsp/quantize.h"
 
-// No-alias qualifier for the kernel hot loops: without it the compiler
-// versions the blend loop behind a runtime aliasing check (verified with
-// -fopt-info-vec; see docs/PERFORMANCE.md, hypothesis 2).
-#if defined(_MSC_VER)
-#define SRT_RESTRICT __restrict
-#else
-#define SRT_RESTRICT __restrict__
-#endif
-
-// ANCHOR: opt_smlald_gate
-// Dual 16x16 MAC (SMLALD) for the Q15 dot product on Arm cores that have
-// the DSP extension but no Helium — the Cortex-M33/M4/M7 class (e.g.
-// Raspberry Pi Pico 2). Gated off when MVE is present: on M55 the compiler
-// already auto-vectorizes the scalar loop with Helium and the intrinsic
-// path would replace vectors with dual-MACs (see docs/PERFORMANCE.md,
-// hypothesis 4). Bit-exactness: each 16x16 product is exact in int32 and
-// the int64 accumulation is associative, so pairing changes no output bit.
-#if defined(__ARM_FEATURE_DSP) && !defined(__ARM_FEATURE_MVE)
-#include <arm_acle.h>
-#define SRT_Q15_SMLALD 1
-#else
-#define SRT_Q15_SMLALD 0
-#endif
-// ANCHOR_END: opt_smlald_gate
-
-// Channel-parallel dot product for high channel counts (hypothesis C6,
-// docs/PERFORMANCE.md): history stored frame-major so the per-tap inner
-// loop runs across channels — contiguous loads, one accumulator lane per
-// channel, coefficient broadcast. Bit-exact because each channel's
-// accumulation order over taps is unchanged (lanes are channels, not
-// taps), which is what lets the FLOAT path vectorize at all: its strict
-// per-channel double accumulation forbids tap-axis SIMD (PERFORMANCE.md
-// hypothesis 5), but the channel axis is free. Float-only by measurement:
-// fixed-point planar dots already auto-vectorize over taps on hosts
-// (integer reduction is exactly reassociable) and measured ~1.5x FASTER
-// than the channel-parallel form. Host-only: the embedded targets keep
-// their proven planar codegen (Helium on M55, SMLALD on M33-class,
-// Hexagon's measured scalar floor — see PERFORMANCE.md C4/C5).
-#if !defined(__ARM_FEATURE_MVE) && !defined(__ARM_FEATURE_DSP) && !defined(__hexagon__)
-#define SRT_CHANNEL_PARALLEL 1
-#else
-#define SRT_CHANNEL_PARALLEL 0
-#endif
-// Minimum channel count for the frame-major path (overridable for A/B
-// measurements; the blend-share planar path stays better at low counts).
+// The kernel hot loops (dot_row, the channel-parallel tiles) and their target
+// gates (SMLALD dual-MAC on DSP-extension Arm, the channel-parallel layout
+// selection) moved to DspTap's fir_kernels.h with the rest of the shared FIR
+// substrate; the measurements that sized them are recorded there and in
+// docs/PERFORMANCE.md (hypotheses 2/4/5/C4-C6). The historical SRT_ macro
+// names keep working, forwarded to the TAP_DSP_ gates.
+#define SRT_RESTRICT TAP_DSP_RESTRICT
+#define SRT_Q15_SMLALD TAP_DSP_Q15_SMLALD
+#define SRT_CHANNEL_PARALLEL TAP_DSP_CHANNEL_PARALLEL
 #ifndef SRT_CP_MIN_CHANNELS
-#define SRT_CP_MIN_CHANNELS 4
+#define SRT_CP_MIN_CHANNELS TAP_DSP_CP_MIN_CHANNELS
 #endif
 
 namespace tap::samplerate {
@@ -191,48 +158,19 @@ namespace tap::samplerate {
             }
 
             m_table.resize((m_phases + 1) * m_taps);
-            std::vector<double> remainder(m_taps);
+            // Row-sum-preserving quantization ("the coefficients of every
+            // phase must add to one" — R. Bristow-Johnson, music-dsp): the
+            // largest-remainder correction now lives in DspTap's quantize.h,
+            // shared with RatioTap's fixed-ratio tables. Gather each branch
+            // into storage (tap-reversed) order in double, then quantize the
+            // row as a unit so its DC sum survives fixed point exactly.
+            std::vector<double> row_d(m_taps);
             for (std::size_t p = 0; p < m_phases; ++p) {
-                coeff*       row       = m_table.data() + p * m_taps;
-                double       exact_sum = 0.0;
-                std::int64_t quant_sum = 0;
                 for (std::size_t t = 0; t < m_taps; ++t) {
-                    const std::size_t m       = t * m_phases + p; // prototype index of (branch p, tap t)
-                    const double      v       = (m < n) ? proto[m] : 0.0;
-                    const double      scaled  = v * sample_traits<S>::k_coeff_scale;
-                    const coeff       q       = sample_traits<S>::make_coeff(v);
-                    row[m_taps - 1 - t]       = q;
-                    remainder[m_taps - 1 - t] = scaled - static_cast<double>(q);
-                    exact_sum += scaled;
-                    quant_sum += static_cast<std::int64_t>(q);
+                    const std::size_t m   = t * m_phases + p; // prototype index of (branch p, tap t)
+                    row_d[m_taps - 1 - t] = (m < n) ? proto[m] : 0.0;
                 }
-                if constexpr (!std::is_floating_point_v<coeff>) {
-                    // ANCHOR: pw_row_sum
-                    // Row-sum-preserving quantization ("the coefficients of every
-                    // phase must add to one" — R. Bristow-Johnson, music-dsp). In
-                    // double the image_zeros designs make every branch's DC sum
-                    // identical to machine epsilon (the k*fs zeros ARE branch-DC
-                    // uniformity, stated in frequency), but independent per-tap
-                    // rounding rebroke it by several LSB. Distribute each row's
-                    // total rounding residual to the taps that were rounded
-                    // furthest from it (largest-remainder method): every row then
-                    // sums to llround(exact * scale), so DC gain deviates by at
-                    // most one coefficient LSB across all mu.
-                    std::int64_t residual = static_cast<std::int64_t>(std::llround(exact_sum)) - quant_sum;
-                    while (residual != 0) {
-                        const double sgn  = residual > 0 ? 1.0 : -1.0;
-                        std::size_t  best = 0;
-                        for (std::size_t u = 1; u < m_taps; ++u) {
-                            if (sgn * remainder[u] > sgn * remainder[best]) {
-                                best = u;
-                            }
-                        }
-                        row[best] = static_cast<coeff>(row[best] + (residual > 0 ? 1 : -1));
-                        remainder[best] -= sgn;
-                        residual -= residual > 0 ? 1 : -1;
-                    }
-                    // ANCHOR_END: pw_row_sum
-                }
+                tap::dsp::quantize_row_preserving_sum<S>(row_d, std::span<coeff>(m_table.data() + p * m_taps, m_taps));
             }
             // The extra row L is row 0 advanced one input sample; copy it from
             // the QUANTIZED row 0 so the mu-wrap continuity invariant holds
@@ -356,95 +294,15 @@ namespace tap::samplerate {
     }
     // ANCHOR_END: rs_interpolate_phase
 
-    // ANCHOR: rs_dot_row
-    /// Dot product of a pre-blended coefficient row against a history window.
-    /// Identical arithmetic to interpolate() given the same mu: blend then mac,
-    /// per tap, in the same order — outputs are bit-exact either way.
-    template <sample_type S>
-    inline S dot_row(const typename sample_traits<S>::coeff* SRT_RESTRICT row, const S* SRT_RESTRICT hist,
-                     std::size_t taps) noexcept {
-        using tr = sample_traits<S>;
-#if SRT_Q15_SMLALD
-        if constexpr (std::is_same_v<S, std::int16_t>) {
-            std::int64_t acc = 0;
-            std::size_t  t   = 0;
-            for (; t + 1 < taps; t += 2) {
-                // memcpy keeps the 16-bit pair loads alignment-safe; both
-                // compile to a single 32-bit load (little-endian packing
-                // matches SMLALD's lo/hi lanes).
-                std::uint32_t h;
-                std::uint32_t r;
-                std::memcpy(&h, hist + t, sizeof h);
-                std::memcpy(&r, row + t, sizeof r);
-                acc = __smlald(static_cast<int16x2_t>(h), static_cast<int16x2_t>(r), acc);
-            }
-            for (; t < taps; ++t) // odd-tap tail; every preset is even
-                acc = tr::mac(acc, hist[t], row[t]);
-            return tr::finalize(acc);
-        }
-#endif
-        typename tr::accum acc{};
-        for (std::size_t t = 0; t < taps; ++t) {
-            acc = tr::mac(acc, hist[t], row[t]);
-        }
-        return tr::finalize(acc);
-    }
-    // ANCHOR_END: rs_dot_row
-
-    // ANCHOR: opt_dot_tile
-    /// One K-channel tile of the channel-parallel dot (hypothesis C6): K
-    /// accumulators live in a constexpr-size local array — registers, not
-    /// memory — while the tap loop walks the frame-major window with stride
-    /// `stride` samples per frame. K is the register-blocking factor; a naive
-    /// channels-inner loop with accumulators in memory measures ~2.8x SLOWER
-    /// than planar (each mac round-trips its accumulator through the stack).
-    template <sample_type S, std::size_t K>
-    inline void dot_tile_frame_major(const typename sample_traits<S>::coeff* SRT_RESTRICT row, const S* SRT_RESTRICT x,
-                                     std::size_t taps, std::size_t stride, S* SRT_RESTRICT out) noexcept {
-        using tr = sample_traits<S>;
-        typename tr::accum acc[K]{};
-        for (std::size_t t = 0; t < taps; ++t) {
-            const auto            coeff = row[t];
-            const S* SRT_RESTRICT frame = x + t * stride;
-            for (std::size_t k = 0; k < K; ++k) {
-                acc[k] = tr::mac(acc[k], frame[k], coeff);
-            }
-        }
-        for (std::size_t k = 0; k < K; ++k) {
-            out[k] = tr::finalize(acc[k]);
-        }
-    }
-    // ANCHOR_END: opt_dot_tile
-
-    // ANCHOR: rs_dot_rows_frame_major
-    // ANCHOR: opt_dot_rows
-    /// Channel-parallel dot products over a frame-major history block: all
-    /// channels' outputs for one frame in register-blocked tiles of 8/4/2/1.
-    /// Per channel the accumulation order over taps equals dotRow's, so the
-    /// outputs are bit-exact vs the planar path for every sample type — float
-    /// included, since each channel's double accumulator still sums the taps
-    /// in the same order (lanes are channels, not taps).
-    template <sample_type S>
-    inline void dot_rows_frame_major(const typename sample_traits<S>::coeff* SRT_RESTRICT row, const S* SRT_RESTRICT x,
-                                     std::size_t taps, std::size_t channels, S* SRT_RESTRICT out) noexcept {
-        std::size_t c = 0;
-        for (; c + 8 <= channels; c += 8) {
-            dot_tile_frame_major<S, 8>(row, x + c, taps, channels, out + c);
-        }
-        if (c + 4 <= channels) {
-            dot_tile_frame_major<S, 4>(row, x + c, taps, channels, out + c);
-            c += 4;
-        }
-        if (c + 2 <= channels) {
-            dot_tile_frame_major<S, 2>(row, x + c, taps, channels, out + c);
-            c += 2;
-        }
-        if (c < channels) {
-            dot_tile_frame_major<S, 1>(row, x + c, taps, channels, out + c);
-        }
-    }
-    // ANCHOR_END: rs_dot_rows_frame_major
-    // ANCHOR_END: opt_dot_rows
+    // The dot-product kernels (dot_row with its SMLALD path, the
+    // channel-parallel dot_tile_frame_major / dot_rows_frame_major) moved to
+    // DspTap's fir_kernels.h with the rest of the shared FIR substrate —
+    // identical code, and the tap::dsp core traits they run on are the base
+    // of this library's traits, so outputs are bit-exact. Re-exported here so
+    // existing unqualified uses keep working.
+    using tap::dsp::dot_row;
+    using tap::dsp::dot_rows_frame_major;
+    using tap::dsp::dot_tile_frame_major;
 
     // ANCHOR: rs_class_doc
     /// Streaming fractional-delay engine for one converter instance.

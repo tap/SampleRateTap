@@ -87,7 +87,7 @@ design target by 1/sinc(f/fs) so the composite comes out flat *and*
 zeroed:
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.h:pw_comp_design}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/kaiser.h:pw_comp_design}}
 ```
 
 Two implementation details earned their scars. The cosine-series trick is
@@ -98,7 +98,7 @@ rect is applied as a running sum *after* windowing, which makes the zeros
 exact in the discrete composite:
 
 ```cpp
-{{#include ../../../include/srt/detail/kaiser.h:pw_comp_rect}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/kaiser.h:pw_comp_rect}}
 ```
 
 One bug in between is worth its paragraph, because the test suite caught
@@ -158,14 +158,14 @@ log-spaced 60 Hz–16 kHz, amplitudes pink (equal energy per octave — the
 long-run average of real program), phases chosen for bounded crest:
 
 ```cpp
-{{#include ../../../tests/support/multitone_analysis.h:pw_comb}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/analysis/multitone_analysis.h:pw_comb}}
 ```
 
 The measurement fits every tone jointly and calls everything left over —
 aliases, servo FM, noise — the residual:
 
 ```cpp
-{{#include ../../../tests/support/multitone_analysis.h:pw_metric}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/analysis/multitone_analysis.h:pw_metric}}
 ```
 
 The instrument fought back twice, and both fights are preserved in its
@@ -249,7 +249,7 @@ over with a widened tolerance earlier in this very chapter's story. The
 tricky thing is row-sum-preserving quantization:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.h:pw_row_sum}}
+{{#include ../../../submodules/dsptap/include/tap/dsp/quantize.h:pw_row_sum}}
 ```
 
 After it, the measured result is the one his claim demanded: a DC input
