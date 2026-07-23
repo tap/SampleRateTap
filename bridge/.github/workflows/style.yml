@@ -1,0 +1,34 @@
+name: Tap House Style
+
+# Enforces the shared Tap House Rules. clang-format is run locally via the
+# pre-commit hook; this adds (1) a drift check against the canonical TapHouse
+# configs and (2) clang-tidy naming + mandatory-braces enforcement over this
+# repo's own translation units (scripts/tidy.sh is the local mirror).
+on: [push, pull_request]
+
+jobs:
+  drift:
+    uses: tap/taphouse/.github/workflows/drift-check.yml@v5
+    with:
+      ref: v5
+
+  clang-tidy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy-18 cmake python3
+      - name: Configure (compile database)
+        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DTAP_RATIO_BUILD_TESTS=ON
+      - name: clang-tidy (project TUs; the submodule and fetched deps excluded)
+        run: |
+          files=$(python3 -c "import json; print('\n'.join(e['file'] for e in json.load(open('build/compile_commands.json')) if 'submodules' not in e['file'] and 'third_party' not in e['file'] and '_deps' not in e['file']))")
+          fail=0
+          for f in $files; do
+            out=$(clang-tidy-18 -p build "$f" 2>/dev/null || true)
+            if echo "$out" | grep -qE "warning:|error:"; then echo "$out"; fail=1; fi
+          done
+          [ "$fail" -eq 0 ] && echo "clang-tidy clean." || { echo "::error::clang-tidy found violations"; exit 1; }

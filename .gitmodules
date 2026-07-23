@@ -1,0 +1,3 @@
+[submodule "bridge/submodules/dsptap"]
+	path = bridge/submodules/dsptap
+	url = https://github.com/tap/dsptap

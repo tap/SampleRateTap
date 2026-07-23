@@ -1,0 +1,10 @@
+build*/
+.cache/
+compile_commands.json
+CMakeUserPresets.json
+.vscode/
+.idea/
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+build_capi/
