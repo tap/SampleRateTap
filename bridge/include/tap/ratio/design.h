@@ -32,8 +32,8 @@ namespace tap::ratio {
 
     template <>
     struct ratio_traits<direction::up_to_48k> {
-        static constexpr std::size_t k_phases         = 160;     ///< L
-        static constexpr std::size_t k_decimation     = 147;     ///< M
+        static constexpr std::size_t k_phases         = 160; ///< L
+        static constexpr std::size_t k_decimation     = 147; ///< M
         static constexpr double      k_input_rate_hz  = 44100.0;
         static constexpr double      k_output_rate_hz = 48000.0;
         /// Anti-image stopband edge: the output Nyquist. Images of baseband
@@ -44,8 +44,8 @@ namespace tap::ratio {
 
     template <>
     struct ratio_traits<direction::down_to_44k1> {
-        static constexpr std::size_t k_phases         = 147;     ///< L
-        static constexpr std::size_t k_decimation     = 160;     ///< M
+        static constexpr std::size_t k_phases         = 147; ///< L
+        static constexpr std::size_t k_decimation     = 160; ///< M
         static constexpr double      k_input_rate_hz  = 48000.0;
         static constexpr double      k_output_rate_hz = 44100.0;
         /// Anti-alias stopband edge: the output Nyquist. A 48 kHz source
@@ -64,8 +64,8 @@ namespace tap::ratio {
     ///
     /// | profile     | stopband | passband | taps down | taps up | measured worst stop |
     /// |-------------|----------|----------|-----------|---------|---------------------|
-    /// | economy     |  70 dB   | 19 kHz   |  78       |  44     | -72.1 / -72.3 dB    |
-    /// | transparent | 120 dB   | 20 kHz   | 184       |  96     | -121.4 / -121.1 dB  |
+    /// | economy     |  70 dB   | 19 kHz   |  78       |  44     | -72.1 / -72.8 dB    |
+    /// | transparent | 120 dB   | 20 kHz   | 184       |  96     | -121.7 / -121.7 dB  |
     ///
     /// economy is the default, per the speed-first charter: going down, every
     /// alias product is confined above 20.1 kHz by arithmetic (see
@@ -84,10 +84,7 @@ namespace tap::ratio {
 
         /// Pristine tier: 120 dB stopband, flat to 20 kHz.
         static profile transparent() noexcept {
-            return {.passband_hz       = 20000.0,
-                    .stopband_atten_db = 120.0,
-                    .taps_up_to_48k    = 96,
-                    .taps_down_to_44k1 = 184};
+            return {.passband_hz = 20000.0, .stopband_atten_db = 120.0, .taps_up_to_48k = 96, .taps_down_to_44k1 = 184};
         }
 
         template <direction D>
