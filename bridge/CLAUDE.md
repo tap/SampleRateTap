@@ -14,8 +14,11 @@ which of its decisions were superseded. Read PLAN.md before implementing anythin
 re-derive decisions it has already settled (compile-time direction, profile vocabulary, the
 three-leg test strategy, the pinned-eps cross-validation design).
 
-Current state: **M1 skeleton.** The umbrella header carries only identity constants; the
-coefficient tables and schedule land in M2, the engine in M3.
+Current state: **v0.1 (M6 complete).** Design/schedule/tables (M2), the streaming converter for
+float/Q15/Q31 with committed scipy reference vectors (M3/M4), the golden cross-validation against
+SampleRateTap at pinned eps (M5, test-only submodule), and the bluetooth_bridge example + C ABI +
+executed demo notebook (M6). Next: the M7+ optimization campaign, gated on the embedded CI matrix
+(icount ratchet) landing first — see PLAN.md section 7.
 
 ## The charter constraints (load-bearing)
 

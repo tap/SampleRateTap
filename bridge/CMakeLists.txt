@@ -24,8 +24,26 @@ target_link_libraries(tap_ratio INTERFACE tap::dsp)
 
 if(PROJECT_IS_TOP_LEVEL)
     option(TAP_RATIO_BUILD_TESTS "Build RatioTap tests" ON)
+    option(TAP_RATIO_BUILD_EXAMPLES "Build RatioTap examples" ON)
 else()
     option(TAP_RATIO_BUILD_TESTS "Build RatioTap tests" OFF)
+    option(TAP_RATIO_BUILD_EXAMPLES "Build RatioTap examples" OFF)
+endif()
+
+# C ABI shared library for FFI consumers (the notebooks drive the shipping
+# C++ through it — see notebooks/ratio_demo.ipynb).
+option(TAP_RATIO_BUILD_CAPI "Build the C ABI shared library" OFF)
+
+# SampleRateTap, dev-only (never part of the shipped tap::ratio target): the
+# golden cross-validation test and the bluetooth_bridge example compose
+# against its near-unity ASRC. Consumed headers-only via include path — its
+# own CMake would add_subdirectory a second dsptap and collide with ours;
+# both repos pin the identical dsptap tree, so our tap::dsp serves its
+# "tap/dsp/..." includes.
+if(TAP_RATIO_BUILD_TESTS OR TAP_RATIO_BUILD_EXAMPLES)
+    add_library(srt_headers INTERFACE)
+    target_include_directories(srt_headers INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/submodules/sampleratetap/include)
 endif()
 
 # Warning flags for this project's own tests; never exported to consumers of
@@ -44,4 +62,12 @@ endif()
 if(TAP_RATIO_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(TAP_RATIO_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
+if(TAP_RATIO_BUILD_CAPI)
+    add_subdirectory(tools/capi)
 endif()

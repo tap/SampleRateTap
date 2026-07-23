@@ -202,7 +202,8 @@ executed (it measures the shipping C++, not a Python re-implementation).
   spec relaxation (the `economy` default) and channel vectorization
   (inherited kernels).
 
-v0.1 ships at M6. Nothing in M7+ blocks it.
+v0.1 ships at M6. Nothing in M7+ blocks it. **Status: M0–M6 complete —
+v0.1 shipped (2026-07-23).**
 
 ## 8. Acceptance criteria (v0.1)
 

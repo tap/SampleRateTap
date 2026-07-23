@@ -13,7 +13,7 @@ on the Tap family's shared FIR substrate
 float/Q15/Q31 sample-format traits, measured dot-product kernels, row-sum
 quantization, measurement instruments).
 
-> **Status: milestone M5.** The converter is in for all three sample
+> **Status: v0.1 (milestone M6).** The converter is in for all three sample
 > formats: float (the golden model, pinned against committed scipy
 > reference vectors sample-for-sample), Q31 (tracks float within −147 dB;
 > measures 146 dB at 997 Hz — exceeding float, whose float32 I/O is its
@@ -21,9 +21,32 @@ quantization, measurement instruments).
 > both cheaper *and* quieter than `transparent` at 16 bits). The golden
 > cross-validation against SampleRateTap's async engine at pinned
 > eps = L/M−1 agrees to −109 dB (down) / −99 dB (up) over every phase.
+> The `bluetooth_bridge` example, the C ABI (`tools/capi/`), and the
+> executed demo notebook (`notebooks/ratio_demo.ipynb`) complete v0.1.
 > [PLAN.md](PLAN.md) is the authoritative roadmap (charter, architecture
 > decisions, milestones, acceptance criteria);
 > [HANDOFF.md](HANDOFF.md) is the original design brief it grew from.
+
+## Quick start
+
+```cpp
+#include <tap/ratio/ratio.h>
+
+tap::ratio::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
+std::vector<float> out(down.outputs_for(n_in) * 2);
+std::size_t made = down.process(in, n_in, out.data());   // noexcept, alloc-free
+// ... and at end of stream:
+std::vector<float> tail(down.flush_output_frames() * 2);
+down.flush(tail.data());
+```
+
+Direction is a compile-time type (`converter_to_48k` / `converter_to_44k1`,
+plus `_q15` / `_q31` fixed-point variants); `pull(out, n, pop_fn)` is the
+callback-driven shape, and `frames_needed(n)` is exact arithmetic. For
+44.1↔48 across *independent clocks* (a Bluetooth chip on its own crystal),
+compose with SampleRateTap — `examples/bluetooth_bridge.cpp` is the
+documented recipe: +200 ppm crystal, servo locked, 997 Hz recovered
+exactly, 2.0 ms total latency.
 
 ## The boundaries are identity, not policy
 
