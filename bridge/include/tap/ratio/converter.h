@@ -245,9 +245,20 @@ namespace tap::ratio {
         std::uint32_t               m_pending = 1; // inputs to consume before the next output
     };
 
-    /// The float converters, one per direction (Q15/Q31 aliases land with
-    /// their parity battery in milestone M4).
+    /// The float converters, one per direction — the golden-model profile.
     using converter_to_48k  = basic_converter<float, direction::up_to_48k>;
     using converter_to_44k1 = basic_converter<float, direction::down_to_44k1>;
+
+    /// Q15 fixed-point converters (int16_t samples; the flagship embedded
+    /// profile — Bluetooth-adjacent M33/M55 deployments). Integer-only hot
+    /// loop via the tap::dsp Q15 core; the floor is the 16-bit format itself
+    /// (see test_converter_fixed_point.cpp for the measured numbers).
+    using converter_to_48k_q15  = basic_converter<std::int16_t, direction::up_to_48k>;
+    using converter_to_44k1_q15 = basic_converter<std::int16_t, direction::down_to_44k1>;
+
+    /// Q31 fixed-point converters (int32_t samples): matches the float
+    /// datapath at the format-negligible level (parity pinned by test).
+    using converter_to_48k_q31  = basic_converter<std::int32_t, direction::up_to_48k>;
+    using converter_to_44k1_q31 = basic_converter<std::int32_t, direction::down_to_44k1>;
 
 } // namespace tap::ratio

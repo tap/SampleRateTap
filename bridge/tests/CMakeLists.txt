@@ -17,6 +17,7 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(tap_ratio_tests
     test_converter.cpp
+    test_converter_fixed_point.cpp
     test_design.cpp
     test_phase_table.cpp
     test_schedule.cpp

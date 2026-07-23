@@ -226,7 +226,16 @@ All numbers pinned (M2 design spike, 2026-07-23).
   statistical sampling (began in M2: `test_phase_table.cpp` holds the
   row-sum and DC guarantees for every phase of all four tables).
 - Cross-validation agreement within the ASRC interpolation floor (§6.3).
-- Bit-exact repeatability per §3; Q15/Q31 parity bounds pinned.
+- Bit-exact repeatability per §3. Fixed-point parity pinned (M4,
+  `test_converter_fixed_point.cpp`): **Q31 tracks the float golden model
+  within 5×10⁻⁸ per sample (−147 dB)** on the reference noise, and measures
+  **146 dB** SNR at 997 Hz through transparent — *exceeding* float, whose
+  float32 I/O is its own bound. **Q15 is format-limited**: 76.1 dB (economy)
+  / 72.8 dB (transparent) at 997 Hz half scale — transparent is *worse* at
+  Q15 because Q1.14 coefficient noise stacks with tap count (184 vs 78) while
+  the deeper filter buys nothing 16 bits can express, so **economy is the
+  recommended Q15 pairing** (cheaper and quieter). Full-scale drive
+  saturates without wrapping; DC emerges within one LSB at every phase.
 - RT contract: processing paths `noexcept`, allocation-free (verified under
   sanitizers); constructor-only design confirmed < 10 ms class.
 - Latency (`latency_frames()`, linear-phase group delay in input samples):
