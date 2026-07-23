@@ -1,0 +1,3 @@
+[submodule "submodules/dsptap"]
+	path = submodules/dsptap
+	url = https://github.com/tap/dsptap

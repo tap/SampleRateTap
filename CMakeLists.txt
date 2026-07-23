@@ -1,12 +1,19 @@
 cmake_minimum_required(VERSION 3.24)
 project(SampleRateTap VERSION 0.1.0 LANGUAGES CXX)
 
+# Shared Tap-family substrate (tap::dsp): kaiser design math, sample-format
+# traits, FIR dot kernels, row-sum quantization, measurement instruments.
+# Pinned as a submodule per the DspTap release flow (changes land there first,
+# consumers bump the pin).
+add_subdirectory(submodules/dsptap)
+
 add_library(SampleRateTap INTERFACE)
 add_library(SampleRateTap::SampleRateTap ALIAS SampleRateTap)
 target_include_directories(SampleRateTap INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 target_compile_features(SampleRateTap INTERFACE cxx_std_20)
+target_link_libraries(SampleRateTap INTERFACE tap::dsp)
 
 if(PROJECT_IS_TOP_LEVEL)
     option(SRT_BUILD_TESTS "Build SampleRateTap tests" ON)

@@ -39,6 +39,8 @@ jobs:
             werror: OFF
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
 
       - name: Configure
         env:
@@ -68,6 +70,8 @@ jobs:
             flags: -fsanitize=thread
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
 
       - name: Configure
         env:
@@ -109,6 +113,8 @@ jobs:
       HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
 
       - name: Cache toolchain
         id: cache
@@ -193,6 +199,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
 
       - name: Install toolchain and QEMU
         run: >
@@ -222,6 +230,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
 
       - name: Install toolchain and QEMU
         run: >
@@ -294,6 +304,8 @@ jobs:
       HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
 
       - name: Install toolchains and QEMU
         run: >
@@ -440,6 +452,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
 
       - name: Configure
         run: >
@@ -464,6 +478,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
 
       - name: Install dependencies
         run: >
@@ -493,6 +509,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
       # Run the TapHouse pre-commit hook — the same pinned clang-format
       # developers get from `pre-commit install` (.pre-commit-config.yaml), so
       # local and CI share one version AND one file scope (all C/C++ minus
@@ -515,6 +533,8 @@ jobs:
       MDBOOK_SHA256: "9ef07fd288ba58ff3b99d1c94e6d414d431c9a61fdb20348e5beb74b823d546b"
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
 
       - name: Install mdBook (pinned)
         run: |
