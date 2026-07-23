@@ -42,7 +42,10 @@ option(TAP_RATIO_BUILD_CAPI "Build the C ABI shared library" OFF)
 # "tap/dsp/..." includes.
 if(TAP_RATIO_BUILD_TESTS OR TAP_RATIO_BUILD_EXAMPLES)
     add_library(srt_headers INTERFACE)
-    target_include_directories(srt_headers INTERFACE
+    # SYSTEM: dependency headers are exempt from this repo's warning gates
+    # (MSVC /W4 otherwise fires benign C4324 on the ASRC ring's deliberate
+    # cache-line alignment padding, and -Werror turns it fatal).
+    target_include_directories(srt_headers SYSTEM INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/submodules/sampleratetap/include)
 endif()
 
