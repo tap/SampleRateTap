@@ -44,8 +44,7 @@ namespace tap::ratio {
                 for (std::size_t t = 0; t < m_taps; ++t) {
                     row_d[m_taps - 1 - t] = proto[t * k_phases + ph];
                 }
-                tap::dsp::quantize_row_preserving_sum<S>(row_d,
-                                                         std::span<coeff>(m_table.data() + ph * m_taps, m_taps));
+                tap::dsp::quantize_row_preserving_sum<S>(row_d, std::span<coeff>(m_table.data() + ph * m_taps, m_taps));
             }
         }
 

@@ -34,8 +34,8 @@ namespace {
         constexpr std::size_t l = ratio_traits<D>::k_phases;
         constexpr std::size_t m = ratio_traits<D>::k_decimation;
 
-        std::uint64_t advance_sum = 0;
-        std::uint64_t phase_seen  = 0; // bitset via sum of distinct check below
+        std::uint64_t     advance_sum = 0;
+        std::uint64_t     phase_seen  = 0; // bitset via sum of distinct check below
         std::vector<bool> seen(l, false);
         for (std::size_t n = 0; n < l; ++n) {
             // The defining formulas, entry by entry.

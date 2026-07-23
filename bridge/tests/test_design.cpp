@@ -39,7 +39,7 @@ namespace {
 
     template <direction D>
     void check_meets_spec(const profile& p, const char* name) {
-        using traits = ratio_traits<D>;
+        using traits                = ratio_traits<D>;
         const std::vector<double> h = design_prototype<D>(p);
         ASSERT_EQ(h.size(), traits::k_phases * p.taps<D>());
 
@@ -77,8 +77,7 @@ namespace {
         EXPECT_NEAR(hi, 1.0, 1e-12) << name;
 
         std::printf("[ measured ] %-24s L=%3zu taps=%3zu  worst stopband %7.2f dB  storage(f32) %5.1f KiB\n", name,
-                    traits::k_phases, p.taps<D>(), worst,
-                    static_cast<double>(h.size() * sizeof(float)) / 1024.0);
+                    traits::k_phases, p.taps<D>(), worst, static_cast<double>(h.size() * sizeof(float)) / 1024.0);
     }
 
     TEST(Design, DownEconomyMeetsSpec) {
@@ -106,11 +105,11 @@ namespace {
     }
 
     TEST(Design, BadProfilesThrow) {
-        profile p        = profile::economy();
-        p.passband_hz    = 23000.0; // above the down direction's stopband edge
+        profile p     = profile::economy();
+        p.passband_hz = 23000.0; // above the down direction's stopband edge
         EXPECT_THROW((design_prototype<direction::down_to_44k1>(p)), std::invalid_argument);
-        profile q            = profile::economy();
-        q.stopband_atten_db  = -1.0;
+        profile q           = profile::economy();
+        q.stopband_atten_db = -1.0;
         EXPECT_THROW((design_prototype<direction::up_to_48k>(q)), std::invalid_argument);
     }
 

@@ -31,8 +31,8 @@ namespace tap::ratio {
     /// to exactly M over the superblock: L outputs always consume M inputs.
     template <direction D>
     constexpr std::array<schedule_entry, ratio_traits<D>::k_phases> make_schedule() noexcept {
-        constexpr std::size_t l = ratio_traits<D>::k_phases;
-        constexpr std::size_t m = ratio_traits<D>::k_decimation;
+        constexpr std::size_t         l = ratio_traits<D>::k_phases;
+        constexpr std::size_t         m = ratio_traits<D>::k_decimation;
         std::array<schedule_entry, l> s{};
         for (std::size_t n = 0; n < l; ++n) {
             s[n].phase   = static_cast<std::uint16_t>((n * m) % l);
