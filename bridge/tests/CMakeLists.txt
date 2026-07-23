@@ -21,12 +21,13 @@ add_executable(tap_ratio_tests
     test_phase_table.cpp
     test_schedule.cpp
     test_skeleton.cpp)
+# The tests' own headers (the committed reference vectors) resolve relative
+# to this directory.
 target_include_directories(tap_ratio_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(tap_ratio_tests PRIVATE
     tap::ratio
     tap_ratio_warnings)
 
-target_include_directories(tap_ratio_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(tap_ratio_tests PRIVATE GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(tap_ratio_tests DISCOVERY_TIMEOUT 120 PROPERTIES TIMEOUT 900)
