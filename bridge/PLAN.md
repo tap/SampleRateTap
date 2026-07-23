@@ -208,11 +208,18 @@ v0.1 ships at M6. Nothing in M7+ blocks it.
 
 All numbers pinned (M2 design spike, 2026-07-23).
 
-- `economy`, both directions: every alias/image product ≤ **−71 dBFS**
-  above 20 kHz (design floors: −72.1 dB down, −72.8 dB up); **nothing
-  measurable below 20 kHz** above the format/accumulation floor
-  (scipy-`upfirdn` preview in the spike measured the audible band at
-  −100 dBFS).
+- `economy`, both directions: every spurious product ≥ **71 dB below the
+  source content** (design floors: −72.1 dB down, −72.8 dB up). Two species,
+  measured separately (M3, `test_converter.cpp`): decimation *aliases* of
+  signal content are additionally **confined above 20 kHz by arithmetic**;
+  upsampling *image leakage* folds in-band but is bounded by the stopband
+  (worst measured in-band product: −85 dBFS for a −6 dBFS stopband-adjacent
+  tone; a 997 Hz tone measures ~89 dB SNR against its imaging floor). The
+  original "nothing measurable below 20 kHz" phrasing overstated economy —
+  that claim holds at the *transparent* tier; economy's honest in-band bound
+  is the stopband. Deepening exactly these in-band images for low-frequency
+  program energy is the k·fs image-zeros lever (M7, SampleRateTap's
+  `design_prototype_compensated`).
 - `transparent`, both directions: alias/image products ≤ **−121 dB**
   (design floors −121.7 dB); passband flat to 20 kHz within ±0.00001 dB.
 - Exhaustive phase coverage in tests — all 147 and all 160 phases, not

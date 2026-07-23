@@ -13,7 +13,10 @@ on the Tap family's shared FIR substrate
 float/Q15/Q31 sample-format traits, measured dot-product kernels, row-sum
 quantization, measurement instruments).
 
-> **Status: skeleton (milestone M1).** The converter itself lands next —
+> **Status: milestone M3.** The float converter is in — both directions,
+> push (`process`) and pull (`pull` + exact `frames_needed`) call shapes,
+> pinned against committed scipy reference vectors sample-for-sample from
+> the first output. Q15/Q31 aliases land with their parity battery in M4.
 > [PLAN.md](PLAN.md) is the authoritative roadmap (charter, architecture
 > decisions, milestones, acceptance criteria);
 > [HANDOFF.md](HANDOFF.md) is the original design brief it grew from.

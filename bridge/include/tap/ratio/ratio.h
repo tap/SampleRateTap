@@ -23,13 +23,13 @@
 // profiles, dot kernels, row-sum quantization, measurement instruments),
 // consumed as the submodules/dsptap submodule.
 //
-// Status: M2 — direction/profile/design (design.h), the compile-time
-// (phase, advance) schedule (schedule.h), and the phase-major quantized
-// coefficient table (phase_table.h) are in; the engine lands in M3.
-// PLAN.md is the authoritative roadmap; HANDOFF.md is the original design
-// brief.
+// Status: M3 — the streaming converter (converter.h: process/pull/flush,
+// float aliases) over the M2 design/schedule/table layer. Q15/Q31 aliases
+// land with their parity battery in M4. PLAN.md is the authoritative
+// roadmap; HANDOFF.md is the original design brief.
 #pragma once
 
+#include "tap/ratio/converter.h"   // IWYU pragma: export
 #include "tap/ratio/design.h"      // IWYU pragma: export
 #include "tap/ratio/phase_table.h" // IWYU pragma: export
 #include "tap/ratio/schedule.h"    // IWYU pragma: export
