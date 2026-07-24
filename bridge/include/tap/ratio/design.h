@@ -80,15 +80,17 @@ namespace tap::ratio {
         std::size_t taps_down_to_44k1 = 78;      ///< taps per phase, 48 -> 44.1
 
         /// The speed-first default: ~70 dB stopband, 19 kHz passband.
-        static profile economy() noexcept { return {}; }
+        /// constexpr so the converter's hot path can hard-commit to the
+        /// canonical trip counts at compile time (M7 lever 2).
+        static constexpr profile economy() noexcept { return {}; }
 
         /// Pristine tier: 120 dB stopband, flat to 20 kHz.
-        static profile transparent() noexcept {
+        static constexpr profile transparent() noexcept {
             return {.passband_hz = 20000.0, .stopband_atten_db = 120.0, .taps_up_to_48k = 96, .taps_down_to_44k1 = 184};
         }
 
         template <direction D>
-        std::size_t taps() const noexcept {
+        constexpr std::size_t taps() const noexcept {
             return D == direction::up_to_48k ? taps_up_to_48k : taps_down_to_44k1;
         }
     };

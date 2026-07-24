@@ -47,6 +47,12 @@ namespace tap::ratio {
         static constexpr std::size_t k_phases     = ratio_traits<D>::k_phases;     ///< L
         static constexpr std::size_t k_decimation = ratio_traits<D>::k_decimation; ///< M
 
+        /// The canonical trip counts (taps per phase = MACs per output) the
+        /// hot path hard-commits to at compile time; any other profile runs
+        /// the runtime-length walk.
+        static constexpr std::size_t k_taps_economy     = profile::economy().taps<D>();
+        static constexpr std::size_t k_taps_transparent = profile::transparent().taps<D>();
+
         /// Allocates histories and designs the table; setup time only.
         explicit basic_converter(std::size_t channels = 1, const profile& p = profile::economy())
             : m_table(p)
@@ -80,14 +86,22 @@ namespace tap::ratio {
         /// channel loops vanish. The dots themselves are the unchanged
         /// tap::dsp kernels, and the append/emit order is identical, so
         /// outputs stay bit-exact (pinned by the scipy-vector tests).
+        ///
+        /// M7 lever 2 commits the trip counts: the two canonical profiles'
+        /// taps-per-phase are compile-time facts (constexpr profile), so one
+        /// dispatch per call hands the walk a constant dot length — the
+        /// inlined kernels unroll and vectorize against it instead of a
+        /// runtime bound. A custom-taps profile takes the runtime-length
+        /// instantiation (pinned by the custom-profile parity test).
         std::size_t process(const S* in, std::size_t in_frames, S* out) noexcept {
-            if (m_channels == 1) {
-                return process_walk<1>(in, in_frames, out);
+            const std::size_t taps = m_table.taps();
+            if (taps == k_taps_economy) {
+                return process_taps<k_taps_economy>(in, in_frames, out);
             }
-            if (m_channels == 2) {
-                return process_walk<2>(in, in_frames, out);
+            if (taps == k_taps_transparent) {
+                return process_taps<k_taps_transparent>(in, in_frames, out);
             }
-            return process_walk<0>(in, in_frames, out);
+            return process_taps<0>(in, in_frames, out);
         }
         // ANCHOR_END: rt_process
 
@@ -200,21 +214,36 @@ namespace tap::ratio {
 
         const S* window(std::size_t c) const noexcept { return m_hist[c].data() + m_end - m_table.taps(); }
 
+        /// Channel-shape dispatch for one compile-time trip count T (0 =
+        /// runtime taps): mono and stereo get stamped-out walks, anything
+        /// else the generic.
+        template <std::size_t T>
+        std::size_t process_taps(const S* in, std::size_t in_frames, S* out) noexcept {
+            if (m_channels == 1) {
+                return process_walk<1, T>(in, in_frames, out);
+            }
+            if (m_channels == 2) {
+                return process_walk<2, T>(in, in_frames, out);
+            }
+            return process_walk<0, T>(in, in_frames, out);
+        }
+
         // ANCHOR: rt_superblock_walk
-        /// The superblock walk behind process() (M7 lever 1). CH = 1 and 2
-        /// are stamped-out specializations — the deployment shapes — with the
-        /// per-channel loops dissolved and the planar history pointers
+        /// The superblock walk behind process() (M7 levers 1 + 2). CH = 1 and
+        /// 2 are stamped-out specializations — the deployment shapes — with
+        /// the per-channel loops dissolved and the planar history pointers
         /// hoisted (compaction memmoves in place, so they stay valid for the
-        /// whole call); CH = 0 is the any-channel-count generic. The schedule
-        /// cursor, history end and pending gap run in locals so the state
-        /// machine lives in registers, and the outputs_for() arithmetic
-        /// settles the trip count before the first sample moves — the walk
-        /// itself has no exhaustion checks. Same append/emit order and the
-        /// same tap::dsp dot kernels as the naive loop: bit-exact by
+        /// whole call); CH = 0 is the any-channel-count generic. T is the
+        /// compile-time dot length for the canonical profiles (0 = runtime).
+        /// The schedule cursor, history end and pending gap run in locals so
+        /// the state machine lives in registers, and the outputs_for()
+        /// arithmetic settles the trip count before the first sample moves —
+        /// the walk itself has no exhaustion checks. Same append/emit order
+        /// and the same tap::dsp dot kernels as the naive loop: bit-exact by
         /// construction, pinned by the scipy-vector and pull-parity tests.
-        template <std::size_t CH>
+        template <std::size_t CH, std::size_t T>
         std::size_t process_walk(const S* in, std::size_t in_frames, S* out) noexcept {
-            const std::size_t taps  = m_table.taps();
+            const std::size_t taps  = T != 0 ? T : m_table.taps();
             const std::size_t total = static_cast<std::size_t>(outputs_for(in_frames));
             const std::size_t ch    = CH != 0 ? CH : m_channels;
 

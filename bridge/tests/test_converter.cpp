@@ -64,6 +64,16 @@ namespace {
     TEST(Converter, ImpulseReproducesTableUp) {
         check_impulse_reproduces_table<direction::up_to_48k>(profile::economy());
     }
+    // Non-canonical taps take the runtime-length walk (process() only
+    // hard-commits to the two constexpr profile trip counts, M7 lever 2);
+    // this pins that instantiation with the same bit-exact sweep.
+    TEST(Converter, ImpulseReproducesTableCustomTaps) {
+        profile p           = profile::economy();
+        p.taps_up_to_48k    = 52;
+        p.taps_down_to_44k1 = 86;
+        check_impulse_reproduces_table<direction::up_to_48k>(p);
+        check_impulse_reproduces_table<direction::down_to_44k1>(p);
+    }
     TEST(Converter, ImpulseReproducesTableDownTransparent) {
         check_impulse_reproduces_table<direction::down_to_44k1>(profile::transparent());
     }

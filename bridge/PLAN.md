@@ -235,11 +235,27 @@ executed (it measures the shipping C++, not a Python re-implementation).
     old loop, confirming the overhead was an Arm codegen story). pull()
     keeps the generic per-frame loop deliberately: its granularity is the
     pop callback, a different lever.
+  - **M7c — committed trip counts (landed).** Lever 2, the codegen half of
+    "baked tables": the canonical profiles became constexpr, so process()
+    dispatches once per call on the four pinned taps-per-phase counts
+    (44/78 economy, 96/184 transparent) and the walk hands the inlined dot
+    kernels a compile-time trip count; custom-taps profiles take the
+    runtime-length instantiation (pinned by its own impulse test).
+    Measured: **Hexagon fixed point −7…−12%** (all four scenarios —
+    hexagon-clang pipelines the exact-count scalar loops), **M55 up_q15
+    −15%** (44 taps fully unrolls under Helium; the 78/96/184-tap
+    scenarios stay loop-shaped and flat), **M33 Q15 −2.6/−3.4%**; float
+    everywhere within noise of flat (soft-double MAC bound on M33, FP64
+    chain bound on M55). Coefficient *baking* (committed tables in rodata)
+    remains un-pulled: construction is <0.3% of every workload, so its
+    value is boot time and RAM on MCUs, not instruction counts — deferred
+    until a consumer needs it.
 
 v0.1 ships at M6. Nothing in M7+ blocks it. **Status: M0–M6 complete —
-v0.1 shipped (2026-07-23). M7a measurement harness landed (2026-07-23);
-M7b superblock codegen landed (2026-07-24); next lever: baked/committed
-tables, or the M33 float story if a consumer needs it.**
+v0.1 shipped (2026-07-23). M7a measurement harness + M7b superblock
+codegen + M7c committed trip counts landed (2026-07-23/24); next lever:
+polyphase symmetry storage halving, or the M33 float story if a consumer
+needs it.**
 
 ## 8. Acceptance criteria (v0.1)
 
