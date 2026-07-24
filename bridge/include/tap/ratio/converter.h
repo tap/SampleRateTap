@@ -16,6 +16,21 @@
 #include "tap/ratio/phase_table.h"
 #include "tap/ratio/schedule.h"
 
+// Out-of-lining attribute for the mirrored-phase dot (see dot_mirrored):
+// measured per target, gated per target, the same pattern as the tap::dsp
+// kernel gates. On Arm, two inlined dot expansions in the walk's loop body
+// break the forward arm's unrolled codegen (M55 up_q15 +3.3%), so the
+// mirrored arm is a call; hexagon-clang keeps both expansions tight inline
+// and pays for the call instead (down_q31: +3.3% outlined, +2.7% inlined),
+// so there the attribute is empty and the helper inlines away.
+#if defined(__hexagon__)
+#define TAP_RATIO_MIRRORED_DOT_ATTR
+#elif defined(_MSC_VER)
+#define TAP_RATIO_MIRRORED_DOT_ATTR __declspec(noinline)
+#else
+#define TAP_RATIO_MIRRORED_DOT_ATTR __attribute__((noinline))
+#endif
+
 namespace tap::ratio {
 
     // ANCHOR: rt_converter_doc
@@ -282,18 +297,34 @@ namespace tap::ratio {
                     append();
                     --pending;
                 }
+                // Symmetry-halved table (M7 lever 3): a mirrored phase dots
+                // its partner's stored row tap-reversed — same products,
+                // same accumulation order, bit-identical to a full table.
+                // The mirrored arm is a CALL (dot_mirrored), not an inline
+                // expansion: two inlined dot bodies in this loop measurably
+                // break the forward arm's unrolled codegen (M55 up_q15,
+                // +3.3%), while a call against a ~300-insn dot is noise.
                 const schedule_entry step = k_schedule<D>[pos];
-                const coeff*         row  = m_table.row(step.phase);
+                const coeff*         row  = m_table.stored_row(step.phase);
+                const bool           mir  = basic_phase_table<S, D>::is_mirrored(step.phase);
                 if constexpr (CH == 1) {
-                    out[0] = tap::dsp::dot_row<S>(row, h0 + end - taps, taps);
+                    out[0] =
+                        mir ? dot_mirrored<T>(row, h0 + end - taps) : tap::dsp::dot_row<S>(row, h0 + end - taps, taps);
                 }
                 else if constexpr (CH == 2) {
-                    out[0] = tap::dsp::dot_row<S>(row, h0 + end - taps, taps);
-                    out[1] = tap::dsp::dot_row<S>(row, h1 + end - taps, taps);
+                    if (mir) {
+                        out[0] = dot_mirrored<T>(row, h0 + end - taps);
+                        out[1] = dot_mirrored<T>(row, h1 + end - taps);
+                    }
+                    else {
+                        out[0] = tap::dsp::dot_row<S>(row, h0 + end - taps, taps);
+                        out[1] = tap::dsp::dot_row<S>(row, h1 + end - taps, taps);
+                    }
                 }
                 else {
                     for (std::size_t c = 0; c < ch; ++c) {
-                        out[c] = tap::dsp::dot_row<S>(row, m_hist[c].data() + end - taps, taps);
+                        out[c] = mir ? dot_mirrored<T>(row, m_hist[c].data() + end - taps)
+                                     : tap::dsp::dot_row<S>(row, m_hist[c].data() + end - taps, taps);
                     }
                 }
                 out += ch;
@@ -312,13 +343,27 @@ namespace tap::ratio {
         }
         // ANCHOR_END: rt_superblock_walk
 
+        /// The mirrored-phase dot, forced out of line (T = compile-time trip
+        /// count, 0 = runtime): the walk's loop body keeps the forward
+        /// tap::dsp::dot_row as its only inlined dot expansion — inlining
+        /// both arms measurably regressed the forward arm's unrolled codegen
+        /// — while this instantiation gets the same compile-time trip count
+        /// on its own. Bit-exactness is the reversed kernel's contract:
+        /// identical bits to dotting the materialized mirrored row.
+        template <std::size_t T>
+        TAP_RATIO_MIRRORED_DOT_ATTR S dot_mirrored(const coeff* row, const S* hist) const noexcept {
+            return tap::dsp::dot_row_reversed<S>(row, hist, T != 0 ? T : m_table.taps());
+        }
+
         /// One output frame at the current schedule position; advances state.
         void emit(S* out) noexcept {
             const schedule_entry step = k_schedule<D>[m_pos];
-            const coeff*         row  = m_table.row(step.phase);
+            const coeff*         row  = m_table.stored_row(step.phase);
+            const bool           mir  = basic_phase_table<S, D>::is_mirrored(step.phase);
             const std::size_t    taps = m_table.taps();
             for (std::size_t c = 0; c < m_channels; ++c) {
-                out[c] = tap::dsp::dot_row<S>(row, window(c), taps);
+                out[c] = mir ? tap::dsp::dot_row_reversed<S>(row, window(c), taps)
+                             : tap::dsp::dot_row<S>(row, window(c), taps);
             }
             m_pending = step.advance;
             m_pos     = m_pos + 1 == k_phases ? 0 : m_pos + 1;

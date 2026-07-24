@@ -53,7 +53,7 @@ namespace {
         for (std::size_t n = 0; n < made; ++n) {
             const std::size_t k        = n * m / l; // newest-input index for output n
             const std::size_t phase    = (n * m) % l;
-            const float       expected = k < taps ? c.table().row(phase)[taps - 1 - k] : 0.0f;
+            const float       expected = k < taps ? c.table().at(phase, taps - 1 - k) : 0.0f;
             ASSERT_EQ(y[n], expected) << "n=" << n; // bit-exact, transient included
         }
     }

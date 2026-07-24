@@ -106,8 +106,11 @@ Two quality tiers behind one design path, named in the family vocabulary:
 
 | Profile | Stopband | Passband edge | Taps/phase (=MACs/out) down / up | Storage f32 down / up | Role |
 |---|---|---|---|---|---|
-| `economy()` — **default** | 70 dB | 19 kHz | **78 / 44** | 44.8 / 27.5 KiB | The speed-first default. All alias products land above 20 kHz at ≤ −71 dBFS — arithmetically confined to the ultrasonic band (see HANDOFF §4) |
-| `transparent()` | 120 dB | 20 kHz | **184 / 96** | 105.7 / 60.0 KiB | Pristine/offline tier |
+| `economy()` — **default** | 70 dB | 19 kHz | **78 / 44** | 22.5 / 13.8 KiB | The speed-first default. All alias products land above 20 kHz at ≤ −71 dBFS — arithmetically confined to the ultrasonic band (see HANDOFF §4) |
+| `transparent()` | 120 dB | 20 kHz | **184 / 96** | 53.2 / 30.0 KiB | Pristine/offline tier |
+
+Storage figures are with the M7d symmetry halving (ceil(L/2) stored rows;
+pinned by `PhaseTable.StorageBudgetsArePinned`); Q15 halves them again.
 
 `economy` as default is a deliberate positioning choice consistent with the
 speed-first charter; the README must state the reasoning (the §4 argument:
@@ -250,11 +253,30 @@ executed (it measures the shipping C++, not a Python re-implementation).
     remains un-pulled: construction is <0.3% of every workload, so its
     value is boot time and RAM on MCUs, not instruction counts — deferred
     until a consumer needs it.
+  - **M7d — polyphase symmetry storage halving (landed).** Lever 3, in two
+    PRs per the substrate discipline: `tap::dsp::dot_row_reversed` landed
+    in DspTap first (hist forward × row backward, SMLALDX swapped-lane
+    dual-MAC on DSP-extension Arm — bit-identical to dotting the
+    materialized mirror), then the table dropped to ceil(L/2) stored rows
+    (74 of 147 down, 80 of 160 up; economy f32 44.8→22.5 / 27.5→13.8 KiB,
+    transparent 105.7→53.2 / 60.0→30.0 KiB, Q15 halves again) with
+    mirrored phases dotting their partner's stored row reversed.
+    Quantization is canonical over the stored half, so the mirror is exact
+    by construction and every row-sum guarantee carries over. Compute cost
+    measured at **zero baseline changes on all three targets** — with one
+    codegen subtlety the ratchet caught: inlining both dot arms in the
+    walk broke Arm's unrolled forward codegen (M55 up_q15 +3.3%), while
+    outlining the mirrored arm broke Hexagon's (down_q31 +3.3% called,
+    +2.7% inlined) — so the mirrored-arm out-lining is gated per target
+    (TAP_RATIO_MIRRORED_DOT_ATTR), the same measured-per-target pattern as
+    the tap::dsp kernel gates. Worst residual rides inside the ±3% gate
+    (Hexagon down_q31 +2.7%); Arm came out slightly ahead (M33 Q31 −2.5%).
 
 v0.1 ships at M6. Nothing in M7+ blocks it. **Status: M0–M6 complete —
 v0.1 shipped (2026-07-23). M7a measurement harness + M7b superblock
-codegen + M7c committed trip counts landed (2026-07-23/24); next lever:
-polyphase symmetry storage halving, or the M33 float story if a consumer
+codegen + M7c committed trip counts + M7d symmetry halving landed
+(2026-07-23/24); next lever candidates: multistage decomposition,
+minimum-phase economy variant, or the M33 float story if a consumer
 needs it.**
 
 ## 8. Acceptance criteria (v0.1)

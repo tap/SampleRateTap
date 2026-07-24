@@ -29,28 +29,42 @@ namespace {
         using tr = tap::dsp::sample_traits<S>;
         const basic_phase_table<S, D> table(p);
         EXPECT_EQ(table.taps(), p.template taps<D>());
-        EXPECT_EQ(table.storage_bytes(), table.k_phases * table.taps() * sizeof(typename tr::coeff));
+        // Symmetry-halved storage (M7 lever 3): only ceil(L/2) rows held.
+        EXPECT_EQ(table.storage_bytes(), table.k_stored * table.taps() * sizeof(typename tr::coeff));
         EXPECT_NEAR(table.group_delay_input_samples(), static_cast<double>(table.taps()) / 2.0, 0.51);
 
-        // Every phase, exhaustively: fixed-point rows sum to the format's
-        // unity exactly (the row-sum guarantee), and a full-scale DC window
-        // through the shared kernel lands within one output LSB of full
-        // scale for every branch — DC gain is phase-independent.
+        // Every phase, exhaustively — through the same stored_row/is_mirrored
+        // pairing the converter's hot path uses, so the reversed-kernel leg
+        // is exercised for every mirrored branch: fixed-point rows sum to
+        // the format's unity exactly (the row-sum guarantee; reversal
+        // preserves the multiset), and a full-scale DC window lands within
+        // one output LSB of full scale — DC gain is phase-independent.
         std::vector<S> dc(table.taps(), std::is_floating_point_v<S> ? S(1) : std::numeric_limits<S>::max());
         for (std::size_t ph = 0; ph < table.k_phases; ++ph) {
             if constexpr (!std::is_floating_point_v<S>) {
                 std::int64_t sum = 0;
                 for (std::size_t t = 0; t < table.taps(); ++t) {
-                    sum += table.row(ph)[t];
+                    sum += table.at(ph, t);
                 }
                 ASSERT_EQ(sum, static_cast<std::int64_t>(tr::k_coeff_scale)) << "phase " << ph;
             }
-            const S y = tap::dsp::dot_row<S>(table.row(ph), dc.data(), table.taps());
+            const S y = table.is_mirrored(ph)
+                            ? tap::dsp::dot_row_reversed<S>(table.stored_row(ph), dc.data(), table.taps())
+                            : tap::dsp::dot_row<S>(table.stored_row(ph), dc.data(), table.taps());
             if constexpr (std::is_floating_point_v<S>) {
                 ASSERT_NEAR(y, 1.0f, 1e-3f) << "phase " << ph;
             }
             else {
                 ASSERT_NEAR(y, std::numeric_limits<S>::max(), 2) << "phase " << ph;
+            }
+        }
+
+        // The mirror identity itself, exhaustively: phase ph IS phase
+        // L-1-ph tap-reversed, coefficient for coefficient.
+        for (std::size_t ph = 0; ph < table.k_phases; ++ph) {
+            for (std::size_t t = 0; t < table.taps(); ++t) {
+                ASSERT_EQ(table.at(ph, t), table.at(table.k_phases - 1 - ph, table.taps() - 1 - t))
+                    << "phase " << ph << " tap " << t;
             }
         }
     }
@@ -69,14 +83,16 @@ namespace {
     }
 
     // The storage numbers the plan quotes, pinned: economy is the compact
-    // profile the speed-first charter defaults to.
+    // profile the speed-first charter defaults to, and the symmetry halving
+    // stores ceil(L/2) rows — 74 of 147 down, 80 of 160 up (the odd L keeps
+    // its self-symmetric middle branch as a stored row).
     TEST(PhaseTable, StorageBudgetsArePinned) {
         const basic_phase_table<float, direction::down_to_44k1> de(profile::economy());
-        EXPECT_EQ(de.storage_bytes(), 147u * 78u * 4u); // 44.8 KiB
+        EXPECT_EQ(de.storage_bytes(), 74u * 78u * 4u); // 22.5 KiB (was 44.8 full)
         const basic_phase_table<float, direction::down_to_44k1> dt(profile::transparent());
-        EXPECT_EQ(dt.storage_bytes(), 147u * 184u * 4u); // 105.7 KiB
+        EXPECT_EQ(dt.storage_bytes(), 74u * 184u * 4u); // 53.2 KiB (was 105.7 full)
         const basic_phase_table<std::int16_t, direction::up_to_48k> ue(profile::economy());
-        EXPECT_EQ(ue.storage_bytes(), 160u * 44u * 2u); // 13.8 KiB — Q15 halves it
+        EXPECT_EQ(ue.storage_bytes(), 80u * 44u * 2u); // 6.9 KiB — Q15 halves it again
     }
 
 } // namespace
