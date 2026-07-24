@@ -14,15 +14,17 @@ which of its decisions were superseded. Read PLAN.md before implementing anythin
 re-derive decisions it has already settled (compile-time direction, profile vocabulary, the
 three-leg test strategy, the pinned-eps cross-validation design).
 
-Current state: **v0.1 (M6 complete), M7a measurement harness landed.** Design/schedule/tables
-(M2), the streaming converter for float/Q15/Q31 with committed scipy reference vectors (M3/M4),
-the golden cross-validation against SampleRateTap at pinned eps (M5, test-only submodule), the
-bluetooth_bridge example + C ABI + executed demo notebook (M6), and the embedded CI matrix +
-instruction-count ratchet (M7a: Cortex-M33/M55 + Hexagon under QEMU, eight fixed workloads gated
-two-sided ±3% against `bench/baselines.json` — `scripts/icount.py`). Next: the M7 levers, one
-measured PR each, superblock codegen first — see PLAN.md section 7. Any change that moves a
-workload's count beyond ±3% must re-record baselines (`icount.py --update` per target) in the
-same PR; an *improvement* beyond tolerance fails the gate too, by design.
+Current state: **v0.2 — M7 codegen phase complete.** v0.1 (M0–M6): design/schedule/tables, the
+streaming converter for float/Q15/Q31 with committed scipy reference vectors, the golden
+cross-validation against SampleRateTap at pinned eps (test-only submodule), bluetooth_bridge +
+C ABI + executed notebook. M7 (v0.2): the embedded CI matrix + instruction-count ratchet
+(Cortex-M33/M55 + Hexagon under QEMU, eight workloads gated two-sided ±3% against
+`bench/baselines.json` — `scripts/icount.py`), then three measured codegen levers — superblock
+walk, committed trip counts, symmetry-halved tables — outputs bit-identical throughout; PLAN.md
+section 7 records each lever's numbers. Remaining levers are deferred until a consumer pulls
+them (they change the output contract). Any change that moves a workload's count beyond ±3%
+must re-record baselines (`icount.py --update` per target) in the same PR; an *improvement*
+beyond tolerance fails the gate too, by design.
 
 ## The charter constraints (load-bearing)
 

@@ -35,7 +35,7 @@
 #include "tap/ratio/schedule.h"    // IWYU pragma: export
 
 #define TAP_RATIO_VERSION_MAJOR 0
-#define TAP_RATIO_VERSION_MINOR 1
+#define TAP_RATIO_VERSION_MINOR 2
 #define TAP_RATIO_VERSION_PATCH 0
 
 namespace tap::ratio {

@@ -273,11 +273,18 @@ executed (it measures the shipping C++, not a Python re-implementation).
     (Hexagon down_q31 +2.7%); Arm came out slightly ahead (M33 Q31 −2.5%).
 
 v0.1 ships at M6. Nothing in M7+ blocks it. **Status: M0–M6 complete —
-v0.1 shipped (2026-07-23). M7a measurement harness + M7b superblock
-codegen + M7c committed trip counts + M7d symmetry halving landed
-(2026-07-23/24); next lever candidates: multistage decomposition,
-minimum-phase economy variant, or the M33 float story if a consumer
-needs it.**
+v0.1 shipped (2026-07-23). M7 codegen phase complete — v0.2 (2026-07-24):
+M7a measurement harness, M7b superblock codegen, M7c committed trip
+counts, M7d symmetry halving, all measured, outputs bit-identical
+throughout. Cumulative vs the M7a baselines: M55 Q15 −59%/−60% and float
+−35%/−37%; M33 Q31 −26%/−27%, Q15 −15%/−16%; Hexagon Q15 −13%/−10%,
+Q31 −15%/−7%; table storage halved. The remaining levers (multistage
+decomposition, minimum-phase economy, IIR pre-filter, FFT offline path)
+all change the output contract or serve currently-unpressured needs
+(storage, latency) — deferred until a consumer pulls them: a latency
+need pulls minimum-phase; a storage need pulls multistage; an MCU float
+consumer pulls the accumulation-contract discussion (a DspTap decision,
+since double accumulation is the float golden model's identity).**
 
 ## 8. Acceptance criteria (v0.1)
 
