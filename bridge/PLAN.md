@@ -201,9 +201,26 @@ executed (it measures the shipping C++, not a Python re-implementation).
   every optimization is measured the family way. Levers already banked:
   spec relaxation (the `economy` default) and channel vectorization
   (inherited kernels).
+  - **M7a — measurement harness (landed).** The embedded matrix runs the
+    emulation-sized test suite on Cortex-M33 (QEMU mps2-an505), Cortex-M55
+    (mps3-an547) and Hexagon (qemu-hexagon user mode, static musl), and the
+    instruction-count ratchet gates eight fixed workloads (direction ×
+    float/Q15/Q31 on `economy`, plus both `transparent` float legs; 2 s of
+    stereo virtual audio each) two-sided at ±3% against
+    `bench/baselines.json` on all three targets — noise-free, so a hard
+    gate is safe on shared runners. Baselines recorded 2026-07-23 with the
+    CI-pinned QEMU 8.2.2; re-measurement is bit-identical. The recorded
+    story already ranks the levers per target: on M33 (Pico-2 class, no
+    FP64) Q15 runs ~6–10× cheaper than the float path (245 M vs 1.53 B
+    insns for the up workload), on Hexagon Q15/Q31 are ~5× cheaper than
+    float, while on M55 float currently *beats* the fixed-point paths
+    (97 M vs 119 M) — so the fixed-point dot kernels are a named M7 target
+    on that core, not just the float loop. Toolchains, QEMU source, and the
+    plugin header are SHA256-pinned, mirroring SampleRateTap's CI.
 
 v0.1 ships at M6. Nothing in M7+ blocks it. **Status: M0–M6 complete —
-v0.1 shipped (2026-07-23).**
+v0.1 shipped (2026-07-23). M7a measurement harness landed (2026-07-23);
+next lever: superblock codegen.**
 
 ## 8. Acceptance criteria (v0.1)
 

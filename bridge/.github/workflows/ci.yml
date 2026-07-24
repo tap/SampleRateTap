@@ -52,3 +52,316 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+  # ------------------------------------------------------------------------
+  # Embedded matrix (PLAN.md section 7): the M33/M55 eurorack/pedal cores and
+  # the Hexagon DSP are deployment targets, so every M7 optimization lever is
+  # gated on them — correctness under emulation here, instruction counts in
+  # the icount-ratchet job below. Toolchain provenance and pins mirror
+  # SampleRateTap's CI (the family's embedded story lives there first).
+  # ------------------------------------------------------------------------
+
+  hexagon-qemu:
+    name: Hexagon cross (QEMU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Prebuilt open-source toolchain (BSD-3) published by Qualcomm/Quicinc;
+      # binary artifacts are hosted on CodeLinaro and linked from the
+      # quic/toolchain_for_hexagon release notes.
+      HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
+      # Hard pin, matching SampleRateTap's (verified there against the
+      # published SHA256SUMS).
+      HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache toolchain
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/hexagon
+          # Keyed on the pinned digest: every job that can write this key
+          # verifies its download against the same pin, so no unverified
+          # writer can poison the trusted entry.
+          key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
+
+      - name: Download toolchain
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/hexagon && cd ~/hexagon
+          curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
+          # Integrity check against the published SHA256SUMS, plus the hard
+          # pin. The SUMS file catches corruption and cache-poisoning; only
+          # the pin catches an origin compromise.
+          curl -sfLo SHA256SUMS "$(dirname "$HEXAGON_TOOLCHAIN_URL")/SHA256SUMS"
+          expected=$(grep "$(basename "$HEXAGON_TOOLCHAIN_URL")" SHA256SUMS | awk '{print $1}' | head -1)
+          actual=$(sha256sum toolchain.tar.zst | cut -d' ' -f1)
+          echo "toolchain sha256: $actual (pin this in HEXAGON_TOOLCHAIN_SHA256)"
+          if [ -z "$expected" ] || [ "$actual" != "$expected" ]; then
+            echo "::error::toolchain does not match published SHA256SUMS"; exit 1
+          fi
+          if [ -n "${HEXAGON_TOOLCHAIN_SHA256:-}" ] && \
+             [ "$actual" != "$HEXAGON_TOOLCHAIN_SHA256" ]; then
+            echo "::error::toolchain checksum mismatch against pinned value"; exit 1
+          fi
+          tar --zstd -xf toolchain.tar.zst
+          rm toolchain.tar.zst SHA256SUMS
+
+      - name: Set up toolchain and QEMU paths
+        run: |
+          # No -type f (symlinks count); dirname of an empty find result is
+          # ".", so assert on the find output itself.
+          clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
+          test -n "$clangxx"
+          echo "$(dirname "$clangxx")" >> "$GITHUB_PATH"
+          # Prefer a qemu-hexagon bundled with the toolchain; else use distro qemu.
+          qemu=$(find "$HOME/hexagon" -name 'qemu-hexagon' -type f | head -1 || true)
+          if [ -n "$qemu" ]; then
+            echo "$(dirname "$qemu")" >> "$GITHUB_PATH"
+          else
+            sudo apt-get update -q && sudo apt-get install -y -q qemu-user
+          fi
+
+      - name: Verify tools
+        run: |
+          hexagon-unknown-linux-musl-clang++ --version
+          qemu-hexagon --version
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake
+          -DTAP_RATIO_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build build -j 4
+
+      - name: Test under emulation
+        # -j 4: each test is an independent qemu-user process and the
+        # per-test soft-double table construction dominates, so the suite
+        # parallelizes cleanly (and serial would crowd the job timeout).
+        run: >
+          ctest --test-dir build -j 4 --output-on-failure
+          -E 'BadProfilesThrow|LatencyAndValidation'
+        # This static-musl toolchain cannot unwind across frames — the
+        # constructor throws correctly but EXPECT_THROW never catches and
+        # libc++abi terminates (same known debt as SampleRateTap's leg).
+        # Validation is target-independent and covered on every other leg.
+
+  # Cross-compile for Arm Cortex-M55 (bare metal, newlib + semihosting) and
+  # run the emulation-sized test subset on QEMU's MPS3 AN547 board model.
+  # Validates the converter on a 32-bit MCU-class target with no OS, no
+  # threads and no double-precision FPU; the fixed-point datapaths are the
+  # performance-appropriate formats here.
+  cortex-m55-qemu:
+    name: Cortex-M55 cross (QEMU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install toolchain and QEMU
+        run: >
+          sudo apt-get update -q &&
+          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=MinSizeRel
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
+          -DTAP_RATIO_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build build -j 4
+
+      - name: Test under emulation
+        run: ctest --test-dir build --output-on-failure
+
+  # Cortex-M33 (Raspberry Pi Pico 2 / RP2350 class: single-precision FPU,
+  # no FP64, no MVE) on QEMU's MPS2+ AN505 model. Shares the Armv8-M
+  # startup with the M55 target; quantifies the soft-double design path and
+  # anchors the Q15/Q31 budgets for Pico-class parts.
+  cortex-m33-qemu:
+    name: Cortex-M33 cross (QEMU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install toolchain and QEMU
+        run: >
+          sudo apt-get update -q &&
+          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=MinSizeRel
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake
+          -DTAP_RATIO_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build build -j 4
+
+      - name: Test under emulation
+        run: ctest --test-dir build --output-on-failure
+
+  # Deterministic instruction-count ratchet (PLAN.md section 7): fixed
+  # workloads under QEMU with a counting plugin, gated two-sided (±3%)
+  # against bench/baselines.json. Unlike wall-clock numbers these are
+  # noise-free, so a hard gate is safe on shared runners — this is the
+  # measurement harness every M7 lever must move before it merges.
+  icount-ratchet:
+    name: Instruction-count ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Commit the v8.2.2 tag pointed at when pinned (tags are movable;
+      # commit SHAs are not), with the header's digest verified on download.
+      QEMU_PLUGIN_HEADER_URL: https://raw.githubusercontent.com/qemu/qemu/11aa0b1ff115b86160c4d37e7c37e6a6b13b77ea/include/qemu/qemu-plugin.h
+      QEMU_PLUGIN_HEADER_SHA256: "c53a2af163e80e3f4bc6c60dbdfc84003db329d757e37cd8a16a77e1d82606ff"
+      QEMU_SRC_URL: https://download.qemu.org/qemu-8.2.2.tar.xz
+      QEMU_SRC_SHA256: "847346c1b82c1a54b2c38f6edbd85549edeb17430b7d4d3da12620e2962bc4f3"
+      HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
+      # Same hard pin as the hexagon-qemu job: this job also writes the
+      # shared toolchain cache, so it must verify against the same digest.
+      HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install toolchains and QEMU
+        run: >
+          sudo apt-get update -q &&
+          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+          libglib2.0-dev ninja-build meson flex bison
+
+      - name: Build counting plugin
+        run: |
+          curl -sfLo /tmp/qemu-plugin.h "$QEMU_PLUGIN_HEADER_URL"
+          actual=$(sha256sum /tmp/qemu-plugin.h | cut -d' ' -f1)
+          if [ "$actual" != "$QEMU_PLUGIN_HEADER_SHA256" ]; then
+            echo "::error::qemu-plugin.h checksum mismatch"; exit 1
+          fi
+          gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/tmp \
+            -o /tmp/libinsncount.so tools/qemu_insn_plugin/insn_count.c
+
+      # Release (-O2), matching how the baselines were recorded.
+      - name: Build M55 workloads
+        run: >
+          cmake -B build-m55
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
+          -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
+          -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+          && cmake --build build-m55 -j 4
+
+      - name: Ratchet M55
+        run: >
+          python3 scripts/icount.py --target m55
+          --build-dir build-m55 --plugin /tmp/libinsncount.so
+
+      - name: Build M33 workloads
+        if: ${{ !cancelled() }}
+        run: >
+          cmake -B build-m33
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake
+          -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
+          -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+          && cmake --build build-m33 -j 4
+
+      - name: Ratchet M33
+        if: ${{ !cancelled() }}
+        run: >
+          python3 scripts/icount.py --target m33
+          --build-dir build-m33 --plugin /tmp/libinsncount.so
+
+      # Neither Debian's nor the CodeLinaro toolchain's qemu-hexagon enables
+      # TCG plugins, so the Hexagon leg builds its own from the pinned QEMU
+      # release (linux-user target only, ~4 min, cached thereafter).
+      # The remaining ratchet steps run even if an earlier target failed
+      # (each target's numbers are independent evidence; stopping at the
+      # first failure forces a serial harvest when baselines legitimately
+      # move). The job still fails if any step failed.
+      - name: Cache plugin-enabled qemu-hexagon
+        if: ${{ !cancelled() }}
+        id: qemu-hex
+        uses: actions/cache@v4
+        with:
+          path: ~/qemu-hexagon-plugins
+          key: qemu-hexagon-plugins-${{ env.QEMU_SRC_URL }}-1
+
+      - name: Build plugin-enabled qemu-hexagon
+        if: ${{ !cancelled() && steps.qemu-hex.outputs.cache-hit != 'true' }}
+        run: |
+          curl -sfLo /tmp/qemu-src.tar.xz "$QEMU_SRC_URL"
+          actual=$(sha256sum /tmp/qemu-src.tar.xz | cut -d' ' -f1)
+          echo "qemu source sha256: $actual (pin this in QEMU_SRC_SHA256)"
+          if [ -n "${QEMU_SRC_SHA256:-}" ] && [ "$actual" != "$QEMU_SRC_SHA256" ]; then
+            echo "::error::qemu source checksum mismatch"; exit 1
+          fi
+          tar -xJf /tmp/qemu-src.tar.xz -C /tmp
+          cd /tmp/qemu-*/
+          ./configure --target-list=hexagon-linux-user --enable-plugins \
+            --disable-docs --disable-tools --disable-system
+          ninja -C build qemu-hexagon
+          mkdir -p ~/qemu-hexagon-plugins
+          cp build/qemu-hexagon ~/qemu-hexagon-plugins/
+
+      - name: Cache Hexagon toolchain
+        if: ${{ !cancelled() }}
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/hexagon
+          # Same digest-keyed name as the hexagon-qemu job; the download
+          # below verifies the same pin before anything is saved under it.
+          key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
+
+      - name: Ratchet Hexagon
+        if: ${{ !cancelled() }}
+        run: |
+          if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
+            mkdir -p ~/hexagon && cd ~/hexagon
+            curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
+            actual=$(sha256sum toolchain.tar.zst | cut -d' ' -f1)
+            if [ "$actual" != "$HEXAGON_TOOLCHAIN_SHA256" ]; then
+              echo "::error::toolchain checksum mismatch against pinned value"
+              exit 1
+            fi
+            tar --zstd -xf toolchain.tar.zst && rm toolchain.tar.zst
+            cd "$GITHUB_WORKSPACE"
+          fi
+          # No -type f: the compiler may be a symlink in the restored tree.
+          clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
+          if [ -z "$clangxx" ]; then
+            echo "::error::hexagon cross compiler not found under ~/hexagon"
+            exit 1
+          fi
+          bindir=$(dirname "$clangxx")
+          export PATH="$HOME/qemu-hexagon-plugins:$bindir:$PATH"
+          test -x "$HOME/qemu-hexagon-plugins/qemu-hexagon" || {
+            echo "::error::plugin-enabled qemu-hexagon missing"; exit 1; }
+          # qemu exits 1 with or without plugin support here (no guest binary
+          # was given), so probe by the error text, not the exit code.
+          if qemu-hexagon -plugin help 2>&1 | grep -q "unknown option"; then
+            echo "::error::built qemu-hexagon lacks plugin support"; exit 1
+          fi
+          cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
+            -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
+            -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+          cmake --build build-hex -j 4
+          python3 scripts/icount.py --target hexagon \
+            --build-dir build-hex --plugin /tmp/libinsncount.so

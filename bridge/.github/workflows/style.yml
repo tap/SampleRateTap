@@ -22,7 +22,7 @@ jobs:
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y clang-tidy-18 cmake python3
       - name: Configure (compile database)
-        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DTAP_RATIO_BUILD_TESTS=ON
+        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DTAP_RATIO_BUILD_TESTS=ON -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
       - name: clang-tidy (project TUs; the submodule and fetched deps excluded)
         run: |
           files=$(python3 -c "import json; print('\n'.join(e['file'] for e in json.load(open('build/compile_commands.json')) if 'submodules' not in e['file'] and 'third_party' not in e['file'] and '_deps' not in e['file']))")

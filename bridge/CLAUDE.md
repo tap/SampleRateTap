@@ -14,11 +14,15 @@ which of its decisions were superseded. Read PLAN.md before implementing anythin
 re-derive decisions it has already settled (compile-time direction, profile vocabulary, the
 three-leg test strategy, the pinned-eps cross-validation design).
 
-Current state: **v0.1 (M6 complete).** Design/schedule/tables (M2), the streaming converter for
-float/Q15/Q31 with committed scipy reference vectors (M3/M4), the golden cross-validation against
-SampleRateTap at pinned eps (M5, test-only submodule), and the bluetooth_bridge example + C ABI +
-executed demo notebook (M6). Next: the M7+ optimization campaign, gated on the embedded CI matrix
-(icount ratchet) landing first — see PLAN.md section 7.
+Current state: **v0.1 (M6 complete), M7a measurement harness landed.** Design/schedule/tables
+(M2), the streaming converter for float/Q15/Q31 with committed scipy reference vectors (M3/M4),
+the golden cross-validation against SampleRateTap at pinned eps (M5, test-only submodule), the
+bluetooth_bridge example + C ABI + executed demo notebook (M6), and the embedded CI matrix +
+instruction-count ratchet (M7a: Cortex-M33/M55 + Hexagon under QEMU, eight fixed workloads gated
+two-sided ±3% against `bench/baselines.json` — `scripts/icount.py`). Next: the M7 levers, one
+measured PR each, superblock codegen first — see PLAN.md section 7. Any change that moves a
+workload's count beyond ±3% must re-record baselines (`icount.py --update` per target) in the
+same PR; an *improvement* beyond tolerance fails the gate too, by design.
 
 ## The charter constraints (load-bearing)
 

@@ -34,6 +34,10 @@ endif()
 # C++ through it — see notebooks/ratio_demo.ipynb).
 option(TAP_RATIO_BUILD_CAPI "Build the C ABI shared library" OFF)
 
+# Fixed deterministic workloads for the QEMU instruction-count ratchet;
+# buildable for any target including bare metal. See PLAN.md section 7.
+option(TAP_RATIO_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF)
+
 # SampleRateTap, dev-only (never part of the shipped tap::ratio target): the
 # golden cross-validation test and the bluetooth_bridge example compose
 # against its near-unity ASRC. Consumed headers-only via include path — its
@@ -73,4 +77,8 @@ endif()
 
 if(TAP_RATIO_BUILD_CAPI)
     add_subdirectory(tools/capi)
+endif()
+
+if(TAP_RATIO_BUILD_ICOUNT_BENCH)
+    add_subdirectory(bench/icount)
 endif()

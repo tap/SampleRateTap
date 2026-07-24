@@ -99,6 +99,26 @@ ctest --test-dir build --output-on-failure
 Consume with `add_subdirectory` (or FetchContent) and link `tap::ratio`;
 the DspTap submodule rides along automatically.
 
+### Embedded targets and the instruction-count ratchet
+
+The deployment cores are CI targets, not aspirations: every push runs the
+emulation-sized test suite on **Cortex-M33** (QEMU mps2-an505 — Raspberry
+Pi Pico 2 class), **Cortex-M55** (mps3-an547) and **Hexagon**
+(qemu-hexagon, static musl), and gates eight fixed conversion workloads
+(direction × float/Q15/Q31) against committed per-target instruction
+counts (`bench/baselines.json`, two-sided ±3% — see `scripts/icount.py`).
+The counts are deterministic, so the M7 optimization campaign in
+[PLAN.md](PLAN.md) lands one measured lever at a time:
+
+```sh
+cmake -B build-m55 -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
+      -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
+      -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+cmake --build build-m55 -j
+python3 scripts/icount.py --target m55 --build-dir build-m55 --plugin libinsncount.so
+```
+
 ## License
 
 MIT (see [LICENSE](LICENSE)), consistent with the family. Style is the
