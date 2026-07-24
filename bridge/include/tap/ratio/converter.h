@@ -70,21 +70,24 @@ namespace tap::ratio {
         ///
         /// \pre out has room for outputs_for(in_frames) frames — the exact
         /// count this call will produce from the current position.
+        ///
+        /// The hot path is the superblock walk (M7 lever 1, PLAN section 7):
+        /// the output count is settled by arithmetic up front, the schedule
+        /// cursor / history end / pending gap live in locals the compiler
+        /// keeps in registers, input and output move by pointer bumps
+        /// instead of per-frame index multiplies, and the mono and stereo
+        /// shapes are stamped out as their own specializations so the
+        /// channel loops vanish. The dots themselves are the unchanged
+        /// tap::dsp kernels, and the append/emit order is identical, so
+        /// outputs stay bit-exact (pinned by the scipy-vector tests).
         std::size_t process(const S* in, std::size_t in_frames, S* out) noexcept {
-            std::size_t consumed = 0;
-            std::size_t produced = 0;
-            for (;;) {
-                while (m_pending != 0 && consumed < in_frames) {
-                    append_frame(in + consumed * m_channels);
-                    ++consumed;
-                    --m_pending;
-                }
-                if (m_pending != 0) { // input exhausted mid-gap
-                    return produced;
-                }
-                emit(out + produced * m_channels);
-                ++produced;
+            if (m_channels == 1) {
+                return process_walk<1>(in, in_frames, out);
             }
+            if (m_channels == 2) {
+                return process_walk<2>(in, in_frames, out);
+            }
+            return process_walk<0>(in, in_frames, out);
         }
         // ANCHOR_END: rt_process
 
@@ -197,6 +200,89 @@ namespace tap::ratio {
 
         const S* window(std::size_t c) const noexcept { return m_hist[c].data() + m_end - m_table.taps(); }
 
+        // ANCHOR: rt_superblock_walk
+        /// The superblock walk behind process() (M7 lever 1). CH = 1 and 2
+        /// are stamped-out specializations — the deployment shapes — with the
+        /// per-channel loops dissolved and the planar history pointers
+        /// hoisted (compaction memmoves in place, so they stay valid for the
+        /// whole call); CH = 0 is the any-channel-count generic. The schedule
+        /// cursor, history end and pending gap run in locals so the state
+        /// machine lives in registers, and the outputs_for() arithmetic
+        /// settles the trip count before the first sample moves — the walk
+        /// itself has no exhaustion checks. Same append/emit order and the
+        /// same tap::dsp dot kernels as the naive loop: bit-exact by
+        /// construction, pinned by the scipy-vector and pull-parity tests.
+        template <std::size_t CH>
+        std::size_t process_walk(const S* in, std::size_t in_frames, S* out) noexcept {
+            const std::size_t taps  = m_table.taps();
+            const std::size_t total = static_cast<std::size_t>(outputs_for(in_frames));
+            const std::size_t ch    = CH != 0 ? CH : m_channels;
+
+            S* const h0 = m_hist[0].data();
+            S* const h1 = CH == 2 ? m_hist[1].data() : nullptr;
+
+            const S*    src     = in;
+            std::size_t remain  = in_frames;
+            std::size_t end     = m_end;
+            std::size_t pos     = m_pos;
+            std::size_t pending = m_pending;
+
+            const auto append = [&]() noexcept {
+                if (end == m_hist_cap) {
+                    end = compact(end);
+                }
+                if constexpr (CH == 1) {
+                    h0[end] = src[0];
+                }
+                else if constexpr (CH == 2) {
+                    h0[end] = src[0];
+                    h1[end] = src[1];
+                }
+                else {
+                    for (std::size_t c = 0; c < ch; ++c) {
+                        m_hist[c][end] = src[c];
+                    }
+                }
+                src += ch;
+                --remain;
+                ++end;
+            };
+
+            for (std::size_t produced = 0; produced < total; ++produced) {
+                while (pending != 0) { // never outruns in_frames: total is exact
+                    append();
+                    --pending;
+                }
+                const schedule_entry step = k_schedule<D>[pos];
+                const coeff*         row  = m_table.row(step.phase);
+                if constexpr (CH == 1) {
+                    out[0] = tap::dsp::dot_row<S>(row, h0 + end - taps, taps);
+                }
+                else if constexpr (CH == 2) {
+                    out[0] = tap::dsp::dot_row<S>(row, h0 + end - taps, taps);
+                    out[1] = tap::dsp::dot_row<S>(row, h1 + end - taps, taps);
+                }
+                else {
+                    for (std::size_t c = 0; c < ch; ++c) {
+                        out[c] = tap::dsp::dot_row<S>(row, m_hist[c].data() + end - taps, taps);
+                    }
+                }
+                out += ch;
+                pending = step.advance;
+                pos     = pos + 1 == k_phases ? 0 : pos + 1;
+            }
+            while (remain != 0) { // leftover input smaller than the next gap
+                append();
+                --pending;
+            }
+
+            m_end     = end;
+            m_pos     = static_cast<std::uint32_t>(pos);
+            m_pending = static_cast<std::uint32_t>(pending);
+            return total;
+        }
+        // ANCHOR_END: rt_superblock_walk
+
         /// One output frame at the current schedule position; advances state.
         void emit(S* out) noexcept {
             const schedule_entry step = k_schedule<D>[m_pos];
@@ -226,13 +312,20 @@ namespace tap::ratio {
         }
 
         void compact_if_full() noexcept {
-            if (m_end == m_hist_cap) { // keep the newest T-1 frames at the front
-                const std::size_t keep = m_table.taps() - 1;
-                for (auto& h : m_hist) {
-                    std::memmove(h.data(), h.data() + (m_end - keep), keep * sizeof(S));
-                }
-                m_end = keep;
+            if (m_end == m_hist_cap) {
+                m_end = compact(m_end);
             }
+        }
+
+        /// Slide the newest T-1 frames to the front of every channel's
+        /// history (in place — data() pointers stay valid); returns the new
+        /// end index.
+        std::size_t compact(std::size_t end) noexcept {
+            const std::size_t keep = m_table.taps() - 1;
+            for (auto& h : m_hist) {
+                std::memmove(h.data(), h.data() + (end - keep), keep * sizeof(S));
+            }
+            return keep;
         }
 
         basic_phase_table<S, D>     m_table;

@@ -217,10 +217,29 @@ executed (it measures the shipping C++, not a Python re-implementation).
     (97 M vs 119 M) — so the fixed-point dot kernels are a named M7 target
     on that core, not just the float loop. Toolchains, QEMU source, and the
     plugin header are SHA256-pinned, mirroring SampleRateTap's CI.
+  - **M7b — superblock codegen (landed).** Lever 1: process()'s hot path
+    became the superblock walk — trip count settled by outputs_for()
+    arithmetic before the first sample moves, schedule cursor / history
+    end / pending gap in registers, pointer bumps instead of per-frame
+    index multiplies, mono and stereo stamped out as specializations with
+    the planar history pointers hoisted. Same append/emit order, same
+    tap::dsp dot kernels: outputs bit-exact (57/57 host, both bare-metal
+    suites, Hexagon suite all green, scipy vectors unmoved). Measured
+    (baselines re-recorded 2026-07-24): **M55 −31…−60%** (up_q15 118.8 M →
+    58.5 M — Q15 now beats float on M55, 58.5 M vs 62.2 M, half of M7a's
+    named anomaly resolved by letting Helium see a register-resident
+    loop); **M33 fixed point −12…−25%** (up_q15 245 M → 216 M, q31
+    −24%), M33 float only −2.8% (soft-double MACs dominate by design —
+    the golden model's double accumulation); **Hexagon ≈ flat**
+    (−0.1…−3.8% — hexagon-clang already generated tight code around the
+    old loop, confirming the overhead was an Arm codegen story). pull()
+    keeps the generic per-frame loop deliberately: its granularity is the
+    pop callback, a different lever.
 
 v0.1 ships at M6. Nothing in M7+ blocks it. **Status: M0–M6 complete —
 v0.1 shipped (2026-07-23). M7a measurement harness landed (2026-07-23);
-next lever: superblock codegen.**
+M7b superblock codegen landed (2026-07-24); next lever: baked/committed
+tables, or the M33 float story if a consumer needs it.**
 
 ## 8. Acceptance criteria (v0.1)
 
