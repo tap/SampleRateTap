@@ -24,19 +24,27 @@ jobs:
             cc: gcc
             cxx: g++
             werror: ON
+            capi: ON
           - name: Linux Clang
             os: ubuntu-latest
             cc: clang
             cxx: clang++
             werror: ON
+            capi: ON
           - name: macOS AppleClang
             os: macos-latest
             werror: ON
+            capi: ON
           # Warnings stay non-fatal on MSVC until /W4 output has been
-          # triaged (docs/PERFORMANCE.md "Known debt").
+          # triaged (docs/PERFORMANCE.md "Known debt"). capi stays OFF here too:
+          # tools/capi carries no __declspec(dllexport) (unlike DspTap's), so an
+          # MSVC build would link a DLL exporting nothing — it would pass without
+          # gating anything. Turn it ON in the same change that gives the C ABI
+          # an export decoration.
           - name: Windows MSVC
             os: windows-latest
             werror: OFF
+            capi: OFF
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -50,6 +58,7 @@ jobs:
           cmake -B build
           -DCMAKE_BUILD_TYPE=Release
           -DSRT_WERROR=${{ matrix.werror }}
+          -DSRT_BUILD_CAPI=${{ matrix.capi }}
 
       - name: Build
         run: cmake --build build --config Release -j 4

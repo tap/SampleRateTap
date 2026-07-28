@@ -9,6 +9,11 @@ add_subdirectory(submodules/dsptap)
 
 add_library(SampleRateTap INTERFACE)
 add_library(SampleRateTap::SampleRateTap ALIAS SampleRateTap)
+# The family-wide alias, per the namespace convention in taphouse's README: one
+# `tap::<library>` sub-namespace per repo, and the CMake alias matches it. The
+# older spelling above stays so existing consumers keep working; prefer
+# `tap::samplerate` in new code.
+add_library(tap::samplerate ALIAS SampleRateTap)
 target_include_directories(SampleRateTap INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
