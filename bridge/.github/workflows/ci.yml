@@ -12,16 +12,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest,  name: linux }
-          - { os: macos-latest,   name: macos }
-          - { os: windows-latest, name: windows }
+          # capi stays OFF on Windows: tools/capi carries no __declspec(dllexport)
+          # (unlike DspTap's), so an MSVC build would link a DLL exporting nothing
+          # — it would pass without gating anything. Turn this ON in the same
+          # change that gives the C ABI an export decoration.
+          - { os: ubuntu-latest,  name: linux,   capi: ON }
+          - { os: macos-latest,   name: macos,   capi: ON }
+          - { os: windows-latest, name: windows, capi: OFF }
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      # TAP_RATIO_BUILD_CAPI is ON here so the verification layer (the C ABI the
+      # executed notebook drives via ctypes) cannot rot unnoticed.
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTAP_RATIO_WERROR=ON
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTAP_RATIO_WERROR=ON
+          -DTAP_RATIO_BUILD_CAPI=${{ matrix.capi }}
 
       - name: Build
         run: cmake --build build --config Release
