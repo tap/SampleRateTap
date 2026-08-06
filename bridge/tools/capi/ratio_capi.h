@@ -18,6 +18,10 @@ extern "C" {
 
 typedef struct ratio_converter ratio_converter;
 
+/// Every function below requires a valid converter from a successful
+/// ratio_create; passing NULL is undefined behavior. The one exception is
+/// ratio_destroy, where NULL is a safe no-op (the free() convention).
+
 /// direction: 0 = up (44.1 -> 48), 1 = down (48 -> 44.1).
 /// profile:   0 = economy (default tier), 1 = transparent.
 /// Returns NULL on invalid arguments.

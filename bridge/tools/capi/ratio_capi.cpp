@@ -5,7 +5,7 @@
 
 #include "ratio_capi.h"
 
-#include <new>
+#include <memory>
 
 #include "tap/ratio/ratio.h"
 
@@ -37,15 +37,17 @@ ratio_converter* ratio_create(int direction, int profile, unsigned channels) {
     }
     const tap::ratio::profile p = profile == 0 ? tap::ratio::profile::economy() : tap::ratio::profile::transparent();
     try {
-        auto* c = new ratio_converter;
-        c->dir  = direction;
+        // unique_ptr owns the wrapper until the converter constructor has
+        // succeeded, so a throw below cannot leak it.
+        auto c = std::make_unique<ratio_converter>();
+        c->dir = direction;
         if (direction == 0) {
             c->up = new conv<tap::ratio::direction::up_to_48k>(channels, p);
         }
         else {
             c->down = new conv<tap::ratio::direction::down_to_44k1>(channels, p);
         }
-        return c;
+        return c.release();
     }
     catch (...) {
         return nullptr;

@@ -25,10 +25,11 @@ jobs:
         run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DTAP_RATIO_BUILD_TESTS=ON -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
       - name: clang-tidy (project TUs; the submodule and fetched deps excluded)
         run: |
-          files=$(python3 -c "import json; print('\n'.join(e['file'] for e in json.load(open('build/compile_commands.json')) if 'submodules' not in e['file'] and 'third_party' not in e['file'] and '_deps' not in e['file']))")
+          python3 -c "import json; print('\n'.join(e['file'] for e in json.load(open('build/compile_commands.json')) if 'submodules' not in e['file'] and 'third_party' not in e['file'] and '_deps' not in e['file']))" > /tmp/tidy-files.txt
           fail=0
-          for f in $files; do
+          # Line-wise read, not word splitting: robust to paths with spaces.
+          while IFS= read -r f; do
             out=$(clang-tidy-18 -p build "$f" 2>/dev/null || true)
             if echo "$out" | grep -qE "warning:|error:"; then echo "$out"; fail=1; fi
-          done
+          done < /tmp/tidy-files.txt
           [ "$fail" -eq 0 ] && echo "clang-tidy clean." || { echo "::error::clang-tidy found violations"; exit 1; }

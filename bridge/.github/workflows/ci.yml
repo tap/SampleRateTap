@@ -96,27 +96,12 @@ jobs:
           # writer can poison the trusted entry.
           key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
 
+      # Download + verification live in the shared script so this job and
+      # icount-ratchet (the other writer of the digest-keyed cache) can
+      # never drift onto different checks.
       - name: Download toolchain
         if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/hexagon && cd ~/hexagon
-          curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
-          # Integrity check against the published SHA256SUMS, plus the hard
-          # pin. The SUMS file catches corruption and cache-poisoning; only
-          # the pin catches an origin compromise.
-          curl -sfLo SHA256SUMS "$(dirname "$HEXAGON_TOOLCHAIN_URL")/SHA256SUMS"
-          expected=$(grep "$(basename "$HEXAGON_TOOLCHAIN_URL")" SHA256SUMS | awk '{print $1}' | head -1)
-          actual=$(sha256sum toolchain.tar.zst | cut -d' ' -f1)
-          echo "toolchain sha256: $actual (pin this in HEXAGON_TOOLCHAIN_SHA256)"
-          if [ -z "$expected" ] || [ "$actual" != "$expected" ]; then
-            echo "::error::toolchain does not match published SHA256SUMS"; exit 1
-          fi
-          if [ -n "${HEXAGON_TOOLCHAIN_SHA256:-}" ] && \
-             [ "$actual" != "$HEXAGON_TOOLCHAIN_SHA256" ]; then
-            echo "::error::toolchain checksum mismatch against pinned value"; exit 1
-          fi
-          tar --zstd -xf toolchain.tar.zst
-          rm toolchain.tar.zst SHA256SUMS
+        run: scripts/fetch_hexagon_toolchain.sh
 
       - name: Set up toolchain and QEMU paths
         run: |
@@ -341,15 +326,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
-            mkdir -p ~/hexagon && cd ~/hexagon
-            curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
-            actual=$(sha256sum toolchain.tar.zst | cut -d' ' -f1)
-            if [ "$actual" != "$HEXAGON_TOOLCHAIN_SHA256" ]; then
-              echo "::error::toolchain checksum mismatch against pinned value"
-              exit 1
-            fi
-            tar --zstd -xf toolchain.tar.zst && rm toolchain.tar.zst
-            cd "$GITHUB_WORKSPACE"
+            # Same shared download+verify as the hexagon-qemu job: both
+            # writers of the digest-keyed cache run identical checks.
+            scripts/fetch_hexagon_toolchain.sh
           fi
           # No -type f: the compiler may be a symlink in the restored tree.
           clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)

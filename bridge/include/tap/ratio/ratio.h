@@ -23,10 +23,11 @@
 // profiles, dot kernels, row-sum quantization, measurement instruments),
 // consumed as the submodules/dsptap submodule.
 //
-// Status: M3 — the streaming converter (converter.h: process/pull/flush,
-// float aliases) over the M2 design/schedule/table layer. Q15/Q31 aliases
-// land with their parity battery in M4. PLAN.md is the authoritative
-// roadmap; HANDOFF.md is the original design brief.
+// Status: v0.2 — M7 codegen phase complete. The streaming converter
+// (converter.h: process/pull/flush) ships float, Q15 and Q31 aliases with
+// the superblock walk, committed trip counts and symmetry-halved tables,
+// outputs bit-identical throughout. PLAN.md is the authoritative roadmap;
+// HANDOFF.md is the original design brief.
 #pragma once
 
 #include "tap/ratio/converter.h"   // IWYU pragma: export

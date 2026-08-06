@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include "tap/dsp/fir_kernels.h"
@@ -127,9 +128,12 @@ namespace tap::ratio {
         /// than out_frames means the source ran dry — the partial consumption
         /// is retained, so delivering more input later resumes exactly where
         /// the stream left off. Bit-identical to process() on the same input.
-        /// PopFn must be noexcept.
+        /// PopFn must be noexcept (enforced at compile time: pull() is
+        /// noexcept, so a throwing callback could only terminate).
         template <typename PopFn>
         std::size_t pull(S* out, std::size_t out_frames, PopFn&& pop) noexcept {
+            static_assert(std::is_nothrow_invocable_r_v<std::size_t, PopFn&, S*, std::size_t>,
+                          "pull() requires a noexcept PopFn: std::size_t(S*, std::size_t) noexcept");
             for (std::size_t n = 0; n < out_frames; ++n) {
                 while (m_pending != 0) {
                     const std::size_t pending = m_pending;
