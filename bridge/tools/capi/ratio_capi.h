@@ -23,7 +23,8 @@ typedef struct ratio_converter ratio_converter;
 /// ratio_destroy, where NULL is a safe no-op (the free() convention).
 
 /// direction: 0 = up (44.1 -> 48), 1 = down (48 -> 44.1).
-/// profile:   0 = economy (default tier), 1 = transparent, 2 = balanced.
+/// profile:   0 = economy (default tier), 1 = transparent, 2 = balanced,
+///            3 = super_economy (the voice/comms tier).
 /// Returns NULL on invalid arguments.
 ratio_converter* ratio_create(int direction, int profile, unsigned channels);
 void             ratio_destroy(ratio_converter* c);

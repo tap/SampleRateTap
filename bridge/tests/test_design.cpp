@@ -80,6 +80,12 @@ namespace {
                     traits::k_phases, p.taps<D>(), worst, static_cast<double>(h.size() * sizeof(float)) / 1024.0);
     }
 
+    TEST(Design, DownSuperEconomyMeetsSpec) {
+        check_meets_spec<direction::down_to_44k1>(profile::super_economy(), "down super_economy");
+    }
+    TEST(Design, UpSuperEconomyMeetsSpec) {
+        check_meets_spec<direction::up_to_48k>(profile::super_economy(), "up super_economy");
+    }
     TEST(Design, DownEconomyMeetsSpec) {
         check_meets_spec<direction::down_to_44k1>(profile::economy(), "down economy");
     }

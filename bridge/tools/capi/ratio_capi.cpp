@@ -32,12 +32,13 @@ struct ratio_converter {
 extern "C" {
 
 ratio_converter* ratio_create(int direction, int profile, unsigned channels) {
-    if ((direction != 0 && direction != 1) || profile < 0 || profile > 2 || channels == 0) {
+    if ((direction != 0 && direction != 1) || profile < 0 || profile > 3 || channels == 0) {
         return nullptr;
     }
     const tap::ratio::profile p = profile == 0   ? tap::ratio::profile::economy()
                                   : profile == 1 ? tap::ratio::profile::transparent()
-                                                 : tap::ratio::profile::balanced();
+                                  : profile == 2 ? tap::ratio::profile::balanced()
+                                                 : tap::ratio::profile::super_economy();
     try {
         // unique_ptr owns the wrapper until the converter constructor has
         // succeeded, so a throw below cannot leak it.

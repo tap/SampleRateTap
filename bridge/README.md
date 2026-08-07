@@ -44,7 +44,8 @@ quantization, measurement instruments).
 
 tap::ratio::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
 // profiles: economy() (default, 18 kHz passband) | balanced() (19 kHz,
-// the pre-v0.3 default) | transparent() (120 dB pristine tier)
+// the pre-v0.3 default) | transparent() (120 dB pristine tier) |
+// super_economy() (16 kHz voice/comms tier — audible top-octave shelf)
 std::vector<float> out(down.outputs_for(n_in) * 2);
 std::size_t made = down.process(in, n_in, out.data());   // noexcept, alloc-free
 // ... and at end of stream:

@@ -98,6 +98,12 @@ namespace {
     TEST(Converter, MatchesScipyDownEconomy) {
         check_reference<direction::down_to_44k1>(profile::economy(), ratio_ref::k_down_economy);
     }
+    TEST(Converter, MatchesScipyDownSuperEconomy) {
+        check_reference<direction::down_to_44k1>(profile::super_economy(), ratio_ref::k_down_super_economy);
+    }
+    TEST(Converter, MatchesScipyUpSuperEconomy) {
+        check_reference<direction::up_to_48k>(profile::super_economy(), ratio_ref::k_up_super_economy);
+    }
     TEST(Converter, MatchesScipyDownBalanced) {
         check_reference<direction::down_to_44k1>(profile::balanced(), ratio_ref::k_down_balanced);
     }

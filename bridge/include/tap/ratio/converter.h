@@ -66,9 +66,10 @@ namespace tap::ratio {
         /// The canonical trip counts (taps per phase = MACs per output) the
         /// hot path hard-commits to at compile time; any other profile runs
         /// the runtime-length walk.
-        static constexpr std::size_t k_taps_economy     = profile::economy().taps<D>();
-        static constexpr std::size_t k_taps_balanced    = profile::balanced().taps<D>();
-        static constexpr std::size_t k_taps_transparent = profile::transparent().taps<D>();
+        static constexpr std::size_t k_taps_economy       = profile::economy().taps<D>();
+        static constexpr std::size_t k_taps_super_economy = profile::super_economy().taps<D>();
+        static constexpr std::size_t k_taps_balanced      = profile::balanced().taps<D>();
+        static constexpr std::size_t k_taps_transparent   = profile::transparent().taps<D>();
 
         /// Allocates histories and designs the table; setup time only.
         explicit basic_converter(std::size_t channels = 1, const profile& p = profile::economy())
@@ -114,6 +115,9 @@ namespace tap::ratio {
             const std::size_t taps = m_table.taps();
             if (taps == k_taps_economy) {
                 return process_taps<k_taps_economy>(in, in_frames, out);
+            }
+            if (taps == k_taps_super_economy) {
+                return process_taps<k_taps_super_economy>(in, in_frames, out);
             }
             if (taps == k_taps_balanced) {
                 return process_taps<k_taps_balanced>(in, in_frames, out);

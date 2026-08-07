@@ -2,7 +2,8 @@
 # targets have no argv, and per-binary instruction totals are what the
 # ratchet compares. Economy is the speed-first default the M7 levers are
 # judged on, in every format and both directions; the two transparent legs
-# keep the pristine profile honest without tripling the matrix.
+# keep the pristine profile honest without tripling the matrix, and the two
+# Q15 super_economy legs pin the voice tier in its deployment format.
 set(_ratio_icount_scenarios
     up_float_eco:0:0:0:2
     down_float_eco:1:0:0:2
@@ -11,7 +12,9 @@ set(_ratio_icount_scenarios
     up_q31_eco:0:2:0:2
     down_q31_eco:1:2:0:2
     up_float_tr:0:0:1:2
-    down_float_tr:1:0:1:2)
+    down_float_tr:1:0:1:2
+    up_q15_se:0:1:3:2
+    down_q15_se:1:1:3:2)
 
 foreach(_sc IN LISTS _ratio_icount_scenarios)
     string(REPLACE ":" ";" _parts "${_sc}")

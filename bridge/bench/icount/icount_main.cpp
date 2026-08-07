@@ -8,7 +8,8 @@
 //
 // RATIO_SC_DIR:     0 = up (44.1 -> 48), 1 = down (48 -> 44.1)
 // RATIO_SC_TYPE:    0 = float, 1 = Q15, 2 = Q31
-// RATIO_SC_PROFILE: 0 = economy, 1 = transparent
+// RATIO_SC_PROFILE: 0 = economy, 1 = transparent, 3 = super_economy
+//                   (matching the C ABI tags; 2 = balanced unused here)
 // RATIO_SC_CH:      channel count (default 2)
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the RatioTap contributors.
@@ -66,8 +67,12 @@ namespace {
 #endif
 #if RATIO_SC_PROFILE == 0
         const tap::ratio::profile k_prof = tap::ratio::profile::economy();
-#else
+#elif RATIO_SC_PROFILE == 1
         const tap::ratio::profile k_prof = tap::ratio::profile::transparent();
+#elif RATIO_SC_PROFILE == 2
+        const tap::ratio::profile k_prof = tap::ratio::profile::balanced();
+#else
+        const tap::ratio::profile k_prof = tap::ratio::profile::super_economy();
 #endif
         constexpr std::size_t k_ch    = RATIO_SC_CH;
         constexpr std::size_t k_block = 32;

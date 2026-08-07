@@ -75,6 +75,12 @@ namespace {
     TYPED_TEST(phase_table_test, UpEconomyEveryPhase) {
         check_table<TypeParam, direction::up_to_48k>(profile::economy());
     }
+    TYPED_TEST(phase_table_test, DownSuperEconomyEveryPhase) {
+        check_table<TypeParam, direction::down_to_44k1>(profile::super_economy());
+    }
+    TYPED_TEST(phase_table_test, UpSuperEconomyEveryPhase) {
+        check_table<TypeParam, direction::up_to_48k>(profile::super_economy());
+    }
     TYPED_TEST(phase_table_test, DownBalancedEveryPhase) {
         check_table<TypeParam, direction::down_to_44k1>(profile::balanced());
     }
@@ -103,6 +109,8 @@ namespace {
         EXPECT_EQ(ue.storage_bytes(), 80u * 38u * 2u); // 5.9 KiB — Q15 halves it again
         const basic_phase_table<std::int16_t, direction::up_to_48k> ub(profile::balanced());
         EXPECT_EQ(ub.storage_bytes(), 80u * 44u * 2u); // 6.9 KiB
+        const basic_phase_table<std::int16_t, direction::up_to_48k> us(profile::super_economy());
+        EXPECT_EQ(us.storage_bytes(), 80u * 28u * 2u); // 4.4 KiB — the voice tier
     }
 
 } // namespace

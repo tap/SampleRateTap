@@ -25,8 +25,9 @@
 //
 // Status: v0.3 — the profile ladder re-pin. economy (the default) moved to
 // an 18 kHz passband at 58/38 taps; the former economy design continues
-// unchanged as balanced (19 kHz, 78/44); transparent is untouched. On top
-// of v0.2's M7 codegen campaign (superblock walk, committed trip counts,
+// unchanged as balanced (19 kHz, 78/44); super_economy (16 kHz, 40/28) is
+// the explicit voice/comms tier; transparent is untouched. On top of
+// v0.2's M7 codegen campaign (superblock walk, committed trip counts,
 // symmetry-halved tables). PLAN.md is the authoritative roadmap;
 // HANDOFF.md is the original design brief.
 #pragma once

@@ -102,12 +102,14 @@ side of the ASRC:
 
 ## 4. Profiles
 
-Three quality tiers behind one design path, named in the family vocabulary
+Four quality tiers behind one design path, named in the family vocabulary
 (ladder re-pinned 2026-08-07, v0.3: the 18 kHz design became `economy` and
-the default; the former economy design continues unchanged as `balanced`):
+the default; the former economy design continues unchanged as `balanced`;
+`super_economy` added as the explicit voice/comms tier):
 
 | Profile | Stopband | Passband edge | Taps/phase (=MACs/out) down / up | Storage f32 down / up | Role |
 |---|---|---|---|---|---|
+| `super_economy()` | 70 dB | 16 kHz | **40 / 28** | 11.6 / 8.8 KiB | Voice/comms tier: audibly shelves the top octave (−1.4 dB at 18 kHz, −5.9 dB at 19 kHz going down) for half of balanced's MACs. Never a default — opt-in by name |
 | `economy()` — **default** | 70 dB | 18 kHz | **58 / 38** | 16.8 / 11.9 KiB | The speed-first default. All alias products land above 20 kHz at ≤ −71 dBFS — arithmetically confined to the ultrasonic band (see HANDOFF §4) — at 26%/14% fewer MACs than balanced |
 | `balanced()` | 70 dB | 19 kHz | **78 / 44** | 22.5 / 13.8 KiB | The v0.1–v0.2 economy design, unchanged: top of the audible band stays inside the flat passband |
 | `transparent()` | 120 dB | 20 kHz | **184 / 96** | 53.2 / 30.0 KiB | Pristine/offline tier |
@@ -127,15 +129,16 @@ must keep that shelf flat pairs with `balanced`.
 
 Numbers pinned by the M2 design spike (`notebooks/design_spike.ipynb`,
 executed and committed; enforced in CI by `test_design.cpp`) for
-balanced/transparent, and by the 2026-08-07 economy18 re-pin for economy:
-taps are the minimal even counts meeting the stopband with ≥ 1 dB margin on
-a fine (12.5 Hz) sweep grid. Measured worst-case stopband on the shipping
-designs: economy −71.5 dB (down) / −71.7 dB (up); balanced −72.1 / −72.8;
-transparent −121.7 (both). Passband ripple ±0.003 dB (economy/balanced) /
+balanced/transparent, and by the 2026-08-07 ladder re-pin for
+super_economy/economy: taps are the minimal even counts meeting the
+stopband with ≥ 1 dB margin on a fine (12.5 Hz) sweep grid. Measured
+worst-case stopband on the shipping designs: super_economy −71.7 dB (both);
+economy −71.5 dB (down) / −71.7 dB (up); balanced −72.1 / −72.8;
+transparent −121.7 (both). Passband ripple ±0.003 dB (the 70 dB tiers) /
 ±0.00001 dB (transparent). One re-pin quirk worth recording: in the up
-direction 40 taps *fails* the margin criterion while 38 passes (Kaiser
-sidelobe peaking is non-monotonic near threshold) — 38 is a genuine sweet
-spot, not a typo. The designs additionally normalize every polyphase
+direction at the 18 kHz passband, 40 taps *fails* the margin criterion
+while 38 passes (Kaiser sidelobe peaking is non-monotonic near threshold) —
+38 is a genuine sweet spot, not a typo. The designs additionally normalize every polyphase
 branch's DC sum to exactly 1.0 (kills fs_out/L-harmonic spurs from DC/LF
 energy; lets fixed-point row-sum quantization land on format unity exactly).
 
@@ -288,8 +291,10 @@ profile-ladder re-pin.** economy moved to the 18 kHz/58/38 design (the
 "economy18" spec-relaxation experiment, measured through every leg: scipy
 vectors regenerated, cross-validation floors re-pinned at −98/−90 dB,
 Q15 flagship unchanged at 76.5 dB, storage −25%/−14%); the former economy
-became `balanced`, unchanged; icount baselines re-recorded for the six
-economy workloads. **Status: M0–M6 complete —
+became `balanced`, unchanged; `super_economy` (16 kHz, 40/28) joined as
+the explicit voice/comms tier with its own scipy vectors and two Q15
+icount scenarios; icount baselines re-recorded for the six economy
+workloads and recorded for the two new super_economy ones. **Status: M0–M6 complete —
 v0.1 shipped (2026-07-23). M7 codegen phase complete — v0.2 (2026-07-24):
 M7a measurement harness, M7b superblock codegen, M7c committed trip
 counts, M7d symmetry halving, all measured, outputs bit-identical
