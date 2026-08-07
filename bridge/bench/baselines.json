@@ -1,32 +1,38 @@
 {
   "hexagon": {
-    "down_float_eco": 408799302,
-    "down_float_tr": 967322580,
-    "down_q15_eco": 69795923,
-    "down_q31_eco": 67717362,
-    "up_float_eco": 253482716,
-    "up_float_tr": 551268731,
-    "up_q15_eco": 43962582,
-    "up_q31_eco": 43918255
+    "down_float_eco": 313564771,
+    "down_float_tr": 979598163,
+    "down_q15_eco": 54576857,
+    "down_q15_se": 39378689,
+    "down_q31_eco": 54524022,
+    "up_float_eco": 226581827,
+    "up_float_tr": 553818763,
+    "up_q15_eco": 42340774,
+    "up_q15_se": 32106712,
+    "up_q31_eco": 42358271
   },
   "m33": {
-    "down_float_eco": 2405598841,
-    "down_float_tr": 5786890466,
-    "down_q15_eco": 319593940,
-    "down_q31_eco": 421757767,
-    "up_float_eco": 1483417327,
-    "up_float_tr": 3287871636,
-    "up_q15_eco": 208462743,
-    "up_q31_eco": 272069248
+    "down_float_eco": 1791425947,
+    "down_float_tr": 5772164016,
+    "down_q15_eco": 244450483,
+    "down_q15_se": 179742418,
+    "down_q31_eco": 315684738,
+    "up_float_eco": 1282189491,
+    "up_float_tr": 3280145822,
+    "up_q15_eco": 184359117,
+    "up_q15_se": 140538142,
+    "up_q31_eco": 235400465
   },
   "m55": {
-    "down_float_eco": 96760015,
-    "down_float_tr": 218246138,
-    "down_q15_eco": 74152380,
-    "down_q31_eco": 126978624,
-    "up_float_eco": 62737997,
-    "up_float_tr": 127311142,
-    "up_q15_eco": 49644781,
-    "up_q31_eco": 82296302
+    "down_float_eco": 74885193,
+    "down_float_tr": 219532760,
+    "down_q15_eco": 58251264,
+    "down_q15_se": 47710153,
+    "down_q31_eco": 97748073,
+    "up_float_eco": 56229455,
+    "up_float_tr": 128890219,
+    "up_q15_eco": 45305070,
+    "up_q15_se": 39607853,
+    "up_q31_eco": 73399258
   }
 }
