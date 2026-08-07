@@ -6,6 +6,11 @@ name: Tap House Style
 # repo's own translation units (scripts/tidy.sh is the local mirror).
 on: [push, pull_request]
 
+# Same push+PR dedup as ci.yml: one surviving run per head SHA per workflow.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   drift:
     uses: tap/taphouse/.github/workflows/drift-check.yml@v5

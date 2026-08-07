@@ -4,6 +4,15 @@ on:
   push:
   pull_request:
 
+# Dedup: a branch push and its open PR fire simultaneous runs of the same
+# commit. Keying the group on the head SHA collapses that pair to one
+# surviving run (the later-starting PR run cancels the push run), while a
+# branch with no PR keeps its push-triggered CI — the pre-PR
+# baseline-harvest flow (scripts/icount.py, PLAN section 7) depends on it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   build-test:
     name: ${{ matrix.name }}
