@@ -4,11 +4,16 @@ name: Tap House Style
 # pre-commit hook; this adds (1) a drift check against the canonical TapHouse
 # configs and (2) clang-tidy naming + mandatory-braces enforcement over this
 # repo's own translation units (scripts/tidy.sh is the local mirror).
-on: [push, pull_request]
+# Same dedup scheme as ci.yml: PR branches run on pull_request events only,
+# main runs on push, superseded in-flight runs get cancelled per PR/ref.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 
-# Same push+PR dedup as ci.yml: one surviving run per head SHA per workflow.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:

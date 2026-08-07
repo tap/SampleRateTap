@@ -1,16 +1,22 @@
 name: CI
 
+# Dedup: push runs only on main, so a PR branch gets exactly one run set
+# (the pull_request events) and its merge box never shows the cancelled
+# twin a SHA-keyed cancellation scheme would leave attached to the head
+# commit. A branch with no PR yet runs CI via workflow_dispatch — the
+# pre-PR baseline-harvest flow (scripts/icount.py, PLAN section 7) — or
+# simply by opening the PR first and harvesting from its run.
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
-# Dedup: a branch push and its open PR fire simultaneous runs of the same
-# commit. Keying the group on the head SHA collapses that pair to one
-# surviving run (the later-starting PR run cancels the push run), while a
-# branch with no PR keeps its push-triggered CI — the pre-PR
-# baseline-harvest flow (scripts/icount.py, PLAN section 7) depends on it.
+# Superseded-run cancellation: a new push to the same PR (or to main)
+# cancels the previous in-flight run. Those cancelled checks attach to the
+# old commit, so the current head stays clean.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
