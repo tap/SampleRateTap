@@ -167,7 +167,12 @@ chips solve. It handles *only* the near-unity case: two domains at
 nominally the same rate, within ±1000 ppm by default. It will never
 convert 44.1 kHz to 48 kHz — the README lists this first among its
 limitations, and `docs/COMPARISON.md` is blunt that for genuine rate
-*conversion* you should put soxr or libsamplerate in the chain.
+*conversion* you should put a synchronous resampler in the chain: soxr,
+libsamplerate, or — for exactly the 44.1 ↔ 48 pair, built on the same
+DspTap substrate as this library and cross-validated against its engine —
+the family's own [RatioTap](https://github.com/tap/RatioTap). Part V
+returns to that composition and its decision rule: RatioTap converts the
+*number*, the ASRC absorbs the *clock*.
 
 Here is what the restriction buys. A general-ratio converter must be able
 to place output samples anywhere relative to input samples, at any

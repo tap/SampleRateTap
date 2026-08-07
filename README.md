@@ -369,10 +369,62 @@ the float path; Q15's floor is the 16-bit format itself. The servo and the
 filter design always run in double (control path / one-time init, a handful
 of operations per block).
 
+## Position in the Tap family
+
+SampleRateTap is one of two rate converters in the **Tap** family, both
+built on the same shared substrate:
+
+```
+                    ┌────────────────────────────┐
+                    │           DspTap           │  shared substrate (submodule)
+                    │  kaiser design · sample    │
+                    │  traits (float/Q15/Q31) ·  │
+                    │  FIR dot kernels · row-sum │
+                    │  quantization · analysis   │
+                    └──────┬──────────────┬──────┘
+                           │              │
+              ┌────────────┴───┐   ┌──────┴─────────┐
+              │ SampleRateTap  │   │    RatioTap    │
+              │ async, near-   │   │ sync, 44.1↔48, │
+              │ unity, servo   │   │ speed-first    │
+              └────────────┬───┘   └──────┬─────────┘
+                           │              │
+                           └──── test-only│dependency:
+                                golden cross-validation
+```
+
+[DspTap](https://github.com/tap/DspTap) (vendored at `submodules/dsptap`)
+provides the Kaiser prototype design, the float/Q15/Q31 sample-format
+traits, the measured FIR dot-product kernels, the row-sum quantization,
+and the analysis instruments shared by the tests and notebooks.
+[RatioTap](https://github.com/tap/RatioTap) is the synchronous sibling:
+exactly one rational ratio pair (160/147 up, 147/160 down — 44.1 ↔ 48 kHz),
+one clock, speed-first.
+
+Which converter you need is a property of the **clock topology**, never
+inferred from a float ratio:
+
+- Same nominal rate on both sides, independent oscillators (ppm drift) —
+  this library.
+- 44.1 ↔ 48 kHz on one clock (file conversion, a single interface) —
+  RatioTap.
+- 44.1 ↔ 48 kHz across *independent* oscillators (a Bluetooth chip on its
+  own crystal) — both, composed: RatioTap converts the *number*, this
+  library absorbs the *clock*. RatioTap's `bluetooth_bridge` example is
+  the documented recipe (+200 ppm crystal, servo locked, 997 Hz recovered
+  exactly, 2.0 ms total latency).
+
+The two converters check each other: RatioTap's suite cross-validates its
+output against this library's async engine at −109 dB (down) / −99 dB (up)
+over every polyphase phase.
+
 ## Limitations
 
 - Near-unity ratios only (±`max_deviation_ppm`, default 1000 ppm). No
-  44.1 ↔ 48 kHz conversion.
+  44.1 ↔ 48 kHz conversion — that job belongs to
+  [RatioTap](https://github.com/tap/RatioTap), and 44.1 ↔ 48 across
+  independent clocks to the composition of the two (see
+  [Position in the Tap family](#position-in-the-tap-family)).
 - The rate estimate is derived from FIFO counts only. With block-quantized
   transfer its instantaneous value wobbles at the block-beat frequency
   (see `converter_status.ppm` vs. a few seconds of averaging), and ultra-quiet servo

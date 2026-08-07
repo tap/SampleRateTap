@@ -132,7 +132,10 @@ libsamplerate has no fixed-point path, so its cheapest option on such parts cost
   beyond; SampleRateTap deliberately handles only clock *drift* around a
   common nominal rate — that restriction is what buys the 48-tap datapath,
   0.5 ms filter delay, and embedded-class compute. For genuine rate
-  *conversion*, put soxr/libsamplerate in the chain.
+  *conversion*, put a synchronous resampler in the chain —
+  soxr/libsamplerate, or for exactly 44.1↔48 the family's own
+  [RatioTap](https://github.com/tap/RatioTap), which cross-validates its
+  output against this library's engine.
 - **Coarse-block operation is a different regime** (cent-scale low-rate FM
   over a 53–61 dB floor — measured in
   [the block-size study](../notebooks/asrc_block_size_study.ipynb)); the
