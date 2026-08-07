@@ -75,6 +75,12 @@ namespace {
     TYPED_TEST(phase_table_test, UpEconomyEveryPhase) {
         check_table<TypeParam, direction::up_to_48k>(profile::economy());
     }
+    TYPED_TEST(phase_table_test, DownBalancedEveryPhase) {
+        check_table<TypeParam, direction::down_to_44k1>(profile::balanced());
+    }
+    TYPED_TEST(phase_table_test, UpBalancedEveryPhase) {
+        check_table<TypeParam, direction::up_to_48k>(profile::balanced());
+    }
     TYPED_TEST(phase_table_test, DownTransparentEveryPhase) {
         check_table<TypeParam, direction::down_to_44k1>(profile::transparent());
     }
@@ -88,11 +94,15 @@ namespace {
     // its self-symmetric middle branch as a stored row).
     TEST(PhaseTable, StorageBudgetsArePinned) {
         const basic_phase_table<float, direction::down_to_44k1> de(profile::economy());
-        EXPECT_EQ(de.storage_bytes(), 74u * 78u * 4u); // 22.5 KiB (was 44.8 full)
+        EXPECT_EQ(de.storage_bytes(), 74u * 58u * 4u); // 16.8 KiB
+        const basic_phase_table<float, direction::down_to_44k1> db(profile::balanced());
+        EXPECT_EQ(db.storage_bytes(), 74u * 78u * 4u); // 22.5 KiB (was 44.8 full)
         const basic_phase_table<float, direction::down_to_44k1> dt(profile::transparent());
         EXPECT_EQ(dt.storage_bytes(), 74u * 184u * 4u); // 53.2 KiB (was 105.7 full)
         const basic_phase_table<std::int16_t, direction::up_to_48k> ue(profile::economy());
-        EXPECT_EQ(ue.storage_bytes(), 80u * 44u * 2u); // 6.9 KiB — Q15 halves it again
+        EXPECT_EQ(ue.storage_bytes(), 80u * 38u * 2u); // 5.9 KiB — Q15 halves it again
+        const basic_phase_table<std::int16_t, direction::up_to_48k> ub(profile::balanced());
+        EXPECT_EQ(ub.storage_bytes(), 80u * 44u * 2u); // 6.9 KiB
     }
 
 } // namespace

@@ -57,32 +57,44 @@ namespace tap::ratio {
     // ANCHOR_END: rt_direction
 
     // ANCHOR: rt_profile
-    /// Quality profile. Two tiers behind one design path; taps-per-phase are
-    /// pinned numbers from the M2 design spike (notebooks/design_spike.ipynb,
-    /// verified by test_design.cpp): the minimal even counts whose Kaiser
-    /// designs meet the stopband spec with >= 1 dB margin.
+    /// Quality profile. Three tiers behind one design path; taps-per-phase
+    /// are pinned numbers (M2 design spike for balanced/transparent, the
+    /// 2026-08-07 economy18 re-pin for economy; verified by test_design.cpp):
+    /// the minimal even counts whose Kaiser designs meet the stopband spec
+    /// with >= 1 dB margin on a fine (12.5 Hz) sweep grid.
     ///
     /// | profile     | stopband | passband | taps down | taps up | measured worst stop |
     /// |-------------|----------|----------|-----------|---------|---------------------|
-    /// | economy     |  70 dB   | 19 kHz   |  78       |  44     | -72.1 / -72.8 dB    |
+    /// | economy     |  70 dB   | 18 kHz   |  58       |  38     | -71.5 / -71.7 dB    |
+    /// | balanced    |  70 dB   | 19 kHz   |  78       |  44     | -72.1 / -72.8 dB    |
     /// | transparent | 120 dB   | 20 kHz   | 184       |  96     | -121.7 / -121.7 dB  |
     ///
     /// economy is the default, per the speed-first charter: going down, every
     /// alias product is confined above 20.1 kHz by arithmetic (see
-    /// ratio_traits), so its 70 dB stopband buys ultrasonic cleanliness at
-    /// half the compute and storage of transparent — the relaxation trades
-    /// nothing audible. transparent exists for pristine/offline use and for
-    /// consumers who post-process the ultrasonic band.
+    /// ratio_traits), so the 70 dB stopband buys ultrasonic cleanliness at a
+    /// quarter the compute of transparent — and the 18 kHz edge widens the
+    /// transition band for another 26%/14% off balanced's tap counts. The
+    /// trade is the 18-19 kHz shelf moving into the transition band (measured
+    /// -1.4 dB at 19 kHz going down); content there is where balanced (the
+    /// v0.2 economy design, unchanged) remains the right pairing. transparent
+    /// exists for pristine/offline use.
     struct profile {
-        double      passband_hz       = 19000.0; ///< edge of the flat passband
+        double      passband_hz       = 18000.0; ///< edge of the flat passband
         double      stopband_atten_db = 70.0;    ///< prototype stopband target
-        std::size_t taps_up_to_48k    = 44;      ///< taps per phase, 44.1 -> 48
-        std::size_t taps_down_to_44k1 = 78;      ///< taps per phase, 48 -> 44.1
+        std::size_t taps_up_to_48k    = 38;      ///< taps per phase, 44.1 -> 48
+        std::size_t taps_down_to_44k1 = 58;      ///< taps per phase, 48 -> 44.1
 
-        /// The speed-first default: ~70 dB stopband, 19 kHz passband.
+        /// The speed-first default: ~70 dB stopband, 18 kHz passband.
         /// constexpr so the converter's hot path can hard-commit to the
         /// canonical trip counts at compile time (M7 lever 2).
         static constexpr profile economy() noexcept { return {}; }
+
+        /// The v0.2 economy design, unchanged: 70 dB, flat to 19 kHz. For
+        /// content where the top of the audible band must stay in the flat
+        /// passband at half of transparent's cost.
+        static constexpr profile balanced() noexcept {
+            return {.passband_hz = 19000.0, .stopband_atten_db = 70.0, .taps_up_to_48k = 44, .taps_down_to_44k1 = 78};
+        }
 
         /// Pristine tier: 120 dB stopband, flat to 20 kHz.
         static constexpr profile transparent() noexcept {

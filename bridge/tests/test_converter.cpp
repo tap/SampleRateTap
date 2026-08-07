@@ -98,11 +98,17 @@ namespace {
     TEST(Converter, MatchesScipyDownEconomy) {
         check_reference<direction::down_to_44k1>(profile::economy(), ratio_ref::k_down_economy);
     }
+    TEST(Converter, MatchesScipyDownBalanced) {
+        check_reference<direction::down_to_44k1>(profile::balanced(), ratio_ref::k_down_balanced);
+    }
     TEST(Converter, MatchesScipyDownTransparent) {
         check_reference<direction::down_to_44k1>(profile::transparent(), ratio_ref::k_down_transparent);
     }
     TEST(Converter, MatchesScipyUpEconomy) {
         check_reference<direction::up_to_48k>(profile::economy(), ratio_ref::k_up_economy);
+    }
+    TEST(Converter, MatchesScipyUpBalanced) {
+        check_reference<direction::up_to_48k>(profile::balanced(), ratio_ref::k_up_balanced);
     }
     TEST(Converter, MatchesScipyUpTransparent) {
         check_reference<direction::up_to_48k>(profile::transparent(), ratio_ref::k_up_transparent);
@@ -259,13 +265,14 @@ namespace {
         // IMAGING LEAKAGE: the upsampling images at k*48000 +/- 997 Hz
         // survive at stopband depth and fold in-band (e.g. 47003 -> 2903 Hz).
         // That floor is bounded by the stopband (>= 71 dB below the tone,
-        // deeper where the Kaiser sidelobes have decayed; measured ~89 dB
-        // SNR here). This is economy's honest in-band contract — and exactly
-        // what the k*fs image-zeros lever (PLAN M7) would deepen.
+        // deeper where the Kaiser sidelobes have decayed; measured ~91 dB
+        // SNR on the 18 kHz economy design). This is economy's honest
+        // in-band contract — and exactly what the k*fs image-zeros lever
+        // (PLAN M7) would deepen.
         const auto tail = run_sine_down(profile::economy(), 997.0, 0.5, 1 << 16);
         const auto fit  = an::fit_sine_tracked(tail, 997.0 / 44100.0);
         EXPECT_NEAR(fit.amplitude, 0.5, 1e-4);
-        EXPECT_GT(an::snr_db(fit), 85.0); // measured ~89.2 dB
+        EXPECT_GT(an::snr_db(fit), 85.0); // measured ~91.3 dB (balanced: ~89.2)
     }
 
     TEST(Converter, PassbandSineIsTransparentTransparent) {
@@ -297,8 +304,10 @@ namespace {
         for (double f = 100.0; f < 20000.0; f += 100.0) {
             ASSERT_LT(probe_dbfs(y, f / 44100.0), -6.0 - 71.0) << f << " Hz";
         }
-        // And the worst in-band product is the predicted 19.1 kHz image.
-        EXPECT_LT(probe_dbfs(y, 19100.0 / 44100.0), -80.0); // measured ~-85 dBFS
+        // And the worst in-band product is the predicted 19.1 kHz image
+        // (deeper on the 18 kHz economy design than balanced's ~-85: the
+        // image at 25 kHz sits further into the narrower filter's stopband).
+        EXPECT_LT(probe_dbfs(y, 19100.0 / 44100.0), -80.0); // measured ~-96 dBFS
     }
 
     // ------------------------------------------------------------------
@@ -385,7 +394,7 @@ namespace {
 
     TEST(Converter, LatencyAndValidation) {
         conv<direction::down_to_44k1> c(1);
-        EXPECT_NEAR(c.latency_input_frames(), 78.0 / 2.0, 0.51);
+        EXPECT_NEAR(c.latency_input_frames(), 58.0 / 2.0, 0.51);
         EXPECT_EQ(c.channels(), 1u);
         EXPECT_THROW(conv<direction::down_to_44k1>(0), std::invalid_argument);
     }

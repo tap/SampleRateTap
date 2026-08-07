@@ -83,11 +83,17 @@ namespace {
     TEST(Design, DownEconomyMeetsSpec) {
         check_meets_spec<direction::down_to_44k1>(profile::economy(), "down economy");
     }
+    TEST(Design, DownBalancedMeetsSpec) {
+        check_meets_spec<direction::down_to_44k1>(profile::balanced(), "down balanced");
+    }
     TEST(Design, DownTransparentMeetsSpec) {
         check_meets_spec<direction::down_to_44k1>(profile::transparent(), "down transparent");
     }
     TEST(Design, UpEconomyMeetsSpec) {
         check_meets_spec<direction::up_to_48k>(profile::economy(), "up economy");
+    }
+    TEST(Design, UpBalancedMeetsSpec) {
+        check_meets_spec<direction::up_to_48k>(profile::balanced(), "up balanced");
     }
     TEST(Design, UpTransparentMeetsSpec) {
         check_meets_spec<direction::up_to_48k>(profile::transparent(), "up transparent");
@@ -100,6 +106,8 @@ namespace {
     TEST(Design, DirectionsAreAsymmetric) {
         const profile eco = profile::economy();
         EXPECT_GE(eco.taps_down_to_44k1, (eco.taps_up_to_48k * 3) / 2);
+        const profile bal = profile::balanced();
+        EXPECT_GE(bal.taps_down_to_44k1, (bal.taps_up_to_48k * 3) / 2);
         const profile tr = profile::transparent();
         EXPECT_GE(tr.taps_down_to_44k1, (tr.taps_up_to_48k * 3) / 2);
     }

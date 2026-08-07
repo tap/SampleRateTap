@@ -67,6 +67,7 @@ namespace tap::ratio {
         /// hot path hard-commits to at compile time; any other profile runs
         /// the runtime-length walk.
         static constexpr std::size_t k_taps_economy     = profile::economy().taps<D>();
+        static constexpr std::size_t k_taps_balanced    = profile::balanced().taps<D>();
         static constexpr std::size_t k_taps_transparent = profile::transparent().taps<D>();
 
         /// Allocates histories and designs the table; setup time only.
@@ -103,7 +104,7 @@ namespace tap::ratio {
         /// tap::dsp kernels, and the append/emit order is identical, so
         /// outputs stay bit-exact (pinned by the scipy-vector tests).
         ///
-        /// M7 lever 2 commits the trip counts: the two canonical profiles'
+        /// M7 lever 2 commits the trip counts: the canonical profiles'
         /// taps-per-phase are compile-time facts (constexpr profile), so one
         /// dispatch per call hands the walk a constant dot length — the
         /// inlined kernels unroll and vectorize against it instead of a
@@ -113,6 +114,9 @@ namespace tap::ratio {
             const std::size_t taps = m_table.taps();
             if (taps == k_taps_economy) {
                 return process_taps<k_taps_economy>(in, in_frames, out);
+            }
+            if (taps == k_taps_balanced) {
+                return process_taps<k_taps_balanced>(in, in_frames, out);
             }
             if (taps == k_taps_transparent) {
                 return process_taps<k_taps_transparent>(in, in_frames, out);

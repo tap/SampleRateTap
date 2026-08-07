@@ -71,7 +71,7 @@ def _load():
 _LIB = _load()
 
 _DIRS = {"up": 0, "down": 1}
-_PROFILES = {"economy": 0, "transparent": 1}
+_PROFILES = {"economy": 0, "transparent": 1, "balanced": 2}
 
 
 class RatioConverter:

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(RatioTap VERSION 0.2.0 LANGUAGES CXX)
+project(RatioTap VERSION 0.3.0 LANGUAGES CXX)
 
 # ==============================================================================
 # RatioTap — synchronous 44.1 <-> 48 kHz sample rate conversion, as fast as

@@ -122,25 +122,29 @@ namespace {
                     20.0 * std::log10(worst + 1e-18), phases_seen, l);
     }
 
-    // Measured floors: down 3.5e-6 (-109 dB), up 1.2e-5 (-99 dB) — and the
-    // SAME at async L=512 and L=1024. That equality is itself evidence: the
-    // async table's mu-interpolation residual (its documented -12 dB per
-    // doubling of L) is already below the one deliberate filter difference
-    // between the machines — RatioTap's per-branch DC normalization, a
-    // ~5e-6-level perturbation the async bank does not apply. The exact and
-    // interpolated machines agree to the last systematic difference we chose
-    // to introduce, on every phase.
+    // Measured floors on the 18 kHz economy designs (v0.3 re-pin): down
+    // 1.2e-5 (-98 dB), up 3.1e-5 (-90 dB) — and the SAME at async L=512 and
+    // L=1024. That equality is itself evidence: the async table's
+    // mu-interpolation residual (its documented -12 dB per doubling of L) is
+    // already below the one deliberate filter difference between the
+    // machines — RatioTap's per-branch DC normalization, a perturbation the
+    // async bank does not apply. The perturbation scales with the branch-sum
+    // spread of the raw windowed-sinc, which is larger for the shorter
+    // wider-transition economy designs (the v0.2 economy = today's balanced
+    // measured 3.5e-6 / 1.2e-5 here). The exact and interpolated machines
+    // agree to the last systematic difference we chose to introduce, on
+    // every phase.
     TEST(CrossValidation, DownEconomyAgainstAsync512) {
-        check_cross_validation<direction::down_to_44k1>(512, 1e-5);
+        check_cross_validation<direction::down_to_44k1>(512, 3e-5);
     }
     TEST(CrossValidation, DownEconomyAgainstAsync1024) {
-        check_cross_validation<direction::down_to_44k1>(1024, 1e-5);
+        check_cross_validation<direction::down_to_44k1>(1024, 3e-5);
     }
     TEST(CrossValidation, UpEconomyAgainstAsync512) {
-        check_cross_validation<direction::up_to_48k>(512, 3e-5);
+        check_cross_validation<direction::up_to_48k>(512, 8e-5);
     }
     TEST(CrossValidation, UpEconomyAgainstAsync1024) {
-        check_cross_validation<direction::up_to_48k>(1024, 3e-5);
+        check_cross_validation<direction::up_to_48k>(1024, 8e-5);
     }
 
 } // namespace

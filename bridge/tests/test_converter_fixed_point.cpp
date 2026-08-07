@@ -113,14 +113,14 @@ namespace {
 
     TEST(FixedPoint, Q15SineQualityEconomyDown) {
         // Q15's floor is the format (input quantization + output requant +
-        // Q1.14 coefficient noise over 78 taps), of the same order as
-        // economy's imaging floor. Measured 76.1 dB.
+        // Q1.14 coefficient noise over 58 taps), of the same order as
+        // economy's imaging floor. Measured 76.5 dB (balanced's 78 taps: 76.1).
         EXPECT_GT((measure_sine_snr_db<std::int16_t, direction::down_to_44k1>(profile::economy(), 997.0, 0.5)), 72.0);
     }
     TEST(FixedPoint, Q15SineQualityTransparentDown) {
         // LOWER than economy, on purpose pinned: Q1.14 coefficient noise
         // stacks with tap count, so transparent's 184 taps cost ~3.7 dB over
-        // economy's 78 while the 120 dB filter buys nothing a 16-bit format
+        // economy's 58 while the 120 dB filter buys nothing a 16-bit format
         // can express. At Q15, economy is the better pairing in both compute
         // AND noise — the profile guidance the README states. Measured 72.8 dB.
         EXPECT_GT((measure_sine_snr_db<std::int16_t, direction::down_to_44k1>(profile::transparent(), 997.0, 0.5)),

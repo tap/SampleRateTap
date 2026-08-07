@@ -13,22 +13,26 @@ on the Tap family's shared FIR substrate
 float/Q15/Q31 sample-format traits, measured dot-product kernels, row-sum
 quantization, measurement instruments).
 
-> **Status: v0.2 (M7 codegen campaign).** v0.1 shipped the converter for
-> all three sample formats: float (the golden model, pinned against
-> committed scipy reference vectors sample-for-sample), Q31 (tracks float
-> within −147 dB), and Q15 (format-limited: pair it with `economy`, which
-> is both cheaper *and* quieter than `transparent` at 16 bits), plus the
-> golden cross-validation against SampleRateTap's async engine (−109 dB
-> down / −99 dB up over every phase), the `bluetooth_bridge` example, the
-> C ABI, and the executed demo notebook. v0.2 is the measured optimization
-> campaign on top — four levers, each gated by the instruction-count
-> ratchet, outputs bit-identical throughout: the superblock walk,
-> committed compile-time trip counts, and symmetry-halved tables. Since
-> the campaign's baselines: **Q15 −59%/−60% and float −35%/−37% on
-> Cortex-M55, Q31 −26%/−27% on Cortex-M33, Q15 −13%/−10% on Hexagon —
-> with table storage halved** (economy Q15 up: 6.9 KiB). The remaining
-> PLAN §7 levers (multistage, minimum-phase, IIR, FFT) change the output
-> contract and stay deferred until a consumer needs them.
+> **Status: v0.3 (profile-ladder re-pin).** The default `economy` profile
+> moved to an 18 kHz passband at **58/38 taps — 26%/14% fewer MACs and
+> −25%/−14% storage** than the previous default, with every 70 dB contract
+> bound re-measured and held (the 18–19 kHz shelf moves into the
+> transition band; the former economy design continues unchanged as
+> `balanced` for content that needs that shelf flat). v0.1 shipped the
+> converter for all three sample formats: float (the golden model, pinned
+> against committed scipy reference vectors sample-for-sample), Q31
+> (tracks float within −147 dB), and Q15 (format-limited: pair it with
+> `economy`, which is both cheaper *and* quieter than `transparent` at 16
+> bits), plus the golden cross-validation against SampleRateTap's async
+> engine (every phase, floor at the one deliberate design difference), the
+> `bluetooth_bridge` example, the C ABI, and the executed demo notebook.
+> v0.2 was the measured optimization campaign — superblock walk, committed
+> compile-time trip counts, symmetry-halved tables, each gated by the
+> instruction-count ratchet, outputs bit-identical throughout: **Q15
+> −59%/−60% and float −35%/−37% on Cortex-M55, Q31 −26%/−27% on
+> Cortex-M33, Q15 −13%/−10% on Hexagon**. The remaining PLAN §7 levers
+> (multistage, minimum-phase, IIR, FFT) change the output contract and
+> stay deferred until a consumer needs them.
 > [PLAN.md](PLAN.md) is the authoritative roadmap (charter, architecture
 > decisions, milestones, acceptance criteria, per-lever measurements);
 > [HANDOFF.md](HANDOFF.md) is the original design brief it grew from.
@@ -39,6 +43,8 @@ quantization, measurement instruments).
 #include <tap/ratio/ratio.h>
 
 tap::ratio::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
+// profiles: economy() (default, 18 kHz passband) | balanced() (19 kHz,
+// the pre-v0.3 default) | transparent() (120 dB pristine tier)
 std::vector<float> out(down.outputs_for(n_in) * 2);
 std::size_t made = down.process(in, n_in, out.data());   // noexcept, alloc-free
 // ... and at end of stream:
@@ -52,7 +58,7 @@ callback-driven shape, and `frames_needed(n)` is exact arithmetic. For
 44.1↔48 across *independent clocks* (a Bluetooth chip on its own crystal),
 compose with SampleRateTap — `examples/bluetooth_bridge.cpp` is the
 documented recipe: +200 ppm crystal, servo locked, 997 Hz recovered
-exactly, 2.0 ms total latency.
+exactly, 1.9 ms total latency.
 
 ## The boundaries are identity, not policy
 

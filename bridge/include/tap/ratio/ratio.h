@@ -23,10 +23,11 @@
 // profiles, dot kernels, row-sum quantization, measurement instruments),
 // consumed as the submodules/dsptap submodule.
 //
-// Status: v0.2 — M7 codegen phase complete. The streaming converter
-// (converter.h: process/pull/flush) ships float, Q15 and Q31 aliases with
-// the superblock walk, committed trip counts and symmetry-halved tables,
-// outputs bit-identical throughout. PLAN.md is the authoritative roadmap;
+// Status: v0.3 — the profile ladder re-pin. economy (the default) moved to
+// an 18 kHz passband at 58/38 taps; the former economy design continues
+// unchanged as balanced (19 kHz, 78/44); transparent is untouched. On top
+// of v0.2's M7 codegen campaign (superblock walk, committed trip counts,
+// symmetry-halved tables). PLAN.md is the authoritative roadmap;
 // HANDOFF.md is the original design brief.
 #pragma once
 
@@ -36,7 +37,7 @@
 #include "tap/ratio/schedule.h"    // IWYU pragma: export
 
 #define TAP_RATIO_VERSION_MAJOR 0
-#define TAP_RATIO_VERSION_MINOR 2
+#define TAP_RATIO_VERSION_MINOR 3
 #define TAP_RATIO_VERSION_PATCH 0
 
 namespace tap::ratio {

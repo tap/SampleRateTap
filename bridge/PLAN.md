@@ -102,11 +102,14 @@ side of the ASRC:
 
 ## 4. Profiles
 
-Two quality tiers behind one design path, named in the family vocabulary:
+Three quality tiers behind one design path, named in the family vocabulary
+(ladder re-pinned 2026-08-07, v0.3: the 18 kHz design became `economy` and
+the default; the former economy design continues unchanged as `balanced`):
 
 | Profile | Stopband | Passband edge | Taps/phase (=MACs/out) down / up | Storage f32 down / up | Role |
 |---|---|---|---|---|---|
-| `economy()` — **default** | 70 dB | 19 kHz | **78 / 44** | 22.5 / 13.8 KiB | The speed-first default. All alias products land above 20 kHz at ≤ −71 dBFS — arithmetically confined to the ultrasonic band (see HANDOFF §4) |
+| `economy()` — **default** | 70 dB | 18 kHz | **58 / 38** | 16.8 / 11.9 KiB | The speed-first default. All alias products land above 20 kHz at ≤ −71 dBFS — arithmetically confined to the ultrasonic band (see HANDOFF §4) — at 26%/14% fewer MACs than balanced |
+| `balanced()` | 70 dB | 19 kHz | **78 / 44** | 22.5 / 13.8 KiB | The v0.1–v0.2 economy design, unchanged: top of the audible band stays inside the flat passband |
 | `transparent()` | 120 dB | 20 kHz | **184 / 96** | 53.2 / 30.0 KiB | Pristine/offline tier |
 
 Storage figures are with the M7d symmetry halving (ceil(L/2) stored rows;
@@ -116,17 +119,25 @@ pinned by `PhaseTable.StorageBudgetsArePinned`); Q15 halves them again.
 speed-first charter; the README must state the reasoning (the §4 argument:
 nothing *can* fold below 20.1 kHz going down; images land ≥ 22.05 kHz going
 up) rather than just the number, and the program-weighted measurement style
-from SampleRateTap's `economy` preset applies here too.
+from SampleRateTap's `economy` preset applies here too. The 18 kHz edge is
+the same species of inaudible trade that put economy at 19 kHz rather than
+transparent's 20: the 18–19 kHz shelf moves into the transition band
+(measured −1.4 dB at 19 kHz going down, −0.5 dB going up). Content that
+must keep that shelf flat pairs with `balanced`.
 
 Numbers pinned by the M2 design spike (`notebooks/design_spike.ipynb`,
-executed and committed; enforced in CI by `test_design.cpp`): taps are the
-minimal even counts meeting the stopband with ≥ 1 dB margin. Measured
-worst-case stopband on the shipping designs: economy −72.1 dB (down) /
-−72.8 dB (up); transparent −121.7 dB (both). Passband ripple ±0.003 dB
-(economy) / ±0.00001 dB (transparent). Q15 tables halve the storage. The
-designs additionally normalize every polyphase branch's DC sum to exactly
-1.0 (kills fs_out/L-harmonic spurs from DC/LF energy; lets fixed-point
-row-sum quantization land on format unity exactly).
+executed and committed; enforced in CI by `test_design.cpp`) for
+balanced/transparent, and by the 2026-08-07 economy18 re-pin for economy:
+taps are the minimal even counts meeting the stopband with ≥ 1 dB margin on
+a fine (12.5 Hz) sweep grid. Measured worst-case stopband on the shipping
+designs: economy −71.5 dB (down) / −71.7 dB (up); balanced −72.1 / −72.8;
+transparent −121.7 (both). Passband ripple ±0.003 dB (economy/balanced) /
+±0.00001 dB (transparent). One re-pin quirk worth recording: in the up
+direction 40 taps *fails* the margin criterion while 38 passes (Kaiser
+sidelobe peaking is non-monotonic near threshold) — 38 is a genuine sweet
+spot, not a typo. The designs additionally normalize every polyphase
+branch's DC sum to exactly 1.0 (kills fs_out/L-harmonic spurs from DC/LF
+energy; lets fixed-point row-sum quantization land on format unity exactly).
 
 ## 5. The async composition (`bluetooth_bridge`)
 
@@ -272,7 +283,13 @@ executed (it measures the shipping C++, not a Python re-implementation).
     the tap::dsp kernel gates. Worst residual rides inside the ±3% gate
     (Hexagon down_q31 +2.7%); Arm came out slightly ahead (M33 Q31 −2.5%).
 
-v0.1 ships at M6. Nothing in M7+ blocks it. **Status: M0–M6 complete —
+v0.1 ships at M6. Nothing in M7+ blocks it. **v0.3 (2026-08-07): the
+profile-ladder re-pin.** economy moved to the 18 kHz/58/38 design (the
+"economy18" spec-relaxation experiment, measured through every leg: scipy
+vectors regenerated, cross-validation floors re-pinned at −98/−90 dB,
+Q15 flagship unchanged at 76.5 dB, storage −25%/−14%); the former economy
+became `balanced`, unchanged; icount baselines re-recorded for the six
+economy workloads. **Status: M0–M6 complete —
 v0.1 shipped (2026-07-23). M7 codegen phase complete — v0.2 (2026-07-24):
 M7a measurement harness, M7b superblock codegen, M7c committed trip
 counts, M7d symmetry halving, all measured, outputs bit-identical
@@ -288,7 +305,13 @@ since double accumulation is the float golden model's identity).**
 
 ## 8. Acceptance criteria (v0.1)
 
-All numbers pinned (M2 design spike, 2026-07-23).
+All numbers pinned (M2 design spike, 2026-07-23). *These are the v0.1
+acceptance records: "economy" below refers to the 19 kHz design that is
+`balanced()` as of the v0.3 ladder re-pin (§4). The v0.3 economy's numbers:
+worst stopband −71.5/−71.7 dB, 997 Hz imaging floor ~91 dB (float) /
+76.5 dB (Q15), cross-validation floors 1.2e-5 down / 3.1e-5 up, latency
+29 smp (0.60 ms) down / 19 smp (0.43 ms) up — every contract bound below
+still holds on the new default, re-measured in the same test batteries.*
 
 - `economy`, both directions: every spurious product ≥ **71 dB below the
   source content** (design floors: −72.1 dB down, −72.8 dB up). Two species,
