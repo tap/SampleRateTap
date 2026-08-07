@@ -183,6 +183,44 @@ samples*, which is three times as many milliseconds at 16 kHz (1.5 ms vs
 slower — the 16 kHz test runs 120 s where the 48 kHz one ran 40 s, the
 same number of samples and of time constants.
 
+### A different rate on each side belongs to RatioTap
+
+Everything above scales the *common* nominal rate; it does not license
+44.1 ↔ 48. With the default configuration the servo clamps its estimate
+at ±1.5 × `max_deviation_ppm` — ±1500 ppm against an 8.8% gap — and the
+near-unity datapath has none of the band-limiting machinery a genuine
+downward conversion needs. That conversion is a different problem —
+synchronous, rational, known at compile time — and in the Tap family it
+has a different engine: [RatioTap](https://github.com/tap/RatioTap),
+built on the same DspTap substrate this book has been reading (the same
+Kaiser design path, sample traits, and dot kernels), with its entire
+optimization budget spent on exactly one ratio pair, 160/147 up and
+147/160 down.
+
+The decision rule is worth stating the way RatioTap's README states it,
+because the failure mode is choosing an engine from a float: **which
+converter applies is a property of the clock topology, never inferred
+from the ratio.** A 44.1 kHz file rendered for a 48 kHz interface is
+RatioTap alone — one clock, a number to convert. Two 48 kHz devices on
+separate crystals is this library alone — one nominal rate, a clock to
+absorb. A Bluetooth chip running 44.1 kHz on its own crystal into a
+48 kHz host is both, composed: RatioTap converts the *number*, the ASRC
+absorbs the *clock*.
+
+The composition is not hypothetical, and it is measured. RatioTap's
+`bluetooth_bridge` example is the documented recipe — +200 ppm on the
+simulated crystal, servo locked, 997 Hz recovered exactly, 2.0 ms of
+total latency through both stages — and the two engines check each
+other: RatioTap's suite pins its output against this library's async
+engine at −109 dB (down) / −99 dB (up) over every polyphase phase. Two
+independent implementations of the same mathematics agreeing at the
+noise floor is the strongest mutual check either repository runs.
+
+The working code lives in RatioTap's repository, which is why this
+section is prose rather than a code walk: the book's include-anchor
+contract quotes only from this tree, and the recipe is RatioTap's to
+keep honest. What this book owes you is the decision rule above.
+
 ## Blocks: feasibility, then observability
 
 The block-size axis has two boundaries, one hard and one
@@ -308,6 +346,13 @@ jupyter nbconvert --execute notebooks/asrc_block_size_study.ipynb
 # adaptive raise reports itself in effective_target_latency_frames instead
 # of dropping out:
 ./build/examples/drifting_clocks
+
+# The 44.1↔48 composition (RatioTap converts the number, this library
+# absorbs the clock) runs from the sibling repository:
+git clone --recurse-submodules https://github.com/tap/RatioTap
+cmake -S RatioTap -B rt-build -DCMAKE_BUILD_TYPE=Release
+cmake --build rt-build --target bluetooth_bridge -j 4
+./rt-build/examples/bluetooth_bridge
 ```
 
 The break-it-on-purpose suggestions are, as ever, the chapter in
