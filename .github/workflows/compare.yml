@@ -58,7 +58,10 @@ jobs:
               -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
               -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
             cmake --build build-$tgt -j 4
-            for bin in cmp_icount_srt_float cmp_icount_lsr_medium cmp_icount_lsr_best; do
+            # Each engine at 2 s and 4 s: the difference is steady state, the
+            # remainder construction (bench/icount/cmp_main.cpp).
+            for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8; do
+                           echo cmp_icount_$e cmp_icount_${e}_4s; done); do
               out=$(qemu-system-arm -M $machine -nographic -semihosting \
                 -d plugin -plugin /tmp/libinsncount.so \
                 -kernel build-$tgt/bench/icount/$bin 2>&1)
@@ -122,7 +125,8 @@ jobs:
             -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
             -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
           cmake --build build-hex -j 4
-          for bin in cmp_icount_srt_float cmp_icount_lsr_medium cmp_icount_lsr_best; do
+          for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8; do
+                         echo cmp_icount_$e cmp_icount_${e}_4s; done); do
             out=$(qemu-hexagon -d plugin -plugin /tmp/libinsncount.so \
               build-hex/bench/icount/$bin 2>&1)
             echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {

@@ -77,3 +77,11 @@ option(SRT_BUILD_CAPI "Build the C ABI shared library" OFF)
 if(SRT_BUILD_CAPI)
     add_subdirectory(tools/capi)
 endif()
+
+# ctypes shim over r8brain-free-src for the comparison notebook (fetched at a
+# commit pin; comparison-only, never linked into the library). See
+# notebooks/asrc_comparison.ipynb and docs/COMPARISON.md.
+option(SRT_BUILD_COMPARE_SHIM "Build the r8brain shim for the comparison notebook" OFF)
+if(SRT_BUILD_COMPARE_SHIM)
+    add_subdirectory(tools/compare_shim)
+endif()

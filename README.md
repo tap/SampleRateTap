@@ -218,8 +218,8 @@ sample-granular transfer, 0.5 FS sine, 1 s analysis window after settling):
 | `transparent()` (L=512, T=80) | 133 dB | — | — | 108 dB | 0.83 ms |
 
 AES17-style THD+N measured under identical conditions against
-libsamplerate, soxr and hardware datasheet figures:
-[docs/COMPARISON.md](docs/COMPARISON.md) (−132 dB THD+N / 149 dB DR at the
+libsamplerate, soxr, r8brain-free-src and hardware datasheet figures:
+[docs/COMPARISON.md](docs/COMPARISON.md) (−134 dB THD+N / 149 dB DR at the
 24-bit interface, servo in the loop;
 [notebooks/asrc_comparison.ipynb](notebooks/asrc_comparison.ipynb)).
 
@@ -311,9 +311,10 @@ two USB audio dongles, a Pi + Pico 2, two Pis over Ethernet), see
 Methodology, optimization roadmap and regression gating live in
 [docs/PERFORMANCE.md](docs/PERFORMANCE.md). Build the benchmarks with
 `-DSRT_BUILD_BENCHMARKS=ON` (host only). A measured computational
-head-to-head against libsamplerate and soxr — host wall-clock and embedded
-instruction counts (`-DSRT_BUILD_COMPARE_BENCH=ON`, `SRT_ICOUNT_COMPARE`) —
-lives in [docs/COMPARISON.md](docs/COMPARISON.md).
+head-to-head against libsamplerate, soxr and r8brain-free-src — host
+wall-clock and embedded instruction counts, steady state and construction
+(`-DSRT_BUILD_COMPARE_BENCH=ON`, `SRT_ICOUNT_COMPARE`) — lives in
+[docs/COMPARISON.md](docs/COMPARISON.md).
 
 <!-- ICOUNT:BEGIN -->
 Executed instructions per fixed workload (`bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bench/baselines.json`:
