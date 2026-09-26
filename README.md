@@ -441,3 +441,6 @@ window design (Kaiser 1974), band-limited interpolation (J. O. Smith,
 CCRMA), polyphase decomposition and the harris length estimate, and textbook
 2nd-order PLL servo design. No third-party source was copied. GoogleTest
 (BSD-3) is fetched for tests only and is not part of the shipped headers.
+r8brain-free-src (MIT) is fetched at a commit pin only when the opt-in
+comparison builds are enabled (`cmake/r8brain.cmake`); it is never linked
+into the library or its tests.
