@@ -264,9 +264,13 @@ executed (it measures the shipping C++, not a Python re-implementation).
     scenarios stay loop-shaped and flat), **M33 Q15 −2.6/−3.4%**; float
     everywhere within noise of flat (soft-double MAC bound on M33, FP64
     chain bound on M55). Coefficient *baking* (committed tables in rodata)
-    remains un-pulled: construction is <0.3% of every workload, so its
-    value is boot time and RAM on MCUs, not instruction counts — deferred
-    until a consumer needs it.
+    remains un-pulled — deferred until a consumer needs it. (This entry
+    first justified the deferral with "construction is <0.3% of every
+    workload"; measured directly on 2026-09-26 it is not — see the M7e
+    entry: 3–5% on M55, 5–37% on Hexagon, and on M33 up to 63% of the Q15
+    workloads, 74% before the shared-window change. Baking would therefore
+    move the M33/Hexagon fixed-point counts a lot, while the audio path it
+    leaves untouched is what the ratchet is meant to watch.)
   - **M7d — polyphase symmetry storage halving (landed).** Lever 3, in two
     PRs per the substrate discipline: `tap::dsp::dot_row_reversed` landed
     in DspTap first (hist forward × row backward, SMLALDX swapped-lane
@@ -285,6 +289,33 @@ executed (it measures the shipping C++, not a Python re-implementation).
     (TAP_RATIO_MIRRORED_DOT_ATTR), the same measured-per-target pattern as
     the tap::dsp kernel gates. Worst residual rides inside the ±3% gate
     (Hexagon down_q31 +2.7%); Arm came out slightly ahead (M33 Q31 −2.5%).
+  - **M7e — DspTap pin 28a34a1 → 0eb09fa: shared Kaiser-window Bessel
+    series (re-record, not a lever).** DspTap #38 evaluates the window's
+    `bessel_i0` series once for half the taps and mirrors it — the design
+    evaluated it per tap. Coefficients bit-identical (FNV-1a-64 over the
+    whole prototype on M33 and on x86 under GCC and clang; scipy vectors
+    and the cross-validation floors unmoved, 78/78 host tests), so only
+    construction moved: per profile × direction and identical across
+    float/Q15/Q31 (down economy −70.7 M on M33 in all three formats),
+    M33 −37…−299 M, Hexagon −4.7…−35 M, M55 −0.6…−4.6 M. That took ten
+    of ten M33 scenarios and eight of ten Hexagon scenarios past the
+    two-sided gate (M33 down_q15_eco −28.9%); baselines re-recorded on all
+    three targets (M55 moved −1.0…−2.1%, re-recorded to keep the gate
+    tight). The sampleratetap test pin moves with it (5315689 → 2b4dff1,
+    no header changes in that range) so both repos keep the identical
+    dsptap tree the dev-only include path relies on.
+    Measuring the delta exposed how much of each workload construction is.
+    A construct-only build of every scenario, after the change (before in
+    parentheses): M55 3–5% (4–6%); Hexagon float 5–6% (8–10%), fixed
+    point 32–37% (42–47%); M33 float 6–8% (10–12%), Q31 42–45% (55–57%),
+    **Q15 55–63% (67–74%)**. So on M33 the fixed-point baselines mostly
+    price the constructor, and a hot-path regression there is diluted
+    ~2–3× before the ±3% gate sees it; the per-lever M33 percentages
+    above were measured through the same dilution (the audio-path
+    improvements were correspondingly larger). A construct-only ratchet
+    scenario, or measuring a second workload length and differencing as
+    SampleRateTap now does (steady state = 4 s − 2 s), would restore the
+    gate's sensitivity.
 
 v0.1 ships at M6. Nothing in M7+ blocks it. **v0.3 (2026-08-07): the
 profile-ladder re-pin.** economy moved to the 18 kHz/58/38 design (the
