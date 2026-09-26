@@ -113,6 +113,14 @@ accumulates a checksum, and ends with:
     std::printf("SRT_ICOUNT_DONE ok=%d checksum=%.17g\n", ok ? 1 : 0, checksum);
 ```
 
+A total is the whole binary's cost, construction included, so a pipeline
+baseline divided by its 96 000 frames is *not* the per-frame cost: on the
+M33 the converter's soft-double filter design alone is over a billion
+instructions. `SRT_SC_SECONDS` (default 2, the only length ever baselined)
+exists for that question. Build the pipeline scenarios again at
+`-DSRT_SC_SECONDS=4` and difference the counts: what doubles is the
+per-frame steady state, and what stays is construction.
+
 The three gated targets each run under the QEMU mode that matches their
 deployment reality. Hexagon binaries are Linux user-space processes, so
 `qemu-hexagon` (user-mode emulation) runs them directly. The two Cortex-M

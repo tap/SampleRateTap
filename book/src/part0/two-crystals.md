@@ -69,7 +69,7 @@ the residual integrated across the 20 Hz–20 kHz band.
 
 The naive FIFO measures **−34.7 dB THD+N** and 94.7 dB of A-weighted
 dynamic range. The converter this book describes, on the same signal and
-the same clocks, measures −132.1 dB.
+the same clocks, measures −133.9 dB.
 
 What does −34.7 dB sound like? The number means that the error left after
 subtracting the test tone sits only 34.7 dB below the tone itself — a
@@ -90,7 +90,7 @@ floor lies.
 
 That row of the table is the cost of doing nothing, and it calibrates
 everything else in this book. Every design decision in the chapters ahead
-is ultimately justified by the distance between −34.7 dB and −132.1 dB.
+is ultimately justified by the distance between −34.7 dB and −133.9 dB.
 
 ## The two industry answers
 
@@ -195,10 +195,10 @@ the constructor.
 The computational tables in `docs/COMPARISON.md` measure what that is
 worth. Against libsamplerate — the closest architectural analog, a
 streaming time-domain polyphase resampler — at the matched ~120 dB quality
-tier, SampleRateTap converts 2.9–3.6× more frames per second (mono/stereo;
-2.1× at 8 channels, where both engines amortize), while carrying half the
+tier, SampleRateTap converts 3.1–3.9× more frames per second (stereo/mono;
+1.5× at 8 channels, where both engines amortize), while carrying half the
 algorithmic latency: 24 frames (0.50 ms) of filter group delay against 46
-frames (0.96 ms). At the ~140 dB tier the gap widens to 6.2× in throughput
+frames (0.96 ms). At the ~140 dB tier the gap widens to 6.1× in throughput
 and to 40 frames against 143 in latency. That is the near-unity dividend,
 and the comparison document names its mechanism exactly: a 48-tap window
 with a creeping phase, instead of general-ratio machinery. On targets
@@ -211,12 +211,15 @@ converter's one-time construction into a 2 s workload; the comparison
 document now reports steady state and construction separately.)
 
 The soxr rows teach a different lesson, and reading them honestly is a
-preview of the next chapter. At the ~120 dB tier soxr converts 32.4
-million stereo frames per second on the same host to SampleRateTap's 10.5
+preview of the next chapter. At the ~120 dB tier soxr converts 52.9
+million stereo frames per second on the same host to SampleRateTap's 14.6
 million — soxr wins raw throughput, decisively, by processing in large
-SIMD-friendly internal batches. The latency column is the price: 556 to
-607 frames of algorithmic delay, 11.6 to 12.6 ms, rising to 777 frames
-(16.2 ms) at its highest quality tier. Those are fine numbers for batch
+SIMD-friendly internal batches. The latency column is the price: 424 to
+788 frames of algorithmic delay, 8.8 to 16.4 ms, and 433 frames (9.0 ms)
+at its highest quality tier. r8brain-free-src tells the same story in a
+different key: it out-runs SampleRateTap on the desktop by 1.1–1.7×, and
+its lowest delay still flat to 20 kHz is 200 frames (4.2 ms) against
+`balanced`'s 24. Those are fine numbers for batch
 conversion and impossible ones inside a 1–2 ms live-monitoring budget, and
 — as `docs/COMPARISON.md` puts it — there is no setting that buys soxr's
 throughput at SampleRateTap's latency. Throughput, latency, and quality
@@ -226,13 +229,13 @@ allocated, and different tools have allocated it for different lives.
 One more number from the measured table completes the picture, because
 this book does not deal in free lunches. Fed by its own servo rather than
 an oracle, running causally at 1.5 ms of total design latency,
-SampleRateTap measures −132.1 dB THD+N against the oracle-fed libraries'
-−143.5 dB. The ~11 dB gap is the measured price of solving the *whole*
+SampleRateTap measures −133.9 dB THD+N against the oracle-fed libraries'
+−143.5 dB. The ~10 dB gap is the measured price of solving the *whole*
 problem — discovering the ratio from buffer occupancy in real time instead
 of being told it — and the comparison document presents it as exactly
-that. Eleven decibels, spent 132 dB below the signal, purchasing the half
+that. Ten decibels, spent 134 dB below the signal, purchasing the half
 of the problem that was actually hard. The rest of this book is an account
-of how both numbers — the 132 and the 11 — were achieved, measured, and
+of how both numbers — the 134 and the 10 — were achieved, measured, and
 defended.
 
 ## Watching the invisible

@@ -69,9 +69,10 @@ Two things this proves that emulation cannot:
   gives deterministic *instruction* counts, not cycles, and real cycles
   need hardware counters. The RP2350 has DWT.CYCCNT: wrapping `pull()`
   in CYCCNT reads gives real cycles-per-block at 150 MHz — directly
-  testing the README's claim that Q15 mono fits comfortably and stereo
-  is tight on one core. Correlating CYCCNT against the QEMU instruction
-  baselines also calibrates the ratchet ("1 QEMU instruction ≈ N RP2350
+  testing the README's claim that Q15 stereo fits comfortably on one
+  core (~1,140 steady-state instructions per frame against 3,125 cycles).
+  Correlating CYCCNT against the QEMU steady-state instruction counts
+  also calibrates the ratchet ("1 QEMU instruction ≈ N RP2350
   cycles") for all future M33 numbers.
 - **Dual-core deployment** (harness shipped:
   [`examples/pico2_dualcore/`](../examples/pico2_dualcore/), self-validating

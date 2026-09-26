@@ -268,9 +268,13 @@ CI builds and tests every push on:
   M33 has no FP64 and no Helium, and the instruction baselines make the
   consequences concrete: the float datapath costs ~19× the M55's
   instructions (soft-double accumulation) — on Pico-class parts use
-  Q15/Q31. The instruction baselines suggest 48 kHz Q15 mono fits a
-  150 MHz core and stereo wants the `fast()` preset or the RP2350's
-  second core — instruction counts are not cycle counts, so treat these
+  Q15/Q31. In steady state the full Q15 converter (servo and FIFO
+  included) costs ~1,140 instructions per stereo frame and ~3,330 at 12
+  channels, against the 3,125 cycles per frame a 150 MHz core has at
+  48 kHz: 48 kHz Q15 stereo fits one core with room to spare, 12 channels
+  does not (the dual-core example runs it at 16 kHz). Construction is
+  separate and heavy: ~1.3 G instructions of soft-double filter design,
+  seconds at boot. Instruction counts are not cycle counts, so treat these
   as budgets pending real-silicon validation: `examples/pico2_cyccnt/`
   is a flashable DWT.CYCCNT harness built to measure exactly this, and
   `examples/pico2_dualcore/` validates the one-clock-domain-per-core

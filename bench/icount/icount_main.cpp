@@ -57,6 +57,14 @@ namespace {
 #define SRT_SC_CH 2
 #endif
 
+// Pipeline length in seconds of virtual audio. The ratchet always builds the
+// default; a second build at -DSRT_SC_SECONDS=4 separates steady-state cost
+// from one-time construction (the difference of the two counts), the method
+// docs/COMPARISON.md uses. Only the gated default is ever baselined.
+#ifndef SRT_SC_SECONDS
+#define SRT_SC_SECONDS 2
+#endif
+
     template <typename S>
     double runPipeline() {
         constexpr std::size_t   kCh    = SRT_SC_CH;
@@ -70,7 +78,7 @@ namespace {
 
         double            sink   = 0.0;
         std::size_t       off    = 0;
-        const std::size_t blocks = 2 * 48000 / kBlock; // 2 s of virtual audio
+        const std::size_t blocks = SRT_SC_SECONDS * 48000 / kBlock; // virtual audio
         for (std::size_t b = 0; b < blocks; ++b) {
             asrc.push(input.data() + off, kBlock);
             asrc.pull(out.data(), kBlock);

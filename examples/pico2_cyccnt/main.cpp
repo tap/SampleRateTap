@@ -6,11 +6,12 @@
 // Calibration purpose: docs/PERFORMANCE.md gates regressions on QEMU
 // *instruction* counts because they are deterministic; real cost is in
 // *cycles*, which only hardware counters give. Dividing the mean cycles/frame
-// printed here by the committed M33 QEMU baselines (bench/baselines.json,
-// 2 s of 48 kHz audio = 96,000 frames per workload):
+// printed here by the M33 QEMU steady-state instruction counts (the workload
+// built at 2 s and at 4 s, -DSRT_SC_SECONDS=4, differenced so the one-time
+// construction a baseline also carries drops out; measured 2026-09-26):
 //
-//   pipeline_q15   (2ch, balanced)  484,146,844 insns = 5,043 insns/frame
-//   pipeline12_q15 (12ch, balanced) 962,613,655 insns = 10,027 insns/frame
+//   pipeline_q15   (2ch, balanced)  1,138 insns/frame
+//   pipeline12_q15 (12ch, balanced) 3,326 insns/frame
 //
 // yields the "1 QEMU instruction ~= N RP2350 cycles" ratio that converts
 // every M33 instruction baseline into a real cycle budget.

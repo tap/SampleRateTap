@@ -11,13 +11,16 @@ hardware cycle counter.
 [docs/PERFORMANCE.md](../../docs/PERFORMANCE.md) gates regressions on QEMU
 *instruction* counts because they are deterministic and noise-free — but
 silicon budgets are spent in *cycles*, and QEMU cannot provide those. This
-firmware closes that loop: dividing its measured cycles/frame by the
-committed M33 instruction baselines (`pipeline_q15` 484,146,844 insns per
-96,000 frames = 5,043/frame; `pipeline12_q15` 962,613,655 = 10,027/frame)
-calibrates the "1 QEMU instruction ≈ N RP2350 cycles" ratio, turning every
-current and future M33 baseline into a real cycle budget. It also tests the
-README's claim directly: Q15 mono fits a 150 MHz core with room to spare,
-stereo is tighter.
+firmware closes that loop: dividing its measured cycles/frame by the M33
+steady-state instruction counts (`pipeline_q15` 1,138/frame,
+`pipeline12_q15` 3,326/frame) calibrates the "1 QEMU instruction ≈ N RP2350
+cycles" ratio, turning every current and future M33 baseline into a real
+cycle budget. The steady state is the difference of the workload built at
+2 s and at 4 s (`-DSRT_SC_SECONDS=4`); a committed baseline divided by its
+96,000 frames also carries the converter's one-time construction (~1.3 G
+instructions of soft-double filter design), which this firmware does not
+time. It also tests the README's claim directly: Q15 stereo fits a 150 MHz
+core with room to spare, 12 channels at 48 kHz does not.
 
 ## Build
 
@@ -75,7 +78,7 @@ SRT_PICO2_DONE
 
 ## Reading the numbers
 
-- **cyc/frame ÷ 5,043** (Q15 balanced 2ch) and **÷ 10,027** (12ch) give the
+- **cyc/frame ÷ 1,138** (Q15 balanced 2ch) and **÷ 3,326** (12ch) give the
   silicon cycles-per-QEMU-instruction ratio — the calibration constant for
   all M33 instruction baselines in the README table.
 - **%core@48k** is the headline budget figure. The float rows exist to put a
