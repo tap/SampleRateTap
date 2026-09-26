@@ -80,7 +80,7 @@ namespace {
             step();
             benchmark::DoNotOptimize(out.data());
         }
-        state.SetItemsProcessed(static_cast<std::int64_t>(state.iterations()) * kBlock);
+        state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(kBlock));
         if (asrc.status().underruns != 0)
             state.SkipWithError("underrun during steady-state benchmark");
     }

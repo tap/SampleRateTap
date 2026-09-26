@@ -120,7 +120,7 @@ namespace {
             if (got != kBlock)
                 state.SkipWithError("source ran dry");
         }
-        state.SetItemsProcessed(static_cast<std::int64_t>(state.iterations()) * kBlock);
+        state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(kBlock));
     }
 
     void lsrBench(benchmark::State& state, int converter, std::size_t channels) {
