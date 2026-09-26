@@ -194,10 +194,13 @@ per-sample path). Hexagon's musl build uses the real mutex.
 
 **Construction is the one column SampleRateTap loses.** Its filter design
 (the compensated prototype, run in double at construction) costs ~1.3 G
-instructions on the M33, where double is emulated — seconds of start-up on
-a 150 MHz part (instructions are not cycles), against tens of millions for
-r8brain and libsamplerate. It is paid once per converter, never on the
-audio path, but it is a real cost for devices that construct at boot.
+instructions on the M33 as QEMU emulates it (every double operation a
+software libcall), against tens of millions for r8brain and
+libsamplerate. On a generic FP64-less 150 MHz core that is seconds of
+start-up; the RP2350 routes double arithmetic through its DCP coprocessor,
+so a Pico 2 should pay less than the count suggests (`pico2_cyccnt` can
+measure it). It is paid once per converter, never on the audio path, but
+it is a real cost for devices that construct at boot.
 
 ## The landscape
 

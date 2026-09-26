@@ -275,7 +275,9 @@ workload at two lengths: the difference is the per-frame cost, the
 remainder is construction. The per-frame cost was 1,138 instructions both
 then and now; what changed since is construction, which grew to ~1.3 G
 instructions with the compensated design. That is still a real budget
-item: seconds of start-up on a 150 MHz part, paid once. Knowing both
+item: seconds of start-up on a generic 150 MHz part with no FP64 help,
+paid once (the RP2350's DCP coprocessor for double arithmetic should make
+a Pico 2 cheaper than the emulated count). Knowing both
 numbers before flashing hardware is the point of keeping the budget in a
 table.
 

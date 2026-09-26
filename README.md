@@ -273,10 +273,12 @@ CI builds and tests every push on:
   channels, against the 3,125 cycles per frame a 150 MHz core has at
   48 kHz: 48 kHz Q15 stereo fits one core with room to spare, 12 channels
   does not (the dual-core example runs it at 16 kHz). Construction is
-  separate and heavy: ~1.3 G instructions of soft-double filter design,
-  seconds at boot. Instruction counts are not cycle counts, so treat these
-  as budgets pending real-silicon validation: `examples/pico2_cyccnt/`
-  is a flashable DWT.CYCCNT harness built to measure exactly this, and
+  separate and heavy: ~1.3 G QEMU instructions of soft-double filter
+  design, seconds at boot on a generic FP64-less core (less on the RP2350,
+  whose DCP coprocessor handles doubles). Instruction counts are not
+  cycle counts, so treat these as budgets pending real-silicon
+  validation: `examples/pico2_cyccnt/` is a flashable DWT.CYCCNT harness
+  built to measure exactly this, and
   `examples/pico2_dualcore/` validates the one-clock-domain-per-core
   deployment shape.
 - **Arm Cortex-M55**, bare metal (newlib + semihosting, no OS/threads),
