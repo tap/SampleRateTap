@@ -58,7 +58,7 @@ integrate the residual across the audio band for THD+N, measure dynamic
 range at −60 dBFS with A-weighting. The comparison notebook implements an
 AES17-style procedure (exact fit plus ±20 Hz notch, 20 Hz–20 kHz
 integration) and calibrates it against synthetic signals before use — the
-standard is what makes the −132 dB figure commensurable with silicon
+standard is what makes the −134 dB figure commensurable with silicon
 datasheets rather than a house metric.
 
 ## The measured competitors

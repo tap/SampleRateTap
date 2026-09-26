@@ -251,8 +251,8 @@ Every subject's output is measured both ways, and `docs/COMPARISON.md`
 leads with the 24-bit columns as the chip-comparable condition. The result
 reads differently than bravado would: at that interface the oracle-fed
 libraries measure at the 24-bit format ceiling itself (~−143.5 dB THD+N),
-all three real converters share the identical 149.1 dB A-weighted
-dynamic-range ceiling, and SampleRateTap's −132.1 dB sits ~11 dB behind the
+every real converter shares the identical 149.1 dB A-weighted
+dynamic-range ceiling, and SampleRateTap's −133.9 dB sits ~10 dB behind the
 oracles — a gap the document does not explain away but *prices*: it is the
 measured cost of solving the clock-recovery half of the problem, which the
 libraries do not attempt. Even so, the caveats refuse the flattering frame

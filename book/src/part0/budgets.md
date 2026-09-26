@@ -256,16 +256,29 @@ What does an instruction budget *mean* on a 150 MHz M33? Divide. A 150 MHz
 core executing (optimistically) one instruction per cycle retires 150
 million instructions per second, and a 48 kHz stream demands a frame every
 20.8 µs — about 3,100 instructions of total budget per frame, forever,
-before the rest of the firmware has run at all. Against that, the measured
-comparison workloads put the full Q15 converter — servo and FIFO included
-— at roughly 5,043 instructions per stereo frame on the M33: about 242
-million instructions per second for stereo, over the core's ceiling even
-at ideal IPC. Mono, at roughly half that, fits. This is exactly the
-README's guidance, now visible as arithmetic rather than advice: 48 kHz
-Q15 mono fits a 150 MHz M33; stereo wants the `fast()` preset or the
-RP2350's second core. On a Xeon the same library is a rounding error; on
-the M33 the default preset is *infeasible in stereo*, and knowing that
-before flashing hardware is the entire point of keeping the budget in a
+before the rest of the firmware has run at all. Against that, the
+steady-state cost of the full Q15 converter — servo and FIFO included —
+is about 1,140 instructions per stereo frame on the M33: roughly 55
+million instructions per second, about a third of the core's ceiling at
+ideal IPC. Twelve channels cost about 3,330 per frame, 160 million per
+second — just over the ceiling. This is the README's guidance visible as
+arithmetic rather than advice: 48 kHz Q15 stereo fits a 150 MHz M33, and
+the 12-channel shape does not fit at 48 kHz on one converter instance.
+
+The arithmetic needs the right denominator, and an earlier edition of this
+chapter used the wrong one. It quoted 5,043 instructions per stereo frame
+and concluded stereo was *infeasible*. That figure divided a whole 2 s
+workload by its frame count, which spreads the converter's one-time
+construction (its soft-double filter design, hundreds of millions of
+instructions on this core) over the audio. The fix is to measure the
+workload at two lengths: the difference is the per-frame cost, the
+remainder is construction. The per-frame cost was 1,138 instructions both
+then and now; what changed since is construction, which grew to ~1.3 G
+instructions with the compensated design. That is still a real budget
+item: seconds of start-up on a generic 150 MHz part with no FP64 help,
+paid once (the RP2350's DCP coprocessor for double arithmetic should make
+a Pico 2 cheaper than the emulated count). Knowing both
+numbers before flashing hardware is the point of keeping the budget in a
 table.
 
 The honesty clause matters as much as the numbers, and `docs/PERFORMANCE.md`

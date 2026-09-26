@@ -509,9 +509,10 @@ int main() {
     //   A: 32/48000 s = 2000/3 us;  B: 32/16000 s = 2000/1 us
     //
     // Phase B pins the 12-channel shape at 16 kHz — the README's
-    // reference-microphone/AVB deployment rate — not 48 kHz: the M33 QEMU
-    // baseline puts pipeline12_q15 at 10,027 insns/frame against a
-    // 150 MHz / 48 kHz budget of 3,125 cycles/frame, more than 3x over, and
+    // reference-microphone/AVB deployment rate — not 48 kHz: in steady state
+    // the M33 QEMU count puts pipeline12_q15 at 3,326 insns/frame against a
+    // 150 MHz / 48 kHz budget of 3,125 cycles/frame, over even at one
+    // instruction per cycle, and
     // pull() of one instance is a single consumer by contract — no core
     // assignment can split it. At 16 kHz the budget is 9,375 cycles/frame.
     // The measured cycles/block is rate-independent either way, so phase B

@@ -232,9 +232,12 @@ is the wrong datapath on an FP64-less core" — the QEMU baselines already
 price float at roughly 3.8× the Q15 instruction count, and a cycle figure
 makes the guidance concrete rather than rhetorical.
 
-The deeper purpose is calibration. The committed M33 baselines divide out
-to 5,043 instructions per frame for the stereo Q15 pipeline and 10,027 for
-the 12-channel one. Divide the firmware's measured cycles-per-frame by
+The deeper purpose is calibration. In steady state the M33 pipelines cost
+1,138 instructions per frame for the stereo Q15 pipeline and 3,326 for the
+12-channel one (the difference of 2 s and 4 s workloads; a baseline
+divided by its frame count also carries the converter's construction, and
+an earlier edition used those larger quotients here). Divide the
+firmware's measured cycles-per-frame by
 those figures and you get the constant the whole ratchet has been waiting
 for: *one QEMU instruction ≈ N RP2350 cycles*. That single ratio converts
 every current and future M33 instruction baseline into a real cycle
@@ -329,11 +332,12 @@ Phase B is the 12-channel reference-microphone/AVB shape... at **16 kHz**,
 not 48. Its README records why, and the passage is a model of how to scope
 a demo honestly:
 
-> Phase B is 16 kHz **by arithmetic, not caution**: the M33 QEMU baseline
-> puts `pipeline12_q15` at 10,027 insns/frame against a 150 MHz / 48 kHz
-> budget of 3,125 cycles/frame — more than 3× over, and `pull()` of a
-> single instance is one consumer by contract, so no core assignment can
-> split it across cores. Dual-core buys one clock domain per core, not
+> Phase B is 16 kHz **by arithmetic, not caution**: in steady state the
+> M33 QEMU count puts `pipeline12_q15` at 3,326 insns/frame against a
+> 150 MHz / 48 kHz budget of 3,125 cycles/frame — over budget even at one
+> instruction per cycle, and `pull()` of a single instance is one consumer
+> by contract, so no core assignment can split it across cores.
+> Dual-core buys one clock domain per core, not
 > more datapath than one core has.
 
 That last sentence is the chapter's most important deployment fact. The

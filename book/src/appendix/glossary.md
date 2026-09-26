@@ -229,7 +229,7 @@ yielding the deterministic per-workload counts the ratchet gates.
 **THD+N (total harmonic distortion plus noise)** — everything that is
 not the test signal — harmonics, spurs, noise — integrated over the
 audio band and expressed relative to the signal. The AES17 measurement
-the comparison document reports (−132 dB at the 24-bit interface).
+the comparison document reports (−134 dB at the 24-bit interface).
 
 **ThreadSanitizer (TSan)** — a compiler-instrumented data-race detector
 that observes the ordering annotations actually used. It certifies only

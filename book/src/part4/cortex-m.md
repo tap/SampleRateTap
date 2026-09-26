@@ -324,13 +324,20 @@ bounded: the M33's Q15 frame cost is dominated by the coefficient blend's
 64-bit products and transport, not by the dot product the intrinsic
 accelerates.
 
-**Budgets, stated as instructions, pending cycles.** Dividing the
-baselines out: `pipeline_q15` is 484,146,844 instructions per 96,000
-frames ≈ **5,043 instructions per stereo frame**; the 12-channel shape is
-≈ 10,027. A 150 MHz core at 48 kHz has 3,125 *cycles* per frame. The
-README draws the honest conclusion in instruction-space — Q15 mono fits
-a 150 MHz core, stereo wants the `fast()` preset or the RP2350's second
-core — and then refuses to pretend the units match: instructions are not
+**Budgets, stated as instructions, pending cycles.** A baseline divided
+by its 96,000 frames is *not* the per-frame cost: each workload also
+constructs its converter, and on the M33 the soft-double filter design
+alone is over a billion instructions. Building the pipeline workloads a
+second time at 4 s of audio (`-DSRT_SC_SECONDS=4`) and taking the
+difference isolates the steady state: **≈ 1,138 instructions per stereo
+frame** for `pipeline_q15` and ≈ 3,326 for the 12-channel shape, with
+~1.31 G and ~1.58 G of one-time construction. (Earlier revisions quoted
+5,043 and 10,027, the construction-inclusive quotients; the per-frame
+costs have not changed since June.) A 150 MHz core at 48 kHz has 3,125
+*cycles* per frame. The README draws the conclusion in
+instruction-space — Q15 stereo fits a 150 MHz core, the 12-channel shape
+does not at 48 kHz — and then refuses to pretend the units match:
+instructions are not
 cycles, the ratio between them is an empirical property of real silicon,
 and the guidance is explicitly a budget *pending real-silicon
 validation*.
@@ -340,8 +347,8 @@ the bridge from this chapter's emulated world to Part V's hardware:
 
 - **`examples/pico2_cyccnt`** runs the same fixed pipeline workloads on a
   real Pico 2 and times each 32-frame block with the M33's DWT.CYCCNT
-  hardware cycle counter. Its output divided by the committed baselines
-  (5,043 and 10,027 instructions per frame) yields the
+  hardware cycle counter. Its output divided by the steady-state
+  instruction counts (1,138 and 3,326 per frame) yields the
   cycles-per-QEMU-instruction calibration constant that turns *every*
   M33 baseline, current and future, into a real cycle budget.
 - **`examples/pico2_dualcore`** is the "second core" clause made
@@ -358,9 +365,10 @@ the bridge from this chapter's emulated world to Part V's hardware:
   M33, 64-bit `std::atomic` is not lock-free, the same fact the startup
   file's PRIMASK helpers exist to paper over on *one* core and which no
   single-core trick can fix across two. Even the firmware's 12-channel
-  phase runs at 16 kHz *by arithmetic, not caution*: 10,027
+  phase runs at 16 kHz *by arithmetic, not caution*: 3,326
   instructions per frame against a 3,125-cycle budget cannot fit at
-  48 kHz on one core, and `pull()` of one converter instance is one
+  48 kHz on one core even at one instruction per cycle, and `pull()` of
+  one converter instance is one
   consumer by contract — a second core buys one clock domain per core,
   not more datapath than one core has.
 

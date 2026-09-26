@@ -36,13 +36,14 @@ Two phases, ~30 s each:
 
 | Phase | config | Rates | Why |
 |---|---|---|---|
-| A | Q15 stereo `balanced()` | 48 kHz out, +200 ppm in | the config the README calls tight on one core |
+| A | Q15 stereo `balanced()` | 48 kHz out, +200 ppm in | the README's stereo config (~1,140 insns/frame steady state, about a third of one core) |
 | B | Q15 12-channel, `balanced()` band edges and servo scaled ×16/48 | 16 kHz out, +200 ppm in | the reference-microphone/AVB 12-channel shape at its deployment rate |
 
-Phase B is 16 kHz **by arithmetic, not caution**: the M33 QEMU baseline puts
-`pipeline12_q15` at 10,027 insns/frame against a 150 MHz / 48 kHz budget of
-3,125 cycles/frame — more than 3× over, and `pull()` of a single instance is
-one consumer by contract, so no core assignment can split it across cores.
+Phase B is 16 kHz **by arithmetic, not caution**: in steady state the M33
+QEMU count puts `pipeline12_q15` at 3,326 insns/frame against a 150 MHz /
+48 kHz budget of 3,125 cycles/frame — over budget even at one instruction per
+cycle, and `pull()` of a single instance is one consumer by contract, so no
+core assignment can split it across cores.
 Dual-core buys one clock domain per core, not more datapath than one core
 has. At 16 kHz the budget is 9,375 cycles/frame. The measured cycles/block
 is rate-independent, so phase B still produces the real-silicon counterpart
@@ -105,17 +106,20 @@ SRT_PICO2_DUALCORE_DONE
   reported sys clock, `cyc_frame × rate / 150 MHz`. It prices `pull()` only
   — by design, since `push()` is a ring write and the producer core's real
   budget goes to whatever feeds it (here: telemetry).
-- **Relation to the QEMU baselines** (`bench/baselines.json`, 2 s = 96,000
-  frames per workload): `pipeline_q15` 484,146,844 insns = **5,043
-  insns/frame**, `pipeline12_q15` 962,613,655 = **10,027 insns/frame**.
-  Those figures amortize one-time setup (soft-double Kaiser design, input
-  synthesis) over the workload, so they are upper bounds for the
-  steady-state loop this firmware times; `cyc_frame ÷ insns/frame` from the
+- **Relation to the QEMU counts**: in steady state `pipeline_q15` costs
+  **1,138 insns/frame** and `pipeline12_q15` **3,326 insns/frame** (each
+  workload built at 2 s and at 4 s, `-DSRT_SC_SECONDS=4`, and differenced).
+  A committed baseline divided by its 96,000 frames is larger — it also
+  carries one-time setup (the soft-double filter design, input synthesis,
+  ~1.3–1.6 G instructions) — so the difference is the right counterpart of
+  the steady-state loop this firmware times; `cyc_frame ÷ insns/frame`
+  from the
   sibling `examples/pico2_cyccnt` run gives the cycles-per-instruction
   calibration that converts every M33 baseline into a cycle budget.
 - Against the budgets: 3,125 cycles/frame buys one 48 kHz frame at
   150 MHz, 9,375 one 16 kHz frame. Phase A's `core_pct` is the measured
-  version of "stereo balanced() is tight on one core": whatever it reads,
+  version of "stereo balanced() fits one core with room to spare":
+  whatever it reads,
   that is the share of core1 a deployment must reserve — and on a
   *single*-core deployment the same cycles would contend with the producer
   side and the rest of the application, which is exactly why the input
