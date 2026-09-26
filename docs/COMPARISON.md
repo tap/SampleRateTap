@@ -3,14 +3,14 @@
 Two different kinds of product get called an "SRC": **full ASRCs** that
 recover the clock ratio themselves (hardware chips, OS audio engines,
 SampleRateTap), and **resampler libraries** that must be handed the ratio by
-an external servo (libsamplerate, soxr, zita-resampler). The second group
-solves only half of the drift problem.
+an external servo (libsamplerate, soxr, r8brain-free-src, zita-resampler).
+The second group solves only half of the drift problem.
 
 ## Measured, identical conditions (software subjects)
 
 From [notebooks/asrc_comparison.ipynb](../notebooks/asrc_comparison.ipynb)
-(2026-06-11): one AES17-style measurement implementation applied to every
-subject — 997 Hz at −1 dBFS across a +200 ppm clock crossing
+(re-executed 2026-09-25): one AES17-style measurement implementation applied
+to every subject — 997 Hz at −1 dBFS across a +200 ppm clock crossing
 (48 009.6 → 48 000 Hz), fundamental removed by exact fit + ±20 Hz notch,
 residual integrated 20 Hz–20 kHz; DR per AES17 (−60 dBFS, A-weighted). The
 **24-bit interface** columns quantize each subject's output to 24 bits —
@@ -21,20 +21,33 @@ signals before use.
 
 | Subject | Clock knowledge | THD+N (24-bit IO) | THD+N (float IO) | DR A-wtd (24-bit IO) |
 |---|---|---:|---:|---:|
-| **SampleRateTap** (balanced, float) | **recovered by servo** | **−132.1 dB** | −132.3 dB | **149.1 dB** |
+| **SampleRateTap** (balanced, float) | **recovered by servo** | **−133.9 dB** | −134.3 dB | **149.1 dB** |
 | libsamplerate `sinc_best` | given exact ratio (oracle) | −143.5 dB | −149.4 dB | 149.1 dB |
 | soxr `VHQ` | given exact ratio (oracle) | −143.8 dB | −150.8 dB | 149.1 dB |
+| r8brain-free-src `CDSPResampler24` | given exact ratio (oracle) | −143.9 dB | −150.8 dB | 149.1 dB |
 | naive FIFO (drop on full) | n/a | −34.7 dB | −34.7 dB | 94.7 dB |
+
+SampleRateTap's row moved from −132.1 dB (2026-06-11) when the notebook was
+re-executed for the r8brain row: the balanced preset gained its compensated
+prototype (transmission zeros at k·fs) on 2026-07-04, and this is the first
+re-measurement since. The library rows are unchanged to the displayed
+precision.
 
 Reading guide:
 
 - The oracle-fed libraries measure at the *format ceilings* (float32 I/O
   ≈ −150 dB; 24-bit ≈ −143.5 dB; A-weighted 24-bit DR ceiling = 149.1 dB).
   Near-unity is their easy regime — libsamplerate's published "97 dB worst
-  case" applies to aggressive ratios, not this one.
-- SampleRateTap's −132 dB includes the entire problem: the servo discovered
+  case" applies to aggressive ratios, not this one. All three are at the
+  ceilings, so this measurement cannot rank them against each other.
+- r8brain is measured through its offline `oneshot()` path (filter delay
+  removed, tail flushed) via a two-function C shim over the pinned headers
+  (`tools/compare_shim/`, `cmake/r8brain.cmake`), since it has no maintained
+  Python binding. Its preset for 24-bit/float work, `CDSPResampler24`
+  (180.15 dB stopband, 2 % transition band), is the subject.
+- SampleRateTap's −134 dB includes the entire problem: the servo discovered
   the ratio from FIFO occupancy and the conversion ran causally at 1.5 ms
-  latency. The ~11 dB to the oracle libraries is the measured price of
+  latency. The ~10 dB to the oracle libraries is the measured price of
   clock recovery + real-time operation — the part of the problem the
   libraries do not solve.
 - The naive FIFO row is the cost of doing nothing.
@@ -46,44 +59,78 @@ known near-unity ratio 1 + 200 ppm, streaming in 128-frame blocks
 (`bench/compare/`, `-DSRT_BUILD_COMPARE_BENCH=ON`). SampleRateTap runs its
 datapath with a constant rate deviation (the servo is quiescent at a fixed
 ratio); the libraries take the ratio as an input. Quality tiers are paired
-by vendor-stated stopband: balanced ≈ `MEDIUM` ≈ `HQ` (~120 dB),
-transparent ≈ `BEST` ≈ `VHQ` (~140 dB+). Latency figures are measured:
-SampleRateTap's is the filter group delay, libsamplerate's the input
-buffered before its first streaming output, soxr's via `soxr_delay()`.
+by vendor-stated stopband: balanced ≈ `MEDIUM` ≈ `HQ` ≈ r8brain at
+`ReqAtten` 120 dB (~120 dB), transparent ≈ `BEST` ≈ `VHQ` ≈ r8brain's
+16-bit preset (~140 dB+). r8brain is mono per instance with double I/O, so
+the harness runs one instance per channel and the float↔double
+(de)interleave is inside the timed loop — what any float-interleaved caller
+pays to use it. Latency figures are measured: SampleRateTap's is the filter
+group delay, libsamplerate's the input buffered before its first streaming
+output, soxr's via `soxr_delay()` (it varies with the streaming state; the
+range over the mono/stereo/8-ch runs is shown), r8brain's via `getInLenBeforeOutPos(0)` — the
+input it consumes before its first output.
 
-### Host wall-clock (x86, GCC 13.3 -O2, shared Xeon @ 2.10 GHz, 2026-06-12)
+### r8brain's latency is a transition-band choice
 
-Million output frames/s — relative ratios are the meaningful figures on a
-shared machine; all subjects ran in the same session.
+r8brain's delay is set by its transition-band parameter (percent of the
+band below Nyquist), and a wider band rolls the passband off. Measured on
+the pinned engine at 120 dB and this ratio (notebook, "Latency vs.
+passband"): the default 2 % band withholds **789 input frames (16.4 ms)**,
+flat far past 20 kHz; the lowest-latency setting still flat to 20 kHz like
+`balanced` is **8 %: 200 frames (4.2 ms)** linear-phase, 143 frames
+(3.0 ms) minimum-phase (latency is not monotonic in the knob: 10 % costs
+212, and 12 % already droops 0.11 dB at 20 kHz). Its ~1 ms settings exist
+only at a 45 % band, which is −35 dB at 20 kHz. The tables below carry both
+the default and the passband-matched 8 % configuration.
+
+### Host wall-clock (x86, GCC 13.3 -O3 (CMake Release), shared Xeon @ 2.10 GHz, 2026-09-25)
+
+Million output frames/s, median of 5 — relative ratios are the meaningful
+figures on a shared machine; all subjects ran in the same session.
+libsamplerate 0.2.2 and soxr 0.1.3 are the Ubuntu 24.04 packages; r8brain
+is the pinned commit (7.5), stock configuration (Ooura FFT).
 
 | Engine (~120 dB tier) | mono | stereo | 8-ch | algorithmic latency |
 |---|---:|---:|---:|---:|
-| **SampleRateTap** balanced | 15.6 | 10.5 | 3.0 | **24 frames (0.50 ms)** |
-| libsamplerate `MEDIUM` (0.2.2) | 4.4 | 3.7 | 1.4 | 46 frames (0.96 ms) |
-| soxr `HQ` (0.1.3) | 72.9 | 32.4 | 8.4 | 556–607 frames (11.6–12.6 ms) |
+| **SampleRateTap** balanced | 20.3 | 14.6 | 3.0 | **24 frames (0.50 ms)** |
+| libsamplerate `MEDIUM` (0.2.2) | 5.2 | 4.8 | 1.9 | 46 frames (0.96 ms)¹ |
+| soxr `HQ` (0.1.3) | 114.3 | 52.9 | 12.9 | 424–788 frames (8.8–16.4 ms) |
+| r8brain 120 dB, default 2 % band | 35.4 | 16.5 | 4.1 | 789 frames (16.4 ms) |
+| r8brain 120 dB, 8 % band (flat to 20 kHz) | — | 17.9 | — | 200 frames (4.2 ms) |
 
 | Engine (~140 dB tier) | stereo | algorithmic latency |
 |---|---:|---:|
-| **SampleRateTap** transparent | 5.8 | 40 frames (0.83 ms) |
-| libsamplerate `BEST` | 0.9 | 143 frames (3.0 ms) |
-| soxr `VHQ` | 22.2 | 777 frames (16.2 ms) |
+| **SampleRateTap** transparent | 9.6 | 40 frames (0.83 ms) |
+| libsamplerate `BEST` | 1.6 | 143 frames (3.0 ms)¹ |
+| soxr `VHQ` | 32.1 | 433 frames (9.0 ms) |
+| r8brain `CDSPResampler16` (136.45 dB) | 18.4 | 1,782 frames (37.1 ms) |
+| r8brain `CDSPResampler24` (180.15 dB) | 14.1 | 1,700 frames (35.4 ms) |
 
 | No competitor analog | stereo | |
 |---|---:|---|
-| **SampleRateTap** Q15 balanced | 17.5 | the row FPU-less embedded targets actually run |
+| **SampleRateTap** Q15 balanced | 21.9 | the row FPU-less embedded targets actually run |
+
+¹ Measured 2026-06-12 on the same library version; the harness reports
+latency counters for soxr and r8brain only.
 
 Reading guide:
 
 - **soxr wins raw host throughput, and the latency column is why.** It
-  processes in large internal batches with SIMD throughout (soxr latency
-  measured via `soxr_delay()`). At ~12–16 ms it is a fine batch/offline
-  resampler and unusable inside a 1–2 ms live monitoring budget — the
-  regime SampleRateTap is built for. There is no setting that buys soxr's
-  throughput at SampleRateTap's latency.
+  processes in large internal batches with SIMD throughout. At ~9–16 ms it
+  is a fine batch/offline resampler and unusable inside a 1–2 ms live
+  monitoring budget — the regime SampleRateTap is built for. There is no
+  setting that buys soxr's throughput at SampleRateTap's latency.
+- **r8brain out-runs SampleRateTap on x86 at the ~120 dB tier** — 1.7×
+  mono, 1.1× stereo, 1.4× at 8 channels (1.2× stereo passband-matched) —
+  and at the ~140 dB tier (1.9× for its 136 dB preset). Its FFT block
+  convolution amortizes well on a desktop core. The price is the same as
+  soxr's: 8× SampleRateTap's filter delay at the matched passband and 33×
+  at its default, 45× at the 140 dB tier. On the embedded targets the
+  ranking reverses, and it has no fixed-point option (next section).
 - **libsamplerate is the closest architectural analog** (streaming
-  time-domain polyphase, block-by-block) and SampleRateTap is 2.9–3.6×
-  (mono/stereo; 2.1× at 8 channels, where both engines amortize)
-  faster at the matched ~120 dB tier, 6.2× at ~140 dB, while also carrying
+  time-domain polyphase, block-by-block) and SampleRateTap is 3.1–3.9×
+  (stereo/mono; 1.5× at 8 channels, where both engines amortize)
+  faster at the matched ~120 dB tier, 6.1× at ~140 dB, while also carrying
   ~2–3.6× less latency. That is the near-unity specialization dividend:
   a 48-tap window with a creeping phase instead of general-ratio
   machinery.
@@ -94,30 +141,74 @@ Reading guide:
 
 Same comparison workload cross-compiled per target (`SRT_ICOUNT_COMPARE`,
 `.github/workflows/compare.yml`; deterministic counts, methodology as the
-ratchet in [PERFORMANCE.md](PERFORMANCE.md)). Stereo float, 2 s of audio.
-libsamplerate 0.2.2; arm-none-eabi-gcc 13.2.1, hexagon-clang 19.1.5, -O2.
+ratchet in [PERFORMANCE.md](PERFORMANCE.md)). Stereo, float I/O (Q15 for
+the Q15 row), 32-frame blocks. libsamplerate 0.2.2, r8brain at the pinned
+commit; arm-none-eabi-gcc 13.2.1, hexagon-clang 19.1.5, -O3 (CMake Release;
+earlier revisions said -O2, but the build type was the same). Measured
+2026-09-25.
 
-| Target | **SampleRateTap** balanced | lsr `MEDIUM` | lsr `BEST` |
+Every engine is built at 2 s and 4 s of audio: the difference is the
+**steady-state** cost per output frame, the remainder the **one-time
+construction** (filter design, tables, FFT setup). Earlier revisions of
+this table divided the 2 s total by the frame count, which folds
+construction into the per-frame figure; the libsamplerate totals under
+that old metric reproduce the previous table exactly (2,218 / 6,400 on
+M55, 49,424 / 149,426 on M33, 9,102 / 26,959 on Hexagon).
+
+Steady state, instructions per stereo output frame (× = vs. SampleRateTap
+balanced float):
+
+| Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
 |---|---:|---:|---:|
-| Cortex-M55 | **899** | 2,218 (2.5×) | 6,400 (7.1×) |
-| Cortex-M33 (Pico 2 class) | 18,842¹ | 49,424 (2.6×) | 149,426 (7.9×) |
-| Hexagon | **3,275** | 9,102 (2.8×) | 26,959 (8.2×) |
+| **SampleRateTap** balanced, float | **821** | 15,302² | **2,754** |
+| **SampleRateTap** balanced, Q15 | 1,163 | **879** | **457** |
+| r8brain 120 dB, default 2 % band³ | 1,002 (1.2×) | 30,004 (2.0×) | 6,060 (2.2×) |
+| r8brain 120 dB, 8 % band (flat to 20 kHz)³ | 934 (1.1×) | 26,619 (1.7×) | 5,420 (2.0×) |
+| libsamplerate `MEDIUM` | 2,203 (2.7×) | 49,206 (3.2×) | 9,025 (3.3×) |
+| libsamplerate `BEST` | 6,392 (7.8×) | 149,420 (9.8×) | 26,916 (9.8×) |
 
-¹ The float datapath is soft-double-bound on the FP64-less M33 — the
-README directs Pico-class parts to Q15, where the **full converter**
-(servo and FIFO included) costs ~5,043 instructions/frame (post-C4):
-libsamplerate has no fixed-point path, so its cheapest option on such parts costs
-**~9.8×** what SampleRateTap's intended configuration does.
+One-time construction, millions of instructions:
+
+| Engine | Cortex-M55 | Cortex-M33 | Hexagon |
+|---|---:|---:|---:|
+| **SampleRateTap** balanced, float | 23.6 | 1,268 | 181 |
+| **SampleRateTap** balanced, Q15 | 24.6 | 1,281 | 184 |
+| r8brain 120 dB, default 2 % band | 1.6 | 38.1 | 11.3 |
+| r8brain 120 dB, 8 % band | 1.8 | 45.5 | 12.6 |
+| libsamplerate `MEDIUM` | 1.4 | 20.9 | 7.4 |
+| libsamplerate `BEST` | 0.8 | 0.7 | 4.1 |
+
+² The float datapath is soft-double-bound on the FP64-less M33 — the
+README directs Pico-class parts to Q15, where the steady-state datapath
+costs **879 instructions/frame**: libsamplerate has no fixed-point path, so
+its cheapest option on such parts costs **~56×** that, and r8brain (double
+precision throughout, no fixed-point path either) **~30×**. On the M55,
+whose FPU and Helium serve float well, the float datapath is the cheaper
+of our two.
+
+³ r8brain guards its process-wide filter cache with `std::mutex` and has no
+hook to replace it; the thread-less arm-none-eabi newlib declares none, so
+the Cortex-M builds force-include `bench/icount/r8b_single_thread_mutex.h`
+(a no-op lock — exact for this single-threaded workload, and outside the
+per-sample path). Hexagon's musl build uses the real mutex.
+
+**Construction is the one column SampleRateTap loses.** Its filter design
+(the compensated prototype, run in double at construction) costs ~1.3 G
+instructions on the M33, where double is emulated — seconds of start-up on
+a 150 MHz part (instructions are not cycles), against tens of millions for
+r8brain and libsamplerate. It is paid once per converter, never on the
+audio path, but it is a real cost for devices that construct at boot.
 
 ## The landscape
 
 | | Type | Clock recovery | Ratio range | Quality | Latency | Footprint / targets | License & form |
 |---|---|---|---|---|---|---|---|
-| **SampleRateTap** | software ASRC | built-in (PI servo on FIFO occupancy) | near-unity (±~1000 ppm) | −132 dB THD+N / 149 dB DR measured above; Q15/Q31 paths for FPU-less DSPs | **1.5 ms default** (0.5 ms filter); sub-ms with `fast()` | 308× RT/core x86; ~515 insn/sample Q15 kernel-only on Hexagon (full converter ~1,245/frame stereo), CI-gated | MIT, header-only C++20 |
+| **SampleRateTap** | software ASRC | built-in (PI servo on FIFO occupancy) | near-unity (±~1000 ppm) | −134 dB THD+N / 149 dB DR measured above; Q15/Q31 paths for FPU-less DSPs | **1.5 ms default** (0.5 ms filter); sub-ms with `fast()` | 308× RT/core x86; Q15 datapath 457 insn/frame stereo steady-state on Hexagon, 879 on M33 (above), CI-gated | MIT, header-only C++20 |
 | [AD1896][ad1896] (ADI) | hardware ASRC | built-in | 1:8 up / 7.75:1 down | THD+N −117 dB min / −133 dB best; 142 dB DNR (datasheet) | sub-ms–ms, mode dependent | dedicated chip, one stereo pair | proprietary |
 | [SRC4392][src4392] (TI) | hardware ASRC | built-in (automatic) | 1:16–16:1 | THD+N −140 dB typ; 144 dB DR (datasheet) | selectable filter delay | dedicated chip + DIR/DIT | proprietary |
 | [libsamplerate][lsr] | resampler library | **no** — caller supplies ratio | 1/256–256 | measured above (near-unity); 97 dB worst-case across ratios (own docs) | filter-dependent, offline-friendly | portable C, float | BSD-2 |
 | [soxr][soxr] | resampler library | no (fixed ratio + bounded VR mode) | wide | measured above (near-unity) | quality-dependent | portable C, SIMD | LGPL |
+| [r8brain-free-src][r8b] | resampler library | no — caller supplies ratio | arbitrary | measured above (near-unity, 24-bit preset at the format ceilings); stopband user-set 49–218 dB | transition-band dependent: 16 ms default at 120 dB here, 4.2 ms flat to 20 kHz, ~1 ms only with a 13 kHz-class roll-off | double precision, no fixed-point path; SSE2/AVX/NEON; ~1.1–2.2× SampleRateTap's float steady state on the embedded targets above | MIT, header-only C++ |
 | zita-resampler + zita-ajbridge | resampler + DLL servo | ajbridge adds a delay-locked loop | near-unity (bridge) | designed for 24-bit transparency; no published CI-verified figures | several ms (period-driven) | Linux/JACK, float | GPL |
 | OS engines (CoreAudio, WASAPI shared, PipeWire) | system ASRC | built-in, opaque | device-dependent | unpublished; generally well below the above | typically 5–20 ms | bundled | n/a |
 
@@ -133,7 +224,7 @@ libsamplerate has no fixed-point path, so its cheapest option on such parts cost
   common nominal rate — that restriction is what buys the 48-tap datapath,
   0.5 ms filter delay, and embedded-class compute. For genuine rate
   *conversion*, put a synchronous resampler in the chain —
-  soxr/libsamplerate, or for exactly 44.1↔48 the family's own
+  soxr/libsamplerate/r8brain, or for exactly 44.1↔48 the family's own
   [RatioTap](https://github.com/tap/RatioTap), which cross-validates its
   output against this library's engine.
 - **Coarse-block operation is a different regime** (cent-scale low-rate FM
@@ -147,3 +238,4 @@ libsamplerate has no fixed-point path, so its cheapest option on such parts cost
 [src4392]: https://www.ti.com/product/SRC4392
 [lsr]: https://libsndfile.github.io/libsamplerate/quality.html
 [soxr]: https://github.com/chirlu/soxr
+[r8b]: https://github.com/avaneev/r8brain-free-src

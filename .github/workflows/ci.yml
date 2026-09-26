@@ -502,7 +502,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DSRT_BUILD_BENCHMARKS=ON
           -DSRT_BUILD_COMPARE_BENCH=ON
-          && cmake --build build-host -j 4 --target srt_bench_compare
+          -DSRT_BUILD_COMPARE_SHIM=ON
+          && cmake --build build-host -j 4 --target srt_bench_compare srt_r8b_shim
 
       - name: Build M55 comparison workload
         run: >
@@ -512,6 +513,7 @@ jobs:
           -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
           -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
           && cmake --build build-m55 -j 4 --target cmp_icount_lsr_medium
+          cmp_icount_srt_q15 cmp_icount_r8b_120
 
   clang-format:
     name: clang-format

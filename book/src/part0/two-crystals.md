@@ -204,8 +204,11 @@ and the comparison document names its mechanism exactly: a 48-tap window
 with a creeping phase, instead of general-ratio machinery. On targets
 without floating-point hardware the dividend compounds — the Q15
 fixed-point datapath has no libsamplerate analog at all, and on a
-Pico-class Cortex-M33 the cheapest libsamplerate option costs about 9.8×
-what SampleRateTap's intended configuration does.
+Pico-class Cortex-M33 the cheapest libsamplerate option costs about 56×
+the Q15 datapath's steady-state cost of 879 instructions per frame. (An
+earlier revision said 9.8×, from a per-frame figure that folded the
+converter's one-time construction into a 2 s workload; the comparison
+document now reports steady state and construction separately.)
 
 The soxr rows teach a different lesson, and reading them honestly is a
 preview of the next chapter. At the ~120 dB tier soxr converts 32.4

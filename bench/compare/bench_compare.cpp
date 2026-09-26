@@ -11,12 +11,22 @@
 //
 // Quality pairing (stopband attenuation, vendor-stated):
 //   srt balanced (120 dB)     ~ libsamplerate MEDIUM (121 dB) ~ soxr HQ (~120 dB)
+//                             ~ r8brain ReqAtten=120 (default 2% transition band,
+//                               and 8%: the lowest-latency setting flat to 20 kHz)
 //   srt transparent (140 dB)  ~ libsamplerate BEST (144 dB)   ~ soxr VHQ (~170 dB)
+//                             ~ r8brain CDSPResampler16 (136.45 dB)
+// plus r8brain's CDSPResampler24 (180.15 dB), its preset for 24-bit/float work.
+//
+// r8brain is mono per instance with double-precision I/O, so the harness runs
+// one instance per channel and pays the float<->double (de)interleave inside
+// the timed loop — the cost any float-interleaved caller pays to use it.
 #include <cmath>
 #include <cstddef>
+#include <memory>
 #include <numbers>
 #include <vector>
 
+#include <CDSPResampler.h>
 #include <benchmark/benchmark.h>
 #include <samplerate.h>
 #include <soxr.h>
@@ -174,6 +184,37 @@ namespace {
         state.SetItemsProcessed(frames);
     }
 
+    void r8bBench(benchmark::State& state, double reqAtten, double transBandPct, std::size_t channels) {
+        std::vector<std::unique_ptr<r8b::CDSPResampler>> rs;
+        for (std::size_t c = 0; c < channels; ++c)
+            rs.push_back(std::make_unique<r8b::CDSPResampler>(48000.0, 48000.0 * kRatio, static_cast<int>(kBlock),
+                                                              transBandPct, reqAtten, r8b::fprLinearPhase));
+        InputTap            in(48000, channels);
+        std::vector<float>  inBlock(kBlock * channels);
+        std::vector<double> chIn(kBlock);
+        std::vector<float>  out(4 * kBlock * channels);
+
+        std::int64_t frames = 0;
+        for (auto _ : state) {
+            in.pop(inBlock.data(), kBlock);
+            int got = 0;
+            for (std::size_t c = 0; c < channels; ++c) {
+                for (std::size_t i = 0; i < kBlock; ++i)
+                    chIn[i] = inBlock[i * channels + c];
+                double* op = nullptr;
+                got        = rs[c]->process(chIn.data(), static_cast<int>(kBlock), op);
+                for (int i = 0; i < got; ++i)
+                    out[static_cast<std::size_t>(i) * channels + c] = static_cast<float>(op[i]);
+            }
+            benchmark::DoNotOptimize(out.data());
+            frames += got;
+        }
+        // Input frames consumed before the first output frame appears: r8brain
+        // hides its filter delay by withholding output, so this is its latency.
+        state.counters["latency_frames"] = rs[0]->getInLenBeforeOutPos(0);
+        state.SetItemsProcessed(frames);
+    }
+
     // --- ~120 dB tier: mono / stereo / 8ch -------------------------------------
     void BM_SRT_Balanced_1ch(benchmark::State& s) {
         srtBench<float>(s, tap::samplerate::filter_spec::balanced(), 1);
@@ -211,6 +252,28 @@ namespace {
     BENCHMARK(BM_SOXR_HQ_1ch);
     BENCHMARK(BM_SOXR_HQ_2ch);
     BENCHMARK(BM_SOXR_HQ_8ch);
+    void BM_R8B_120dB_1ch(benchmark::State& s) {
+        r8bBench(s, 120.0, 2.0, 1);
+    }
+    void BM_R8B_120dB_2ch(benchmark::State& s) {
+        r8bBench(s, 120.0, 2.0, 2);
+    }
+    void BM_R8B_120dB_8ch(benchmark::State& s) {
+        r8bBench(s, 120.0, 2.0, 8);
+    }
+    BENCHMARK(BM_R8B_120dB_1ch);
+    BENCHMARK(BM_R8B_120dB_2ch);
+    BENCHMARK(BM_R8B_120dB_8ch);
+    // r8brain's default 2% transition band keeps its passband flat far past
+    // 20 kHz and pays for it in delay. The passband-matched row takes the
+    // lowest-latency linear-phase setting still flat to 20 kHz like srt
+    // balanced, from the sweep in notebooks/asrc_comparison.ipynb: 8% (200
+    // input frames; latency is not monotonic in the knob — 10% costs 212 —
+    // and 12% already droops 0.11 dB at 20 kHz).
+    void BM_R8B_120dB_TB8_2ch(benchmark::State& s) {
+        r8bBench(s, 120.0, 8.0, 2);
+    }
+    BENCHMARK(BM_R8B_120dB_TB8_2ch);
 
     // --- ~140 dB tier, stereo ---------------------------------------------------
     void BM_SRT_Transparent_2ch(benchmark::State& s) {
@@ -225,9 +288,17 @@ namespace {
     BENCHMARK(BM_SRT_Transparent_2ch);
     BENCHMARK(BM_LSR_Best_2ch);
     BENCHMARK(BM_SOXR_VHQ_2ch);
+    void BM_R8B_16bit_2ch(benchmark::State& s) {
+        r8bBench(s, 136.45, 2.0, 2); // CDSPResampler16's preset attenuation
+    }
+    void BM_R8B_24bit_2ch(benchmark::State& s) {
+        r8bBench(s, 180.15, 2.0, 2); // CDSPResampler24's preset attenuation
+    }
+    BENCHMARK(BM_R8B_16bit_2ch);
+    BENCHMARK(BM_R8B_24bit_2ch);
 
-    // --- Fixed-point (no competitor analog; libsamplerate and soxr are
-    // float-only engines — this is the row embedded targets actually run) ------
+    // --- Fixed-point (no competitor analog; libsamplerate, soxr and r8brain
+    // are floating-point engines — this is the row embedded targets actually run) ------
     void BM_SRT_Q15_Balanced_2ch(benchmark::State& s) {
         srtBench<std::int16_t>(s, tap::samplerate::filter_spec::balanced(), 2);
     }
