@@ -1,10 +1,12 @@
 # Monorepo plan: the `tap::sr` sample-rate family
 
-Status: **DRAFT v2. Revised after adversarial audit; nothing executed.**
+Status: **DRAFT v2.1. Revised after adversarial audit; open questions answered; nothing executed.**
 
 - v1 (2026-09-26, `11f2a94`): the first draft.
 - v2 (2026-09-26): folds in the five-reviewer adversarial audit. It had 78
   findings, of which 6 were blockers.
+- v2.1 (2026-09-26): records the user's answers to Q2, Q4, Q5, Q7 and Q8
+  (D13–D15) and the confirmed outside-repository facts.
 - Appendix A maps every finding ID (DEC-, GIT-, GATE-, INF-, INV-) to where
   it landed in this document, or to why it was rejected.
 
@@ -32,7 +34,7 @@ How to read it:
 | D1 | **Merge SampleRateTap and RatioTap into one repository**; each engine keeps its own charter, CMake target, CI coverage and ratchet baselines | The engines are built to be composed and cross-checked against each other. **This supersedes** HANDOFF.md preamble item 1 ("separate repo") and RatioTap PLAN.md §2 (SampleRateTap as a test-only dependency). Those were decided when the family had two engines and no plan for more. With five engines planned, the cost of pins, duplicated harnesses and cross-repository test dependencies grows with every addition. There are no external consumers, so the rename is free |
 | D2 | **SampleRateTap is the host repository** and keeps its name | "Sample rate" names the whole family once it is namespaced. The published book (tap.github.io/SampleRateTap) keeps its URL. It is also the larger history: **136** commits on `main` (full clone), against RatioTap's 29 |
 | D3 | **RatioTap's history is preserved** through a `git filter-repo` path rewrite that also rewrites `.gitmodules` throughout history (section 6, step 1), plus an unrelated-histories merge. **The final PR is merged with a merge commit, never squash or rebase** | `git log --follow` and `git blame` keep working for every file. A squash would erase all 29 imported commits (GIT-1) |
-| D4 | **Namespace `tap::sr::<engine>`**, include path `include/tap/sr/<engine>/` | Follows DspTap's rule that the path mirrors the namespace. **This supersedes** the rename agreed in RatioTap PLAN.md (`include/srt/` → `include/tap/samplerate/`) and extends the taphouse convention of one `tap::<library>` sub-namespace per repository to two levels. That extension needs **confirming with taphouse** (Q7) |
+| D4 | **Namespace `tap::sr::<engine>`**, include path `include/tap/sr/<engine>/` | Follows DspTap's rule that the path mirrors the namespace. **This supersedes** the rename agreed in RatioTap PLAN.md (`include/srt/` → `include/tap/samplerate/`) and extends the taphouse convention of one `tap::<library>` sub-namespace per repository to two levels. The two-level form is **accepted** (user decision, 2026-09-26). The convention note goes into taphouse's `STYLE.md` through a taphouse PR (step 5) |
 | D5 | **Engine names:** `async` (today's SampleRateTap), `ratio` (today's RatioTap); future `integer`, `pdm`, `varispeed` | `async` is the industry term (ASRC) and the family's own clock-topology vocabulary. It is the only async engine, and async at other ratios is reached by composition. Every other engine is sync and is named by what it converts. Known wrinkle: in code with `using namespace tap::sr`, these names sit beside `std::ratio` and `std::async`. The house style already avoids namespace-wide `using` directives |
 | D6 | **One top-level directory per engine** (`async/`, `ratio/`, …), each with its own `include/ tests/ bench/ examples/ capi/ notebooks/ README.md PLAN.md` | Keeps each charter's boundary physical, where a single shared `include/` tree would not |
 | D7 | **Clean renames, no compatibility aliases.** Removed user-facing override macros get an `#error` **tripwire**, not an alias | Aliases would be permanent debt. A tripwire makes a stale `-DSRT_CP_MIN_CHANNELS=…` a loud error rather than a silent no-op (GATE-14) |
@@ -41,6 +43,9 @@ How to read it:
 | D10 | **DspTap stays a separate repository**, pinned once at `submodules/dsptap` | It has consumers outside the rate family: TapTools, and MuTap through the `LogMel`/`Decimator` C ABI |
 | D11 | **Charter rule for new engines:** a capability gets an engine directory here when it has its own charter, optimization campaign and ratchet. Building blocks (filter design math, kernels, the `chain<>` template) go into DspTap. **Engine-owned datapaths stay with their engine.** In particular, `fractional_resampler`, the polyphase bank and the blend stratum are `async`'s and never move to DspTap | Agrees with RatioTap PLAN.md Appendix A ("the blend stratum does not move"). Keeping async's datapath out of DspTap is also what keeps `ratio`'s cross-validation oracle outside `ratio`'s reach (DEC-6) |
 | D12 | **No routing by rate, ever, including through composition.** `chain<>` is a caller-named, compile-time composition of **synchronous** stages. There is no `(in_hz, out_hz) → engine` lookup, `async` is never selected by a chain, and the coverage matrix *documents* chains without dispatching them | Keeps HANDOFF preamble item 4 ("factory dropped; clock topology is routed by type choice") intact as the family grows (DEC-8) |
+| D13 | **One family version**, starting at **0.4.0**: `project(SampleRateTap VERSION 0.4.0)`, macros `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}`, one C function `tap_sr_version()` encoded `(M<<16)\|(m<<8)\|p`, and tags `vX.Y.Z` | User decision, 2026-09-26. 0.4.0 sits above both current versions (async 0.1.0, ratio 0.3.0), so neither engine appears to go backwards. The bit-packed encoding is RatioTap's, already pinned by `test_skeleton.cpp`, and has room above 99. Any engine change bumps the family version |
+| D14 | **One copyright holder line family-wide:** "Copyright 2026 Timothy Place and the SampleRateTap contributors" in the root `LICENSE` and in every file banner | User decision, 2026-09-26. Both repositories' notices name the same author, and RatioTap's contributors become SampleRateTap contributors when the histories merge, so this is a restatement, not a relicensing. `ratio/LICENSE` is kept until the root `LICENSE` carries the unified line (step 1c), then deleted in the same commit |
+| D15 | **`async_sample_rate_converter` → `tap::sr::async::converter`** | User decision, 2026-09-26. Matches `tap::sr::ratio::converter`; the namespace already says "async" |
 
 ---
 
@@ -274,15 +279,18 @@ nothing today.
   `book/src/part0/two-crystals.md:173`, `part5/scaling.md:194,352-355` and
   `docs/COMPARISON.md:234`. The README quotes stale cross-validation figures
   (−109/−99 dB; the current v0.3 floors are about −98/−90 dB).
-- **Outside this session: the user checks these** before step 1:
-  - **TapTools, TapTools-Max, MuTap, AmbiTap, OscTap:** submodules pointing
-    at either repository, and uses of `srt/`, `tap/ratio`,
-    `tap::samplerate`, `tap::ratio`, `SampleRateTap::SampleRateTap`, the C
-    ABI symbols and Pages links.
-  - **taphouse:** `sync.sh` target list (drop RatioTap, or syncs to the
-    archive fail), `drift-check.yml`, and the catalog README.
-  - **GitHub:** open RatioTap issues and PRs, and the Pages source setting.
-    Note: the repository is private while its Pages site is public.
+- **Outside this session** (confirmed by the user, 2026-09-26):
+  - **TapTools, TapTools-Max, MuTap, AmbiTap, OscTap** do not submodule or
+    reference either repository's headers, targets or C ABIs. D7's "no
+    consumers" premise holds.
+  - **taphouse's `sync.sh` includes RatioTap.** It must be removed from the
+    target list before RatioTap is archived (step 5), or syncs to the
+    archive fail. `drift-check.yml` and the catalog README are updated in the
+    same taphouse PR.
+  - **"Create a merge commit" is allowed** on SampleRateTap (D3, step 4).
+  - Still to check at step 5: open RatioTap issues and PRs, and the Pages
+    source setting. The repository is private while its Pages site is
+    public.
 
 ---
 
@@ -293,7 +301,7 @@ SampleRateTap/
 ├── CMakeLists.txt          NEW root: project(SampleRateTap), enable_testing(),
 │                           add_subdirectory(submodules/dsptap) ONCE, then engines
 ├── CLAUDE.md  PLAN.md  README.md   NEW family-level files (step 4)
-├── LICENSE                 SampleRateTap's; ratio/LICENSE kept until Q5 is decided
+├── LICENSE                 unified holder line (D14)
 ├── STYLE.md .clang-* .pre-commit-config.yaml .claude/ .github/  (shared)
 ├── .git-blame-ignore-revs  repaired (step P.1), extended after step 4
 ├── submodules/dsptap       the one pin
@@ -308,7 +316,7 @@ SampleRateTap/
 │   ├── capi/   notebooks/   docs/ (PERFORMANCE, COMPARISON, HARDWARE_TESTING)
 │   └── tools/compare_shim/  cmake/r8brain.cmake
 └── ratio/
-    ├── CMakeLists.txt  README.md  PLAN.md  HANDOFF.md  CLAUDE.md  LICENSE
+    ├── CMakeLists.txt  README.md  PLAN.md  HANDOFF.md  CLAUDE.md
     ├── include/tap/sr/ratio/   tests/ (+reference/)   bench/   examples/
     ├── capi/   notebooks/ (+requirements.txt)   tools/reference/   docs/HISTORY.md
 ```
@@ -334,7 +342,7 @@ SampleRateTap/
 | `ratio/tools/capi/` | `ratio/capi/` | step 3 |
 | `ratio/cmake/`, `ratio/platform/`, `ratio/tools/qemu_insn_plugin/`, `ratio/scripts/icount.py` | deleted (root copies) | step 2 |
 | `ratio/CLAUDE.md` | kept, build commands corrected at step 1c; reduced to the ratio charter at step 4 | step 1c, step 4 |
-| `ratio/LICENSE` | kept until Q5 is decided | — |
+| `ratio/LICENSE` | deleted in the same commit that puts D14's unified line in the root `LICENSE` | step 1c |
 | `ratio/notebooks/requirements.txt` | superseded by the root lockfile | step P.3 |
 | `docs/migration/` (snapshots) | created at root `docs/migration/` (not moved, since `docs/` stays) and deleted at the end | step 0, step 4 |
 
@@ -521,11 +529,13 @@ and G7 prove that.
   - `book-pages.yml` path filters and Doxyfile `INPUT`.
   - The `bench-smoke` binary path, `compare.yml` build paths,
     `icount.py --baselines` per engine, `update_icount_docs.py` →
-    `async/bench/baselines.json` and `async/README.md`.
+    `async/bench/baselines.json` and `async/README.md` (Q8). ratio gains the
+    same table in `ratio/README.md`, and the script takes `--engine`.
   - Notebook `REPO` roots and `sys.path` entries.
   - The 11 README relative links.
   - `ratio/CLAUDE.md` build commands.
-- **LICENSE:** keep `ratio/LICENSE`, which MIT requires to be retained
+- **LICENSE:** in one commit, the root `LICENSE` takes D14's unified line
+  and `ratio/LICENSE` is deleted. The notice MIT requires is never absent
   (GIT-13).
 
 **Gate 1:**
@@ -565,11 +575,12 @@ and G7 prove that.
    `ratio/tools/capi` → `ratio/capi`. Delete `srt/detail/kaiser.h` per 3.1.
 2. **Namespaces:** `tap::samplerate` → `tap::sr::async`; `tap::ratio` →
    `tap::sr::ratio`; test namespaces `srt_test` / `ratio_ref` as decided.
-   Optionally `async_sample_rate_converter` → `converter` (Q2).
+   `async_sample_rate_converter` → `converter` (D15).
 3. **clang-format reflow:** its own commit. The namespace rename reflows
    22 files (+112/−114) through alignment columns (GIT-6).
 4. **Macros:**
-   - `SRT_VERSION_*`, `TAP_RATIO_VERSION_*` → `TAP_SR_<ENGINE>_VERSION_*`.
+   - `SRT_VERSION_*`, `TAP_RATIO_VERSION_*` → `TAP_SR_VERSION_*`, set to
+     0.4.0 (D13).
    - `SRT_RESTRICT`, `SRT_Q15_SMLALD`, `SRT_CHANNEL_PARALLEL`,
      `TAP_RATIO_MIRRORED_DOT_ATTR`: renamed, or replaced by their
      `TAP_DSP_*` originals where they are pure aliases.
@@ -588,7 +599,8 @@ and G7 prove that.
    - `srt_*` → `tap_sr_async_*`, `ratio_*` → `tap_sr_ratio_*`.
    - Handle types, header names and library names.
    - The shim's exports.
-   - Reconcile the version encodings (Q4). Bridges renamed per D8.
+   - `srt_version` and `ratio_version` → one `tap_sr_version()`, bit-packed
+     (D13); `test_skeleton.cpp` re-pins it at 0.4.0. Bridges renamed per D8.
 7. **Ratchet workload binaries:** prefix only (`tap_sr_<engine>_icount_*`).
    Workload names do not change, because the key is the basename minus the
    prefix (GATE-12, INV-5).
@@ -655,7 +667,8 @@ sequenced before it.
 - No new engine, profile or API function.
 - DspTap **code** is untouched. DspTap docs and comments change only
   through a DspTap PR (step 5), and `STYLE.md` only through taphouse.
-- Versioning is not unified (Q4).
+- No release is cut during the migration. 0.4.0 (D13) is set in step 3 and
+  tagged `v0.4.0` after step 4 merges.
 - The third harness copy (DspTap's) is not adopted (3.3).
 
 ## 8. Risks
@@ -675,24 +688,18 @@ sequenced before it.
 
 ## 9. Open questions
 
-- **Q2.** Rename `async_sample_rate_converter` → `tap::sr::async::converter`
-  for symmetry with `ratio`, or keep the descriptive name?
-- **Q4.** Versioning: SampleRateTap is 0.1.0 and RatioTap is 0.3.0, and the
-  two version functions encode differently. Options are one family version,
-  per-engine versions, or both, plus one encoding.
-- **Q5.** License holder line: unify to one line family-wide, or keep both
-  notices? Until this is decided, `ratio/LICENSE` stays.
-- **Q7.** taphouse: is a two-level `tap::sr::<engine>` namespace acceptable
-  under the one-sub-namespace-per-repository convention?
-- **Q8.** Where does the async icount table live once the root README
-  becomes the family front page? Proposed: `async/README.md`, with
-  `update_icount_docs.py` pointed there at step 1c.
+None. All were resolved; the decisions are recorded where they apply.
 
-Resolved since v1:
-
-- **Q1:** `HANDOFF.md` stays in `ratio/`.
-- **Q3:** section 2.2.
-- **Q6:** per-engine READMEs plus a family README.
+| Q | Resolution |
+|---|---|
+| Q1 | `HANDOFF.md` stays in `ratio/` (v2) |
+| Q2 | Rename to `converter`: D15 (user, 2026-09-26) |
+| Q3 | `ratio` at 2^k rates: section 2.2 (v2) |
+| Q4 | One family version, 0.4.0, bit-packed encoding: D13 (user) |
+| Q5 | One unified holder line: D14 (user) |
+| Q6 | Per-engine READMEs plus a family README (v2) |
+| Q7 | Two-level namespace accepted: D4 (user) |
+| Q8 | Icount tables in each engine's README: step 1c (user) |
 
 ---
 
@@ -722,7 +729,7 @@ completeness). Severity: B blocker, M major, m minor, n nit.
 | DEC-7 | M | Moving `decimate.h` breaks MuTap / D10 | 2; the `integer` plan (section 6, Next) |
 | DEC-8 | M | `chain<>` risks a rate-routing factory | D12 |
 | DEC-9 | m | D1 supersession unrecorded; third harness copy | D1; 3.3 |
-| DEC-10 | n | D4 supersedes agreed rename; `std::` shadowing | D4, D5; Q7 |
+| DEC-10 | n | D4 supersedes agreed rename; `std::` shadowing | D4, D5 |
 | DEC-11 | M | Independence misattributed; R4 guards the wrong thing | R4; G6 |
 | DEC-12 | M | Per-engine enables can drop leg 3 | D9 |
 | DEC-13 | M | Header-isolation bypassable | 4.2 |
@@ -741,7 +748,7 @@ completeness). Severity: B blocker, M major, m minor, n nit.
 | GIT-10 | m | Import branch; stale local refs | 3; step 0 |
 | GIT-11 | m | Tags | 3; step 1b |
 | GIT-12 | m | Duplicate ctest names | G1 |
-| GIT-13 | m | Deleting ratio LICENSE drops notice | 4.1; step 1c; Q5 |
+| GIT-13 | m | Deleting ratio LICENSE drops notice | D14; 4.1; step 1c |
 | GIT-14 | n | Plan swept into `async/docs` | 4.1 |
 | GATE-1 | B | 0 % icount unattainable (marker, Hexagon argv/env) | G3; step P.2; step 2 |
 | GATE-2 | M | icount.py passes on missing workloads | G3; step P.2 |
@@ -786,8 +793,8 @@ completeness). Severity: B blocker, M major, m minor, n nit.
 | INV-9 | M | Unaccounted files | 4.1 |
 | INV-10 | m | 3.4 conclusion wrong | 3.4 |
 | INV-11 | m | 3.5 table errors | 3.5 |
-| INV-12 | m | C ABI counts exact; version encodings | 3.6; Q4 |
+| INV-12 | m | C ABI counts exact; version encodings | 3.6; D13 |
 | INV-13 | m | DspTap list 10 of 25; non-goal conflict; STYLE via taphouse | 3.7; 7; step 5 |
 | INV-14 | m | RatioTap URLs dangle | 3.7; step 3.8 |
 | INV-15 | n | 3.2 / R4 stale | 3.2; R4 |
-| INV-16 | m | Outside consumers unchecked | 3.7 (user checklist) |
+| INV-16 | m | Outside consumers unchecked | 3.7 (confirmed by user) |
