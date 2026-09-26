@@ -273,7 +273,7 @@ CI builds and tests every push on:
   channels, against the 3,125 cycles per frame a 150 MHz core has at
   48 kHz: 48 kHz Q15 stereo fits one core with room to spare, 12 channels
   does not (the dual-core example runs it at 16 kHz). Construction is
-  separate and heavy: ~1.3 G QEMU instructions of soft-double filter
+  separate and heavy: ~0.9 G QEMU instructions of soft-double filter
   design, seconds at boot on a generic FP64-less core (less on the RP2350,
   whose DCP coprocessor handles doubles). Instruction counts are not
   cycle counts, so treat these as budgets pending real-silicon
@@ -327,13 +327,13 @@ Executed instructions per fixed workload (`bench/icount/`), measured under QEMU 
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `kernel_float` | 2,825,389,539 | 115,540,990 | 470,171,975 |
-| `kernel_q15` | 1,515,719,465 | 198,066,650 | 234,098,419 |
-| `kernel_q31` | 1,562,793,261 | 226,862,081 | 241,733,702 |
-| `pipeline12_q15` | 1,891,351,546 | 403,861,915 | 510,167,719 |
-| `pipeline_float` | 2,789,479,856 | 108,833,486 | 467,197,861 |
-| `pipeline_q15` | 1,412,881,372 | 143,427,077 | 251,145,660 |
-| `pipeline_q31` | 1,495,389,428 | 178,785,673 | 251,993,512 |
+| `kernel_float` | 2,427,595,993 | 109,298,076 | 422,164,193 |
+| `kernel_q15` | 1,123,119,218 | 192,431,957 | 187,432,836 |
+| `kernel_q31` | 1,169,957,251 | 221,164,795 | 194,967,771 |
+| `pipeline12_q15` | 1,498,750,507 | 398,227,192 | 463,502,418 |
+| `pipeline_float` | 2,391,686,215 | 102,590,477 | 419,190,309 |
+| `pipeline_q15` | 1,020,281,310 | 137,792,386 | 204,480,261 |
+| `pipeline_q31` | 1,102,554,828 | 173,088,119 | 205,227,716 |
 <!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->

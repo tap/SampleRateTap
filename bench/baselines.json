@@ -1,29 +1,29 @@
 {
   "hexagon": {
-    "kernel_float": 470171975,
-    "kernel_q15": 234098419,
-    "kernel_q31": 241733702,
-    "pipeline12_q15": 510167719,
-    "pipeline_float": 467197861,
-    "pipeline_q15": 251145660,
-    "pipeline_q31": 251993512
+    "kernel_float": 422164193,
+    "kernel_q15": 187432836,
+    "kernel_q31": 194967771,
+    "pipeline12_q15": 463502418,
+    "pipeline_float": 419190309,
+    "pipeline_q15": 204480261,
+    "pipeline_q31": 205227716
   },
   "m33": {
-    "kernel_float": 2825389539,
-    "kernel_q15": 1515719465,
-    "kernel_q31": 1562793261,
-    "pipeline12_q15": 1891351546,
-    "pipeline_float": 2789479856,
-    "pipeline_q15": 1412881372,
-    "pipeline_q31": 1495389428
+    "kernel_float": 2427595993,
+    "kernel_q15": 1123119218,
+    "kernel_q31": 1169957251,
+    "pipeline12_q15": 1498750507,
+    "pipeline_float": 2391686215,
+    "pipeline_q15": 1020281310,
+    "pipeline_q31": 1102554828
   },
   "m55": {
-    "kernel_float": 115540990,
-    "kernel_q15": 198066650,
-    "kernel_q31": 226862081,
-    "pipeline12_q15": 403861915,
-    "pipeline_float": 108833486,
-    "pipeline_q15": 143427077,
-    "pipeline_q31": 178785673
+    "kernel_float": 109298076,
+    "kernel_q15": 192431957,
+    "kernel_q31": 221164795,
+    "pipeline12_q15": 398227192,
+    "pipeline_float": 102590477,
+    "pipeline_q15": 137792386,
+    "pipeline_q31": 173088119
   }
 }

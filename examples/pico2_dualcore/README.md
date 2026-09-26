@@ -111,7 +111,7 @@ SRT_PICO2_DUALCORE_DONE
   workload built at 2 s and at 4 s, `-DSRT_SC_SECONDS=4`, and differenced).
   A committed baseline divided by its 96,000 frames is larger — it also
   carries one-time setup (the soft-double filter design, input synthesis,
-  ~1.3–1.6 G instructions) — so the difference is the right counterpart of
+  ~0.9–1.2 G instructions) — so the difference is the right counterpart of
   the steady-state loop this firmware times; `cyc_frame ÷ insns/frame`
   from the
   sibling `examples/pico2_cyccnt` run gives the cycles-per-instruction

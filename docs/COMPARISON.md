@@ -171,8 +171,8 @@ One-time construction, millions of instructions:
 
 | Engine | Cortex-M55 | Cortex-M33 | Hexagon |
 |---|---:|---:|---:|
-| **SampleRateTap** balanced, float | 23.6 | 1,268 | 181 |
-| **SampleRateTap** balanced, Q15 | 24.6 | 1,281 | 184 |
+| **SampleRateTap** balanced, float | 17.3 | 870 | 133 |
+| **SampleRateTap** balanced, Q15 | 18.4 | 884 | 136 |
 | r8brain 120 dB, default 2 % band | 1.6 | 38.1 | 11.3 |
 | r8brain 120 dB, 8 % band | 1.8 | 45.5 | 12.6 |
 | libsamplerate `MEDIUM` | 1.4 | 20.9 | 7.4 |
@@ -193,8 +193,11 @@ the Cortex-M builds force-include `bench/icount/r8b_single_thread_mutex.h`
 per-sample path). Hexagon's musl build uses the real mutex.
 
 **Construction is the one column SampleRateTap loses.** Its filter design
-(the compensated prototype, run in double at construction) costs ~1.3 G
-instructions on the M33 as QEMU emulates it (every double operation a
+(the compensated prototype, run in double at construction) costs ~0.9 G
+instructions on the M33 as QEMU emulates it (~1.3 G until DspTap shared the
+Kaiser window's Bessel series across the design's kernel builds; the
+construction rows above are re-measured at that pin, the steady-state rows
+did not move by a single instruction) (every double operation a
 software libcall), against tens of millions for r8brain and
 libsamplerate. On a generic FP64-less 150 MHz core that is seconds of
 start-up; the RP2350 routes double arithmetic through its DCP coprocessor,

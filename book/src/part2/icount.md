@@ -115,7 +115,7 @@ accumulates a checksum, and ends with:
 
 A total is the whole binary's cost, construction included, so a pipeline
 baseline divided by its 96 000 frames is *not* the per-frame cost: on the
-M33 the converter's soft-double filter design alone is over a billion
+M33 the converter's soft-double filter design alone is close to a billion
 instructions. `SRT_SC_SECONDS` (default 2, the only length ever baselined)
 exists for that question. Build the pipeline scenarios again at
 `-DSRT_SC_SECONDS=4` and difference the counts: what doubles is the
