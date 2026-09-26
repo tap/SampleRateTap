@@ -274,7 +274,9 @@ instructions on this core) over the audio. The fix is to measure the
 workload at two lengths: the difference is the per-frame cost, the
 remainder is construction. The per-frame cost was 1,138 instructions both
 then and now; what changed since is construction, which grew to ~1.3 G
-instructions with the compensated design. That is still a real budget
+instructions with the compensated design and then fell to ~0.9 G once the
+design shared its Kaiser window's Bessel series between kernel builds
+(bit-identical coefficients, DspTap #38). That is still a real budget
 item: seconds of start-up on a generic 150 MHz part with no FP64 help,
 paid once (the RP2350's DCP coprocessor for double arithmetic should make
 a Pico 2 cheaper than the emulated count). Knowing both

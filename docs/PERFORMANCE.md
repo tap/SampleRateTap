@@ -130,13 +130,29 @@ table is already enforced by test thresholds.
   algorithm-change rule; the two-sided ratchet flagged both directions
   during the process (the M55 leg failed as 'IMPROVED beyond tolerance'
   when the one-pass reduction landed on top of the two-pass baselines).
+- [x] **Shared Kaiser-window Bessel series (DspTap #38, pin bump
+  28a34a1 → 0eb09fa)** — both prototype designs now evaluate the window's
+  `bessel_i0` series once, for half the taps, and mirror it; the
+  compensated design used to evaluate it per tap in each of its two
+  kernel builds. Bit-identical coefficients (FNV-1a-64 over the whole
+  prototype, on M33 and on x86 under GCC and clang), so the audio path is
+  untouched: the comparison workloads' steady state (4 s minus 2 s,
+  docs/COMPARISON.md) is identical to the instruction on all three
+  targets. Construction only, constant across all seven scenarios per
+  target to within the scenarios' own spread: M33 −393 to −398M, Hexagon
+  −47M, M55 −6M instructions (M33 `pipeline_q15` −27.8%, the largest
+  relative move). Baselines re-recorded with this entry as the
+  justification; the ratchet flagged every scenario 'IMPROVED beyond
+  tolerance' before the update. The pin also carries DspTap's FFT
+  stages, which SampleRateTap does not use.
 
 ## Known debt
 
 - **Constructor cost on soft-FP64 targets, and ratchet sensitivity.** The
   compensated design costs ~7M double flops at construction — pennies on
-  hosts and the M55 (hardware FP64), but ~1G instructions on the QEMU
-  M33 (soft-double libcalls): seconds of boot on an M33-class part, and
+  hosts and the M55 (hardware FP64), but ~0.9G instructions on the QEMU
+  M33 (soft-double libcalls; ~1.3G before the shared-window entry
+  above): seconds of boot on an M33-class part, and
   a large share of each M33 icount scenario's total, which dilutes the
   +/-3% gate's sensitivity to hot-path regressions on that target.
   Mitigations queued: split construction into its own ratcheted scenario

@@ -327,11 +327,11 @@ accelerates.
 **Budgets, stated as instructions, pending cycles.** A baseline divided
 by its 96,000 frames is *not* the per-frame cost: each workload also
 constructs its converter, and on the M33 the soft-double filter design
-alone is over a billion instructions. Building the pipeline workloads a
+alone is close to a billion instructions. Building the pipeline workloads a
 second time at 4 s of audio (`-DSRT_SC_SECONDS=4`) and taking the
 difference isolates the steady state: **≈ 1,138 instructions per stereo
 frame** for `pipeline_q15` and ≈ 3,326 for the 12-channel shape, with
-~1.31 G and ~1.58 G of one-time construction. (Earlier revisions quoted
+~0.91 G and ~1.18 G of one-time construction. (Earlier revisions quoted
 5,043 and 10,027, the construction-inclusive quotients; the per-frame
 costs have not changed since June.) A 150 MHz core at 48 kHz has 3,125
 *cycles* per frame. The README draws the conclusion in
