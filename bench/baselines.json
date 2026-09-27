@@ -1,12 +1,12 @@
 {
   "hexagon": {
-    "kernel_float": 422164193,
-    "kernel_q15": 187432836,
-    "kernel_q31": 194967771,
-    "pipeline12_q15": 463502418,
-    "pipeline_float": 419190309,
-    "pipeline_q15": 204480261,
-    "pipeline_q31": 205227716
+    "kernel_float": 422160503,
+    "kernel_q15": 187429180,
+    "kernel_q31": 194964115,
+    "pipeline12_q15": 463498694,
+    "pipeline_float": 419186585,
+    "pipeline_q15": 204476571,
+    "pipeline_q31": 205224026
   },
   "m33": {
     "kernel_float": 2427595993,

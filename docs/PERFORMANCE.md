@@ -145,6 +145,20 @@ table is already enforced by test thresholds.
   justification; the ratchet flagged every scenario 'IMPROVED beyond
   tolerance' before the update. The pin also carries DspTap's FFT
   stages, which SampleRateTap does not use.
+- [x] **Hexagon harness isolation (monorepo migration step P.2)** — harness
+  change, not a code change: `icount.py` now runs every Hexagon workload
+  from one fixed path (`/tmp/tap-icount/w`), with a fixed `argv[0]` and an
+  empty environment. qemu-hexagon is a user-mode emulator that copies
+  argv, the exec path and the host environment onto the guest stack, and
+  static musl's startup walks them, so the build directory's path and the
+  runner's environment were part of every Hexagon count. Measured on the
+  first isolated CI run: −3,656 to −3,724 instructions per scenario
+  (−0.0008% to −0.0020%), well inside tolerance and constant in kind across
+  the seven scenarios; the M33/M55 legs (system mode, `main(0, NULL)`) are
+  unaffected and still match their baselines to the instruction. Hexagon
+  baselines re-recorded to the isolated values with this entry as the
+  justification, so exact (`--exact`) comparisons start from the new
+  harness.
 
 ## Known debt
 
