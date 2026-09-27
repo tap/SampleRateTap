@@ -1,0 +1,175 @@
+# DRAFT (audit round 2, R2-CI): root .github/workflows/ci.yml as it should
+# stand right after step 1c. This is a sketch, not a tested workflow.
+#
+# Design choices it makes, and why:
+# - ONE configure of the root tree per job, both engines built. D9 forbids
+#   per-engine enables, and from step 3.5 on there is one TAP_SR_BUILD_TESTS,
+#   so "ratio jobs" that build only ratio cannot survive step 3. Per-engine
+#   behaviour is selected at *ctest* time by LABELS (added in P.2), and
+#   per-engine warnings by the per-engine WERROR options, which already live
+#   on separate INTERFACE targets (srt_warnings / tap_ratio_warnings), so
+#   async-OFF / ratio-ON on MSVC coexists in one tree.
+# - Options are DEFAULTED at the root (option() before add_subdirectory), never
+#   FORCEd: every bare-metal/Hexagon job passes *_BUILD_EXAMPLES=OFF, and
+#   async's examples do find_package(Threads REQUIRED), which fails a
+#   bare-metal configure.
+# - Dedup/concurrency is adopted HERE (not at step 2), with cancel-in-progress
+#   OFF for the migration PR, so every pushed SHA gets exactly one full run
+#   and G13 can hold without waiting-before-push discipline being the only
+#   guard.
+# - Every ctest call: --no-tests=error, --output-log (G2 needs the [ RUN ]
+#   lines, which --output-on-failure never prints on success), log uploaded.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Never cancel on main, and never on the migration PR (G13 needs a complete
+  # run per SHA). Other PRs keep superseded-run cancellation.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.head_ref != 'claude/sample-rate-expansion-strategies-ezqzu6' }}
+
+env:
+  CTEST_COMMON: --no-tests=error --output-on-failure
+
+jobs:
+  host:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux GCC,        os: ubuntu-latest,  cc: gcc,   cxx: g++,     async_werror: ON,  ratio_werror: ON, capi: ON }
+          - { name: Linux Clang,      os: ubuntu-latest,  cc: clang, cxx: clang++, async_werror: ON,  ratio_werror: ON, capi: ON }   # ratio: NEW coverage (measured 78/78 locally, clang 18 -Werror)
+          - { name: macOS AppleClang, os: macos-latest,                            async_werror: ON,  ratio_werror: ON, capi: ON }
+          - { name: Windows MSVC,     os: windows-latest,                          async_werror: OFF, ratio_werror: ON, capi: OFF }  # async /W4 untriaged (INF-11); ratio keeps /WX
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with: { submodules: recursive }
+      - name: Configure
+        env: { CC: "${{ matrix.cc }}", CXX: "${{ matrix.cxx }}" }
+        run: >
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          -DSRT_WERROR=${{ matrix.async_werror }} -DTAP_RATIO_WERROR=${{ matrix.ratio_werror }}
+          -DSRT_BUILD_CAPI=${{ matrix.capi }} -DTAP_RATIO_BUILD_CAPI=${{ matrix.capi }}
+      - run: cmake --build build --config Release -j 4
+      - run: ctest --test-dir build -C Release $CTEST_COMMON --output-log ctest-${{ matrix.name }}.log
+        shell: bash
+      - uses: actions/upload-artifact@<sha> # pin
+        if: ${{ !cancelled() }}
+        with: { name: "ctest-${{ matrix.name }}", path: "ctest-*.log" }
+
+  sanitizers:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # async ran ASan without WERROR, ratio with it; per-engine options keep both.
+          - { name: ASan + UBSan, flags: "-fsanitize=address,undefined -fno-sanitize-recover=all", labels: "" }
+          # TSan: async only (ratio is single-threaded; running it costs ~3 s
+          # but adds rows G1 has no step-0 counterpart for). Build is shared.
+          - { name: TSan, flags: "-fsanitize=thread", labels: "-L async" }
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with: { submodules: recursive }
+      - name: Configure
+        env: { CC: clang, CXX: clang++ }
+        run: >
+          cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DSRT_BUILD_EXAMPLES=OFF
+          -DSRT_WERROR=OFF -DTAP_RATIO_WERROR=ON
+          -DCMAKE_CXX_FLAGS="${{ matrix.flags }}"
+        # NB ratio's sanitizer job built ratio examples (bluetooth_bridge); keep
+        # TAP_RATIO_BUILD_EXAMPLES at its default (ON) so G7's TU set matches.
+      - run: cmake --build build -j 4
+      - env: { TSAN_OPTIONS: halt_on_error=1, UBSAN_OPTIONS: print_stacktrace=1 }
+        run: ctest --test-dir build $CTEST_COMMON ${{ matrix.labels }} --output-log ctest.log
+
+  # One job per (target, engine) for correctness: both engines are BUILT
+  # (one tree), each job RUNS one engine's label with that engine's -E list
+  # and parallelism. Measured today: async Hexagon 22.5 min serial, ratio
+  # Hexagon 11.0 min at -j 4, async M33 22.4 min, ratio M33 0.4 min
+  # (runs 36253867157, 36256431538). Serialising both in one Hexagon job is
+  # ~36 min of a 45 min timeout; a single un-labelled ctest at one -j is
+  # either 67 min (serial) or changes async's leg (-j 4).
+  qemu:
+    name: ${{ matrix.target }} ${{ matrix.engine }} (QEMU)
+    runs-on: ubuntu-24.04     # pinned: plugin header, qemu, glib and caches must agree
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: hexagon, engine: async, timeout: 45, j: 1, exclude: 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation', build_type: Release,    toolchain: cmake/hexagon-linux-musl.cmake }
+          - { target: hexagon, engine: ratio, timeout: 30, j: 4, exclude: 'BadProfilesThrow|LatencyAndValidation',                                                                   build_type: Release,    toolchain: cmake/hexagon-linux-musl.cmake }
+          - { target: m55,     engine: async, timeout: 20, j: 1, exclude: '',                                                                                                         build_type: MinSizeRel, toolchain: cmake/arm-cortex-m55-mps3.cmake }
+          - { target: m55,     engine: ratio, timeout: 20, j: 1, exclude: '',                                                                                                         build_type: MinSizeRel, toolchain: cmake/arm-cortex-m55-mps3.cmake }
+          - { target: m33,     engine: async, timeout: 40, j: 1, exclude: '',                                                                                                         build_type: MinSizeRel, toolchain: cmake/arm-cortex-m33-mps2.cmake }
+          - { target: m33,     engine: ratio, timeout: 20, j: 1, exclude: '',                                                                                                         build_type: MinSizeRel, toolchain: cmake/arm-cortex-m33-mps2.cmake }
+    env:
+      HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
+      HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with: { submodules: recursive }
+      - if: matrix.target != 'hexagon'
+        run: sudo apt-get update -q && sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+      - if: matrix.target == 'hexagon'
+        id: cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with: { path: ~/hexagon, key: "hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1" }
+      - if: matrix.target == 'hexagon' && steps.cache.outputs.cache-hit != 'true'
+        run: scripts/fetch_hexagon_toolchain.sh
+      # (hexagon PATH / qemu-user setup as today)
+      - name: Configure (both engines, one tree)
+        run: >
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}
+          -DSRT_BUILD_EXAMPLES=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
+      - run: cmake --build build -j 4
+      - name: Test under emulation (${{ matrix.engine }} only)
+        shell: bash
+        run: |
+          args=(--test-dir build $CTEST_COMMON -L '^${{ matrix.engine }}$' -j ${{ matrix.j }} -V --output-log ctest.log)
+          [ -n '${{ matrix.exclude }}' ] && args+=(-E '${{ matrix.exclude }}')
+          ctest "${args[@]}"
+      - uses: actions/upload-artifact@<sha>
+        if: ${{ !cancelled() }}
+        with: { name: "gtest-${{ matrix.target }}-${{ matrix.engine }}", path: ctest.log }   # G2 input
+
+  # Ratchet stays per ENGINE until step 2 (step 2 then folds to per target).
+  # Two jobs x three targets inside, exactly as today, each pointing icount.py
+  # at its engine's baselines. Plugin built in-job (1 s; an artifact would
+  # couple jobs across runner images).
+  icount-async:   # = today's SampleRateTap job, --baselines async/bench/baselines.json, docs freshness kept
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps: [ { run: "# as today; configure root with -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF -DSRT_BUILD_ICOUNT_BENCH=ON" } ]
+  icount-ratio:   # = RatioTap's job, --baselines ratio/bench/baselines.json, plus ratio README freshness (1c adds the table)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps: [ { run: "# as RatioTap today, SHA-pinned; -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON, tests/examples OFF for both engines" } ]
+
+  bench-smoke:      { runs-on: ubuntu-latest, timeout-minutes: 15, steps: [ { run: "# ./build/async/bench/srt_bench" } ] }
+  compare-smoke:    { runs-on: ubuntu-latest, timeout-minutes: 20, steps: [ { run: "# as today; paths under async/; ALSO run one cmp_icount binary under qemu so compare.yml's markers are exercised per push" } ] }
+  clang-format:     { runs-on: ubuntu-latest, timeout-minutes: 10, steps: [ { run: "pre-commit run --all-files" } ] }
+  book:             { runs-on: ubuntu-latest, timeout-minutes: 10, steps: [ { run: "# as today" } ] }
+
+  # NEW: the jobs that actually evaluate G1-G7 (section 5 demands same-job
+  # A/B, but no workflow in v2 performs it). See migration-gates.yml.
+
+# Job count per push after this sketch: host 4 + sanitizers 2 + qemu 6 +
+# icount 2 + bench/compare/format/book 4 = 18 in ci.yml, + style (drift +
+# clang-tidy) 2 = 20, + migration-gates. macOS: 1.
