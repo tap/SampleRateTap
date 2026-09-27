@@ -1,0 +1,11 @@
+T ratio_create
+T ratio_destroy
+T ratio_flush
+T ratio_flush_output_frames
+T ratio_frames_needed
+T ratio_latency_input_frames
+T ratio_outputs_for
+T ratio_process
+T ratio_reset
+T ratio_taps
+T ratio_version

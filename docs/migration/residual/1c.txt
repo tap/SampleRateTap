@@ -1,0 +1,29 @@
+# G14 residual allowlist for the step-1c gated SHA. Seeded at step 0 from
+# MONOREPO_PLAN.md step 1c; narrowed to hunk entries by the 1c commit.
+
+# New and rewritten build glue.
+file CMakeLists.txt  -- new root CMakeLists (1c; draft root-CMakeLists-1c.cmake)
+file async/CMakeLists.txt  -- tap::dsp guard with explicit binary dir (R2-RUN-3)
+file bridge/CMakeLists.txt  -- tap::dsp guard; srt_headers -> ../async/include (SYSTEM)
+file cmake/arm-cortex-m33-mps2.cmake  -- sets both SRT_ and TAP_RATIO_BARE_METAL
+file cmake/arm-cortex-m55-mps3.cmake  -- sets both SRT_ and TAP_RATIO_BARE_METAL
+
+# CI: one configure per job, per-(target, engine) correctness legs.
+file .github/workflows/*.yml  -- 1c CI port (draft ci-after-1c.yml); style.yml from RatioTap
+file scripts/fetch_hexagon_toolchain.sh  -- RatioTap's copy at root; all cache writers use it
+
+# Path fix-ups that follow the 1a/1b moves.
+file book/src/**  -- the 52 moved book includes
+file book/book.toml  -- include roots, if the moves touch them
+file docs/Doxyfile  -- INPUT/USE_MDFILE_AS_MAINPAGE for async/ and bridge/
+file scripts/*.py  -- icount.py --baselines, update_*_docs.py, book_figures.py paths
+file async/notebooks/*.ipynb  -- CAPI_DIR / TOOLS_DIR / sys.path after the move
+file async/notebooks/*.py  -- binding paths after the move
+file async/README.md  -- LICENSE link -> ../
+file bridge/README.md  -- build commands; LICENSE x2, STYLE.md -> ../; "eight workloads" -> ten
+file bridge/CLAUDE.md  -- build commands
+file bridge/notebooks/*.py  -- binding paths after the move
+file bridge/docs/HISTORY.md  -- new: old SHA -> new SHA -> RatioTap PR
+
+# Licence: D14's line lands in the root LICENSE as bridge/LICENSE goes.
+file LICENSE  -- D14 holder line

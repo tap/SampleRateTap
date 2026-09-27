@@ -1,0 +1,116 @@
+== include/tap/ratio/converter.h  commits=8  lines=443
+log   2026-08-07T01:01:34+00:00 Add super_economy: the 16 kHz voice/comms tier
+log   2026-08-07T00:45:42+00:00 v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+log   2026-08-06T23:47:52+00:00 Fix the audit findings: create-path leak, pull() contract, doc rot, CI nits
+log   2026-07-24T15:04:38+00:00 M7d: symmetry storage halving — ceil(L/2) stored rows, mirrored dots
+log   2026-07-24T12:15:53+00:00 M7c: commit the trip counts — constexpr profiles, compile-time dot lengths
+log   2026-07-24T01:08:40+00:00 M7b: superblock codegen — the process() hot path as a register walk
+log   2026-07-23T18:12:53+00:00 Add M4: fixed-point converters and their parity battery
+log   2026-07-23T16:59:55+00:00 Add M3: the streaming converter, pinned to scipy sample-for-sample
+blame   229  1784825995  Add M3: the streaming converter, pinned to scipy sample-for-sample
+blame    13  1784830373  Add M4: fixed-point converters and their parity battery
+blame    91  1784855320  M7b: superblock codegen — the process() hot path as a register walk
+blame    42  1784895353  M7c: commit the trip counts — constexpr profiles, compile-time dot lengths
+blame    52  1784905478  M7d: symmetry storage halving — ceil(L/2) stored rows, mirrored dots
+blame     5  1786060072  Fix the audit findings: create-path leak, pull() contract, doc rot, CI nits
+blame     4  1786063542  v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+blame     7  1786064494  Add super_economy: the 16 kHz voice/comms tier
+== include/tap/ratio/design.h  commits=5  lines=166
+log   2026-08-07T01:01:34+00:00 Add super_economy: the 16 kHz voice/comms tier
+log   2026-08-07T00:45:42+00:00 v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+log   2026-07-24T12:15:53+00:00 M7c: commit the trip counts — constexpr profiles, compile-time dot lengths
+log   2026-07-23T15:34:36+00:00 Refresh the profile doc table to the post-normalization measurements
+log   2026-07-23T15:33:42+00:00 Add M2: design spike, profiles, schedule, and phase tables
+blame   116  1784820822  Add M2: design spike, profiles, schedule, and phase tables
+blame     5  1784820876  Refresh the profile doc table to the post-normalization measurements
+blame     5  1784895353  M7c: commit the trip counts — constexpr profiles, compile-time dot lengths
+blame    18  1786063542  v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+blame    22  1786064494  Add super_economy: the 16 kHz voice/comms tier
+== include/tap/ratio/schedule.h  commits=2  lines=62
+log   2026-07-23T15:34:59+00:00 Apply clang-format reflow the pre-commit hook produced post-staging
+log   2026-07-23T15:33:42+00:00 Add M2: design spike, profiles, schedule, and phase tables
+blame    60  1784820822  Add M2: design spike, profiles, schedule, and phase tables
+blame     2  1784820899  Apply clang-format reflow the pre-commit hook produced post-staging
+== include/tap/ratio/phase_table.h  commits=3  lines=95
+log   2026-07-24T15:04:38+00:00 M7d: symmetry storage halving — ceil(L/2) stored rows, mirrored dots
+log   2026-07-23T15:34:59+00:00 Apply clang-format reflow the pre-commit hook produced post-staging
+log   2026-07-23T15:33:42+00:00 Add M2: design spike, profiles, schedule, and phase tables
+blame    53  1784820822  Add M2: design spike, profiles, schedule, and phase tables
+blame     1  1784820899  Apply clang-format reflow the pre-commit hook produced post-staging
+blame    41  1784905478  M7d: symmetry storage halving — ceil(L/2) stored rows, mirrored dots
+== tests/test_converter.cpp  commits=5  lines=408
+log   2026-08-07T01:01:34+00:00 Add super_economy: the 16 kHz voice/comms tier
+log   2026-08-07T00:45:42+00:00 v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+log   2026-07-24T15:04:38+00:00 M7d: symmetry storage halving — ceil(L/2) stored rows, mirrored dots
+log   2026-07-24T12:15:53+00:00 M7c: commit the trip counts — constexpr profiles, compile-time dot lengths
+log   2026-07-23T16:59:55+00:00 Add M3: the streaming converter, pinned to scipy sample-for-sample
+blame   375  1784825995  Add M3: the streaming converter, pinned to scipy sample-for-sample
+blame    10  1784895353  M7c: commit the trip counts — constexpr profiles, compile-time dot lengths
+blame     1  1784905478  M7d: symmetry storage halving — ceil(L/2) stored rows, mirrored dots
+blame    16  1786063542  v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+blame     6  1786064494  Add super_economy: the 16 kHz voice/comms tier
+== tests/test_cross_validation.cpp  commits=3  lines=154
+log   2026-09-27T15:52:36+00:00 Harden the ratchet and CI so the migration gates have data to read
+log   2026-08-07T00:45:42+00:00 v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+log   2026-07-23T20:08:43+00:00 Add M5: the golden cross-validation against SampleRateTap
+blame   132  1784837323  Add M5: the golden cross-validation against SampleRateTap
+blame    16  1786063542  v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+blame     6  1790524356  Harden the ratchet and CI so the migration gates have data to read
+== CMakeLists.txt  commits=6  lines=84
+log   2026-08-07T00:45:42+00:00 v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+log   2026-07-24T16:15:25+00:00 v0.2: wrap the M7 codegen campaign
+log   2026-07-24T00:07:09+00:00 M7a: embedded CI matrix + instruction-count ratchet (M33/M55/Hexagon)
+log   2026-07-23T22:32:45+00:00 Mark the SampleRateTap dev headers as SYSTEM includes
+log   2026-07-23T22:12:23+00:00 Add M6: bluetooth_bridge, the C ABI, and the demo notebook — v0.1
+log   2026-07-23T13:23:54+00:00 Add the M1 skeleton: build, substrate, style, CI
+blame    46  1784813034  Add the M1 skeleton: build, substrate, style, CI
+blame    25  1784844743  Add M6: bluetooth_bridge, the C ABI, and the demo notebook — v0.1
+blame     4  1784845965  Mark the SampleRateTap dev headers as SYSTEM includes
+blame     8  1784851629  M7a: embedded CI matrix + instruction-count ratchet (M33/M55/Hexagon)
+blame     1  1786063542  v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+== PLAN.md  commits=15  lines=524
+log   2026-09-27T16:03:25+00:00 Re-record Hexagon icount baselines under the isolated harness
+log   2026-09-26T16:11:20+00:00 Bump DspTap to 0eb09fa and SampleRateTap to 2b4dff1; re-record icount
+log   2026-08-07T01:01:34+00:00 Add super_economy: the 16 kHz voice/comms tier
+log   2026-08-07T00:45:42+00:00 v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+log   2026-07-24T16:15:25+00:00 v0.2: wrap the M7 codegen campaign
+log   2026-07-24T15:04:38+00:00 M7d: symmetry storage halving — ceil(L/2) stored rows, mirrored dots
+log   2026-07-24T12:15:53+00:00 M7c: commit the trip counts — constexpr profiles, compile-time dot lengths
+log   2026-07-24T01:08:40+00:00 M7b: superblock codegen — the process() hot path as a register walk
+log   2026-07-24T00:07:09+00:00 M7a: embedded CI matrix + instruction-count ratchet (M33/M55/Hexagon)
+log   2026-07-23T22:12:23+00:00 Add M6: bluetooth_bridge, the C ABI, and the demo notebook — v0.1
+log   2026-07-23T20:08:43+00:00 Add M5: the golden cross-validation against SampleRateTap
+log   2026-07-23T18:12:53+00:00 Add M4: fixed-point converters and their parity battery
+log   2026-07-23T16:59:55+00:00 Add M3: the streaming converter, pinned to scipy sample-for-sample
+log   2026-07-23T15:33:42+00:00 Add M2: design spike, profiles, schedule, and phase tables
+log   2026-07-23T03:32:38+00:00 Add the v0.1 plan and the amended design-brief handoff
+blame   316  1784777558  Add the v0.1 plan and the amended design-brief handoff
+blame    11  1784820822  Add M2: design spike, profiles, schedule, and phase tables
+blame    12  1784825995  Add M3: the streaming converter, pinned to scipy sample-for-sample
+blame    10  1784830373  Add M4: fixed-point converters and their parity battery
+blame     8  1784837323  Add M5: the golden cross-validation against SampleRateTap
+blame    16  1784851629  M7a: embedded CI matrix + instruction-count ratchet (M33/M55/Hexagon)
+blame    18  1784855320  M7b: superblock codegen — the process() hot path as a register walk
+blame    12  1784895353  M7c: commit the trip counts — constexpr profiles, compile-time dot lengths
+blame    22  1784905478  M7d: symmetry storage halving — ceil(L/2) stored rows, mirrored dots
+blame    12  1784909725  v0.2: wrap the M7 codegen campaign
+blame    24  1786063542  v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+blame    17  1786064494  Add super_economy: the 16 kHz voice/comms tier
+blame    34  1790439080  Bump DspTap to 0eb09fa and SampleRateTap to 2b4dff1; re-record icount
+blame    12  1790525005  Re-record Hexagon icount baselines under the isolated harness
+== README.md  commits=9  lines=139
+log   2026-08-07T01:01:34+00:00 Add super_economy: the 16 kHz voice/comms tier
+log   2026-08-07T00:45:42+00:00 v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+log   2026-07-24T16:15:25+00:00 v0.2: wrap the M7 codegen campaign
+log   2026-07-24T00:07:09+00:00 M7a: embedded CI matrix + instruction-count ratchet (M33/M55/Hexagon)
+log   2026-07-23T22:12:23+00:00 Add M6: bluetooth_bridge, the C ABI, and the demo notebook — v0.1
+log   2026-07-23T20:08:43+00:00 Add M5: the golden cross-validation against SampleRateTap
+log   2026-07-23T18:12:53+00:00 Add M4: fixed-point converters and their parity battery
+log   2026-07-23T16:59:55+00:00 Add M3: the streaming converter, pinned to scipy sample-for-sample
+log   2026-07-23T13:23:54+00:00 Add the M1 skeleton: build, substrate, style, CI
+blame    74  1784813034  Add the M1 skeleton: build, substrate, style, CI
+blame    20  1784844743  Add M6: bluetooth_bridge, the C ABI, and the demo notebook — v0.1
+blame    20  1784851629  M7a: embedded CI matrix + instruction-count ratchet (M33/M55/Hexagon)
+blame     1  1784909725  v0.2: wrap the M7 codegen campaign
+blame    22  1786063542  v0.3: re-pin the profile ladder — economy at 18 kHz, balanced keeps 19
+blame     2  1786064494  Add super_economy: the 16 kHz voice/comms tier

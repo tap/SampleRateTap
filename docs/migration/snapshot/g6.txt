@@ -1,0 +1,4 @@
+[ measured ] cross-validation down, async L=1024: worst |diff| = 1.255e-05 (-98.0 dB), 147/147 phases, limit 3.0e-05
+[ measured ] cross-validation down, async L=512: worst |diff| = 1.195e-05 (-98.5 dB), 147/147 phases, limit 3.0e-05
+[ measured ] cross-validation up  , async L=1024: worst |diff| = 3.222e-05 (-89.8 dB), 160/160 phases, limit 8.0e-05
+[ measured ] cross-validation up  , async L=512: worst |diff| = 3.031e-05 (-90.4 dB), 160/160 phases, limit 8.0e-05

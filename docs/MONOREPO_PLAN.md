@@ -517,6 +517,15 @@ must produce the data the gates read.
   (`ratio.` → `bridge.`, D16).
 - The G2 collector strips the test-number prefix that ctest's verbose log
   puts on each output line (`1: [ RUN      ] …`) before it compares.
+- **Done (v3.1):** S0 `5e2057f` (140 commits) and R0 `8f19e8b` (33), from
+  CI runs 36348916668 and 36356088654 (`docs/migration/runs.md`).
+  `rename.py` applied through 3.8 builds with `-Werror`, passes 77/77 and
+  82/82, reproduces both tips' output hashes and cross-validation lines,
+  and flags a loosened tolerance as residual. The map fixed three things the
+  plan left implicit: the `SRT_RESTRICT`/`…_Q15_SMLALD`/`…_CHANNEL_PARALLEL`
+  alias `#define`s are deleted rather than renamed; the kaiser re-export's
+  two users requalify to `tap::dsp` at 3.1; and `SrtHandle` becomes
+  `tap_sr_async_converter`, matching `tap_sr_bridge_converter`.
 - If `main` must move, it moves in SampleRateTap only, and step 1 is re-cut.
   filter-repo is deterministic (tip `daceb8d` on two fresh clones, with
   the dry run's `ratio/` prefix).
@@ -638,7 +647,7 @@ builds.
   - `bridge/CLAUDE.md`: build commands.
 - **HISTORY.md:**
   - `bridge/docs/HISTORY.md` maps old SHA → new SHA → RatioTap PR for
-    `git rev-list R0` (29 commits, skipping the commit-map header).
+    `git rev-list R0` (33 commits at R0, `tips.txt`; skipping the commit-map header).
   - PR numbers come from `GET /repos/tap/RatioTap/commits/<sha>/pulls`,
     queried once at cut time. The repository is public; the dry run built
     the map as `audit2-dryrun/history_map.tsv`.
