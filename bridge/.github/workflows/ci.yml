@@ -12,12 +12,17 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Superseded-run cancellation: a new push to the same PR (or to main)
-# cancels the previous in-flight run. Those cancelled checks attach to the
-# old commit, so the current head stays clean.
+permissions:
+  contents: read
+
+# Superseded-run cancellation: a new push to the same PR cancels the
+# previous in-flight run. Those cancelled checks attach to the old commit,
+# so the current head stays clean. Never on main (every main commit keeps
+# its ratchet evidence), and never on the monorepo migration branch, whose
+# plan requires a complete run for every pushed commit.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.head_ref != 'claude/sample-rate-expansion-strategies-ezqzu6' }}
 
 jobs:
   build-test:
@@ -35,7 +40,7 @@ jobs:
           - { os: macos-latest,   name: macos,   capi: ON }
           - { os: windows-latest, name: windows, capi: OFF }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           submodules: recursive
 
@@ -50,13 +55,13 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Test
-        run: ctest --test-dir build --build-config Release --output-on-failure
+        run: ctest --test-dir build --build-config Release --output-on-failure --no-tests=error
 
   sanitizers:
     name: ASan + UBSan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           submodules: recursive
 
@@ -74,7 +79,7 @@ jobs:
         run: cmake --build build -j 4
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure --no-tests=error
 
   # ------------------------------------------------------------------------
   # Embedded matrix (PLAN.md section 7): the M33/M55 eurorack/pedal cores and
@@ -86,7 +91,7 @@ jobs:
 
   hexagon-qemu:
     name: Hexagon cross (QEMU)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       # Prebuilt open-source toolchain (BSD-3) published by Qualcomm/Quicinc;
@@ -97,13 +102,13 @@ jobs:
       # published SHA256SUMS).
       HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           submodules: recursive
 
       - name: Cache toolchain
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/hexagon
           # Keyed on the pinned digest: every job that can write this key
@@ -152,13 +157,24 @@ jobs:
         # -j 4: each test is an independent qemu-user process and the
         # per-test soft-double table construction dominates, so the suite
         # parallelizes cleanly (and serial would crowd the job timeout).
+        # -V --output-log keeps every test's own output ([ RUN ] lines,
+        # [ measured ] numbers), which --output-on-failure prints only for
+        # failures; the log is uploaded below as evidence.
         run: >
-          ctest --test-dir build -j 4 --output-on-failure
+          ctest --test-dir build -j 4 --output-on-failure --no-tests=error
+          -V --output-log ctest-hexagon.log
           -E 'BadProfilesThrow|LatencyAndValidation'
         # This static-musl toolchain cannot unwind across frames — the
         # constructor throws correctly but EXPECT_THROW never catches and
         # libc++abi terminates (same known debt as SampleRateTap's leg).
         # Validation is target-independent and covered on every other leg.
+
+      - name: Upload test log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ctest-hexagon
+          path: ctest-hexagon.log
 
   # Cross-compile for Arm Cortex-M55 (bare metal, newlib + semihosting) and
   # run the emulation-sized test subset on QEMU's MPS3 AN547 board model.
@@ -167,10 +183,10 @@ jobs:
   # performance-appropriate formats here.
   cortex-m55-qemu:
     name: Cortex-M55 cross (QEMU)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           submodules: recursive
 
@@ -190,7 +206,16 @@ jobs:
         run: cmake --build build -j 4
 
       - name: Test under emulation
-        run: ctest --test-dir build --output-on-failure
+        run: >
+          ctest --test-dir build --output-on-failure --no-tests=error
+          -V --output-log ctest-m55.log
+
+      - name: Upload test log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ctest-m55
+          path: ctest-m55.log
 
   # Cortex-M33 (Raspberry Pi Pico 2 / RP2350 class: single-precision FPU,
   # no FP64, no MVE) on QEMU's MPS2+ AN505 model. Shares the Armv8-M
@@ -198,10 +223,10 @@ jobs:
   # anchors the Q15/Q31 budgets for Pico-class parts.
   cortex-m33-qemu:
     name: Cortex-M33 cross (QEMU)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           submodules: recursive
 
@@ -221,7 +246,16 @@ jobs:
         run: cmake --build build -j 4
 
       - name: Test under emulation
-        run: ctest --test-dir build --output-on-failure
+        run: >
+          ctest --test-dir build --output-on-failure --no-tests=error
+          -V --output-log ctest-m33.log
+
+      - name: Upload test log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ctest-m33
+          path: ctest-m33.log
 
   # Deterministic instruction-count ratchet (PLAN.md section 7): fixed
   # workloads under QEMU with a counting plugin, gated two-sided (±3%)
@@ -230,7 +264,9 @@ jobs:
   # measurement harness every M7 lever must move before it merges.
   icount-ratchet:
     name: Instruction-count ratchet
-    runs-on: ubuntu-latest
+    # Pinned image: the counts are a function of the apt toolchain, the
+    # plugin build and QEMU, so the job must not straddle an image rollout.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       # Commit the v8.2.2 tag pointed at when pinned (tags are movable;
@@ -244,7 +280,7 @@ jobs:
       # shared toolchain cache, so it must verify against the same digest.
       HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           submodules: recursive
 
@@ -263,6 +299,15 @@ jobs:
           fi
           gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/tmp \
             -o /tmp/libinsncount.so tools/qemu_insn_plugin/insn_count.c
+
+      # What produced the counts: the runner image and the toolchain packages
+      # (the counts move when either does; PLAN.md section 7).
+      - name: Record image and toolchain versions
+        id: image
+        run: |
+          echo "image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          dpkg-query -W gcc-arm-none-eabi qemu-system-arm
+          echo "os=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
 
       # Release (-O2), matching how the baselines were recorded.
       - name: Build M55 workloads
@@ -305,10 +350,13 @@ jobs:
       - name: Cache plugin-enabled qemu-hexagon
         if: ${{ !cancelled() }}
         id: qemu-hex
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/qemu-hexagon-plugins
-          key: qemu-hexagon-plugins-${{ env.QEMU_SRC_URL }}-1
+          # The image OS is part of the key: the cached binary links the
+          # image's glib, so a new Ubuntu release must not restore an old
+          # build. (Weekly image updates keep the same glib ABI.)
+          key: qemu-hexagon-plugins-${{ steps.image.outputs.os }}-${{ env.QEMU_SRC_URL }}-1
 
       - name: Build plugin-enabled qemu-hexagon
         if: ${{ !cancelled() && steps.qemu-hex.outputs.cache-hit != 'true' }}
@@ -330,7 +378,7 @@ jobs:
       - name: Cache Hexagon toolchain
         if: ${{ !cancelled() }}
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/hexagon
           # Same digest-keyed name as the hexagon-qemu job; the download

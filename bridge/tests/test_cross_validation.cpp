@@ -117,9 +117,13 @@ namespace {
             }
         }
         EXPECT_EQ(phases_seen, l); // all phases exercised
-        std::printf("[ measured ] cross-validation %s, async L=%zu: worst |diff| = %.3e (%.1f dB), %zu/%zu phases\n",
+        // The limit is printed with the measurement so a loosened tolerance
+        // shows in the output, not only in the source (the monorepo
+        // migration's gates compare these lines).
+        std::printf("[ measured ] cross-validation %s, async L=%zu: worst |diff| = %.3e (%.1f dB), %zu/%zu phases,"
+                    " limit %.1e\n",
                     D == direction::down_to_44k1 ? "down" : "up  ", async_phases, worst,
-                    20.0 * std::log10(worst + 1e-18), phases_seen, l);
+                    20.0 * std::log10(worst + 1e-18), phases_seen, l, tolerance);
     }
 
     // Measured floors on the 18 kHz economy designs (v0.3 re-pin): down

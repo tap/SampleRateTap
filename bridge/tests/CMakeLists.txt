@@ -35,6 +35,7 @@ add_executable(tap_ratio_tests
     test_design.cpp
     test_phase_table.cpp
     test_schedule.cpp
+    test_output_hash.cpp
     test_skeleton.cpp)
 # The tests' own headers (the committed reference vectors) resolve relative
 # to this directory.
@@ -58,11 +59,17 @@ if(TAP_RATIO_BARE_METAL)
     set_tests_properties(tap_ratio_tests_emulated PROPERTIES
         PASS_REGULAR_EXPRESSION "TAP_RATIO_TESTS_COMPLETE rc=0"
         FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
-        TIMEOUT 1800)
+        TIMEOUT 1800
+        LABELS ratio)
 else()
     target_link_libraries(tap_ratio_tests PRIVATE GTest::gtest_main)
     # Generous timeouts: discovery and the DSP-measurement tests run orders
     # of magnitude slower under instruction-set emulation (e.g. qemu-hexagon).
     include(GoogleTest)
-    gtest_discover_tests(tap_ratio_tests DISCOVERY_TIMEOUT 120 PROPERTIES TIMEOUT 900)
+    # The "ratio." prefix and label keep ctest names unique once this suite
+    # shares a tree with SampleRateTap's (FixedPoint.* exists in both, and
+    # CTest applies a duplicated name's properties to every copy); the
+    # monorepo plan's gates key tests by these names.
+    gtest_discover_tests(tap_ratio_tests TEST_PREFIX "ratio." DISCOVERY_TIMEOUT 120
+                         PROPERTIES TIMEOUT 900 LABELS ratio)
 endif()
