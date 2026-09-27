@@ -282,7 +282,7 @@ phase-tracked as benign *latency breathing* (the FIFO term of the latency
 wanders by a fraction of the block as the servo follows the beat), and
 the remainder appears as low-rate FM measured in cents:
 `notebooks/asrc_block_size_study.ipynb` puts it at ~0.9 cents rms over a
-61 dB wideband floor at 32-frame blocks, ~1.3 cents rms over 53 dB at
+62 dB wideband floor at 32-frame blocks, ~1.3 cents rms over 54 dB at
 5 ms (240-frame) blocks. Those are honest numbers for a different regime,
 not a degradation of the headline ones — the 135 dB figures are for
 fine-grained transfer, and the comparison document says so plainly. If

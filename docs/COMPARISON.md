@@ -234,7 +234,7 @@ it is a real cost for devices that construct at boot.
   [RatioTap](https://github.com/tap/RatioTap), which cross-validates its
   output against this library's engine.
 - **Coarse-block operation is a different regime** (cent-scale low-rate FM
-  over a 53–61 dB floor — measured in
+  over a 54–62 dB floor — measured in
   [the block-size study](../notebooks/asrc_block_size_study.ipynb)); the
   numbers above are for fine-grained transfer.
 - Software-row figures regenerate by re-running the comparison notebook;

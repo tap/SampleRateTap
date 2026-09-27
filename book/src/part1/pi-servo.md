@@ -446,8 +446,8 @@ beat: most of the sawtooth is absorbed as **latency breathing** — the
 buffer level, and hence the delay, swaying by a fraction of the block at
 the beat rate, inaudible by construction. The remainder leaks into ε̂ as
 low-rate FM, and the study put calibrated numbers on it: **~0.9 cents rms
-of frequency wobble (61 dB wideband quality) at 32-frame blocks, ~1.3
-cents / 53 dB at 5 ms blocks**, as the README reports. Cent-scale wobble
+of frequency wobble (62 dB wideband quality) at 32-frame blocks, ~1.3
+cents / 54 dB at 5 ms blocks**, as the README reports. Cent-scale wobble
 at sub-hertz rates is at the edge of perception for sustained pure tones
 and irrelevant for program material — but it is a real ceiling, and it is
 a *sensor* ceiling, not a servo defect. The README's limitations section

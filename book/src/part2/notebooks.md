@@ -29,12 +29,12 @@ the naive-FIFO disaster, then walks lock acquisition, transparency,
 spectrograms, latency, drift tracking, and dropout recovery. Its committed
 outputs are where the README's "what does it sound like" numbers come from:
 clicks roughly ten times per second at 29 dB SNR for the naive path,
-126.4 dB for the converter under the notebook's instrument.
+125.9 dB for the converter under the notebook's instrument.
 
 **`asrc_block_size_study.ipynb`** answers a deployment question: what
 happens at block sizes 32, 64, and 240 frames? Its committed conclusion —
 Track-stage operation turns block quantization into cent-scale, low-rate FM
-over a 53–61 dB wideband floor, while designed latency scales as roughly
+over a 54–62 dB wideband floor, while designed latency scales as roughly
 `2·B/fs + 0.5 ms` — is quoted by `docs/COMPARISON.md` whenever coarse-block
 operation comes up.
 
@@ -267,7 +267,7 @@ The last trap is the quietest, and this project walked into it. The demo
 notebook's measurement cell printed, in its committed output:
 
 ```text
-ASRC SNR: 126.4 dB   |   naive: 29.4 dB   |   improvement: 97 dB
+ASRC SNR: 125.9 dB   |   naive: 29.4 dB   |   improvement: 97 dB
 ```
 
 with `assert snr_asrc > 125.0` enforcing it. The *summary table* at the
@@ -280,7 +280,8 @@ results. (The measured 135 dB figure from the test suite is real, but it is
 a *different instrument* — a tracked global fit over a different window —
 and a summary must quote its own cell, not the best number available
 elsewhere in the repo.) The fix was the boring, correct one: the summary
-now states 126.4 dB and points at the assertion.
+now states the measured figure (125.9 dB since the compensated
+prototype design; re-executed 2026-09) and points at the assertion.
 
 The lesson generalizes beyond notebooks: **summaries drift from cells the
 same way READMEs drift from benchmarks and comments drift from code.**
