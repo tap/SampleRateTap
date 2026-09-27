@@ -1,6 +1,8 @@
 """ctypes bridge to the shipping RatioTap C++ through the C ABI
 (tools/capi/ratio_capi.h). Family convention: the notebooks measure the real
-library, never a Python re-implementation. Builds build_capi/ on first import.
+library, never a Python re-implementation. (Re)builds build_capi/ on import:
+the build is incremental, and loading a library left over from an older
+checkout would silently measure old code.
 
     from ratiotap_py import RatioConverter
     conv = RatioConverter(direction="down", profile="economy")
@@ -28,18 +30,24 @@ def _lib_path():
     return BUILD / "libratio_capi.so"
 
 
+def _run(cmd):
+    # Quiet on success: the build log would otherwise land in the executed
+    # notebook's outputs, where it varies with the machine and toolchain.
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        print(r.stdout)
+        print(r.stderr, file=sys.stderr)
+        raise RuntimeError("command failed: " + " ".join(cmd))
+
+
 def _build():
-    subprocess.run(
-        ["cmake", "-S", str(ROOT / "tools" / "capi"), "-B", str(BUILD), "-DCMAKE_BUILD_TYPE=Release"],
-        check=True,
-    )
-    subprocess.run(["cmake", "--build", str(BUILD), "-j"], check=True)
+    _run(["cmake", "-S", str(ROOT / "tools" / "capi"), "-B", str(BUILD), "-DCMAKE_BUILD_TYPE=Release"])
+    _run(["cmake", "--build", str(BUILD), "-j"])
 
 
 def _load():
+    _build()
     path = _lib_path()
-    if not path.exists():
-        _build()
     lib = ctypes.CDLL(str(path))
     lib.ratio_create.restype = ctypes.c_void_p
     lib.ratio_create.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_uint]
