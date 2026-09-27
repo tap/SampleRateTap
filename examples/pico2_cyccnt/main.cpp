@@ -65,7 +65,7 @@ namespace {
         if constexpr (std::is_floating_point_v<S>)
             return static_cast<S>(v);
         else
-            return tap::samplerate::detail::roundSat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return tap::samplerate::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
     }
 
     template <typename S>
@@ -80,7 +80,7 @@ namespace {
     template <typename S>
     void runCase(const char* typeName, const char* presetName, const tap::samplerate::filter_spec& spec,
                  std::size_t channels) {
-        tap::samplerate::Config cfg;
+        tap::samplerate::config cfg;
         cfg.channels = channels;
         cfg.filter   = spec;
 

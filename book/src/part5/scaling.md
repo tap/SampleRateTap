@@ -212,9 +212,10 @@ The composition is not hypothetical, and it is measured. RatioTap's
 simulated crystal, servo locked, 997 Hz recovered exactly, 2.0 ms of
 total latency through both stages — and the two engines check each
 other: RatioTap's suite pins its output against this library's async
-engine at −109 dB (down) / −99 dB (up) over every polyphase phase. Two
-independent implementations of the same mathematics agreeing at the
-noise floor is the strongest mutual check either repository runs.
+engine at −98 dB (down) / −90 dB (up) on its default `economy` profile,
+over every polyphase phase. Two independent implementations of the same
+mathematics agreeing at the noise floor is the strongest mutual check
+either repository runs.
 
 The working code lives in RatioTap's repository, which is why this
 section is prose rather than a code walk: the book's include-anchor

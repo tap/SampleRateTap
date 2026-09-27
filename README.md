@@ -422,8 +422,8 @@ inferred from a float ratio:
   exactly, 2.0 ms total latency).
 
 The two converters check each other: RatioTap's suite cross-validates its
-output against this library's async engine at −109 dB (down) / −99 dB (up)
-over every polyphase phase.
+output against this library's async engine at −98 dB (down) / −90 dB (up)
+on its default `economy` profile, over every polyphase phase.
 
 ## Limitations
 

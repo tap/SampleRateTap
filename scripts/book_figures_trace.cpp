@@ -6,7 +6,11 @@
 // file twice, once against the current include/ tree and once against the
 // tree of the last pre-feasibility-fix commit, so the before/after figure
 // in the composition chapter is measured on both sides of the fix, not
-// modeled. Only Status fields that exist in both versions are printed.
+// modeled. Only status fields that exist in both versions are printed.
+//
+// The two trees spell the API differently (045de5d: srt/*.hpp, namespace
+// srt, camelCase; today: srt/*.h, namespace tap::samplerate, snake_case),
+// so the small adapter below selects the spelling by which header exists.
 //
 // Usage: trace pullBlock pushBlock ppm seconds [dropStart dropDur]
 #include <cmath>
@@ -15,7 +19,33 @@
 #include <numbers>
 #include <vector>
 
+#if __has_include(<srt/asrc.hpp>)
+#include <srt/asrc.hpp>
+namespace trace_api {
+    using config    = srt::Config;
+    using converter = srt::AsyncSampleRateConverter;
+    inline double rate(const config& c) {
+        return c.sampleRateHz;
+    }
+    template <class S>
+    double fill(const S& s) {
+        return s.fifoFillFrames;
+    }
+} // namespace trace_api
+#else
 #include <srt/asrc.h>
+namespace trace_api {
+    using config    = tap::samplerate::config;
+    using converter = tap::samplerate::async_sample_rate_converter;
+    inline double rate(const config& c) {
+        return c.sample_rate_hz;
+    }
+    template <class S>
+    double fill(const S& s) {
+        return s.fifo_fill_frames;
+    }
+} // namespace trace_api
+#endif
 
 int main(int argc, char** argv) {
     if (argc < 5) {
@@ -29,11 +59,11 @@ int main(int argc, char** argv) {
     const double      dropStart = argc > 5 ? std::atof(argv[5]) : -1.0;
     const double      dropDur   = argc > 6 ? std::atof(argv[6]) : 0.0;
 
-    tap::samplerate::Config cfg;
+    trace_api::config cfg;
     cfg.channels = 1;
-    tap::samplerate::AsyncSampleRateConverter conv(cfg);
+    trace_api::converter conv(cfg);
 
-    const double       fsOut = cfg.sampleRateHz;
+    const double       fsOut = trace_api::rate(cfg);
     const double       fsIn  = fsOut * (1.0 + ppm * 1e-6); // producer's crystal
     std::vector<float> in(pushBlock), out(pullBlock);
 
@@ -54,8 +84,8 @@ int main(int argc, char** argv) {
         }
         conv.pull(out.data(), pullBlock);
         tPull += static_cast<double>(pullBlock) / fsOut;
-        const tap::samplerate::Status s = conv.status();
-        std::printf("%.6f,%.2f,%d,%.2f,%llu\n", tPull, s.fifoFillFrames, static_cast<int>(s.state), s.ppm,
+        const auto s = conv.status();
+        std::printf("%.6f,%.2f,%d,%.2f,%llu\n", tPull, trace_api::fill(s), static_cast<int>(s.state), s.ppm,
                     static_cast<unsigned long long>(s.underruns));
     }
     return 0;

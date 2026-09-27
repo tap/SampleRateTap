@@ -208,7 +208,10 @@ def fig_kaiser_response():
 
 def build_trace_tool(include_dir, exe):
     subprocess.run(
+        # The dsptap include serves the current tree (tap/dsp/...); the
+        # pre-fix tree predates DspTap and never looks there.
         ["g++", "-O2", "-std=c++20", f"-I{include_dir}",
+         "-I" + os.path.join(ROOT, "submodules", "dsptap", "include"),
          os.path.join(ROOT, "scripts", "book_figures_trace.cpp"), "-o", exe],
         check=True)
 
