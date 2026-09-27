@@ -317,6 +317,18 @@ executed (it measures the shipping C++, not a Python re-implementation).
     SampleRateTap now does (steady state = 4 s − 2 s), would restore the
     gate's sensitivity.
 
+  - **Hexagon harness isolation (monorepo migration step P.2; re-record,
+    not a lever).** `scripts/icount.py` now runs every Hexagon workload
+    from one fixed path with a fixed `argv[0]` and an empty environment:
+    qemu-hexagon (user mode) copies argv, the exec path and the host
+    environment onto the guest stack, and static musl's startup walks
+    them, so the build path and the runner's environment were part of
+    every Hexagon count. First isolated CI run: −3,724…−3,809 instructions
+    per scenario (−0.0004…−0.0136%), inside the gate; M33/M55 (system
+    mode, `main(0, NULL)`) unaffected and matching their baselines to the
+    instruction. Hexagon baselines re-recorded so exact (`--exact`)
+    comparisons start from the isolated harness.
+
 v0.1 ships at M6. Nothing in M7+ blocks it. **v0.3 (2026-08-07): the
 profile-ladder re-pin.** economy moved to the 18 kHz/58/38 design (the
 "economy18" spec-relaxation experiment, measured through every leg: scipy
