@@ -1,13 +1,14 @@
 # Monorepo plan: the `tap::sr` sample-rate family
 
-Status: **DRAFT v3. Two adversarial audit rounds folded in; nothing executed.**
+Status: **DRAFT v3.1. Two adversarial audit rounds folded in; step P executed, steps 0–5 not started.**
 
 | Version | Commit | What changed |
 |---|---|---|
 | v1 | `11f2a94` | First draft |
 | v2 | `4884b01` | Round 1: 5 reviewers, 78 findings (Appendix A) |
 | v2.1 | `c78ab93` | User decisions D13–D15; outside-repository facts confirmed |
-| v3 | this commit | Round 2: 4 reviewers, including an end-to-end dry run of steps 1a–1c and gate prototypes; 78 findings (Appendix B). The user reconfirmed D14 and chose banners everywhere |
+| v3 | `b34681c` | Round 2: 4 reviewers, including an end-to-end dry run of steps 1a–1c and gate prototypes; 78 findings (Appendix B). The user reconfirmed D14 and chose banners everywhere |
+| v3.1 | this commit | Engine names (D5, user decision 2026-09-27): RatioTap's engine becomes **`bridge`** and the future 2^a·3^b engine **`rational`**, replacing `ratio` and `integer`. The Python ctypes modules are now called **bindings**, leaving "bridge" to the engine. Step 0's G2 parser note |
 
 When this plan is approved, it becomes the family-level `PLAN.md`. Draft
 workflow and CMake files that the audit produced live in
@@ -36,18 +37,18 @@ How to read it:
 | D2 | **SampleRateTap is the host repository** and keeps its name | "Sample rate" names the family once it is namespaced. The Pages book keeps its URL. It also has the larger history: 136 commits on `main` in a full clone, against RatioTap's 29 at the time of writing (step 0 re-counts both) |
 | D3 | **RatioTap's history is preserved.** `git filter-repo` rewrites the paths, and `.gitmodules` throughout history, on `main` only (step 1b). The rewritten history is joined by an unrelated-histories merge. **The final PR is merged with a merge commit, never squash or rebase** | `--follow`, `blame` and submodule checkout keep working for every imported commit. A squash would erase all imported commits (GIT-1). Merge commits are allowed on SampleRateTap (confirmed) |
 | D4 | **Namespace `tap::sr::<engine>`**, include path `include/tap/sr/<engine>/` | The path mirrors the namespace, as in DspTap. **This supersedes** RatioTap PLAN.md's agreed `include/tap/samplerate/`. The two-level form is **accepted** (user, 2026-09-26). The convention note goes to taphouse's `STYLE.md` (step 5) |
-| D5 | **Engines:** `async` (was SampleRateTap), `ratio` (was RatioTap); future `integer`, `pdm`, `varispeed` | `async` is the industry term and the family's clock-topology word. It is the only async engine, and async at other ratios comes from composition. The sync engines are named for what they convert. The names sit next to `std::ratio`/`std::async` only under namespace-wide `using`, which the house style avoids |
+| D5 | **Engines:** `async` (was SampleRateTap), `bridge` (was RatioTap); future `rational`, `pdm`, `varispeed` | `async` is the industry term and the family's clock-topology word. It is the only async engine, and async at other ratios comes from composition. The sync engines are named for what they convert: **`rational`** converts *within* a rate family (small-factor L/M, L, M ∈ {2^a·3^b}); **`bridge`** crosses *between* the 44.1 and 48 kHz families, the one large-factor ratio (147/160) and hand-optimized for it. Both are rational in the mathematical sense; the charters (section 2), not the names, draw the line. **User decision, 2026-09-27**, replacing v3's `ratio` (which read too close to `rational`) and `integer` (which read as the integer-sample Q15/Q31 profiles). `async` sits next to `std::async` only under namespace-wide `using`, which the house style avoids. The `bluetooth_bridge` example keeps its name: it composes `async` and `bridge` |
 | D6 | **One top-level directory per engine**, each with `include/ tests/ bench/ examples/ capi/ notebooks/ README.md PLAN.md` | Keeps each charter's boundary physical |
 | D7 | **Clean renames, no aliases.** Retired user-facing override macros get an `#error` **tripwire**. Retired **CMake options** get a `FATAL_ERROR` tripwire (step 3.4) | Aliases would be permanent debt. A tripwire turns a stale `-DSRT_CP_MIN_CHANNELS=…` or `-DSRT_WERROR=ON` into a loud failure instead of a silent no-op. An unknown `-D` otherwise only warns and drops a gate (R2-CI-6) |
-| D8 | **C ABI prefix `tap_sr_<engine>_*`, one shared library per engine** (`tap_sr_async_capi`, `tap_sr_ratio_capi`), and one bridge module per engine | No shipped artifact links two engines. The version function follows the rule as well: `tap_sr_async_version()` and `tap_sr_ratio_version()`, which return the same family value (D13) |
-| D9 | **CMake options `TAP_SR_*`** after step 3.4: `BUILD_TESTS`, `BUILD_EXAMPLES`, `BUILD_CAPI` (builds both engine libraries), `BUILD_ICOUNT_BENCH`, `BUILD_BENCHMARKS` and `BUILD_COMPARE_BENCH` (async-only), plus per-engine `TAP_SR_<ENGINE>_WERROR`. **Every configure builds both engines. CI picks an engine only when running tests**, through ctest names and labels (step P.2) | Per-engine WERROR keeps ratio's MSVC `/WX` alongside async's untriaged `/W4`. The warning flags sit on separate INTERFACE targets, and the dry run showed they coexist. There are no per-engine enables, which could silently drop the cross-validation (DEC-12). Selecting tests at ctest time settles the D9 versus per-engine-job conflict (R2-CI-3, R2-COH-11) |
+| D8 | **C ABI prefix `tap_sr_<engine>_*`, one shared library per engine** (`tap_sr_async_capi`, `tap_sr_bridge_capi`), and one Python binding module per engine | No shipped artifact links two engines. The version function follows the rule as well: `tap_sr_async_version()` and `tap_sr_bridge_version()`, which return the same family value (D13) |
+| D9 | **CMake options `TAP_SR_*`** after step 3.4: `BUILD_TESTS`, `BUILD_EXAMPLES`, `BUILD_CAPI` (builds both engine libraries), `BUILD_ICOUNT_BENCH`, `BUILD_BENCHMARKS` and `BUILD_COMPARE_BENCH` (async-only), plus per-engine `TAP_SR_<ENGINE>_WERROR`. **Every configure builds both engines. CI picks an engine only when running tests**, through ctest names and labels (step P.2) | Per-engine WERROR keeps bridge's MSVC `/WX` alongside async's untriaged `/W4`. The warning flags sit on separate INTERFACE targets, and the dry run showed they coexist. There are no per-engine enables, which could silently drop the cross-validation (DEC-12). Selecting tests at ctest time settles the D9 versus per-engine-job conflict (R2-CI-3, R2-COH-11) |
 | D10 | **DspTap stays separate**, pinned once at `submodules/dsptap` | It has consumers outside the family: TapTools, and MuTap through the `LogMel`/`Decimator` C ABI |
-| D11 | **Engine directory vs. DspTap:** a capability gets an engine directory when it has its own charter, campaign and ratchet. Building blocks go into DspTap. **Engine-owned datapaths stay with their engine.** `fractional_resampler`, the polyphase bank and the blend stratum belong to `async` | Consistent with RatioTap PLAN.md Appendix A. It also keeps `ratio`'s cross-validation oracle out of `ratio`'s reach |
+| D11 | **Engine directory vs. DspTap:** a capability gets an engine directory when it has its own charter, campaign and ratchet. Building blocks go into DspTap. **Engine-owned datapaths stay with their engine.** `fractional_resampler`, the polyphase bank and the blend stratum belong to `async` | Consistent with RatioTap PLAN.md Appendix A. It also keeps `bridge`'s cross-validation oracle out of `bridge`'s reach |
 | D12 | **No routing by rate, including through composition.** `chain<>` is a caller-named, compile-time chain of **synchronous** stages. There is no `(in_hz, out_hz)` lookup, `async` is never chained, and the coverage matrix documents chains without dispatching them | Keeps HANDOFF preamble item 4 |
-| D13 | **One family version, 0.4.0**, with tags `vX.Y.Z` and bit-packed encoding `(M<<16)\|(m<<8)\|p`. **Mechanics (step 3):** root `project(SampleRateTap VERSION 0.4.0)`; engine subprojects renamed `tap_sr_async` / `tap_sr_ratio` with no VERSION; macros `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}` defined **token-identically** in each engine's umbrella header, checked by a static_assert test (no shared header, so 4.2 check 1 holds); each C ABI library exports its own `tap_sr_<engine>_version()`; a new C ABI test `CApi.VersionIsBitPacked` pins the encoding, **which nothing pins today** (`test_skeleton.cpp` checks only MAJOR = 0) | User decision. 0.4.0 is above both current versions. The encoding is RatioTap's (`ratio_capi.cpp:97`) |
+| D13 | **One family version, 0.4.0**, with tags `vX.Y.Z` and bit-packed encoding `(M<<16)\|(m<<8)\|p`. **Mechanics (step 3):** root `project(SampleRateTap VERSION 0.4.0)`; engine subprojects renamed `tap_sr_async` / `tap_sr_bridge` with no VERSION; macros `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}` defined **token-identically** in each engine's umbrella header, checked by a static_assert test (no shared header, so 4.2 check 1 holds); each C ABI library exports its own `tap_sr_<engine>_version()`; a new C ABI test `CApi.VersionIsBitPacked` pins the encoding, **which nothing pins today** (`test_skeleton.cpp` checks only MAJOR = 0) | User decision. 0.4.0 is above both current versions. The encoding is RatioTap's (`ratio_capi.cpp:97`) |
 | D14 | **One copyright line family-wide:** `Copyright (c) 2026 Timothy Place and the SampleRateTap contributors` in the root `LICENSE`, and the same holder in a **banner on every C/C++/Python source file** | User decision, **reconfirmed**: the user holds SampleRateTap's copyright. SampleRateTap's notice today names only "SampleRateTap contributors"; RatioTap's names the user. So this **adds the author's name** to SampleRateTap's notice, which is accurate on the user's word, and restates RatioTap's. There are 35 banner lines today; about 25 of SampleRateTap's C/C++ files have none. Banners are added everywhere in step 3.8. `STYLE.md`'s banner template ("Copyright 2025-2026 Timothy Place.") is reconciled through taphouse (step 5) |
-| D15 | **`async` renames its converter family to match `ratio`'s `basic_converter` family:** `basic_async_sample_rate_converter<S>` → `basic_converter<S>`, `async_sample_rate_converter` → `converter`, `…_q15`/`…_q31` → `converter_q15`/`converter_q31`, exception prefixes `"async_sample_rate_converter: "` → `"tap::sr::async::converter: "`, and `asrc.h` → `converter.h` | User decision. v2.1's rationale cited a `tap::sr::ratio::converter` that does not exist. The real parallel is ratio's `basic_converter<S, D>` with its `converter_to_48k` family. Scale: about 80 hits in 22 files, plus the book's naming-decision prose (R2-COH-19) |
-| D16 | **Tests carry an engine prefix:** `gtest_discover_tests(… TEST_PREFIX "async." / "ratio.")`, plus a `LABELS` value of `async` / `ratio` on every test, including the bare-metal `*_tests_emulated` entries. Lands in step P.2, so the snapshot already has it | CTest applies a duplicate name's properties to both tests. `FixedPoint.FullScaleSineDoesNotWrapQ15` exists in both engines, so labels alias and `ctest -L ratio` selects async's copy (reproduced, R2-GATE-4). Unique names fix G1 and engine selection |
+| D15 | **`async` renames its converter family to match `bridge`'s `basic_converter` family:** `basic_async_sample_rate_converter<S>` → `basic_converter<S>`, `async_sample_rate_converter` → `converter`, `…_q15`/`…_q31` → `converter_q15`/`converter_q31`, exception prefixes `"async_sample_rate_converter: "` → `"tap::sr::async::converter: "`, and `asrc.h` → `converter.h` | User decision. v2.1's rationale cited a `tap::sr::ratio::converter` that does not exist. The real parallel is RatioTap's (now `bridge`'s) `basic_converter<S, D>` with its `converter_to_48k` family. Scale: about 80 hits in 22 files, plus the book's naming-decision prose (R2-COH-19) |
+| D16 | **Tests carry an engine prefix:** `gtest_discover_tests(… TEST_PREFIX "async." / "bridge.")`, plus a `LABELS` value of `async` / `bridge` on every test, including the bare-metal `*_tests_emulated` entries. Lands in step P.2, so the snapshot already has it, **with RatioTap's pre-rename spelling `ratio.` / `ratio`**; step 3.4 renames it to `bridge.` / `bridge`, and G1/G2 compare through `rename.py`'s name map | CTest applies a duplicate name's properties to both tests. `FixedPoint.FullScaleSineDoesNotWrapQ15` exists in both engines, so labels alias and `ctest -L ratio` selects async's copy (reproduced, R2-GATE-4). Unique names fix G1 and engine selection |
 
 ---
 
@@ -56,9 +57,9 @@ How to read it:
 | Engine | Namespace | Origin | Charter |
 |---|---|---|---|
 | `async` | `tap::sr::async` | SampleRateTap v0.1.0 | Asynchronous, near-unity (±`max_deviation_ppm`, default 1000 ppm): absorbs the clock |
-| `ratio` | `tap::sr::ratio` | RatioTap v0.3.0 | Synchronous 160/147 pair, 44.1 ↔ 48 kHz: converts the number. **After the 2.2 follow-up:** 44.1·2^k ↔ 48·2^k, k ≤ 2 |
-| `integer` | `tap::sr::integer` | new, separate plan | Synchronous rational L/M with L, M ∈ {2^a·3^b}. Nyquist (L-th band) stages. Does not absorb DspTap's `decimate.h` |
-| `pdm` | `tap::sr::pdm` | new, when a consumer asks | 1-bit sigma-delta → PCM: CIC → compensation FIR → `integer` stages |
+| `bridge` | `tap::sr::bridge` | RatioTap v0.3.0 | Synchronous 160/147 pair, 44.1 ↔ 48 kHz: converts the number. **After the 2.2 follow-up:** 44.1·2^k ↔ 48·2^k, k ≤ 2 |
+| `rational` | `tap::sr::rational` | new, separate plan | Synchronous rational L/M with L, M ∈ {2^a·3^b}. Nyquist (L-th band) stages. Does not absorb DspTap's `decimate.h` |
+| `pdm` | `tap::sr::pdm` | new, when a consumer asks | 1-bit sigma-delta → PCM: CIC → compensation FIR → `rational` stages |
 | `varispeed` | `tap::sr::varispeed` | new, when a consumer asks | Time-varying ratio (Smith, CCRMA bandlimited interpolation) |
 
 Not engines:
@@ -89,7 +90,7 @@ matrix test. For **every rate-changing stage** whose lower rate is `r`:
 
 Checks against the rows below:
 
-- **176.4 → 48** (`integer` ↓4 → `ratio` ↑): `ratio`'s stopband edge,
+- **176.4 → 48** (`rational` ↓4 → `bridge` ↑): `bridge`'s stopband edge,
   24 kHz, is ≤ 44.1 − `f_pass` for `f_pass` ≤ 20.1 kHz. The ↓4 stage needs a
   stopband ≤ 24.1 kHz at 20 kHz passband.
 - **16 → 44.1** through ↑3 (lower rate 16): needs stopband ≤ 16 − `f_pass`
@@ -101,28 +102,28 @@ Checks against the rows below:
 
 **Excluded, with reasons:**
 
-- **352.8 kHz (DXD):** `ratio`'s k stops at 2 and no consumer has asked.
+- **352.8 kHz (DXD):** `bridge`'s k stops at 2 and no consumer has asked.
 - **37.8 and 50.4 kHz:** ratios of 7.
 - **1000/1001 pull-down rates:** these are synchronous ratios that happen to
   sit inside `async`'s ±1000 ppm. They must never be served by `async`, since
   that would be routing by rate.
 
-The **full 14 × 14 matrix is generated** in `integer`'s plan. Illustrative
+The **full 14 × 14 matrix is generated** in `rational`'s plan. Illustrative
 rows:
 
 | From → To | Chain |
 |---|---|
-| 48 ↔ 44.1 | `ratio` |
-| 96 ↔ 88.2, 192 ↔ 176.4 | `ratio` at k = 1, 2 (after 2.2) |
-| 96 → 44.1 | `integer` ↓2 → `ratio` |
-| 176.4 → 48 | `integer` ↓4 → `ratio` |
-| 48 → 88.2 | `integer` ↑2 → `ratio` k = 1 |
-| 44.1 → 16 | `ratio` → `integer` ↓3 |
-| 48 → 32 | `integer` 2/3 (one rational stage) |
+| 48 ↔ 44.1 | `bridge` |
+| 96 ↔ 88.2, 192 ↔ 176.4 | `bridge` at k = 1, 2 (after 2.2) |
+| 96 → 44.1 | `rational` ↓2 → `bridge` |
+| 176.4 → 48 | `rational` ↓4 → `bridge` |
+| 48 → 88.2 | `rational` ↑2 → `bridge` k = 1 |
+| 44.1 → 16 | `bridge` → `rational` ↓3 |
+| 48 → 32 | `rational` 2/3 (one stage) |
 
-### 2.2 `ratio` at 2× and 4× rates (a follow-up after the migration)
+### 2.2 `bridge` at 2× and 4× rates (a follow-up after the migration)
 
-**What the Hz values reach.** `ratio`'s profile Hz values feed:
+**What the Hz values reach.** `bridge`'s profile Hz values feed:
 
 - the normalized cutoff (`design.h:138`);
 - the validation `p.passband_hz >= traits::k_stopband_edge_hz`
@@ -147,8 +148,8 @@ and `kaiser_beta` depends only on dB (R2-COH-9).
 - 88.2 → 96 (up) places images at ≥ 44.1 kHz.
 - 96 → 88.2 (down) folds aliases above 40.2 kHz.
 
-`ratio/PLAN.md` keeps "no other ratios" until then. The follow-up is
-sequenced before `integer`.
+`bridge/PLAN.md` keeps "no other ratios" until then. The follow-up is
+sequenced before `rational`.
 
 ---
 
@@ -179,7 +180,7 @@ shallow (SampleRateTap) or have a stale local `main`.
 |---|---|
 | `include/srt/{asrc,pi_servo,polyphase_filter,sample_traits,spsc_ring,srt}.h` (1 525 lines) | `async/include/tap/sr/async/…`, with `asrc.h` → `converter.h` (D15) and `srt.h` → `async.h` (umbrella) |
 | `include/srt/detail/kaiser.h` (a 26-line re-export into `tap::samplerate::detail`) | **Deleted in step 3.1.** `polyphase_filter.h:152,153,157` requalify as `tap::dsp::`. `tests/test_kaiser.cpp` (9 tests) repoints to `tap::dsp` with its test names unchanged. Path citations in the book, the bibliography, `book_figures.py:7` and `asrc_rbj_analysis.ipynb` are rewritten |
-| `include/tap/ratio/{converter,design,phase_table,ratio,schedule}.h` (820 lines) | `ratio/include/tap/sr/ratio/…` |
+| `include/tap/ratio/{converter,design,phase_table,ratio,schedule}.h` (820 lines) | `bridge/include/tap/sr/bridge/…` |
 
 ### 3.2 Pins
 
@@ -206,7 +207,7 @@ SampleRateTap vs RatioTap:
 | `cmake/arm-cortex-m33-mps2.cmake`, `…-m55-mps3.cmake` | **functional (one variable)** | `set(SRT_BARE_METAL ON)` vs `set(TAP_RATIO_BARE_METAL ON)`. `hexagon-linux-musl.cmake` sets **no** such variable (corrected, R2-RUN-17) |
 | `tools/qemu_insn_plugin/insn_count.c` | functional (host-side marker) | `SRT_INSN_COUNT` vs `RATIO_INSN_COUNT`. Never affects the guest count |
 | `scripts/icount.py` | functional (prefix, marker) | |
-| `tests/bare_metal_main.cpp` | per-engine, never deduplicated | Filters and floors. Ratio's M33 selection is **59** tests against a floor of 25 |
+| `tests/bare_metal_main.cpp` | per-engine, never deduplicated | Filters and floors. RatioTap's M33 selection is **59** tests against a floor of 25 |
 | `.github/workflows/style.yml` | functional | RatioTap's body wins |
 | `scripts/fetch_hexagon_toolchain.sh` (RatioTap only) | functional | RatioTap's copy wins, and every Hexagon cache writer uses it, **including `compare.yml`** |
 
@@ -245,7 +246,7 @@ There are 84 `{{#include}}` matches:
 
 ### 3.5 CI (measured)
 
-| Job | async (SampleRateTap) | ratio (RatioTap) |
+| Job | async (SampleRateTap) | bridge (RatioTap) |
 |---|---|---|
 | Host matrix | GCC, Clang, AppleClang, MSVC (MSVC `werror: OFF`) | GCC, AppleClang, MSVC with `WERROR=ON` |
 | Sanitizers | ASan+UBSan, TSan | ASan+UBSan only, WERROR ON |
@@ -266,11 +267,11 @@ Timings are from runs 36253867157 and 36256431538.
 | Engine | Functions | Opaque type | Library | Version encoding |
 |---|---|---|---|---|
 | async | 8: `srt_{version,create,destroy,push,pull,status,designed_latency_seconds,reset_from_consumer}` | `SrtHandle` | `libsrt_capi.so` | decimal `srt_version()` |
-| ratio | 11 | `ratio_converter` | `libratio_capi.so` | bit-packed `ratio_version()`. Pinned **by nothing** except the ctypes bridge |
+| bridge (RatioTap) | 11 | `ratio_converter` | `libratio_capi.so` | bit-packed `ratio_version()`. Pinned **by nothing** except the ctypes binding |
 
 The r8brain shim exports `srt_r8b_oneshot` and `srt_r8b_latency_frames`.
 
-Bridges build **only when the library is missing**, so they can measure a
+Bindings build **only when the library is missing**, so they can measure a
 stale library. They also print CMake logs into notebook outputs.
 
 ### 3.7 Outside references
@@ -297,7 +298,7 @@ stale library. They also print CMake logs into notebook outputs.
 ```
 SampleRateTap/
 ├── CMakeLists.txt          root: project(SampleRateTap VERSION 0.4.0 from step 3), enable_testing(),
-│                           option() defaults, dsptap once, add_subdirectory(async|ratio)
+│                           option() defaults, dsptap once, add_subdirectory(async|bridge)
 ├── PLAN.md  CLAUDE.md  README.md   family files (step 4; PLAN.md is this document, moved)
 ├── LICENSE                 D14 line
 ├── requirements.lock       notebook environment (step P.3)
@@ -307,16 +308,16 @@ SampleRateTap/
 ├── cmake/  platform/  tools/qemu_insn_plugin/
 ├── scripts/                icount.py, tidy.sh, fetch_hexagon_toolchain.sh,
 │                           update_icount_docs.py, update_perf_docs.py, book_figures*
-├── book/                   (ratio chapters are follow-up work)
+├── book/                   (bridge chapters are follow-up work)
 ├── docs/                   Doxyfile (both engines); migration/ (removed at step 4)
 ├── async/
 │   ├── CMakeLists.txt  README.md (+ icount table)  PLAN.md
 │   ├── include/tap/sr/async/   tests/   bench/ (icount, compare)   examples/
 │   ├── capi/   notebooks/   docs/ (PERFORMANCE, COMPARISON, HARDWARE_TESTING)
 │   └── tools/compare_shim/   cmake/r8brain.cmake
-└── ratio/
+└── bridge/
     ├── CMakeLists.txt  README.md (+ icount table)  PLAN.md  HANDOFF.md  CLAUDE.md
-    ├── include/tap/sr/ratio/   tests/ (+reference/)   bench/   examples/
+    ├── include/tap/sr/bridge/   tests/ (+reference/)   bench/   examples/
     └── capi/   notebooks/   tools/reference/   docs/HISTORY.md
 ```
 
@@ -330,23 +331,23 @@ SampleRateTap/
 | SRT `docs/{PERFORMANCE,COMPARISON,HARDWARE_TESTING}.md` | `async/docs/` | 1a |
 | SRT `docs/Doxyfile`, `docs/MONOREPO_PLAN.md`, `docs/migration/` | stay in root `docs/` (the plan moves to root `PLAN.md` at step 4) | —, 4 |
 | SRT `book/`, `scripts/`, `cmake/{arm,hexagon}-*`, `platform/`, `tools/qemu_insn_plugin/`, dotfiles, `LICENSE`, `STYLE.md`, `.github/` | stay at root | — |
-| RatioTap `main` | `ratio/…` through filter-repo | 1b |
-| `ratio/.gitmodules`, `ratio/submodules/*` | rewritten into root `.gitmodules` throughout history; gitlinks removed at the merge | 1b |
-| `ratio/{.clang-format,.clang-tidy,STYLE.md,.pre-commit-config.yaml,.claude,scripts/tidy.sh,.github/pull_request_template.md}` | deleted (byte-identical to root) | 1b |
-| `ratio/.github/workflows/{ci,style}.yml` | ported into root workflows, then deleted | 1c |
-| `ratio/scripts/fetch_hexagon_toolchain.sh` | root `scripts/` | 1c |
-| `ratio/.gitignore` | deleted (root `build*/` already covers `build_capi/`) | 1c |
-| `ratio/LICENSE` | deleted in the commit that writes D14's line into root `LICENSE` | 1c |
-| `ratio/requirements.lock`, `ratio/notebooks/requirements.txt` | deleted (identical root lockfile from P.3) | 1c |
-| `ratio/cmake/`, `ratio/platform/`, `ratio/tools/qemu_insn_plugin/`, `ratio/scripts/icount.py` | deleted (root copies) | 2 |
-| `ratio/tools/capi/` | `ratio/capi/` | 3.1 |
-| `ratio/CLAUDE.md` | build commands fixed at 1c; reduced to the charter at 4 | 1c, 4 |
+| RatioTap `main` | `bridge/…` through filter-repo | 1b |
+| `bridge/.gitmodules`, `bridge/submodules/*` | rewritten into root `.gitmodules` throughout history; gitlinks removed at the merge | 1b |
+| `bridge/{.clang-format,.clang-tidy,STYLE.md,.pre-commit-config.yaml,.claude,scripts/tidy.sh,.github/pull_request_template.md}` | deleted (byte-identical to root) | 1b |
+| `bridge/.github/workflows/{ci,style}.yml` | ported into root workflows, then deleted | 1c |
+| `bridge/scripts/fetch_hexagon_toolchain.sh` | root `scripts/` | 1c |
+| `bridge/.gitignore` | deleted (root `build*/` already covers `build_capi/`) | 1c |
+| `bridge/LICENSE` | deleted in the commit that writes D14's line into root `LICENSE` | 1c |
+| `bridge/requirements.lock`, `bridge/notebooks/requirements.txt` | deleted (identical root lockfile from P.3) | 1c |
+| `bridge/cmake/`, `bridge/platform/`, `bridge/tools/qemu_insn_plugin/`, `bridge/scripts/icount.py` | deleted (root copies) | 2 |
+| `bridge/tools/capi/` | `bridge/capi/` | 3.1 |
+| `bridge/CLAUDE.md` | build commands fixed at 1c; reduced to the charter at 4 | 1c, 4 |
 | `docs/migration/` | created at 0; deleted at 4 (`runs.md` optionally kept) | 0, 4 |
 
 ### 4.2 Dependency rule and its enforcement (scheduled: step 3.4)
 
-- `async` and `ratio` each depend on `tap::dsp` only.
-- An engine may depend on a sibling only in `tests/` and `examples/`: ratio's
+- `async` and `bridge` each depend on `tap::dsp` only.
+- An engine may depend on a sibling only in `tests/` and `examples/`: bridge's
   cross-validation, and `bluetooth_bridge`.
 - `capi/` is per-engine.
 
@@ -386,17 +387,17 @@ Each run records in `docs/migration/runs.md`: the run IDs,
 
 | ID | Class | Gate | Catches |
 |---|---|---|---|
-| G1 | snapshot | **Test multiset per (job, engine).** `ctest --show-only=json-v1`; names are unique through D16's prefixes. The collector asserts that the list is non-empty itself, because `--no-tests=error` is ignored under `-N` and `--show-only`. New rows need an entry in `docs/migration/allow.txt`. Ratio newly runs under Linux Clang, where it passes clang `-Werror` 78/78; TSan runs `-L async` only | Dropped tests; label aliasing |
-| G2 | snapshot | **On-target test multiset.** `[ RUN ]` lines from each QEMU leg's `Testing/Temporary/LastTest.log`, which every QEMU job uploads. `--output-on-failure` prints nothing on success, so the CI log alone is not enough. Keyed by (target, engine) | Losses hidden by the floors (up to 34 for ratio on M33); Hexagon exclusion drift |
-| G3 | A/B | **Exact icount.** `icount.py --compare-json`: the gated SHA's measured counts equal step 0's counts **measured in the same job**, exactly. The measured workload **set** equals the baseline key set. Committed `baselines.json` files must be **byte-unchanged**. Everyday CI keeps ±3 % against the committed files, since unpinned apt toolchains drift (R2-CI-10) | Codegen and harness changes. Verified deterministic: ratio's M33 counts match the baselines to the instruction, and the namespace rename leaves all 10 unchanged |
+| G1 | snapshot | **Test multiset per (job, engine).** `ctest --show-only=json-v1`; names are unique through D16's prefixes. The collector asserts that the list is non-empty itself, because `--no-tests=error` is ignored under `-N` and `--show-only`. New rows need an entry in `docs/migration/allow.txt`. `bridge` newly runs under Linux Clang, where it passes clang `-Werror` 78/78; TSan runs `-L async` only | Dropped tests; label aliasing |
+| G2 | snapshot | **On-target test multiset.** `[ RUN ]` lines from each QEMU leg's `Testing/Temporary/LastTest.log`, which every QEMU job uploads. `--output-on-failure` prints nothing on success, so the CI log alone is not enough. Keyed by (target, engine) | Losses hidden by the floors (up to 34 for bridge on M33); Hexagon exclusion drift |
+| G3 | A/B | **Exact icount.** `icount.py --compare-json`: the gated SHA's measured counts equal step 0's counts **measured in the same job**, exactly. The measured workload **set** equals the baseline key set. Committed `baselines.json` files must be **byte-unchanged**. Everyday CI keeps ±3 % against the committed files, since unpinned apt toolchains drift (R2-CI-10) | Codegen and harness changes. Verified deterministic: RatioTap's M33 counts match the baselines to the instruction, and the namespace rename leaves all 10 unchanged |
 | G4 | A/B | **Codegen identity of icount and C ABI binaries only.** Split the disassembly at `STT_FUNC` bounds and skip non-function bytes. Key functions by demangled name after the rename map, and compare them as a sorted multiset. Strip addresses and RIP displacements. Symbolize literal-pool words **through relocations** (a gate-only link with `-Wl,--emit-relocs`, or per-TU `objdump -dr`), and resolve string-literal pointers to their text after the name and path maps. Normalizer prototype: `audit2-gates/norm3.py`. **Test binaries are excluded:** a pure namespace rename changes their codegen (stack-slot swaps in `check_cross_validation`), and gtest embeds `__FILE__` | Real codegen changes in shipped code |
 | G5 | A/B | **Output identity.** P.2's per-engine tests print `[ measured ] hash <workload> <fnv64>` for every direction × format × profile. The gate compares these lines between A and B **per host, in one job**, and compares the QEMU `checksum=` lines, which `icount.py` now prints. **Hashes are never pinned as constants:** async's float `interpolate()` hashes differently when FMA is available, so a pinned hash would fail on arm64 and macOS (R2-GATE-3) | Coefficient, table and datapath changes that leave icount unchanged |
 | G6 | snapshot | **Cross-validation lines**, including the tolerance arguments. P.2 makes the test print its limit | A loosened tolerance. Also covered by G14 |
 | G7 | A/B | **Compile and link flags.** Every gated configure sets `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`. Each entry is keyed by source path under the 4.1 map and tokenized with shlex. `-o/-c/-MD/-MT/-MF` and their arguments are dropped. Paths become `<SRC>`/`<BLD>`, then the 4.1 path map and the macro map apply; FetchContent's `_deps` relocation is mapped away. The **ordered** token lists are compared. The same normalization applies to each target's `link.txt`, which holds the startup file, `-T`, specs and `--gc-sections`. `$CXX --version` is recorded. Linux and cross builds only | `-std`/`-ffp-contract` flips, leaked `-D`s, link changes |
 | G8 | snapshot | **Book and API docs.** `mdbook build` clean, the image check, and `doxygen docs/Doxyfile` producing non-empty output, all in the `ci.yml` book job. `book-pages` itself is never dispatched from the branch, because it deploys | Broken anchors; an empty API reference |
-| G9 | snapshot | **Retired identifiers.** Zero hits for `srt/`, `tap::samplerate`, `tap/ratio`, `tap::ratio`, `SRT_`, `TAP_RATIO_`, `srt_`, `ratio_capi`, `async_sample_rate_converter`, `basic_async_sample_rate_converter`, and retired `-D` option names in `.github/`. Exceptions are an explicit **(file, pattern) allowlist**: the guest icount markers `SRT_ICOUNT_DONE` and `RATIO_ICOUNT_DONE` (kept on purpose), each D7 tripwire line, `STYLE.md` until step 5, `ratio/HANDOFF.md` and `ratio/docs/HISTORY.md` (history). `ratio/PLAN.md` is **rewritten**, not allowlisted. Applies from step 3.7 | Stale prose, code and CI flags |
+| G9 | snapshot | **Retired identifiers.** Zero hits for `srt/`, `tap::samplerate`, `tap/ratio`, `tap::ratio`, `SRT_`, `TAP_RATIO_`, `srt_`, `ratio_capi`, `async_sample_rate_converter`, `basic_async_sample_rate_converter`, and retired `-D` option names in `.github/`. Exceptions are an explicit **(file, pattern) allowlist**: the guest icount markers `SRT_ICOUNT_DONE` and `RATIO_ICOUNT_DONE` (kept on purpose), each D7 tripwire line, `STYLE.md` until step 5, `bridge/HANDOFF.md` and `bridge/docs/HISTORY.md` (history). `bridge/PLAN.md` is **rewritten**, not allowlisted. The retired test prefix and label (`"ratio."`, `LABELS ratio`, `-L ratio`) are checked in CMake files and workflows. Applies from step 3.7 | Stale prose, code and CI flags |
 | G10 | snapshot | **C ABI symbols.** `nm -D --defined-only` on Linux equals the snapshot under the name map, plus the D13 version functions | ABI drift |
-| G11 | A/B | **Notebooks.** Pinned environment (`pip install --require-hashes`, Python version from `setup-python`). Bridges always rebuild **quietly**, printing the CMake log only on failure. Every figure cell also prints an FNV hash or `%.6g` summary of its plotted arrays. A and B are executed in one CI job. The normalizer applies the name and version map and drops timing lines and PNGs | Changed numbers and curves; stale libraries |
+| G11 | A/B | **Notebooks.** Pinned environment (`pip install --require-hashes`, Python version from `setup-python`). Bindings always rebuild **quietly**, printing the CMake log only on failure. Every figure cell also prints an FNV hash or `%.6g` summary of its plotted arrays. A and B are executed in one CI job. The normalizer applies the name and version map and drops timing lines and PNGs | Changed numbers and curves; stale libraries |
 | G12 | snapshot | **History.** `--follow` and `blame` on a fixed file list. Blame of a moved file is not attributed wholesale to a migration commit. The new root `CMakeLists.txt` is checked with `git log --`, since its history starts at 1c | Lost blame |
 | G13 | snapshot | **Every named workflow ran on each gated SHA.** `ci.yml`, `style.yml` and `migration-gates.yml` run automatically. `ci-arm64` and `compare` are dispatched on the SHA. `book-pages` is replaced by G8. Gated SHAs are 1c, 2 and 3.1–3.8 (1a and 1b are not buildable on their own) | Skipped or cancelled evidence |
 | G14 | snapshot | **Rename-only residual.** Apply the committed mechanical rename script (`docs/migration/rename.py`: paths, namespaces, macros, targets, banners) to the step-0 trees, then `git diff --no-index` against HEAD. Every residual hunk must appear in a reviewed allowlist (`docs/migration/residual/<step>.txt`) | Anything the other gates miss: **a loosened `EXPECT_NEAR`, MSVC-only paths, docs, CI.** Round 2 showed that a tolerance change passes G1–G13 (R2-GATE-8) |
@@ -494,7 +495,7 @@ must produce the data the gates read.
 
 - Commit an identical `requirements.lock` at both repository roots: numpy,
   scipy, matplotlib, jupyter, samplerate, soxr, hash-pinned.
-- Bridges always rebuild, quietly.
+- Bindings always rebuild, quietly.
 - Every figure cell gets an array-hash cell.
 - Re-execute all notebooks in that environment. Confirm that their text
   outputs equal the committed ones, apart from the added hash cells.
@@ -512,9 +513,13 @@ must produce the data the gates read.
 - Commit the snapshot-class baselines (G1, G2, G6, G8–G10, G12) under
   `docs/migration/`.
 - Commit `docs/migration/rename.py` (the G14 map) and its first residual
-  allowlist.
+  allowlist. The map also serves G1/G2 as the test-name map
+  (`ratio.` → `bridge.`, D16).
+- The G2 collector strips the test-number prefix that ctest's verbose log
+  puts on each output line (`1: [ RUN      ] …`) before it compares.
 - If `main` must move, it moves in SampleRateTap only, and step 1 is re-cut.
-  filter-repo is deterministic (tip `daceb8d` on two fresh clones).
+  filter-repo is deterministic (tip `daceb8d` on two fresh clones, with
+  the dry run's `ratio/` prefix).
 
 ### Step 1 — Import (1a, 1b and 1c are pushed together)
 
@@ -524,26 +529,29 @@ and 0 deletions**; the dry run moved 59 files.
 - Use `git mv` for exactly the 1a rows of 4.1.
 
 **1b — Import RatioTap.** One merge commit. Verified in the dry run, with
-the two corrections that round found:
+the two corrections that round found. The dry run used the prefix
+`ratio/`; v3.1's `bridge/` changes only the prefix string, so the
+rewritten tip differs from the dry run's `daceb8d` and is re-verified on
+two fresh clones at 1b:
 
 ```sh
 git clone https://github.com/tap/RatioTap rt && cd rt
 test "$(git rev-parse main)" = "$R0"
 git filter-repo --refs main \
-  --path-rename :ratio/ --path-rename ratio/.gitmodules:.gitmodules \
+  --path-rename :bridge/ --path-rename bridge/.gitmodules:.gitmodules \
   --blob-callback '
 if blob.data.startswith(b"[submodule \"submodules/"):
     blob.data = (blob.data
-        .replace(b"path = submodules/", b"path = ratio/submodules/")
-        .replace(b"[submodule \"submodules/", b"[submodule \"ratio/submodules/"))'
+        .replace(b"path = submodules/", b"path = bridge/submodules/")
+        .replace(b"[submodule \"submodules/", b"[submodule \"bridge/submodules/"))'
 cd ../SampleRateTap
 git fetch ../rt main:ratio-import
 git merge --allow-unrelated-histories --no-commit ratio-import
 git checkout --ours .gitmodules && git add .gitmodules     # the one add/add conflict
-git rm -r --cached ratio/submodules
-git rm -rf ratio/.clang-format ratio/.clang-tidy ratio/STYLE.md \
-  ratio/.pre-commit-config.yaml ratio/.claude ratio/scripts/tidy.sh \
-  ratio/.github/pull_request_template.md
+git rm -r --cached bridge/submodules
+git rm -rf bridge/.clang-format bridge/.clang-tidy bridge/STYLE.md \
+  bridge/.pre-commit-config.yaml bridge/.claude bridge/scripts/tidy.sh \
+  bridge/.github/pull_request_template.md
 git commit        # message records R0 and the rewritten tip
 git branch -D ratio-import                                  # never pushed
 ```
@@ -552,14 +560,14 @@ git branch -D ratio-import                                  # never pushed
   exactly as many entries as `main`.
 - `git submodule update --init --recursive` works on the merge commit and on
   the rewritten RatioTap commits. The dry run checked the root commit, M1,
-  M7c (which recurses into `ratio/submodules/sampleratetap/submodules/dsptap`)
+  M7c (which recurses into `bridge/submodules/sampleratetap/submodules/dsptap`)
   and the tip.
 - The rewritten reformat commit `c0894cf` becomes `4c3562c`. It is recorded
   for `.git-blame-ignore-revs`.
 
 **1c — Build glue and path fix-ups.** No change reaches codegen: G4 and G7
 prove it. **Gate 1:** G1, G2, G3, G4, G5, G6, G7, G8, G11, G12, G13 and
-G14; every notebook bridge and every standalone engine build configures and
+G14; every notebook binding and every standalone engine build configures and
 builds.
 
 - **Root `CMakeLists.txt`** (draft: `docs/migration/drafts/root-CMakeLists-1c.cmake`):
@@ -569,17 +577,17 @@ builds.
     the engines, **never FORCE**. CI's `-D…=OFF` must still win: every
     bare-metal job disables examples, because async's examples need Threads.
     Jobs that disable one engine's tests pass both engines' OFF flags.
-  - `add_subdirectory(submodules/dsptap)`, then `async` and `ratio`.
+  - `add_subdirectory(submodules/dsptap)`, then `async` and `bridge`.
   - Hoist the gtest settings (`INSTALL_GTEST OFF`, the Threads probe) to the
     root, so the result does not depend on the order of `add_subdirectory`.
 - **Engine `CMakeLists.txt`:**
   - Guard with
     `if(NOT TARGET tap::dsp) add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/dsptap ${CMAKE_CURRENT_BINARY_DIR}/submodules/dsptap) endif()`.
-    The dry run verified that this keeps `cmake -S async`, `cmake -S ratio`
-    and the notebook bridges working. The plain relative guard in v2 broke
+    The dry run verified that this keeps `cmake -S async`, `cmake -S bridge`
+    and the notebook bindings working. The plain relative guard in v2 broke
     all three (R2-RUN-3).
   - async: `add_subdirectory(tools/capi)` → `add_subdirectory(capi)`.
-  - ratio: `srt_headers` becomes
+  - bridge: `srt_headers` becomes
     `cmake_path(… NORMALIZE)` of `${CMAKE_CURRENT_SOURCE_DIR}/../async/include`,
     kept `SYSTEM`.
   - Engines **keep their `project()`** until step 3.4, so
@@ -596,27 +604,27 @@ builds.
   - Every job configures the root once and builds both engines.
   - Correctness jobs run **per (target, engine)** with
     `ctest -L '^<engine>$'`, each engine's own `-E` list and `-j`:
-    - Hexagon: async serial, ratio `-j 4`.
+    - Hexagon: async serial, bridge `-j 4`.
     - M33: async gets a 40-minute timeout.
-  - Host jobs: per-engine WERROR as in the draft (MSVC: async OFF, ratio ON).
+  - Host jobs: per-engine WERROR as in the draft (MSVC: async OFF, bridge ON).
   - Sanitizers: ASan for both engines; TSan with `-L async` only.
-  - Ratchet: `icount-async` and `icount-ratio` jobs until step 2, each with
+  - Ratchet: `icount-async` and `icount-bridge` jobs until step 2, each with
     its own baselines and README freshness check.
   - Add `migration-gates.yml` from the draft.
   - Replace root `style.yml` with RatioTap's body. It configures both
     engines with tests and icount ON, fails on an empty TU list, and is
     SHA-pinned.
   - Every Hexagon cache writer uses `fetch_hexagon_toolchain.sh`.
-  - Delete `ratio/.github/workflows/`.
+  - Delete `bridge/.github/workflows/`.
 - **Paths:**
   - The 52 book includes.
   - `book-pages.yml` path filters.
-  - Doxyfile: `INPUT = async/include ratio/include async/README.md` and
+  - Doxyfile: `INPUT = async/include bridge/include async/README.md` and
     `USE_MDFILE_AS_MAINPAGE = async/README.md` until step 4.
   - `bench-smoke` → `build/async/bench/srt_bench`.
   - `compare.yml` build paths.
   - `icount.py --baselines <engine>/bench/baselines.json`.
-  - `update_icount_docs.py --engine` (async and ratio tables; README
+  - `update_icount_docs.py --engine` (async and bridge tables; README
     freshness per engine).
   - `update_perf_docs.py` default → `async/README.md`.
   - `book_figures.py`: `ROOT/"async"/"include"`.
@@ -625,11 +633,11 @@ builds.
     - `asrc_comparison`: `TOOLS_DIR = REPO/"build"`.
     - `asrc_rbj_analysis`: `sys.path` → `"../../scripts"`.
   - README links, four in total: `async/README` `LICENSE`, and
-    `ratio/README` `LICENSE` ×2 and `STYLE.md` → `../`.
-  - `ratio/README`: build commands, and "eight workloads" → ten.
-  - `ratio/CLAUDE.md`: build commands.
+    `bridge/README` `LICENSE` ×2 and `STYLE.md` → `../`.
+  - `bridge/README`: build commands, and "eight workloads" → ten.
+  - `bridge/CLAUDE.md`: build commands.
 - **HISTORY.md:**
-  - `ratio/docs/HISTORY.md` maps old SHA → new SHA → RatioTap PR for
+  - `bridge/docs/HISTORY.md` maps old SHA → new SHA → RatioTap PR for
     `git rev-list R0` (29 commits, skipping the commit-map header).
   - PR numbers come from `GET /repos/tap/RatioTap/commits/<sha>/pulls`,
     queried once at cut time. The repository is public; the dry run built
@@ -639,17 +647,17 @@ builds.
   - Optionally rewrite bare `DspTap #38` in messages at 1b with
     `--message-callback`.
 - **LICENSE:** one commit writes D14's line into the root `LICENSE` and
-  deletes `ratio/LICENSE`, so the notice is never absent.
-- **Notebook environment:** delete `ratio/requirements.lock` and
-  `ratio/notebooks/requirements.txt`; they are identical to the root lock.
+  deletes `bridge/LICENSE`, so the notice is never absent.
+- **Notebook environment:** delete `bridge/requirements.lock` and
+  `bridge/notebooks/requirements.txt`; they are identical to the root lock.
 
 ### Step 2 — Shared infrastructure
 
 **Changes:**
 
-- Delete ratio's `cmake/`, `platform/`, `tools/qemu_insn_plugin/` and
+- Delete bridge's `cmake/`, `platform/`, `tools/qemu_insn_plugin/` and
   `scripts/icount.py`.
-- `icount.py --engine async|ratio` sets its glob, baselines path and marker
+- `icount.py --engine async|bridge` sets its glob, baselines path and marker
   regex. **Guest-printed markers stay byte-identical**
   (`SRT_ICOUNT_DONE` / `RATIO_ICOUNT_DONE`, allowlisted in G9). Only the
   host-side plugin marker becomes `TAP_SR_INSN_COUNT`.
@@ -676,12 +684,12 @@ There is no separate reflow commit, since the hook would absorb it anyway
 1. **Paths:**
    - `srt/…` → `tap/sr/async/…` (with `asrc.h` → `converter.h` and
      `srt.h` → `async.h`).
-   - `tap/ratio/…` → `tap/sr/ratio/…`.
-   - `ratio/tools/capi` → `ratio/capi`. Its standalone
-     `add_subdirectory(../..)` becomes `add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/.. ratio)`.
+   - `tap/ratio/…` → `tap/sr/bridge/…`.
+   - `bridge/tools/capi` → `bridge/capi`. Its standalone
+     `add_subdirectory(../..)` becomes `add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/.. bridge)`.
    - Delete `srt/detail/kaiser.h` per 3.1.
 2. **Namespaces and names:**
-   - `tap::samplerate` → `tap::sr::async`; `tap::ratio` → `tap::sr::ratio`.
+   - `tap::samplerate` → `tap::sr::async`; `tap::ratio` → `tap::sr::bridge`.
    - The D15 mapping.
    - Test namespace `srt_test` → `async_test`. `ratio_ref` is unchanged; it
      is not a retired name.
@@ -690,10 +698,10 @@ There is no separate reflow commit, since the hook would absorb it anyway
      both umbrella headers (D13).
    - `SRT_RESTRICT`, `SRT_Q15_SMLALD` and `SRT_CHANNEL_PARALLEL` → their
      `TAP_DSP_*` originals (they are pure aliases).
-   - `TAP_RATIO_MIRRORED_DOT_ATTR` → `TAP_SR_RATIO_MIRRORED_DOT_ATTR`.
+   - `TAP_RATIO_MIRRORED_DOT_ATTR` → `TAP_SR_BRIDGE_MIRRORED_DOT_ATTR`.
    - `SRT_CP_MIN_CHANNELS` → `TAP_SR_ASYNC_CP_MIN_CHANNELS`, with an
      `#error` tripwire.
-   - `SRT_SC_*`, `RATIO_SC_*`, `SRT_CMP_*` → `TAP_SR_{ASYNC,RATIO}_SC_*` /
+   - `SRT_SC_*`, `RATIO_SC_*`, `SRT_CMP_*` → `TAP_SR_{ASYNC,BRIDGE}_SC_*` /
      `…_CMP_*`.
    - `*_TESTS_COMPLETE` → `TAP_SR_TESTS_COMPLETE`.
    - `*_BARE_METAL` → `TAP_SR_BARE_METAL`, in the toolchain files and both
@@ -701,12 +709,12 @@ There is no separate reflow commit, since the hook would absorb it anyway
    - `SRT_PICO2_*` → `TAP_SR_PICO2_*`.
    - Guest icount markers are unchanged.
 4. **CMake, dependency enforcement and workflows:**
-   - Targets: `tap::sr::async`, `tap::sr::ratio`, umbrella `tap::sr`.
+   - Targets: `tap::sr::async`, `tap::sr::bridge`, umbrella `tap::sr`.
    - Internal targets renamed, including the ctest entries
      `srt_tests_emulated` / `tap_ratio_tests_emulated` →
-     `tap_sr_{async,ratio}_tests_emulated`. They are listed in the G1 name
+     `tap_sr_{async,bridge}_tests_emulated`. They are listed in the G1 name
      map.
-   - Engine `project()` → `tap_sr_async` / `tap_sr_ratio`, with no VERSION.
+   - Engine `project()` → `tap_sr_async` / `tap_sr_bridge`, with no VERSION.
    - Root `project(SampleRateTap VERSION 0.4.0)`.
    - Options → `TAP_SR_*` per D9, with the D7 `FATAL_ERROR` tripwire for
      every retired option.
@@ -714,12 +722,12 @@ There is no separate reflow commit, since the hook would absorb it anyway
      `book-pages`) updated in the same commit.
    - The four 4.2 enforcement checks land here with their own tests.
 5. **C ABI:**
-   - `srt_*` → `tap_sr_async_*` and `ratio_*` → `tap_sr_ratio_*`, including
+   - `srt_*` → `tap_sr_async_*` and `ratio_*` → `tap_sr_bridge_*`, including
      handle types, header names and library names.
    - The shim's exports → `tap_sr_async_r8b_*`.
    - The version functions per D13, and a new `CApi.VersionIsBitPacked`
      test, listed in the G1 name map.
-   - Bridges renamed per D8.
+   - Bindings renamed per D8.
 6. **Ratchet binaries:** prefix only, `tap_sr_<engine>_icount_*`. Workload
    names and baseline keys do not change.
 7. **Docs and prose:**
@@ -728,7 +736,7 @@ There is no separate reflow commit, since the hook would absorb it anyway
    - Non-book docs:
      - `async/docs/{PERFORMANCE,COMPARISON,HARDWARE_TESTING}.md`;
      - `examples/pico2_*/README.md`;
-     - `ratio/{README,PLAN,CLAUDE}.md`;
+     - `bridge/{README,PLAN,CLAUDE}.md`;
      - notebook markdown (`asrc_comparison` 42 hits, `asrc_demo` 30,
        `asrc_block_size_study` 24).
    - RatioTap URLs; the `git clone …/RatioTap` instructions.
@@ -736,7 +744,7 @@ There is no separate reflow commit, since the hook would absorb it anyway
 8. **Banners (D14):**
    - Rewrite the 35 existing banner lines.
    - **Add** banners to every C/C++/Python source file that has none.
-   - Update `ratio/tools/reference/make_reference_vectors.py`, and
+   - Update `bridge/tools/reference/make_reference_vectors.py`, and
      regenerate `tests/reference/reference_vectors.h`. That header's only
      residual must be its banner (G14).
 
@@ -752,13 +760,13 @@ G13 and G14, plus G9 from 3.7.
   rule (R4).
 - Write the family `README.md`.
 - Per-engine `PLAN.md` and `README.md` (each with its icount table).
-- `ratio/CLAUDE.md` reduced to the charter.
+- `bridge/CLAUDE.md` reduced to the charter.
 - Doxyfile main page → `README.md`.
 - Delete `docs/migration/`, keeping `runs.md` if wanted.
 - Mark the PR ready. **Merge with "Create a merge commit".**
 - **Post-merge checks:**
   - `git rev-list --count origin/main` ≥ count(S0) + count(R0) + N.
-  - `git log --follow ratio/include/tap/sr/ratio/converter.h` reaches
+  - `git log --follow bridge/include/tap/sr/bridge/converter.h` reaches
     RatioTap M3 (`06769f2` before rewriting).
 - **Follow-up commit:** append to `.git-blame-ignore-revs` the step-3
   commit SHAs and the rewritten RatioTap reformat commit `4c3562c`.
@@ -776,10 +784,10 @@ G13 and G14, plus G9 from 3.7.
 - Delete RatioTap's leftover branches (`…mqc190` and
   `claude/sample-rate-expansion-strategies-ezqzu6`).
 
-### Next — `integer` (separate plan)
+### Next — `rational` (separate plan)
 
 - The 2.2 follow-up comes first (`ratio_traits` k).
-- Then `integer`'s own reviewed plan: L-th-band design math and `chain<>`
+- Then `rational`'s own reviewed plan: L-th-band design math and `chain<>`
   (under D12) in DspTap, the engine, and the generated 14 × 14 matrix
   under 2.1's rule.
 
@@ -806,10 +814,10 @@ G13 and G14, plus G9 from 3.7.
 | R1 | Silently dropped tests or workloads | G1 and G2 multisets with unique names (D16); G3 workload-set equality; non-empty assertions |
 | R2 | Infrastructure or build glue changes codegen | G3, G4 and G7 as same-job A/B; G14 |
 | R3 | Docs rot | G8 from 1c; G9 from 3.7; G14 |
-| R4 | The cross-validation loses its independence | Independence comes from the scipy leg and from the engines' structural difference, never from repository separation. G6 now prints tolerances, and G14 sees any tolerance edit. **Permanent family rule** (CLAUDE.md): a PR that changes cross-validation tolerances leaves `ratio/tests/reference/` untouched, keeps the scipy leg green, and does not also change async's datapath. `ratio` never includes async's bank or blend (D11) |
-| R5 | Rewritten SHAs and PR numbers | `ratio/docs/HISTORY.md` built from the API (1c) |
+| R4 | The cross-validation loses its independence | Independence comes from the scipy leg and from the engines' structural difference, never from repository separation. G6 now prints tolerances, and G14 sees any tolerance edit. **Permanent family rule** (CLAUDE.md): a PR that changes cross-validation tolerances leaves `bridge/tests/reference/` untouched, keeps the scipy leg green, and does not also change async's datapath. `bridge` never includes async's bank or blend (D11) |
+| R5 | Rewritten SHAs and PR numbers | `bridge/docs/HISTORY.md` built from the API (1c) |
 | R6 | CI load | The repositories are public: no minutes cost. The Free concurrency caps (20 jobs, 5 macOS) mean queueing, not failure. About 20 `ci`+`style` jobs plus 4 gate jobs per push; at most 4 macOS jobs |
-| R7 | `git bisect` across the merge | `--first-parent` is required and documented. Imported commits remain buildable in `ratio/` thanks to the `.gitmodules` rewrite |
+| R7 | `git bisect` across the merge | `--first-parent` is required and documented. Imported commits remain buildable in `bridge/` thanks to the `.gitmodules` rewrite |
 | R8 | Charter erosion | 4.2 checks, D11, D12, per-engine PLAN.md files |
 | R9 | Squash-merge of the final PR | D3; step 4; the post-merge history check |
 | R10 | Toolchain drift blamed on a step | A/B gates in one job on a pinned image; image and package versions in `runs.md` |
@@ -821,18 +829,23 @@ None. The decisions are recorded where they apply.
 
 | Q | Resolution |
 |---|---|
-| Q1 | `HANDOFF.md` stays in `ratio/` (allowlisted as history) |
+| Q1 | `HANDOFF.md` stays in `bridge/` (allowlisted as history) |
 | Q2 | Rename to the `converter` family: D15 |
-| Q3 | `ratio` at 2^k rates: 2.2 (follow-up) |
+| Q3 | `bridge` at 2^k rates: 2.2 (follow-up) |
 | Q4 | One family version 0.4.0, bit-packed: D13 |
 | Q5 | Unified holder line; user reconfirmed ownership; banners everywhere: D14 |
 | Q6 | Per-engine READMEs plus a family README |
 | Q7 | Two-level namespace: D4 |
 | Q8 | Icount tables in each engine's README: 1c |
+| Q9 | Engine names `bridge` and `rational`: D5 (v3.1) |
 
 ---
 
 ## Appendix A — Round-1 audit disposition (v1 → v2)
+
+Both appendices are the audit record. Where a finding's wording still
+says `ratio` or `integer`, read `bridge` or `rational` (D5, v3.1); paths
+and resolutions use the current names.
 
 Citations in this table use **v2's** step numbering (v2 had a separate
 reflow commit, so its step 3 sub-numbers differ from v3's). Rows that round
@@ -858,9 +871,9 @@ completeness). Severity: B blocker, M major, m minor, n nit.
 | DEC-2 | M | Invariant forbids more pairs than listed | 2.1: generated full matrix |
 | DEC-3 | M | Nyquist criterion wrong | 2.1: passband rule |
 | DEC-4 | m | "Every standard rate" false (37.8, 50.4, pull-down) | 2.1 exclusions |
-| DEC-5 | n | Table rows; 2/3 needs a rational stage | 2.1 rows; `integer` charter L/M |
+| DEC-5 | n | Table rows; 2/3 needs a rational stage | 2.1 rows; `rational` charter L/M |
 | DEC-6 | M | `fractional_resampler` to DspTap contradicts settled M0 | D11 |
-| DEC-7 | M | Moving `decimate.h` breaks MuTap / D10 | 2; the `integer` plan (section 6, Next) |
+| DEC-7 | M | Moving `decimate.h` breaks MuTap / D10 | 2; the `rational` plan (section 6, Next) |
 | DEC-8 | M | `chain<>` risks a rate-routing factory | D12 |
 | DEC-9 | m | D1 supersession unrecorded; third harness copy | D1; 3.3 |
 | DEC-10 | n | D4 supersedes agreed rename; `std::` shadowing | D4, D5 |
@@ -961,7 +974,7 @@ below.
 |---|---|---|---|
 | RUN-1 | M | `checkout --ours` leaves `.gitmodules` unmerged | 1b: `git add .gitmodules` |
 | RUN-2 | M | `git rm -f` aborts on directory | 1b: explicit `git rm -rf` list |
-| RUN-3 | M | `NOT TARGET` guard breaks standalone builds and bridges | 1c: `../submodules/dsptap` with a binary dir |
+| RUN-3 | M | `NOT TARGET` guard breaks standalone builds and bindings | 1c: `../submodules/dsptap` with a binary dir |
 | RUN-4 | M | `add_subdirectory(tools/capi)` missed | 1c |
 | RUN-5 | M | "Force ON" ignores CI's `-D…=OFF` | 1c: `option()` defaults, never FORCE |
 | RUN-6 | M | Root `ctest` runs both engines under one `-E` | D9; 1c per-(target, engine) jobs with `-L` |
@@ -978,7 +991,7 @@ below.
 | RUN-17 | n | Hexagon toolchain sets no BARE_METAL | 3.3 |
 | RUN-18 | n | D14 wording; generator banner; unscheduled | D14; 3.8 |
 | RUN-19 | n | New root `CMakeLists.txt` history check | G12 |
-| RUN-20 | n | `ratio/.github/workflows` deletion timing | 4.1; 1c |
+| RUN-20 | n | `bridge/.github/workflows` deletion timing | 4.1; 1c |
 | GATE-1 (R2) | B | G4 red on a pure rename | G4 redefined (per-function, relocations, icount/C ABI only) |
 | GATE-2 (R2) | B | A/B exceeds M33/Hexagon timeouts | Section 5: A/B only for G3/G4/G5/G7/G11 in `migration-gates` |
 | GATE-3 (R2) | M | Pinned hashes fail with FMA | G5: per-host A/B, never pinned |
@@ -988,7 +1001,7 @@ below.
 | GATE-7 (R2) | M | G6 misses loosened tolerances | P.2 prints tolerances; G14 |
 | GATE-8 (R2) | M | Regression passing all gates | **G14** (rename-only residual) |
 | GATE-9 (R2) | M | G13 unmeetable (book-pages, dispatch-only, 1a/1b) | G13 names workflows and gated SHAs |
-| GATE-10 (R2) | M | G11 leaks volatile text; compares little | G11 redefined; P.3 quiet bridges and array hashes |
+| GATE-10 (R2) | M | G11 leaks volatile text; compares little | G11 redefined; P.3 quiet bindings and array hashes |
 | GATE-11 (R2) | M | `env -i` breaks qemu lookup | P.2: resolve absolute path first |
 | GATE-12 (R2) | M | Forced options break cross/icount jobs | 1c `option()` defaults |
 | GATE-13 (R2) | m | G9 vs kept markers | G9 (file, pattern) allowlist |
@@ -1017,7 +1030,7 @@ below.
 | COH-2 | M | Encoding pinned by nothing | D13 `CApi.VersionIsBitPacked`; 3.6 |
 | COH-3 | M | D13 mechanics unspecified | D13 mechanics; 3.3–3.5 |
 | COH-4 | M | G11 fails on rename commits | G11 name and version map |
-| COH-5 | M | G9 fails by construction | G9 allowlist; 3.7 widened; `ratio/PLAN.md` rewritten |
+| COH-5 | M | G9 fails by construction | G9 allowlist; 3.7 widened; `bridge/PLAN.md` rewritten |
 | COH-6 | M | Rename/reflow split vs pre-commit | Step 3: rename and reflow in one commit, ignore-revs |
 | COH-7 | M | Passband rule contradicts its example; no stopband rule | 2.1 rewritten (a)–(d); rows re-checked |
 | COH-8 | m | Rate list circular; 352.8 missing | 2.1: exactly 14 rates; 352.8 excluded with reason |

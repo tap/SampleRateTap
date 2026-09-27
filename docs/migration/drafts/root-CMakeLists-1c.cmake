@@ -9,8 +9,8 @@ enable_testing()
 # PROJECT_IS_TOP_LEVEL-dependent option() calls become no-ops, while -D wins.
 option(SRT_BUILD_TESTS          "async tests"    ON)
 option(SRT_BUILD_EXAMPLES       "async examples" ON)
-option(TAP_RATIO_BUILD_TESTS    "ratio tests"    ON)
-option(TAP_RATIO_BUILD_EXAMPLES "ratio examples" ON)
+option(TAP_RATIO_BUILD_TESTS    "bridge tests"    ON)
+option(TAP_RATIO_BUILD_EXAMPLES "bridge examples" ON)
 
 # Stale-option tripwire (extends D7 to CMake options, needed from step 3.5):
 # an unknown -D is only a "Manually-specified variables were not used"
@@ -27,9 +27,9 @@ option(TAP_RATIO_BUILD_EXAMPLES "ratio examples" ON)
 
 add_subdirectory(submodules/dsptap)
 add_subdirectory(async)
-add_subdirectory(ratio)
+add_subdirectory(bridge)
 
 # gtest is made available ONCE, by whichever engine's tests/ runs first
-# (async). ratio/tests' set(INSTALL_GTEST OFF ...) and its Threads probe are
+# (async). bridge/tests' set(INSTALL_GTEST OFF ...) and its Threads probe are
 # then no-ops: hoist both gtest settings here so the result does not depend
 # on add_subdirectory order (and so 4.2's install test does not install gtest).

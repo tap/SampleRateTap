@@ -39,5 +39,5 @@ jobs:
       #    binaries embed __FILE__ via gtest, and the moved paths shift .rodata),
       #    G5 hash tests, G6 lines.
       # 3. Diff; upload all artefacts; fail on any difference not in the
-      #    committed allowlist (docs/migration/allow.txt, e.g. new ratio rows
+      #    committed allowlist (docs/migration/allow.txt, e.g. new bridge rows
       #    in Linux Clang and new async-label rows nowhere).
