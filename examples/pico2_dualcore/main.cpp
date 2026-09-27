@@ -47,7 +47,7 @@
 
 namespace {
 
-    using Asrc = tap::samplerate::AsyncSampleRateConverterQ15;
+    using Asrc = tap::samplerate::async_sample_rate_converter_q15;
 
     constexpr std::size_t kBlockFrames  = 32;
     constexpr std::size_t kMaxChannels  = 12;
@@ -92,11 +92,11 @@ namespace {
         // reads, no UB); the seqlock only adds mutual coherence, so one printed
         // line describes one instant.
         std::atomic<std::uint32_t> seq{0};
-        std::atomic<std::uint32_t> blocks{0};  // measured pull() calls
-        std::atomic<std::uint32_t> meanCyc{0}; // cycles per pull(32)
-        std::atomic<std::uint32_t> p99Cyc{0};
-        std::atomic<std::uint32_t> maxCyc{0};
-        std::atomic<std::uint32_t> lateMaxUs{0}; // worst consumer schedule slip
+        std::atomic<std::uint32_t> blocks{0};   // measured pull() calls
+        std::atomic<std::uint32_t> mean_cyc{0}; // cycles per pull(32)
+        std::atomic<std::uint32_t> p99_cyc{0};
+        std::atomic<std::uint32_t> max_cyc{0};
+        std::atomic<std::uint32_t> late_max_us{0}; // worst consumer schedule slip
     };
 
     static_assert(std::atomic<std::uint32_t>::is_always_lock_free && std::atomic<Asrc*>::is_always_lock_free
@@ -106,11 +106,11 @@ namespace {
     Shared g;
 
     struct Snapshot {
-        std::uint32_t blocks    = 0;
-        std::uint32_t meanCyc   = 0;
-        std::uint32_t p99Cyc    = 0;
-        std::uint32_t maxCyc    = 0;
-        std::uint32_t lateMaxUs = 0;
+        std::uint32_t blocks      = 0;
+        std::uint32_t mean_cyc    = 0;
+        std::uint32_t p99_cyc     = 0;
+        std::uint32_t max_cyc     = 0;
+        std::uint32_t late_max_us = 0;
     };
 
     // Seqlock writer (core1 only). The release fence orders the odd mark before
@@ -121,10 +121,10 @@ namespace {
         g.seq.store(q + 1, std::memory_order_relaxed);
         std::atomic_thread_fence(std::memory_order_release);
         g.blocks.store(s.blocks, std::memory_order_relaxed);
-        g.meanCyc.store(s.meanCyc, std::memory_order_relaxed);
-        g.p99Cyc.store(s.p99Cyc, std::memory_order_relaxed);
-        g.maxCyc.store(s.maxCyc, std::memory_order_relaxed);
-        g.lateMaxUs.store(s.lateMaxUs, std::memory_order_relaxed);
+        g.mean_cyc.store(s.mean_cyc, std::memory_order_relaxed);
+        g.p99_cyc.store(s.p99_cyc, std::memory_order_relaxed);
+        g.max_cyc.store(s.max_cyc, std::memory_order_relaxed);
+        g.late_max_us.store(s.late_max_us, std::memory_order_relaxed);
         g.seq.store(q + 2, std::memory_order_release);
     }
 
@@ -137,10 +137,10 @@ namespace {
                 continue;
             Snapshot s;
             s.blocks      = g.blocks.load(std::memory_order_relaxed);
-            s.mean_cyc    = g.meanCyc.load(std::memory_order_relaxed);
-            s.p99_cyc     = g.p99Cyc.load(std::memory_order_relaxed);
-            s.max_cyc     = g.maxCyc.load(std::memory_order_relaxed);
-            s.late_max_us = g.lateMaxUs.load(std::memory_order_relaxed);
+            s.mean_cyc    = g.mean_cyc.load(std::memory_order_relaxed);
+            s.p99_cyc     = g.p99_cyc.load(std::memory_order_relaxed);
+            s.max_cyc     = g.max_cyc.load(std::memory_order_relaxed);
+            s.late_max_us = g.late_max_us.load(std::memory_order_relaxed);
             std::atomic_thread_fence(std::memory_order_acquire);
             if (g.seq.load(std::memory_order_relaxed) == q0)
                 return s;
@@ -199,7 +199,7 @@ namespace {
                     break;
                 }
             }
-            s.p99_cyc = std::min(s.p99Cyc, s.maxCyc);
+            s.p99_cyc = std::min(s.p99_cyc, s.max_cyc);
         }
         publishSnapshot(s);
     }
@@ -247,13 +247,13 @@ namespace {
                     if (timed) {
                         cycSum += cyc;
                         ++s.blocks;
-                        s.max_cyc = std::max(s.maxCyc, cyc);
+                        s.max_cyc = std::max(s.max_cyc, cyc);
                         ++gHist[std::min<std::uint32_t>(cyc >> kHistShift, kHistBuckets - 1)];
                     }
                     // Schedule slip: if pull() ever exceeded the block period,
                     // lateness accumulates here long before the FIFO notices.
                     const std::uint64_t late = now - due;
-                    if (late > s.lateMaxUs)
+                    if (late > s.late_max_us)
                         s.late_max_us = static_cast<std::uint32_t>(std::min<std::uint64_t>(late, ~0u));
                 }
                 if (now >= nextPubUs) {
@@ -310,9 +310,9 @@ namespace {
 
     const char* stateName(tap::samplerate::converter_state s) {
         switch (s) {
-        case tap::samplerate::converter_state::Filling:
+        case tap::samplerate::converter_state::filling:
             return "Filling";
-        case tap::samplerate::converter_state::Acquiring:
+        case tap::samplerate::converter_state::acquiring:
             return "Acquiring";
         default:
             return "Locked";
@@ -329,7 +329,7 @@ namespace {
         const double              w = 2.0 * std::numbers::pi * 997.0 / rateHz;
         for (std::size_t f = 0; f < kInputFrames; ++f) {
             const auto v =
-                tap::samplerate::detail::roundSat<std::int16_t>(0.5 * std::sin(w * static_cast<double>(f)) * 32767.0);
+                tap::samplerate::detail::round_sat<std::int16_t>(0.5 * std::sin(w * static_cast<double>(f)) * 32767.0);
             for (std::size_t c = 0; c < channels; ++c)
                 out[f * channels + c] = v;
         }
@@ -339,7 +339,7 @@ namespace {
     PhaseResult runPhase(const PhaseSpec& ph) {
         PhaseResult r;
 
-        tap::samplerate::Config cfg;
+        tap::samplerate::config cfg;
         cfg.sample_rate_hz        = ph.rateHz;
         cfg.channels              = ph.channels;
         cfg.target_latency_frames = kTargetLatencyFrames;
@@ -348,12 +348,12 @@ namespace {
             // designed for ~48 kHz; both scale with the rate (README).
             cfg.filter      = balanced16k();
             const double sc = ph.rateHz / 48000.0;
-            cfg.servo.acquireBandwidthHz *= sc;
-            cfg.servo.trackBandwidthHz *= sc;
-            cfg.servo.quietBandwidthHz *= sc;
-            cfg.servo.acquireSmootherHz *= sc;
-            cfg.servo.trackSmootherHz *= sc;
-            cfg.servo.quietSmootherHz *= sc;
+            cfg.servo.acquire_bandwidth_hz *= sc;
+            cfg.servo.track_bandwidth_hz *= sc;
+            cfg.servo.quiet_bandwidth_hz *= sc;
+            cfg.servo.acquire_smoother_hz *= sc;
+            cfg.servo.track_smoother_hz *= sc;
+            cfg.servo.quiet_smoother_hz *= sc;
         }
 
         // Heap-constructed so allocation failure (the 12-channel phase on a
@@ -412,7 +412,7 @@ namespace {
                 off = 0;
 
             const tap::samplerate::converter_status st = asrc->status();
-            if (!locked && st.state == tap::samplerate::converter_state::Locked) {
+            if (!locked && st.state == tap::samplerate::converter_state::locked) {
                 locked    = true;
                 lockUs    = time_us_64() - tStart;
                 undAtLock = st.underruns;
@@ -427,15 +427,16 @@ namespace {
                 nextTelemetryUs += 1000000;
                 const std::uint64_t tMs      = (now - tStart) / 1000;
                 const Snapshot      sn       = readSnapshot();
-                const double        cycFrame = static_cast<double>(sn.meanCyc) / static_cast<double>(kBlockFrames);
+                const double        cycFrame = static_cast<double>(sn.mean_cyc) / static_cast<double>(kBlockFrames);
                 const double        pctCore = cycFrame * ph.rateHz / static_cast<double>(clock_get_hz(clk_sys)) * 100.0;
                 std::printf("[%c t=%2lus] %-9s ppm=%+7.2f fill=%6.1f und=%lu ovr=%lu rsy=%lu | "
                             "pull/blk mean=%lu p99=%lu max=%lu (%4.1f%% core) late<=%luus\n",
                             ph.tag, static_cast<unsigned long>(tMs / 1000), stateName(st.state), st.ppm,
-                            st.fifoFillFrames, static_cast<unsigned long>(st.underruns),
+                            st.fifo_fill_frames, static_cast<unsigned long>(st.underruns),
                             static_cast<unsigned long>(st.overruns), static_cast<unsigned long>(st.resyncs),
-                            static_cast<unsigned long>(sn.meanCyc), static_cast<unsigned long>(sn.p99Cyc),
-                            static_cast<unsigned long>(sn.maxCyc), pctCore, static_cast<unsigned long>(sn.lateMaxUs));
+                            static_cast<unsigned long>(sn.mean_cyc), static_cast<unsigned long>(sn.p99_cyc),
+                            static_cast<unsigned long>(sn.max_cyc), pctCore,
+                            static_cast<unsigned long>(sn.late_max_us));
                 if (tMs >= ph.ppmSettleMs) {
                     ppmSampled = true;
                     if (std::fabs(st.ppm - kOffsetPpm) >= kPpmTolerance)
@@ -469,16 +470,16 @@ namespace {
         const bool          cleanOk = locked && und == 0 && ovr == 0 && rsy == 0;
         r.pass                      = lockOk && ppmOk && ppmSampled && cleanOk;
 
-        const double cycFrame = static_cast<double>(fin.meanCyc) / static_cast<double>(kBlockFrames);
+        const double cycFrame = static_cast<double>(fin.mean_cyc) / static_cast<double>(kBlockFrames);
         const double pctCore  = cycFrame * ph.rateHz / static_cast<double>(clock_get_hz(clk_sys)) * 100.0;
         std::printf("SUMMARY %c %s: %s lock_ms=%lu ppm_final=%+.2f post_lock_und=%lu ovr=%lu "
                     "rsy=%lu pull_cyc_blk mean=%lu p99=%lu max=%lu cyc_frame=%.1f core_pct=%.1f "
                     "late_max_us=%lu\n",
                     ph.tag, ph.desc, r.pass ? "PASS" : "FAIL", static_cast<unsigned long>(lockUs / 1000), ppmFinal,
                     static_cast<unsigned long>(und), static_cast<unsigned long>(ovr), static_cast<unsigned long>(rsy),
-                    static_cast<unsigned long>(fin.meanCyc), static_cast<unsigned long>(fin.p99Cyc),
-                    static_cast<unsigned long>(fin.maxCyc), cycFrame, pctCore,
-                    static_cast<unsigned long>(fin.lateMaxUs));
+                    static_cast<unsigned long>(fin.mean_cyc), static_cast<unsigned long>(fin.p99_cyc),
+                    static_cast<unsigned long>(fin.max_cyc), cycFrame, pctCore,
+                    static_cast<unsigned long>(fin.late_max_us));
         return r;
     }
 

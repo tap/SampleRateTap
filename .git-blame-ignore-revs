@@ -1,2 +1,4 @@
 # Bulk clang-format reformat under the shared Tap house style.
-34bb89eb806a91667fcd895b56dea8c0e701739a
+b84020e738f771c7689ffc1e592f8448b9ce063f
+# Reflow of clang-format alignment after the namespace rename.
+e2f5a484712699592396c1df705c47c9ddab30a3
