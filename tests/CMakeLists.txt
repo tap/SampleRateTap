@@ -41,7 +41,8 @@ add_executable(srt_tests
     test_fade.cpp
     test_hardening.cpp
     test_latency.cpp
-    test_multichannel.cpp)
+    test_multichannel.cpp
+    test_output_hash.cpp)
 target_link_libraries(srt_tests PRIVATE
     SampleRateTap::SampleRateTap
     srt_warnings)
@@ -63,11 +64,17 @@ if(SRT_BARE_METAL)
     set_tests_properties(srt_tests_emulated PROPERTIES
         PASS_REGULAR_EXPRESSION "SRT_TESTS_COMPLETE rc=0"
         FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
-        TIMEOUT 1800)
+        TIMEOUT 1800
+        LABELS async)
 else()
     target_link_libraries(srt_tests PRIVATE GTest::gtest_main)
     # Generous timeouts: discovery and the DSP-measurement tests run orders
     # of magnitude slower under instruction-set emulation (e.g. qemu-hexagon).
     include(GoogleTest)
-    gtest_discover_tests(srt_tests DISCOVERY_TIMEOUT 120 PROPERTIES TIMEOUT 900)
+    # The "async." prefix and label keep ctest names unique once this suite
+    # shares a tree with the ratio engine's (FixedPoint.* exists in both, and
+    # CTest applies a duplicated name's properties to every copy); the
+    # monorepo plan's gates key tests by these names.
+    gtest_discover_tests(srt_tests TEST_PREFIX "async." DISCOVERY_TIMEOUT 120
+                         PROPERTIES TIMEOUT 900 LABELS async)
 endif()

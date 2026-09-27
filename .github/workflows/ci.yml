@@ -1,15 +1,25 @@
 name: CI
 
+# Push runs only for main; branches get CI through their pull request (and
+# on demand). Before, a push to a PR branch ran everything twice: once for
+# the push and once for the pull_request event, in different groups.
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  # Superseded pushes cancel their own in-flight runs: the ratchet stack
-  # (three QEMU targets, a toolchain download, minutes of runner time) was
-  # piling up once per push during baseline harvests.
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # One group per PR (or per ref for main/dispatch). Superseded PR runs are
+  # cancelled: the ratchet stack (three QEMU targets, a toolchain download,
+  # minutes of runner time) piled up once per push during baseline
+  # harvests. Never on main, and never on the monorepo migration PR, whose
+  # plan requires a complete run for every pushed commit.
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.head_ref != 'claude/sample-rate-expansion-strategies-ezqzu6' }}
 
 jobs:
   build-and-test:
@@ -64,7 +74,7 @@ jobs:
         run: cmake --build build --config Release -j 4
 
       - name: Test
-        run: ctest --test-dir build -C Release --output-on-failure
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
 
   sanitizers:
     name: ${{ matrix.name }}
@@ -99,7 +109,7 @@ jobs:
         env:
           TSAN_OPTIONS: halt_on_error=1
           UBSAN_OPTIONS: print_stacktrace=1
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure --no-tests=error
 
   # Cross-compile for Qualcomm Hexagon (Linux/musl) with the open-source
   # toolchain and run a subset of the suite under qemu-hexagon user-mode
@@ -110,7 +120,7 @@ jobs:
   # neither speeds up nor measures meaningfully.
   hexagon-qemu:
     name: Hexagon cross (QEMU)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       # Prebuilt open-source toolchain (BSD-3) published by Qualcomm/Quicinc;
@@ -187,15 +197,26 @@ jobs:
       - name: Build
         run: cmake --build build -j 4
 
+      # -V --output-log keeps every test's own output ([ RUN ] lines,
+      # [ measured ] numbers), which --output-on-failure prints only for
+      # failures; the log is uploaded below as evidence.
       - name: Test under emulation
         run: >
-          ctest --test-dir build --output-on-failure
+          ctest --test-dir build --output-on-failure --no-tests=error
+          -V --output-log ctest-hexagon.log
           -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation'
         # ConfigValidation: this static-musl toolchain cannot unwind across
         # frames — the constructor throws correctly but EXPECT_THROW never
         # catches and libc++abi terminates. Validation is target-independent
         # and covered on every other leg; limitation tracked in
         # docs/PERFORMANCE.md "Known debt".
+
+      - name: Upload test log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ctest-hexagon
+          path: ctest-hexagon.log
 
   # Cross-compile for Arm Cortex-M55 (bare metal, newlib + semihosting) and
   # run the emulation-sized test subset on QEMU's MPS3 AN547 board model.
@@ -204,7 +225,7 @@ jobs:
   # performance-appropriate formats here.
   cortex-m55-qemu:
     name: Cortex-M55 cross (QEMU)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -227,7 +248,16 @@ jobs:
         run: cmake --build build -j 4
 
       - name: Test under emulation
-        run: ctest --test-dir build --output-on-failure
+        run: >
+          ctest --test-dir build --output-on-failure --no-tests=error
+          -V --output-log ctest-m55.log
+
+      - name: Upload test log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ctest-m55
+          path: ctest-m55.log
 
   # Cortex-M33 (Raspberry Pi Pico 2 / RP2350 class: single-precision FPU,
   # no FP64, no MVE) on QEMU's MPS2+ AN505 model. Shares the Armv8-M
@@ -235,8 +265,10 @@ jobs:
   # anchors the Q15/Q31 budgets for Pico-class parts.
   cortex-m33-qemu:
     name: Cortex-M33 cross (QEMU)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    # ~23 min of emulated suite (plus ~1 min of output hashes) against the
+    # old 30: headroom for a slower runner.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -258,7 +290,16 @@ jobs:
         run: cmake --build build -j 4
 
       - name: Test under emulation
-        run: ctest --test-dir build --output-on-failure
+        run: >
+          ctest --test-dir build --output-on-failure --no-tests=error
+          -V --output-log ctest-m33.log
+
+      - name: Upload test log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ctest-m33
+          path: ctest-m33.log
 
   # ------------------------------------------------------------------------
   # Template: genuine Tensilica HiFi4/HiFi5 coverage. The HiFi audio ISA,
@@ -297,7 +338,9 @@ jobs:
   # so a hard >3% gate is safe on shared runners.
   icount-ratchet:
     name: Instruction-count ratchet
-    runs-on: ubuntu-latest
+    # Pinned image: the counts are a function of the apt toolchain, the
+    # plugin build and QEMU, so the job must not straddle an image rollout.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       # Commit the v8.2.2 tag pointed at when pinned (tags are movable;
@@ -331,6 +374,15 @@ jobs:
           fi
           gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/tmp \
             -o /tmp/libinsncount.so tools/qemu_insn_plugin/insn_count.c
+
+      # What produced the counts: the runner image and the toolchain packages
+      # (the counts move when either does; see docs/PERFORMANCE.md).
+      - name: Record image and toolchain versions
+        id: image
+        run: |
+          echo "image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          dpkg-query -W gcc-arm-none-eabi qemu-system-arm
+          echo "os=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
 
       # Release (-O2), matching how the baselines were recorded.
       - name: Build M55 workloads
@@ -376,7 +428,10 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/qemu-hexagon-plugins
-          key: qemu-hexagon-plugins-${{ env.QEMU_SRC_URL }}-1
+          # The image OS is part of the key: the cached binary links the
+          # image's glib, so a new Ubuntu release must not restore an old
+          # build. (Weekly image updates keep the same glib ABI.)
+          key: qemu-hexagon-plugins-${{ steps.image.outputs.os }}-${{ env.QEMU_SRC_URL }}-1
 
       - name: Build plugin-enabled qemu-hexagon
         if: ${{ !cancelled() && steps.qemu-hex.outputs.cache-hit != 'true' }}
@@ -514,6 +569,34 @@ jobs:
           -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
           && cmake --build build-m55 -j 4 --target cmp_icount_lsr_medium
           cmp_icount_srt_q15 cmp_icount_r8b_120
+
+  # The Pico 2 firmware examples are standalone projects (Pico SDK fetched at
+  # configure time), deliberately outside the root build. Building them here
+  # keeps them from silently rotting again: they had stopped compiling after
+  # the snake_case rename and the DspTap substrate move, with nothing
+  # noticing. Build-only; running them needs the hardware
+  # (docs/HARDWARE_TESTING.md).
+  pico2-build:
+    name: Pico 2 firmware build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        run: sudo apt-get update -q && sudo apt-get install -y -q gcc-arm-none-eabi
+
+      - name: Build pico2_cyccnt
+        run: >
+          cmake -S examples/pico2_cyccnt -B build-cyccnt -DPICO_BOARD=pico2
+          && cmake --build build-cyccnt -j 4
+
+      - name: Build pico2_dualcore
+        run: >
+          cmake -S examples/pico2_dualcore -B build-dualcore -DPICO_BOARD=pico2
+          && cmake --build build-dualcore -j 4
 
   clang-format:
     name: clang-format
