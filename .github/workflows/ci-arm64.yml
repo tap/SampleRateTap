@@ -36,7 +36,7 @@ jobs:
         run: cmake --build build -j 4
 
       - name: Full test suite
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure --no-tests=error
 
       # The ring stress under TSan on weakly-ordered silicon is the point
       # of this workflow: run it several times for schedule diversity.
@@ -57,8 +57,11 @@ jobs:
         env:
           TSAN_OPTIONS: halt_on_error=1
         run: |
+          # The suite is spsc_ring (it was SpscRing before the snake_case
+          # rename, when this filter silently started matching nothing);
+          # --no-tests=error makes a stale filter fail instead of passing.
           for i in 1 2 3 4 5; do
-            ctest --test-dir build-tsan -R 'SpscRing' --output-on-failure
+            ctest --test-dir build-tsan -R 'spsc_ring' --output-on-failure --no-tests=error
           done
 
       # Scheduled runs have no PR or push audience; without this a weekly
