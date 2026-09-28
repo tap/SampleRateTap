@@ -1,29 +1,41 @@
-# G14 residual allowlist for the step-1c gated SHA. Seeded at step 0 from
-# MONOREPO_PLAN.md step 1c; narrowed to hunk entries by the 1c commit.
+# G14 residual allowlist for the step-1c gated SHA: every change 1c makes
+# that rename.py's map does not explain. Regenerated from
+# `rename.py check --through 1c` and reviewed hunk by hunk.
 
-# New and rewritten build glue.
-file CMakeLists.txt  -- new root CMakeLists (1c; draft root-CMakeLists-1c.cmake)
-file async/CMakeLists.txt  -- tap::dsp guard with explicit binary dir (R2-RUN-3)
-file bridge/CMakeLists.txt  -- tap::dsp guard; srt_headers -> ../async/include (SYSTEM)
-file cmake/arm-cortex-m33-mps2.cmake  -- sets both SRT_ and TAP_RATIO_BARE_METAL
-file cmake/arm-cortex-m55-mps3.cmake  -- sets both SRT_ and TAP_RATIO_BARE_METAL
-
-# CI: one configure per job, per-(target, engine) correctness legs.
-file .github/workflows/*.yml  -- 1c CI port (draft ci-after-1c.yml); style.yml from RatioTap
-file scripts/fetch_hexagon_toolchain.sh  -- RatioTap's copy at root; all cache writers use it
-
-# Path fix-ups that follow the 1a/1b moves.
-file book/src/**  -- the 52 moved book includes
-file book/book.toml  -- include roots, if the moves touch them
-file docs/Doxyfile  -- INPUT/USE_MDFILE_AS_MAINPAGE for async/ and bridge/
-file scripts/*.py  -- icount.py --baselines, update_*_docs.py, book_figures.py paths
-file async/notebooks/*.ipynb  -- CAPI_DIR / TOOLS_DIR / sys.path after the move
-file async/notebooks/*.py  -- binding paths after the move
-file async/README.md  -- LICENSE link -> ../
-file bridge/README.md  -- build commands; LICENSE x2, STYLE.md -> ../; "eight workloads" -> ten
-file bridge/CLAUDE.md  -- build commands
-file bridge/notebooks/*.py  -- binding paths after the move
+file CMakeLists.txt  -- new root CMakeLists (plan 1c; draft root-CMakeLists-1c.cmake)
+file .github/workflows/*.yml  -- the 1c CI port: one configure per job, per-(target, engine) legs, per-engine ratchet; style.yml from RatioTap; migration-gates.yml new
 file bridge/docs/HISTORY.md  -- new: old SHA -> new SHA -> RatioTap PR
+file docs/MONOREPO_PLAN.md  -- the plan itself, not part of either step-0 tree
 
-# Licence: D14's line lands in the root LICENSE as bridge/LICENSE goes.
-file LICENSE  -- D14 holder line
+hunk LICENSE c40d3a39d41b  -- D14 holder line (bridge/LICENSE deleted in the same commit)
+hunk async/CMakeLists.txt de3b34f036c8  -- tap::dsp guard with an explicit binary dir (R2-RUN-3)
+hunk async/README.md 5e560f48b735  -- LICENSE link -> ../; icount table cites async/ paths (update_icount_docs.py)
+hunk async/README.md a714a9f697ac  -- LICENSE link -> ../; icount table cites async/ paths (update_icount_docs.py)
+hunk async/examples/pico2_cyccnt/CMakeLists.txt 867694912bf1  -- dsptap is one level further up after the move
+hunk async/examples/pico2_dualcore/CMakeLists.txt 867694912bf1  -- dsptap is one level further up after the move
+hunk async/notebooks/asrc_block_size_study.ipynb 7225f1b599c2  -- CAPI_DIR = build/capi after the move
+hunk async/notebooks/asrc_comparison.ipynb fa4056a81847  -- TOOLS_DIR = build after the move
+hunk async/notebooks/asrc_demo.ipynb 7225f1b599c2  -- CAPI_DIR = build/capi; prose names capi/
+hunk async/notebooks/asrc_demo.ipynb 01ac85487697  -- CAPI_DIR = build/capi; prose names capi/
+hunk async/notebooks/asrc_rbj_analysis.ipynb 226cc8587ac3  -- sys.path -> ../../scripts
+hunk bridge/CLAUDE.md 775f8e09bca8  -- build commands from the repository root; ten workloads
+hunk bridge/CLAUDE.md ff961518b4e3  -- build commands from the repository root; ten workloads
+hunk bridge/CMakeLists.txt 8e356a531740  -- tap::dsp guard; srt_headers -> ../async/include, kept SYSTEM
+hunk bridge/CMakeLists.txt 7698d7dc2634  -- tap::dsp guard; srt_headers -> ../async/include, kept SYSTEM
+hunk bridge/README.md 5e560f48b735  -- family-repo build commands; ten workloads; LICENSE/STYLE.md -> ../; icount table added (Q8)
+hunk bridge/README.md 0c810d79966f  -- family-repo build commands; ten workloads; LICENSE/STYLE.md -> ../; icount table added (Q8)
+hunk cmake/arm-cortex-m33-mps2.cmake 20598113d144  -- sets TAP_RATIO_BARE_METAL too (both test trees)
+hunk cmake/arm-cortex-m55-mps3.cmake 20598113d144  -- sets TAP_RATIO_BARE_METAL too (both test trees)
+hunk docs/Doxyfile f6fbec413ea3  -- INPUT and main page for async/ and bridge/
+hunk scripts/book_figures.py 7d52c4284a6e  -- trace tool compiles against async/include
+hunk scripts/icount.py 828920a2db17  -- default baselines path async/bench/baselines.json
+hunk scripts/icount.py b480cbbe3301  -- default baselines path async/bench/baselines.json
+hunk scripts/icount.py 33e83dab43ec  -- default baselines path async/bench/baselines.json
+hunk scripts/tidy.sh 4aad1bac113d  -- compile database covers both engines and bridge's icount TUs (the old gates' coverage); submodule excluded
+hunk scripts/tidy.sh 47ad2dfdbc55  -- compile database covers both engines and bridge's icount TUs (the old gates' coverage); submodule excluded
+hunk scripts/tidy.sh 0c5d4b9f1c39  -- compile database covers both engines and bridge's icount TUs (the old gates' coverage); submodule excluded
+hunk scripts/update_icount_docs.py 6040f56f6190  -- --engine async|bridge: per-engine README table
+hunk scripts/update_icount_docs.py 50a1737f72b0  -- --engine async|bridge: per-engine README table
+hunk scripts/update_icount_docs.py 0c4949cfd53d  -- --engine async|bridge: per-engine README table
+hunk scripts/update_perf_docs.py fbd463752ac4  -- default README -> async/README.md
+hunk scripts/update_perf_docs.py 88543a248c62  -- default README -> async/README.md

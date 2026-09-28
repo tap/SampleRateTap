@@ -12,7 +12,8 @@ committed at step 0 and deleted at step 4 (`runs.md` may be kept).
 | `snapshot/` | the step-0 snapshot those collectors compare against |
 | `allow.txt` | G1 allowlist: test rows a job may gain (never lose) |
 | `runs.md` | provenance of the snapshot, and the run record of every gated SHA (G13) |
-| `drafts/` | the audit's untested workflow and CMake sketches for step 1c |
+| `gates.py` | the gates as the `migration-gates` workflow runs them: `host`, `cross --target`, `notebooks` |
+| `step.txt` | the step the current commit is gated as; selects the rename classes every gate expects |
 
 ## How the pieces fit
 

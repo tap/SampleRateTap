@@ -1,4 +1,4 @@
-# Cross-resampler instruction-count comparison (docs/COMPARISON.md).
+# Cross-resampler instruction-count comparison (async/docs/COMPARISON.md).
 # Manual trigger only: competitor counts are measured once per
 # toolchain/version pin and recorded in the docs, not gated — the ratchet
 # (ci.yml) gates only our own code. Prints one "CMP_COUNT <target> <bin> <n>"
@@ -56,15 +56,16 @@ jobs:
             cmake -B build-$tgt -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_TOOLCHAIN_FILE=$tc \
               -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
+              -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
               -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
             cmake --build build-$tgt -j 4
             # Each engine at 2 s and 4 s: the difference is steady state, the
-            # remainder construction (bench/icount/cmp_main.cpp).
+            # remainder construction (async/bench/icount/cmp_main.cpp).
             for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8; do
                            echo cmp_icount_$e cmp_icount_${e}_4s; done); do
               out=$(qemu-system-arm -M $machine -nographic -semihosting \
                 -d plugin -plugin /tmp/libinsncount.so \
-                -kernel build-$tgt/bench/icount/$bin 2>&1)
+                -kernel build-$tgt/async/bench/icount/$bin 2>&1)
               echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
                 echo "$out"; echo "::error::$tgt $bin did not complete"; exit 1; }
               n=$(echo "$out" | grep -o 'SRT_INSN_COUNT [0-9]*' | cut -d' ' -f2)
@@ -106,16 +107,10 @@ jobs:
 
       - name: Measure Hexagon
         run: |
+          # The shared download+verify script, as every writer of the
+          # digest-keyed cache uses.
           if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
-            mkdir -p ~/hexagon && cd ~/hexagon
-            curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
-            actual=$(sha256sum toolchain.tar.zst | cut -d' ' -f1)
-            if [ "$actual" != "$HEXAGON_TOOLCHAIN_SHA256" ]; then
-              echo "::error::toolchain checksum mismatch against pinned value"
-              exit 1
-            fi
-            tar --zstd -xf toolchain.tar.zst && rm toolchain.tar.zst
-            cd "$GITHUB_WORKSPACE"
+            scripts/fetch_hexagon_toolchain.sh
           fi
           clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
           [ -n "$clangxx" ] || { echo "::error::hexagon compiler not found"; exit 1; }
@@ -123,12 +118,13 @@ jobs:
           cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
             -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
+            -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
             -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
           cmake --build build-hex -j 4
           for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8; do
                          echo cmp_icount_$e cmp_icount_${e}_4s; done); do
             out=$(qemu-hexagon -d plugin -plugin /tmp/libinsncount.so \
-              build-hex/bench/icount/$bin 2>&1)
+              build-hex/async/bench/icount/$bin 2>&1)
             echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
               echo "$out"; echo "::error::hexagon $bin did not complete"; exit 1; }
             n=$(echo "$out" | grep -o 'SRT_INSN_COUNT [0-9]*' | cut -d' ' -f2)

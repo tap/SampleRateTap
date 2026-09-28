@@ -18,7 +18,7 @@ Current state: **v0.2 — M7 codegen phase complete.** v0.1 (M0–M6): design/sc
 streaming converter for float/Q15/Q31 with committed scipy reference vectors, the golden
 cross-validation against SampleRateTap at pinned eps (test-only submodule), bluetooth_bridge +
 C ABI + executed notebook. M7 (v0.2): the embedded CI matrix + instruction-count ratchet
-(Cortex-M33/M55 + Hexagon under QEMU, eight workloads gated two-sided ±3% against
+(Cortex-M33/M55 + Hexagon under QEMU, ten workloads gated two-sided ±3% against
 `bench/baselines.json` — `scripts/icount.py`), then three measured codegen levers — superblock
 walk, committed trip counts, symmetry-halved tables — outputs bit-identical throughout; PLAN.md
 section 7 records each lever's numbers. Remaining levers are deferred until a consumer pulls
@@ -60,9 +60,10 @@ the tidy job and a local clang `-Werror` build as second compilers before pushin
 ## Build & test
 
 ```sh
+# from the repository root (this engine lives in bridge/; the root builds both)
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTAP_RATIO_WERROR=ON
 cmake --build build
-ctest --test-dir build --output-on-failure
+ctest --test-dir build --output-on-failure -L '^ratio$'
 scripts/tidy.sh          # local mirror of the CI clang-tidy gate
 ```
 

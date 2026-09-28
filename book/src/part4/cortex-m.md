@@ -219,7 +219,7 @@ The replacement is a one-shot protocol. A dedicated `main` bakes the
 filter in at compile time, and the *pass criterion is a printed string*:
 
 ```cpp
-{{#include ../../../tests/bare_metal_main.cpp}}
+{{#include ../../../async/tests/bare_metal_main.cpp}}
 ```
 
 CTest registers a single test whose `PASS_REGULAR_EXPRESSION` is

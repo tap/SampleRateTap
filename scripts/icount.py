@@ -2,10 +2,10 @@
 """Deterministic instruction-count ratchet (see docs/PERFORMANCE.md).
 
 Runs every srt_icount_* binary in a build directory under QEMU with the
-instruction-counting plugin, then compares against bench/baselines.json.
+instruction-counting plugin, then compares against async/bench/baselines.json.
 
   icount.py --target {hexagon,m55,m33} --build-dir DIR --plugin LIB
-            [--baselines bench/baselines.json] [--tolerance 0.03]
+            [--baselines async/bench/baselines.json] [--tolerance 0.03]
             [--exact] [--update] [--json-out FILE] [--compare-json FILE]
 
 The gate is two-sided: exit nonzero if any scenario regresses beyond
@@ -97,7 +97,7 @@ def main() -> int:
     ap.add_argument("--target", required=True, choices=["hexagon", "m55", "m33"])
     ap.add_argument("--build-dir", required=True)
     ap.add_argument("--plugin", required=True)
-    ap.add_argument("--baselines", default="bench/baselines.json")
+    ap.add_argument("--baselines", default="async/bench/baselines.json")
     ap.add_argument("--tolerance", type=float, default=0.03)
     ap.add_argument("--exact", action="store_true",
                     help="require identical counts (tolerance 0)")
@@ -164,7 +164,7 @@ def main() -> int:
                 # regressions hide inside the slack, so improvements must be
                 # committed too.
                 verdict = ("IMPROVED beyond tolerance — run icount.py --update "
-                           "and commit bench/baselines.json")
+                           "and commit the baselines file")
                 failures.append(scenario)
             print(f"{scenario}: {count} insns vs baseline {recorded} "
                   f"({count - recorded:+d}, {delta:+.4%}) {verdict}")

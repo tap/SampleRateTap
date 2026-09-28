@@ -1,7 +1,7 @@
 # RatioTap
 
 [![CI](https://github.com/tap/RatioTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/RatioTap/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 
 **Synchronous 44.1 ↔ 48 kHz sample rate conversion, as fast as possible.**
@@ -103,37 +103,61 @@ exactly, 1.9 ms total latency.
 ## Build
 
 ```sh
-git clone --recurse-submodules https://github.com/tap/RatioTap
-cmake -S RatioTap -B build -DCMAKE_BUILD_TYPE=Release
+git clone --recurse-submodules https://github.com/tap/SampleRateTap
+cmake -S SampleRateTap -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-ctest --test-dir build --output-on-failure
+ctest --test-dir build --output-on-failure -L '^ratio$'
 ```
 
-Consume with `add_subdirectory` (or FetchContent) and link `tap::ratio`;
-the DspTap submodule rides along automatically.
+This engine lives in `bridge/` of the SampleRateTap family repository; the
+root build configures both engines, and the `ratio` label selects this one's
+tests. Consume with `add_subdirectory` (or FetchContent) and link
+`tap::ratio`; the DspTap submodule at the repository root rides along
+automatically.
 
 ### Embedded targets and the instruction-count ratchet
 
 The deployment cores are CI targets, not aspirations: every push runs the
 emulation-sized test suite on **Cortex-M33** (QEMU mps2-an505 — Raspberry
 Pi Pico 2 class), **Cortex-M55** (mps3-an547) and **Hexagon**
-(qemu-hexagon, static musl), and gates eight fixed conversion workloads
-(direction × float/Q15/Q31) against committed per-target instruction
-counts (`bench/baselines.json`, two-sided ±3% — see `scripts/icount.py`).
+(qemu-hexagon, static musl), and gates ten fixed conversion workloads
+(direction × float/Q15/Q31 at the economy profile, plus four profile
+variants) against committed per-target instruction
+counts (`bench/baselines.json`, two-sided ±3% — see `scripts/icount.py`),
+run from the repository root:
 The counts are deterministic, so the M7 optimization campaign in
 [PLAN.md](PLAN.md) lands one measured lever at a time:
 
 ```sh
 cmake -B build-m55 -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
+      -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
       -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
       -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
 cmake --build build-m55 -j
-python3 scripts/icount.py --target m55 --build-dir build-m55 --plugin libinsncount.so
+python3 bridge/scripts/icount.py --target m55 --build-dir build-m55 \
+      --baselines bridge/bench/baselines.json --plugin libinsncount.so
 ```
+
+<!-- ICOUNT:BEGIN -->
+Executed instructions per fixed workload (`bridge/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bridge/bench/baselines.json`:
+
+| Workload | Cortex-M33 | Cortex-M55 | Hexagon |
+|---|---:|---:|---:|
+| `down_float_eco` | 1,720,707,553 | 73,794,800 | 304,636,424 |
+| `down_float_tr` | 5,473,297,976 | 214,977,684 | 944,365,314 |
+| `down_q15_eco` | 173,755,176 | 57,208,782 | 45,677,158 |
+| `down_q15_se` | 130,967,926 | 46,983,269 | 33,235,309 |
+| `down_q31_eco` | 244,985,862 | 96,697,327 | 45,622,761 |
+| `up_float_eco` | 1,231,730,349 | 55,451,902 | 220,214,529 |
+| `up_float_tr` | 3,110,380,470 | 126,303,581 | 533,810,577 |
+| `up_q15_eco` | 133,914,472 | 44,556,679 | 35,990,589 |
+| `up_q15_se` | 103,390,933 | 39,050,794 | 27,424,288 |
+| `up_q31_eco` | 184,954,171 | 72,647,042 | 36,008,031 |
+<!-- ICOUNT:END -->
 
 ## License
 
-MIT (see [LICENSE](LICENSE)), consistent with the family. Style is the
-shared [Tap House Rules](STYLE.md), enforced by pre-commit clang-format,
+MIT (see [LICENSE](../LICENSE)), consistent with the family. Style is the
+shared [Tap House Rules](../STYLE.md), enforced by pre-commit clang-format,
 the drift check, and clang-tidy in CI.

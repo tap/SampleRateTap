@@ -10,10 +10,10 @@ Status: **DRAFT v3.1. Two adversarial audit rounds folded in; step P executed, s
 | v3 | `b34681c` | Round 2: 4 reviewers, including an end-to-end dry run of steps 1a–1c and gate prototypes; 78 findings (Appendix B). The user reconfirmed D14 and chose banners everywhere |
 | v3.1 | this commit | Engine names (D5, user decision 2026-09-27): RatioTap's engine becomes **`bridge`** and the future 2^a·3^b engine **`rational`**, replacing `ratio` and `integer`. The Python ctypes modules are now called **bindings**, leaving "bridge" to the engine. Step 0's G2 parser note |
 
-When this plan is approved, it becomes the family-level `PLAN.md`. Draft
-workflow and CMake files that the audit produced live in
-`docs/migration/drafts/`. They are untested sketches, and GitHub does not
-run them from that directory.
+When this plan is approved, it becomes the family-level `PLAN.md`. The
+audit's draft workflow and CMake files were replaced at step 1c by the real
+ones (root `CMakeLists.txt`, `.github/workflows/`), and the gates they
+sketched are implemented in `docs/migration/gates.py`.
 
 How to read it:
 
@@ -373,7 +373,7 @@ two ways: it pushes the M33 and Hexagon jobs past their timeouts
 v3 splits the gates into two classes:
 
 - **A/B gates** are the toolchain-sensitive ones. They run in the dedicated
-  **`migration-gates`** workflow (draft: `docs/migration/drafts/migration-gates.yml`),
+  **`migration-gates`** workflow (`.github/workflows/migration-gates.yml`, running `docs/migration/gates.py`),
   on a pinned `ubuntu-24.04` with `cancel-in-progress: false`. Each job checks
   out the gated SHA **and** the two step-0 tips: `tap/SampleRateTap@S0` and
   `tap/RatioTap@R0`, both public, so no token is needed. It builds all three
@@ -571,15 +571,35 @@ git branch -D ratio-import                                  # never pushed
   the rewritten RatioTap commits. The dry run checked the root commit, M1,
   M7c (which recurses into `bridge/submodules/sampleratetap/submodules/dsptap`)
   and the tip.
-- The rewritten reformat commit `c0894cf` becomes `4c3562c`. It is recorded
+- The rewritten reformat commit `c0894cf` becomes `89c7eba` (`4c3562c` in the
+  dry run, under the old prefix). It is recorded
   for `.git-blame-ignore-revs`.
 
 **1c — Build glue and path fix-ups.** No change reaches codegen: G4 and G7
-prove it. **Gate 1:** G1, G2, G3, G4, G5, G6, G7, G8, G11, G12, G13 and
+prove it.
+
+**Done (v3.1).** 1b's rewritten tip is `654659e`, identical on two fresh
+clones; the branch holds 182 commits (140 + 33 + 9). Measured locally before
+the push, against S0 and R0 built in the same session (`gates.py`):
+G7 exact for every host, M33 and M55 TU; G3 and G5 exact on M33 and M55 (the
+new icount ELFs are byte-identical to S0's and R0's); G4 exact for the C ABI
+libraries and all 17 icount binaries; G1, G6 and G10 equal to the snapshot;
+G12 reaches every step-0 commit; G14 has no unlisted residual; the rendered
+book is byte-identical to S0's. Hexagon A/B, the macOS/Windows legs and G11
+run first in CI. Choices the plan left open:
+
+- clang-tidy keeps each repository's old coverage: both engines' tests and
+  examples, and bridge's icount workloads. async's workloads were never
+  under the gate and fail it; bringing them in is follow-up work.
+- ci-arm64 runs `-L '^async$'` (its old scope). TSan builds both engines and
+  runs async only.
+- The ratchet is one matrix job per engine, each with its own plugin marker
+  and `icount.py`, until step 2.
+- The book's anchor includes are a `rename.py` rule, not residual. **Gate 1:** G1, G2, G3, G4, G5, G6, G7, G8, G11, G12, G13 and
 G14; every notebook binding and every standalone engine build configures and
 builds.
 
-- **Root `CMakeLists.txt`** (draft: `docs/migration/drafts/root-CMakeLists-1c.cmake`):
+- **Root `CMakeLists.txt`**:
   - `project(SampleRateTap LANGUAGES CXX)` and `enable_testing()`.
   - `option()` **defaults** ON for `SRT_BUILD_TESTS`, `SRT_BUILD_EXAMPLES`,
     `TAP_RATIO_BUILD_TESTS` and `TAP_RATIO_BUILD_EXAMPLES`, declared before
@@ -609,7 +629,7 @@ builds.
     it to the root leaked it into the icount TUs and failed G7 in the dry
     run (R2-CI-5, R2-RUN-8). Setting both variables is what makes gtest and
     both test trees agree.
-- **CI** (draft: `docs/migration/drafts/ci-after-1c.yml`):
+- **CI**:
   - Every job configures the root once and builds both engines.
   - Correctness jobs run **per (target, engine)** with
     `ctest -L '^<engine>$'`, each engine's own `-E` list and `-j`:
@@ -778,7 +798,7 @@ G13 and G14, plus G9 from 3.7.
   - `git log --follow bridge/include/tap/sr/bridge/converter.h` reaches
     RatioTap M3 (`06769f2` before rewriting).
 - **Follow-up commit:** append to `.git-blame-ignore-revs` the step-3
-  commit SHAs and the rewritten RatioTap reformat commit `4c3562c`.
+  commit SHAs and the rewritten RatioTap reformat commit `89c7eba`.
 - Tag `v0.4.0`.
 
 ### Step 5 — Outside the repository

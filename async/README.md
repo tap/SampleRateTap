@@ -1,7 +1,7 @@
 # SampleRateTap
 
 [![CI](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 
 Header-only C++20 **asynchronous sample rate converter** (ASRC) for the
@@ -323,7 +323,7 @@ wall-clock and embedded instruction counts, steady state and construction
 [docs/COMPARISON.md](docs/COMPARISON.md).
 
 <!-- ICOUNT:BEGIN -->
-Executed instructions per fixed workload (`bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bench/baselines.json`:
+Executed instructions per fixed workload (`async/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `async/bench/baselines.json`:
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|

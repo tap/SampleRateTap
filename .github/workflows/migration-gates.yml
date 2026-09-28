@@ -1,0 +1,190 @@
+name: migration-gates
+
+# The monorepo migration's gates (docs/MONOREPO_PLAN.md section 5), run on
+# every gated push of the migration PR. Each job checks out the gated tree
+# AND the two step-0 tips (docs/migration/tips.txt; both public, no token
+# needed), builds all three with one toolchain, and runs
+# docs/migration/gates.py:
+#   host      G1 G4(C ABI) G5 G6 G7 G9 G10 G12 G14
+#   m33/m55/hexagon  G3 G4(icount) G5(checksums) G7
+#   notebooks G11
+# Lives only on the migration branch; deleted at step 4 with docs/migration/.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-gates-${{ github.event.pull_request.number || github.ref }}
+  # Every gated SHA needs a complete run (G13).
+  cancel-in-progress: false
+
+env:
+  S0: 5e2057f192cee1eeb61286c466e5f50293580c09
+  R0: 8f19e8b967b8d3e9eb22393e881396d418c0584f
+
+jobs:
+  gates:
+    name: gates ${{ matrix.target }}
+    # Pinned image: G3, G4 and G7 compare builds made in this job, so the
+    # job must not straddle an image rollout.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [host, m33, m55, hexagon]
+    env:
+      QEMU_PLUGIN_HEADER_URL: https://raw.githubusercontent.com/qemu/qemu/11aa0b1ff115b86160c4d37e7c37e6a6b13b77ea/include/qemu/qemu-plugin.h
+      QEMU_PLUGIN_HEADER_SHA256: "c53a2af163e80e3f4bc6c60dbdfc84003db329d757e37cd8a16a77e1d82606ff"
+      QEMU_SRC_URL: https://download.qemu.org/qemu-8.2.2.tar.xz
+      QEMU_SRC_SHA256: "847346c1b82c1a54b2c38f6edbd85549edeb17430b7d4d3da12620e2962bc4f3"
+      HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
+      HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
+    steps:
+      # Full history for G12 (--follow and blame across the import).
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          path: new
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          repository: tap/SampleRateTap
+          ref: ${{ env.S0 }}
+          path: old-async
+          submodules: recursive
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          repository: tap/RatioTap
+          ref: ${{ env.R0 }}
+          path: old-ratio
+          submodules: recursive
+
+      - name: The tips match docs/migration/tips.txt
+        run: |
+          grep -q "^S0 $S0" new/docs/migration/tips.txt
+          grep -q "^R0 $R0" new/docs/migration/tips.txt
+          echo "step: $(cat new/docs/migration/step.txt)"
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q python3-pyelftools clang-format-18 libglib2.0-dev \
+            gcc-arm-none-eabi qemu-system-arm ninja-build meson flex bison
+          # rename.py formats like the pre-commit hook (clang-format 18.1.3).
+          sudo ln -sf "$(command -v clang-format-18)" /usr/local/bin/clang-format
+          echo "image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          dpkg-query -W gcc-arm-none-eabi qemu-system-arm g++ clang-format-18
+          echo "os=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
+        id: image
+
+      - name: Counting plugin header
+        if: matrix.target != 'host'
+        run: |
+          curl -sfLo /tmp/qemu-plugin.h "$QEMU_PLUGIN_HEADER_URL"
+          actual=$(sha256sum /tmp/qemu-plugin.h | cut -d' ' -f1)
+          [ "$actual" = "$QEMU_PLUGIN_HEADER_SHA256" ] || { echo "::error::qemu-plugin.h checksum mismatch"; exit 1; }
+
+      - name: Cache plugin-enabled qemu-hexagon
+        if: matrix.target == 'hexagon'
+        id: qemu-hex
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/qemu-hexagon-plugins
+          key: qemu-hexagon-plugins-${{ steps.image.outputs.os }}-${{ env.QEMU_SRC_URL }}-1
+
+      - name: Build plugin-enabled qemu-hexagon
+        if: matrix.target == 'hexagon' && steps.qemu-hex.outputs.cache-hit != 'true'
+        run: |
+          curl -sfLo /tmp/qemu-src.tar.xz "$QEMU_SRC_URL"
+          actual=$(sha256sum /tmp/qemu-src.tar.xz | cut -d' ' -f1)
+          [ "$actual" = "$QEMU_SRC_SHA256" ] || { echo "::error::qemu source checksum mismatch"; exit 1; }
+          tar -xJf /tmp/qemu-src.tar.xz -C /tmp
+          cd /tmp/qemu-*/
+          ./configure --target-list=hexagon-linux-user --enable-plugins \
+            --disable-docs --disable-tools --disable-system
+          ninja -C build qemu-hexagon
+          mkdir -p ~/qemu-hexagon-plugins
+          cp build/qemu-hexagon ~/qemu-hexagon-plugins/
+
+      - name: Cache Hexagon toolchain
+        if: matrix.target == 'hexagon'
+        id: cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/hexagon
+          key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
+
+      - name: Hexagon toolchain on PATH
+        if: matrix.target == 'hexagon'
+        run: |
+          if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
+            new/scripts/fetch_hexagon_toolchain.sh
+          fi
+          clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
+          test -n "$clangxx"
+          echo "$(dirname "$clangxx")" >> "$GITHUB_PATH"
+          echo "$HOME/qemu-hexagon-plugins" >> "$GITHUB_PATH"
+
+      - name: Gates (${{ matrix.target }})
+        run: |
+          if [ "${{ matrix.target }}" = host ]; then
+            python3 new/docs/migration/gates.py host --work work 2>&1 | tee gates-host.log
+          else
+            python3 new/docs/migration/gates.py cross --target ${{ matrix.target }} \
+              --work work --plugin-header-dir /tmp 2>&1 | tee gates-${{ matrix.target }}.log
+          fi
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload gate log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gates-${{ matrix.target }}
+          path: gates-${{ matrix.target }}.log
+
+  notebooks:
+    name: gates notebooks (G11)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          path: new
+          submodules: recursive
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          repository: tap/SampleRateTap
+          ref: ${{ env.S0 }}
+          path: old-async
+          submodules: recursive
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          repository: tap/RatioTap
+          ref: ${{ env.R0 }}
+          path: old-ratio
+          submodules: recursive
+      # The pinned notebook environment (step P.3): Python from setup-python,
+      # every package hash-pinned by the lockfile.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"   # the lockfile was compiled for 3.11
+      - name: Install the pinned environment
+        run: |
+          python3 -m pip install --require-hashes -r new/requirements.lock
+          python3 --version && python3 -m pip freeze | grep -iE '^(numpy|scipy|matplotlib|samplerate|soxr)=='
+      - name: Gates (notebooks)
+        run: |
+          python3 new/docs/migration/gates.py notebooks --work work 2>&1 | tee gates-notebooks.log
+          exit "${PIPESTATUS[0]}"
+      - name: Upload gate log and executed notebooks
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gates-notebooks
+          path: |
+            gates-notebooks.log
+            work/notebooks/

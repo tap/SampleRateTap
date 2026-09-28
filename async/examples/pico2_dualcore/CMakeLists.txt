@@ -44,7 +44,7 @@ pico_sdk_init()
 add_executable(pico2_dualcore main.cpp)
 # Self-contained except for the header-only library itself.
 target_include_directories(pico2_dualcore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/dsptap/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/dsptap/include)
 target_link_libraries(pico2_dualcore PRIVATE pico_stdlib pico_multicore cmsis_core)
 
 # Telemetry prints from the producer core; when the USB host stops draining

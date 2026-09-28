@@ -35,8 +35,10 @@ jobs:
       - name: Build
         run: cmake --build build -j 4
 
+      # The async engine's suite, as before the monorepo import; the root
+      # also builds the bridge engine, which this workflow does not target.
       - name: Full test suite
-        run: ctest --test-dir build --output-on-failure --no-tests=error
+        run: ctest --test-dir build --output-on-failure --no-tests=error -L '^async$'
 
       # The ring stress under TSan on weakly-ordered silicon is the point
       # of this workflow: run it several times for schedule diversity.

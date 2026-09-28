@@ -45,3 +45,6 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 # running the whole (emulation-sized) suite, judged by gtest's summary text
 # rather than the exit code, which semihosting does not reliably propagate.
 set(SRT_BARE_METAL ON)
+# Both engines' test trees read their own variable until step 3.3 of the
+# monorepo migration unifies them as TAP_SR_BARE_METAL.
+set(TAP_RATIO_BARE_METAL ON)

@@ -21,10 +21,20 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.head_ref != 'claude/sample-rate-expansion-strategies-ezqzu6' }}
 
+env:
+  CTEST_COMMON: --no-tests=error --output-on-failure
+
+# Monorepo migration step 1c: one tree, two engines (async/, bridge/). Every
+# job configures the ROOT once and builds both engines; a job that tests
+# only one engine selects it at ctest time by label (async / ratio — the
+# bridge engine keeps RatioTap's `ratio` label until step 3.4 renames it,
+# docs/MONOREPO_PLAN.md D16). Per-engine options keep each engine's own
+# warning policy.
 jobs:
   build-and-test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -33,27 +43,31 @@ jobs:
             os: ubuntu-latest
             cc: gcc
             cxx: g++
-            werror: ON
+            async_werror: ON
+            bridge_werror: ON
             capi: ON
+          # The bridge engine's first Clang coverage on Linux.
           - name: Linux Clang
             os: ubuntu-latest
             cc: clang
             cxx: clang++
-            werror: ON
+            async_werror: ON
+            bridge_werror: ON
             capi: ON
           - name: macOS AppleClang
             os: macos-latest
-            werror: ON
+            async_werror: ON
+            bridge_werror: ON
             capi: ON
-          # Warnings stay non-fatal on MSVC until /W4 output has been
-          # triaged (docs/PERFORMANCE.md "Known debt"). capi stays OFF here too:
-          # tools/capi carries no __declspec(dllexport) (unlike DspTap's), so an
-          # MSVC build would link a DLL exporting nothing — it would pass without
-          # gating anything. Turn it ON in the same change that gives the C ABI
-          # an export decoration.
+          # async's warnings stay non-fatal on MSVC until its /W4 output has
+          # been triaged (async/docs/PERFORMANCE.md "Known debt"); bridge keeps
+          # /WX, as RatioTap's CI did. The C ABI stays OFF: neither library
+          # carries __declspec(dllexport), so an MSVC build would link DLLs
+          # exporting nothing and gate nothing.
           - name: Windows MSVC
             os: windows-latest
-            werror: OFF
+            async_werror: OFF
+            bridge_werror: ON
             capi: OFF
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -67,31 +81,40 @@ jobs:
         run: >
           cmake -B build
           -DCMAKE_BUILD_TYPE=Release
-          -DSRT_WERROR=${{ matrix.werror }}
+          -DSRT_WERROR=${{ matrix.async_werror }}
+          -DTAP_RATIO_WERROR=${{ matrix.bridge_werror }}
           -DSRT_BUILD_CAPI=${{ matrix.capi }}
+          -DTAP_RATIO_BUILD_CAPI=${{ matrix.capi }}
 
       - name: Build
         run: cmake --build build --config Release -j 4
 
       - name: Test
-        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
+        run: ctest --test-dir build -C Release ${{ env.CTEST_COMMON }}
 
   sanitizers:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: ASan + UBSan
             flags: -fsanitize=address,undefined -fno-sanitize-recover=all
+            labels: ""
+          # TSan runs the async engine only: bridge is single-threaded, and
+          # RatioTap never ran a TSan job.
           - name: TSan
             flags: -fsanitize=thread
+            labels: -L ^async$
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           submodules: recursive
 
+      # Each engine keeps its old sanitizer configuration: async without
+      # WERROR and without examples, bridge with WERROR and its examples.
       - name: Configure
         env:
           CC: clang
@@ -100,6 +123,7 @@ jobs:
           cmake -B build
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DSRT_BUILD_EXAMPLES=OFF
+          -DTAP_RATIO_WERROR=ON
           -DCMAKE_CXX_FLAGS="${{ matrix.flags }}"
 
       - name: Build
@@ -109,65 +133,121 @@ jobs:
         env:
           TSAN_OPTIONS: halt_on_error=1
           UBSAN_OPTIONS: print_stacktrace=1
-        run: ctest --test-dir build --output-on-failure --no-tests=error
+        run: ctest --test-dir build ${{ env.CTEST_COMMON }} ${{ matrix.labels }}
 
-  # Cross-compile for Qualcomm Hexagon (Linux/musl) with the open-source
-  # toolchain and run a subset of the suite under qemu-hexagon user-mode
-  # emulation. Validates ISA-level correctness on a 32-bit audio DSP target
-  # (size_t width, atomics lowering, musl libc, soft-float doubles); the
-  # long-running quality/lock simulations and the 10M-element thread stress
-  # are excluded — they prove DSP math and concurrency, which emulation
-  # neither speeds up nor measures meaningfully.
-  hexagon-qemu:
-    name: Hexagon cross (QEMU)
+  # Cross-compiled correctness under emulation, one job per (target, engine):
+  # both engines are built in one tree and each job runs one engine's label
+  # with that engine's own exclusions and parallelism, as each repository ran
+  # them before (async serial, bridge -j 4 on Hexagon). The -V --output-log
+  # file keeps every test's own output ([ RUN ] lines, [ measured ] numbers)
+  # and is uploaded as evidence (monorepo gate G2).
+  #   Hexagon (Linux/musl, qemu-hexagon user mode): 32-bit audio DSP, soft-
+  #     float doubles. Excluded: the long quality/lock simulations and the
+  #     thread stress (emulation neither speeds up nor measures them), and the
+  #     EXPECT_THROW tests — this static-musl toolchain cannot unwind across
+  #     frames, so a correct throw terminates (Known debt, PERFORMANCE.md).
+  #   Cortex-M55 (MPS3 AN547) and Cortex-M33 (MPS2+ AN505, Pico 2 class):
+  #     bare metal, newlib + semihosting, no threads, no FP64; each engine's
+  #     one-shot binary bakes in its emulation-sized filter.
+  qemu:
+    name: ${{ matrix.title }} ${{ matrix.engine }} (QEMU)
+    # Pinned image: toolchain and qemu packages must not move under a run.
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: hexagon
+            title: Hexagon cross
+            engine: async
+            label: async
+            timeout: 45
+            jobs: 1
+            build_type: Release
+            toolchain: cmake/hexagon-linux-musl.cmake
+            exclude: AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation
+          - target: hexagon
+            title: Hexagon cross
+            engine: bridge
+            label: ratio
+            timeout: 30
+            jobs: 4
+            build_type: Release
+            toolchain: cmake/hexagon-linux-musl.cmake
+            exclude: BadProfilesThrow|LatencyAndValidation
+          - target: m55
+            title: Cortex-M55 cross
+            engine: async
+            label: async
+            timeout: 30
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m55-mps3.cmake
+            exclude: ""
+          - target: m55
+            title: Cortex-M55 cross
+            engine: bridge
+            label: ratio
+            timeout: 20
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m55-mps3.cmake
+            exclude: ""
+          # ~23 min of emulated suite against a 40-minute budget.
+          - target: m33
+            title: Cortex-M33 cross
+            engine: async
+            label: async
+            timeout: 40
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m33-mps2.cmake
+            exclude: ""
+          - target: m33
+            title: Cortex-M33 cross
+            engine: bridge
+            label: ratio
+            timeout: 20
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m33-mps2.cmake
+            exclude: ""
     env:
       # Prebuilt open-source toolchain (BSD-3) published by Qualcomm/Quicinc;
       # binary artifacts are hosted on CodeLinaro and linked from the
-      # quic/toolchain_for_hexagon release notes.
+      # quic/toolchain_for_hexagon release notes. Hard pin verified against
+      # the published SHA256SUMS by scripts/fetch_hexagon_toolchain.sh.
       HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
-      # Hard pin, taken from the "toolchain sha256:" line of run #13 (which
-      # also matched the published SHA256SUMS).
       HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           submodules: recursive
 
-      - name: Cache toolchain
+      - name: Install Arm toolchain and QEMU
+        if: matrix.target != 'hexagon'
+        run: >
+          sudo apt-get update -q &&
+          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+
+      - name: Cache Hexagon toolchain
+        if: matrix.target == 'hexagon'
         id: cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/hexagon
           # Keyed on the pinned digest: every job that can write this key
-          # verifies its download against the same pin, so no unverified
-          # writer can poison the trusted entry.
+          # verifies its download against the same pin (one shared script),
+          # so no unverified writer can poison the trusted entry.
           key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
 
-      - name: Download toolchain
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/hexagon && cd ~/hexagon
-          curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
-          # Integrity check against the published SHA256SUMS, plus the hard
-          # pin when set. The SUMS file catches corruption and
-          # cache-poisoning; only the pin catches an origin compromise.
-          curl -sfLo SHA256SUMS "$(dirname "$HEXAGON_TOOLCHAIN_URL")/SHA256SUMS"
-          expected=$(grep "$(basename "$HEXAGON_TOOLCHAIN_URL")" SHA256SUMS | awk '{print $1}' | head -1)
-          actual=$(sha256sum toolchain.tar.zst | cut -d' ' -f1)
-          echo "toolchain sha256: $actual (pin this in HEXAGON_TOOLCHAIN_SHA256)"
-          if [ -z "$expected" ] || [ "$actual" != "$expected" ]; then
-            echo "::error::toolchain does not match published SHA256SUMS"; exit 1
-          fi
-          if [ -n "${HEXAGON_TOOLCHAIN_SHA256:-}" ] && \
-             [ "$actual" != "$HEXAGON_TOOLCHAIN_SHA256" ]; then
-            echo "::error::toolchain checksum mismatch against pinned value"; exit 1
-          fi
-          tar --zstd -xf toolchain.tar.zst
-          rm toolchain.tar.zst SHA256SUMS
+      - name: Download Hexagon toolchain
+        if: matrix.target == 'hexagon' && steps.cache.outputs.cache-hit != 'true'
+        run: scripts/fetch_hexagon_toolchain.sh
 
-      - name: Set up toolchain and QEMU paths
+      - name: Set up Hexagon toolchain and QEMU paths
+        if: matrix.target == 'hexagon'
         run: |
           # No -type f (symlinks count); dirname of an empty find result is
           # ".", so assert on the find output itself.
@@ -182,124 +262,41 @@ jobs:
             sudo apt-get update -q && sudo apt-get install -y -q qemu-user
           fi
 
-      - name: Verify tools
+      - name: Record image and toolchain versions
         run: |
-          hexagon-unknown-linux-musl-clang++ --version
-          qemu-hexagon --version
+          echo "image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          if [ "${{ matrix.target }}" = hexagon ]; then
+            hexagon-unknown-linux-musl-clang++ --version
+            qemu-hexagon --version
+          else
+            dpkg-query -W gcc-arm-none-eabi qemu-system-arm
+          fi
 
-      - name: Configure
+      - name: Configure (both engines, one tree)
         run: >
           cmake -B build
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}
           -DSRT_BUILD_EXAMPLES=OFF
+          -DTAP_RATIO_BUILD_EXAMPLES=OFF
 
       - name: Build
         run: cmake --build build -j 4
 
-      # -V --output-log keeps every test's own output ([ RUN ] lines,
-      # [ measured ] numbers), which --output-on-failure prints only for
-      # failures; the log is uploaded below as evidence.
-      - name: Test under emulation
-        run: >
-          ctest --test-dir build --output-on-failure --no-tests=error
-          -V --output-log ctest-hexagon.log
-          -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation'
-        # ConfigValidation: this static-musl toolchain cannot unwind across
-        # frames — the constructor throws correctly but EXPECT_THROW never
-        # catches and libc++abi terminates. Validation is target-independent
-        # and covered on every other leg; limitation tracked in
-        # docs/PERFORMANCE.md "Known debt".
+      - name: Test under emulation (${{ matrix.engine }} only)
+        shell: bash
+        run: |
+          args=(--test-dir build ${{ env.CTEST_COMMON }} -L '^${{ matrix.label }}$'
+                -j ${{ matrix.jobs }} -V --output-log ctest-${{ matrix.target }}-${{ matrix.engine }}.log)
+          if [ -n '${{ matrix.exclude }}' ]; then args+=(-E '${{ matrix.exclude }}'); fi
+          ctest "${args[@]}"
 
       - name: Upload test log
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ctest-hexagon
-          path: ctest-hexagon.log
-
-  # Cross-compile for Arm Cortex-M55 (bare metal, newlib + semihosting) and
-  # run the emulation-sized test subset on QEMU's MPS3 AN547 board model.
-  # Validates the library on a 32-bit MCU-class target with no OS, no
-  # threads and no double-precision FPU; the fixed-point datapaths are the
-  # performance-appropriate formats here.
-  cortex-m55-qemu:
-    name: Cortex-M55 cross (QEMU)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-        with:
-          submodules: recursive
-
-      - name: Install toolchain and QEMU
-        run: >
-          sudo apt-get update -q &&
-          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
-
-      - name: Configure
-        run: >
-          cmake -B build
-          -DCMAKE_BUILD_TYPE=MinSizeRel
-          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
-          -DSRT_BUILD_EXAMPLES=OFF
-
-      - name: Build
-        run: cmake --build build -j 4
-
-      - name: Test under emulation
-        run: >
-          ctest --test-dir build --output-on-failure --no-tests=error
-          -V --output-log ctest-m55.log
-
-      - name: Upload test log
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ctest-m55
-          path: ctest-m55.log
-
-  # Cortex-M33 (Raspberry Pi Pico 2 / RP2350 class: single-precision FPU,
-  # no FP64, no MVE) on QEMU's MPS2+ AN505 model. Shares the Armv8-M
-  # startup with the M55 target; quantifies the soft-double float path and
-  # anchors the Q15/Q31 budgets for Pico-class parts.
-  cortex-m33-qemu:
-    name: Cortex-M33 cross (QEMU)
-    runs-on: ubuntu-24.04
-    # ~23 min of emulated suite (plus ~1 min of output hashes) against the
-    # old 30: headroom for a slower runner.
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-        with:
-          submodules: recursive
-
-      - name: Install toolchain and QEMU
-        run: >
-          sudo apt-get update -q &&
-          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
-
-      - name: Configure
-        run: >
-          cmake -B build
-          -DCMAKE_BUILD_TYPE=MinSizeRel
-          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake
-          -DSRT_BUILD_EXAMPLES=OFF
-
-      - name: Build
-        run: cmake --build build -j 4
-
-      - name: Test under emulation
-        run: >
-          ctest --test-dir build --output-on-failure --no-tests=error
-          -V --output-log ctest-m33.log
-
-      - name: Upload test log
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ctest-m33
-          path: ctest-m33.log
+          name: ctest-${{ matrix.target }}-${{ matrix.engine }}
+          path: ctest-${{ matrix.target }}-${{ matrix.engine }}.log
 
   # ------------------------------------------------------------------------
   # Template: genuine Tensilica HiFi4/HiFi5 coverage. The HiFi audio ISA,
@@ -323,25 +320,39 @@ jobs:
   #         -DCMAKE_C_COMPILER=xt-clang
   #         -DCMAKE_CXX_COMPILER=xt-clang++
   #         "-DCMAKE_CROSSCOMPILING_EMULATOR=xt-run;--xtensa-core=$XTENSA_CORE"
-  #         -DSRT_BUILD_EXAMPLES=OFF
+  #         -DSRT_BUILD_EXAMPLES=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
   #     - name: Build
   #       run: cmake --build build -j
   #     - name: Test on ISS
   #       run: >
-  #         ctest --test-dir build --output-on-failure
+  #         ctest --test-dir build --output-on-failure -L '^async$'
   #         -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec'
   # ------------------------------------------------------------------------
 
-  # Deterministic instruction-count ratchet (docs/PERFORMANCE.md): fixed
-  # workloads under QEMU with a counting plugin, gated against
-  # bench/baselines.json. Unlike wall-clock numbers these are noise-free,
-  # so a hard >3% gate is safe on shared runners.
+  # Deterministic instruction-count ratchet (async/docs/PERFORMANCE.md,
+  # bridge/PLAN.md section 7): fixed workloads under QEMU with a counting
+  # plugin, gated two-sided at ±3% against each engine's
+  # bench/baselines.json. Noise-free, so a hard gate is safe on shared
+  # runners. One job per engine until migration step 2 unifies the harness:
+  # each engine still has its own plugin marker and icount.py.
   icount-ratchet:
-    name: Instruction-count ratchet
+    name: Instruction-count ratchet (${{ matrix.engine }})
     # Pinned image: the counts are a function of the apt toolchain, the
     # plugin build and QEMU, so the job must not straddle an image rollout.
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - engine: async
+            plugin_src: tools/qemu_insn_plugin/insn_count.c
+            icount: scripts/icount.py
+            bench: -DSRT_BUILD_ICOUNT_BENCH=ON
+          - engine: bridge
+            plugin_src: bridge/tools/qemu_insn_plugin/insn_count.c
+            icount: bridge/scripts/icount.py
+            bench: -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
     env:
       # Commit the v8.2.2 tag pointed at when pinned (tags are movable;
       # commit SHAs are not), with the header's digest verified on download.
@@ -351,9 +362,13 @@ jobs:
       # Hard pin from the "qemu source sha256:" line of run #24.
       QEMU_SRC_SHA256: "847346c1b82c1a54b2c38f6edbd85549edeb17430b7d4d3da12620e2962bc4f3"
       HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/19.1.5/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl.tar.zst
-      # Same hard pin as the hexagon-qemu job: this job also writes the
-      # shared toolchain cache, so it must verify against the same digest.
+      # Same hard pin as the qemu job: this job also writes the shared
+      # toolchain cache, so it verifies against the same digest.
       HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
+      # Both engines' tests and examples OFF: workloads only.
+      WORKLOADS_ONLY: >-
+        -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
+        -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -373,10 +388,10 @@ jobs:
             echo "::error::qemu-plugin.h checksum mismatch"; exit 1
           fi
           gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/tmp \
-            -o /tmp/libinsncount.so tools/qemu_insn_plugin/insn_count.c
+            -o /tmp/libinsncount.so ${{ matrix.plugin_src }}
 
       # What produced the counts: the runner image and the toolchain packages
-      # (the counts move when either does; see docs/PERFORMANCE.md).
+      # (the counts move when either does).
       - name: Record image and toolchain versions
         id: image
         run: |
@@ -390,14 +405,14 @@ jobs:
           cmake -B build-m55
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
-          -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
-          -DSRT_BUILD_ICOUNT_BENCH=ON
+          $WORKLOADS_ONLY ${{ matrix.bench }}
           && cmake --build build-m55 -j 4
 
       - name: Ratchet M55
         run: >
-          python3 scripts/icount.py --target m55
+          python3 ${{ matrix.icount }} --target m55
           --build-dir build-m55 --plugin /tmp/libinsncount.so
+          --baselines ${{ matrix.engine }}/bench/baselines.json
 
       - name: Build M33 workloads
         if: ${{ !cancelled() }}
@@ -405,23 +420,22 @@ jobs:
           cmake -B build-m33
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake
-          -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
-          -DSRT_BUILD_ICOUNT_BENCH=ON
+          $WORKLOADS_ONLY ${{ matrix.bench }}
           && cmake --build build-m33 -j 4
 
       - name: Ratchet M33
         if: ${{ !cancelled() }}
         run: >
-          python3 scripts/icount.py --target m33
+          python3 ${{ matrix.icount }} --target m33
           --build-dir build-m33 --plugin /tmp/libinsncount.so
+          --baselines ${{ matrix.engine }}/bench/baselines.json
 
       # Neither Debian's nor the CodeLinaro toolchain's qemu-hexagon enables
       # TCG plugins, so the Hexagon leg builds its own from the pinned QEMU
       # release (linux-user target only, ~4 min, cached thereafter).
       # The remaining ratchet steps run even if an earlier target failed
-      # (each target's numbers are independent evidence; stopping at the
-      # first failure forces a serial harvest when baselines legitimately
-      # move). The job still fails if any step failed.
+      # (each target's numbers are independent evidence). The job still
+      # fails if any step failed.
       - name: Cache plugin-enabled qemu-hexagon
         if: ${{ !cancelled() }}
         id: qemu-hex
@@ -456,30 +470,17 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/hexagon
-          # Same digest-keyed name as the hexagon-qemu job; the download
-          # below verifies the same pin before anything is saved under it.
           key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
 
       - name: Ratchet Hexagon
         if: ${{ !cancelled() }}
         run: |
           if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
-            mkdir -p ~/hexagon && cd ~/hexagon
-            curl -sfLo toolchain.tar.zst "$HEXAGON_TOOLCHAIN_URL"
-            actual=$(sha256sum toolchain.tar.zst | cut -d' ' -f1)
-            if [ "$actual" != "$HEXAGON_TOOLCHAIN_SHA256" ]; then
-              echo "::error::toolchain checksum mismatch against pinned value"
-              exit 1
-            fi
-            tar --zstd -xf toolchain.tar.zst && rm toolchain.tar.zst
-            cd "$GITHUB_WORKSPACE"
+            scripts/fetch_hexagon_toolchain.sh
           fi
           # No -type f: the compiler may be a symlink in the restored tree.
           clangxx=$(find "$HOME/hexagon" -name 'hexagon-unknown-linux-musl-clang++' | head -1)
           if [ -z "$clangxx" ]; then
-            echo "contents of ~/hexagon:"
-            ls -la "$HOME/hexagon" 2>&1 | head -20
-            find "$HOME/hexagon" -maxdepth 3 | head -40
             echo "::error::hexagon cross compiler not found under ~/hexagon"
             exit 1
           fi
@@ -494,22 +495,23 @@ jobs:
           fi
           cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
-            -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
-            -DSRT_BUILD_ICOUNT_BENCH=ON
+            $WORKLOADS_ONLY ${{ matrix.bench }}
           cmake --build build-hex -j 4
-          python3 scripts/icount.py --target hexagon \
-            --build-dir build-hex --plugin /tmp/libinsncount.so
+          python3 ${{ matrix.icount }} --target hexagon \
+            --build-dir build-hex --plugin /tmp/libinsncount.so \
+            --baselines ${{ matrix.engine }}/bench/baselines.json
 
-      # The README instruction-count table derives 1:1 from the committed
-      # baselines; regenerating it must produce no diff.
+      # Each engine README's instruction-count table derives 1:1 from its
+      # committed baselines; regenerating it must produce no diff.
       - name: Docs freshness
+        if: ${{ !cancelled() }}
         run: |
-          python3 scripts/update_icount_docs.py
-          git diff --exit-code README.md || {
-            echo "::error::README icount table is stale; run scripts/update_icount_docs.py"; exit 1; }
+          python3 scripts/update_icount_docs.py --engine ${{ matrix.engine }}
+          git diff --exit-code ${{ matrix.engine }}/README.md || {
+            echo "::error::${{ matrix.engine }}/README.md icount table is stale; run scripts/update_icount_docs.py --engine ${{ matrix.engine }}"; exit 1; }
 
   # Keeps the benchmarks compiling and runnable; never a performance gate
-  # (shared runners are noise — see docs/PERFORMANCE.md).
+  # (shared runners are noise — see async/docs/PERFORMANCE.md).
   bench-smoke:
     name: Benchmark smoke
     runs-on: ubuntu-latest
@@ -524,18 +526,18 @@ jobs:
           cmake -B build
           -DCMAKE_BUILD_TYPE=Release
           -DSRT_BUILD_BENCHMARKS=ON
-          -DSRT_BUILD_TESTS=OFF
-          -DSRT_BUILD_EXAMPLES=OFF
+          -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
+          -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
 
       - name: Build
         run: cmake --build build -j 4
 
       - name: Run (smoke)
-        run: ./build/bench/srt_bench --benchmark_min_time=0.01s
+        run: ./build/async/bench/srt_bench --benchmark_min_time=0.01s
 
   # Keeps the manually-triggered comparison paths (compare.yml,
-  # bench/compare) compiling per push; build-only — the measured numbers
-  # come from the manual workflow, never from here.
+  # async/bench/compare) compiling per push; build-only — the measured
+  # numbers come from the manual workflow, never from here.
   compare-smoke:
     name: Comparison build smoke
     runs-on: ubuntu-latest
@@ -558,6 +560,7 @@ jobs:
           -DSRT_BUILD_BENCHMARKS=ON
           -DSRT_BUILD_COMPARE_BENCH=ON
           -DSRT_BUILD_COMPARE_SHIM=ON
+          -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
           && cmake --build build-host -j 4 --target srt_bench_compare srt_r8b_shim
 
       - name: Build M55 comparison workload
@@ -566,16 +569,14 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
           -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
+          -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
           -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
           && cmake --build build-m55 -j 4 --target cmp_icount_lsr_medium
           cmp_icount_srt_q15 cmp_icount_r8b_120
 
   # The Pico 2 firmware examples are standalone projects (Pico SDK fetched at
-  # configure time), deliberately outside the root build. Building them here
-  # keeps them from silently rotting again: they had stopped compiling after
-  # the snake_case rename and the DspTap substrate move, with nothing
-  # noticing. Build-only; running them needs the hardware
-  # (docs/HARDWARE_TESTING.md).
+  # configure time), deliberately outside the root build. Build-only; running
+  # them needs the hardware (async/docs/HARDWARE_TESTING.md).
   pico2-build:
     name: Pico 2 firmware build
     runs-on: ubuntu-24.04
@@ -590,12 +591,12 @@ jobs:
 
       - name: Build pico2_cyccnt
         run: >
-          cmake -S examples/pico2_cyccnt -B build-cyccnt -DPICO_BOARD=pico2
+          cmake -S async/examples/pico2_cyccnt -B build-cyccnt -DPICO_BOARD=pico2
           && cmake --build build-cyccnt -j 4
 
       - name: Build pico2_dualcore
         run: >
-          cmake -S examples/pico2_dualcore -B build-dualcore -DPICO_BOARD=pico2
+          cmake -S async/examples/pico2_dualcore -B build-dualcore -DPICO_BOARD=pico2
           && cmake --build build-dualcore -j 4
 
   clang-format:
@@ -646,6 +647,17 @@ jobs:
             echo "::error::mdbook reported warnings/errors (stale anchor or broken include?)"
             exit 1
           fi
+
+      # The API reference must build and be non-empty (both engines' headers
+      # are its input); book-pages.yml publishes it from main.
+      - name: API reference (Doxygen)
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q doxygen graphviz
+          doxygen docs/Doxyfile
+          test -s docs/html/index.html || { echo "::error::Doxygen produced no index.html"; exit 1; }
+          n=$(find docs/html -name '*.html' | wc -l)
+          echo "doxygen: $n pages"
+          [ "$n" -ge 20 ] || { echo "::error::Doxygen produced only $n pages"; exit 1; }
 
       # mdBook does not fail on a missing image, so check every relative
       # image reference resolves. (The SVGs are committed, generated by

@@ -98,13 +98,13 @@ want the clocks without the threads.
 The rig is a struct of knobs:
 
 ```cpp
-{{#include ../../../tests/support/two_clock_sim.h:pf_knobs}}
+{{#include ../../../async/tests/support/two_clock_sim.h:pf_knobs}}
 ```
 
 and one loop:
 
 ```cpp
-{{#include ../../../tests/support/two_clock_sim.h:pf_run}}
+{{#include ../../../async/tests/support/two_clock_sim.h:pf_run}}
 ```
 
 This is discrete-event simulation reduced to its minimum. Two virtual

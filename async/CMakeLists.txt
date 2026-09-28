@@ -3,9 +3,12 @@ project(SampleRateTap VERSION 0.1.0 LANGUAGES CXX)
 
 # Shared Tap-family substrate (tap::dsp): kaiser design math, sample-format
 # traits, FIR dot kernels, row-sum quantization, measurement instruments.
-# Pinned as a submodule per the DspTap release flow (changes land there first,
-# consumers bump the pin).
-add_subdirectory(submodules/dsptap)
+# Pinned once at the repository root (submodules/dsptap); added here only
+# when this engine is configured on its own (cmake -S async).
+if(NOT TARGET tap::dsp)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/dsptap
+                     ${CMAKE_CURRENT_BINARY_DIR}/submodules/dsptap)
+endif()
 
 add_library(SampleRateTap INTERFACE)
 add_library(SampleRateTap::SampleRateTap ALIAS SampleRateTap)
@@ -75,7 +78,7 @@ endif()
 # C ABI shared library for FFI consumers (see notebooks/asrc_demo.ipynb).
 option(SRT_BUILD_CAPI "Build the C ABI shared library" OFF)
 if(SRT_BUILD_CAPI)
-    add_subdirectory(tools/capi)
+    add_subdirectory(capi)
 endif()
 
 # ctypes shim over r8brain-free-src for the comparison notebook (fetched at a

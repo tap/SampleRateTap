@@ -39,3 +39,4 @@ check joins the book job at 1c.
 
 | Step | SHA | ci.yml | style.yml | migration-gates | ci-arm64 | compare | Image | Notes |
 |---|---|---|---|---|---|---|---|---|
+| 0 | `f2b7d04` | 36368216558 (15/15) | 36368217316 (2/2) | — (added at 1c) | — | — | ubuntu-24.04 | no-change baseline: S0's tree plus docs/migration |

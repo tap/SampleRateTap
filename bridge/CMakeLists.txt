@@ -9,10 +9,13 @@ project(RatioTap VERSION 0.3.0 LANGUAGES CXX)
 # and milestones; this is the M1 skeleton.
 # ==============================================================================
 
-# Shared Tap-family substrate (tap::dsp), pinned as a submodule per the DspTap
-# release flow (changes land there first, consumers bump the pin). Declares
-# its own C language support for the vendored Ooura sources.
-add_subdirectory(submodules/dsptap)
+# Shared Tap-family substrate (tap::dsp), pinned once at the repository root
+# (submodules/dsptap); added here only when this engine is configured on its
+# own (cmake -S bridge).
+if(NOT TARGET tap::dsp)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/dsptap
+                     ${CMAKE_CURRENT_BINARY_DIR}/submodules/dsptap)
+endif()
 
 add_library(tap_ratio INTERFACE)
 add_library(tap::ratio ALIAS tap_ratio)
@@ -38,19 +41,18 @@ option(TAP_RATIO_BUILD_CAPI "Build the C ABI shared library" OFF)
 # buildable for any target including bare metal. See PLAN.md section 7.
 option(TAP_RATIO_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF)
 
-# SampleRateTap, dev-only (never part of the shipped tap::ratio target): the
-# golden cross-validation test and the bluetooth_bridge example compose
-# against its near-unity ASRC. Consumed headers-only via include path — its
-# own CMake would add_subdirectory a second dsptap and collide with ours;
-# both repos pin the identical dsptap tree, so our tap::dsp serves its
-# "tap/dsp/..." includes.
+# The sibling async engine, dev-only (never part of the shipped tap::ratio
+# target): the golden cross-validation test and the bluetooth_bridge example
+# compose against its near-unity ASRC. Consumed headers-only via include path,
+# so this engine's code never links async's target (MONOREPO_PLAN.md 4.2);
+# tap::dsp serves its "tap/dsp/..." includes.
 if(TAP_RATIO_BUILD_TESTS OR TAP_RATIO_BUILD_EXAMPLES)
     add_library(srt_headers INTERFACE)
     # SYSTEM: dependency headers are exempt from this repo's warning gates
     # (MSVC /W4 otherwise fires benign C4324 on the ASRC ring's deliberate
     # cache-line alignment padding, and -Werror turns it fatal).
-    target_include_directories(srt_headers SYSTEM INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/submodules/sampleratetap/include)
+    cmake_path(SET _tap_async_include NORMALIZE "${CMAKE_CURRENT_SOURCE_DIR}/../async/include")
+    target_include_directories(srt_headers SYSTEM INTERFACE ${_tap_async_include})
 endif()
 
 # Warning flags for this project's own tests; never exported to consumers of

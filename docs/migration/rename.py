@@ -171,6 +171,10 @@ SUBS = [
     ("3.1", r"(?<![\w/])tap/ratio/", "tap/sr/bridge/"),
     ("3.1", r"(?<![\w/])tools/capi/ratio_capi", "capi/ratio_capi"),
     ("1c", r"add_subdirectory\(tools/capi\)", "add_subdirectory(capi)", "path:async/CMakeLists.txt"),
+    # 1c: the book's anchor includes follow the 1a moves.
+    ("1c", r"(\{\{#(?:include|rustdoc_include) (?:\.\./)+)include/srt/", r"\1async/include/srt/", "path:book/src/*"),
+    ("1c", r"(\{\{#(?:include|rustdoc_include) (?:\.\./)+)tests/", r"\1async/tests/", "path:book/src/*"),
+    ("1c", r"(\{\{#(?:include|rustdoc_include) (?:\.\./)+)tools/capi/", r"\1async/capi/", "path:book/src/*"),
     ("3.1", r"add_subdirectory\(tools/capi\)", "add_subdirectory(capi)", "path:bridge/CMakeLists.txt"),
     # 3.2 namespaces and names; D15.
     ("3.2", w("tap::samplerate"), "tap::sr::async", "code"),

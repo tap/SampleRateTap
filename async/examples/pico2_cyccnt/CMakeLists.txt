@@ -49,7 +49,7 @@ option(PICO2_MEASURE_FLOAT "Measure the float (soft FP64) datapath too" ON)
 add_executable(pico2_cyccnt main.cpp)
 # Self-contained except for the header-only library itself.
 target_include_directories(pico2_cyccnt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/dsptap/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/dsptap/include)
 target_link_libraries(pico2_cyccnt PRIVATE pico_stdlib cmsis_core)
 if(PICO2_MEASURE_FLOAT)
     target_compile_definitions(pico2_cyccnt PRIVATE PICO2_MEASURE_FLOAT=1)
