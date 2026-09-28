@@ -31,9 +31,6 @@ hunk scripts/book_figures.py 7d52c4284a6e  -- trace tool compiles against async/
 hunk scripts/icount.py 828920a2db17  -- default baselines path async/bench/baselines.json
 hunk scripts/icount.py b480cbbe3301  -- default baselines path async/bench/baselines.json
 hunk scripts/icount.py 33e83dab43ec  -- default baselines path async/bench/baselines.json
-hunk scripts/tidy.sh 4aad1bac113d  -- compile database covers both engines and bridge's icount TUs (the old gates' coverage); submodule excluded
-hunk scripts/tidy.sh 47ad2dfdbc55  -- compile database covers both engines and bridge's icount TUs (the old gates' coverage); submodule excluded
-hunk scripts/tidy.sh 0c5d4b9f1c39  -- compile database covers both engines and bridge's icount TUs (the old gates' coverage); submodule excluded
 hunk scripts/update_icount_docs.py 6040f56f6190  -- --engine async|bridge: per-engine README table
 hunk scripts/update_icount_docs.py 50a1737f72b0  -- --engine async|bridge: per-engine README table
 hunk scripts/update_icount_docs.py 0c4949cfd53d  -- --engine async|bridge: per-engine README table

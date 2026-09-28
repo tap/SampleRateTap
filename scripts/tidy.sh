@@ -11,7 +11,7 @@
 #
 # Usage:
 #   scripts/tidy.sh                       # sweep every project TU (full CI mirror)
-#   scripts/tidy.sh async/tests/test_foo.cpp …  # only the given TU(s) — fast, for a change
+#   scripts/tidy.sh tests/test_foo.cpp …  # only the given TU(s) — fast, for a change
 #
 # Env:
 #   CLANG_TIDY=clang-tidy-18   # binary to use (default: clang-tidy-18, then clang-tidy)
@@ -43,13 +43,11 @@ build="${TIDY_BUILD:-build-tidy}"
 # missing or a reconfigure is forced. This does not touch your ./build dir.
 if [ "${TIDY_RECONFIGURE:-0}" = "1" ] || [ ! -f "$build/compile_commands.json" ]; then
     echo "== configuring compile database in $build/ (one-time; reuses cached deps) =="
-    cmake -B "$build" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-        -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON >/dev/null
+    cmake -B "$build" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
 fi
 
 # File list: the given TUs, or — matching CI exactly — every project TU in the
-# database (both engines) with the submodule, third_party/ and fetched deps
-# (_deps) excluded.
+# database with third_party/ and fetched deps (_deps) excluded.
 if [ "$#" -gt 0 ]; then
     files=("$@")
 else
@@ -57,7 +55,7 @@ else
 import json
 for e in json.load(open('$build/compile_commands.json')):
     f = e['file']
-    if 'submodules' not in f and 'third_party' not in f and '_deps' not in f:
+    if 'third_party' not in f and '_deps' not in f:
         print(f)")
 fi
 
