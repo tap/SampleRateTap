@@ -365,6 +365,14 @@ def host(args):
     g12(new)
 
 
+def log_key(entry: str) -> str:
+    """'<ISO author date> <subject>' with the date as epoch seconds: git
+    2.55 prints UTC in %aI as 'Z' where 2.43 prints '+00:00'."""
+    import datetime
+    date, _, subject = entry.partition(" ")
+    return f"{int(datetime.datetime.fromisoformat(date).timestamp())} {subject}"
+
+
 def g12(new: pathlib.Path):
     if out(["git", "-C", str(new), "rev-parse", "--is-shallow-repository"]).strip() == "true":
         report("G12", False, "the gated tree is a shallow clone; G12 needs full history")
@@ -376,7 +384,7 @@ def g12(new: pathlib.Path):
             lines = block.splitlines()
             old_path = lines[0].split()[0]
             new_path = map_old_path(repo, old_path)
-            want_log = [l[6:] for l in lines if l.startswith("log   ")]
+            want_log = [log_key(l[6:]) for l in lines if l.startswith("log   ")]
             want_blame = {}
             for l in lines:
                 if l.startswith("blame "):
@@ -388,7 +396,7 @@ def g12(new: pathlib.Path):
                 report(f"G12 {new_path}", False, r.stderr.strip()[-200:])
                 continue
             got_lines = r.stdout.splitlines()
-            got_log = [l[6:] for l in got_lines if l.startswith("log   ")]
+            got_log = [log_key(l[6:]) for l in got_lines if l.startswith("log   ")]
             got_blame = {}
             for l in got_lines:
                 if l.startswith("blame "):
