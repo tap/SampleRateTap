@@ -397,6 +397,10 @@ def g12(new: pathlib.Path):
             # --follow must still reach every step-0 commit, in order.
             it = iter(got_log)
             follows = all(any(g == w_ for g in it) for w_ in want_log)
+            if not follows:
+                unreached = [w_ for w_ in want_log if w_ not in got_log]
+                print(f"    not reached ({len(unreached)}): {unreached[:3]!r}")
+                print(f"    gated log head: {got_log[:4]!r}")
             total = sum(got_blame.values()) or 1
             new_owned = sum(n for k, n in got_blame.items() if k not in want_blame)
             wholesale = new_owned > total / 2
