@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the host benchmarks and refresh the README performance table.
 
-Usage: scripts/update_perf_docs.py path/to/srt_bench [README.md]
+Usage: scripts/update_perf_docs.py path/to/srt_bench [async/README.md]
 
 Rewrites the block between <!-- PERF:BEGIN --> and <!-- PERF:END --> with a
 machine- and date-annotated table. See docs/PERFORMANCE.md.
@@ -65,7 +65,7 @@ def table(rows: list[dict]) -> str:
 
 def main() -> int:
     bench = sys.argv[1]
-    readme = pathlib.Path(sys.argv[2] if len(sys.argv) > 2 else "README.md")
+    readme = pathlib.Path(sys.argv[2] if len(sys.argv) > 2 else "async/README.md")
     text = readme.read_text()
     if BEGIN not in text or END not in text:
         print(f"markers not found in {readme}", file=sys.stderr)

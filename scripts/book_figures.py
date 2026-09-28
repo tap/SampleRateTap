@@ -439,7 +439,7 @@ def main():
 
     with tempfile.TemporaryDirectory() as tmp:
         head_exe = os.path.join(tmp, "trace_head")
-        build_trace_tool(os.path.join(ROOT, "include"), head_exe)
+        build_trace_tool(os.path.join(ROOT, "async", "include"), head_exe)
         prefix_tree = os.path.join(tmp, "prefix")
         os.makedirs(prefix_tree)
         archive = subprocess.run(["git", "-C", ROOT, "archive", PREFIX_COMMIT, "include"],

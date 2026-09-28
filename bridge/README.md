@@ -1,0 +1,163 @@
+# RatioTap
+
+[![CI](https://github.com/tap/RatioTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/RatioTap/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
+[![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
+
+**Synchronous 44.1 ↔ 48 kHz sample rate conversion, as fast as possible.**
+
+One rational ratio pair — 160/147 up, 147/160 down — one clock, and the
+entire optimization budget spent on exactly that. Header-only C++20, built
+on the Tap family's shared FIR substrate
+([DspTap](https://github.com/tap/DspTap): Kaiser prototype design,
+float/Q15/Q31 sample-format traits, measured dot-product kernels, row-sum
+quantization, measurement instruments).
+
+> **Status: v0.3 (profile-ladder re-pin).** The default `economy` profile
+> moved to an 18 kHz passband at **58/38 taps — 26%/14% fewer MACs and
+> −25%/−14% storage** than the previous default, with every 70 dB contract
+> bound re-measured and held (the 18–19 kHz shelf moves into the
+> transition band; the former economy design continues unchanged as
+> `balanced` for content that needs that shelf flat). v0.1 shipped the
+> converter for all three sample formats: float (the golden model, pinned
+> against committed scipy reference vectors sample-for-sample), Q31
+> (tracks float within −147 dB), and Q15 (format-limited: pair it with
+> `economy`, which is both cheaper *and* quieter than `transparent` at 16
+> bits), plus the golden cross-validation against SampleRateTap's async
+> engine (every phase, floor at the one deliberate design difference), the
+> `bluetooth_bridge` example, the C ABI, and the executed demo notebook.
+> v0.2 was the measured optimization campaign — superblock walk, committed
+> compile-time trip counts, symmetry-halved tables, each gated by the
+> instruction-count ratchet, outputs bit-identical throughout: **Q15
+> −59%/−60% and float −35%/−37% on Cortex-M55, Q31 −26%/−27% on
+> Cortex-M33, Q15 −13%/−10% on Hexagon**. The remaining PLAN §7 levers
+> (multistage, minimum-phase, IIR, FFT) change the output contract and
+> stay deferred until a consumer needs them.
+> [PLAN.md](PLAN.md) is the authoritative roadmap (charter, architecture
+> decisions, milestones, acceptance criteria, per-lever measurements);
+> [HANDOFF.md](HANDOFF.md) is the original design brief it grew from.
+
+## Quick start
+
+```cpp
+#include <tap/ratio/ratio.h>
+
+tap::ratio::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
+// profiles: economy() (default, 18 kHz passband) | balanced() (19 kHz,
+// the pre-v0.3 default) | transparent() (120 dB pristine tier) |
+// super_economy() (16 kHz voice/comms tier — audible top-octave shelf)
+std::vector<float> out(down.outputs_for(n_in) * 2);
+std::size_t made = down.process(in, n_in, out.data());   // noexcept, alloc-free
+// ... and at end of stream:
+std::vector<float> tail(down.flush_output_frames() * 2);
+down.flush(tail.data());
+```
+
+Direction is a compile-time type (`converter_to_48k` / `converter_to_44k1`,
+plus `_q15` / `_q31` fixed-point variants); `pull(out, n, pop_fn)` is the
+callback-driven shape, and `frames_needed(n)` is exact arithmetic. For
+44.1↔48 across *independent clocks* (a Bluetooth chip on its own crystal),
+compose with SampleRateTap — `examples/bluetooth_bridge.cpp` is the
+documented recipe: +200 ppm crystal, servo locked, 997 Hz recovered
+exactly, 1.9 ms total latency.
+
+## The boundaries are identity, not policy
+
+- **No other ratios.** Not 2:1, not 96→44.1, not arbitrary L/M. The public
+  surface is 44.1↔48 only, which is what licenses the optimization work
+  (straight-line superblock codegen, baked tables, multistage
+  decomposition) to hard-commit to phase counts of exactly 147 and 160.
+- **No asynchronous conversion.** If the two ends of your chain run on
+  different crystals — *even at nominally 44.1-vs-48* — that is the
+  [SampleRateTap](https://github.com/tap/SampleRateTap) near-unity ASRC's
+  problem, reached by composition: RatioTap converts the *number*, the
+  ASRC absorbs the *clock*. Which engine applies is a property of the
+  clock topology, never inferred from a float ratio. The
+  `bluetooth_bridge` example (milestone M6) documents the composition.
+- **Speed-first.** Direction is a compile-time parameter; the default
+  quality profile takes the speed side of every inaudible trade (all alias
+  products confined above 20 kHz by arithmetic — see the plan's profile
+  section), with a pristine 120 dB profile behind the same design path.
+
+## Position in the Tap family
+
+```
+                    ┌────────────────────────────┐
+                    │           DspTap           │  shared substrate (submodule)
+                    │  kaiser design · sample    │
+                    │  traits (float/Q15/Q31) ·  │
+                    │  FIR dot kernels · row-sum │
+                    │  quantization · analysis   │
+                    └──────┬──────────────┬──────┘
+                           │              │
+              ┌────────────┴───┐   ┌──────┴─────────┐
+              │ SampleRateTap  │   │    RatioTap    │
+              │ async, near-   │   │ sync, 44.1↔48, │
+              │ unity, servo   │   │ speed-first    │
+              └────────────┬───┘   └──────┬─────────┘
+                           │              │
+                           └──── test-only│dependency:
+                                golden cross-validation
+```
+
+## Build
+
+```sh
+git clone --recurse-submodules https://github.com/tap/SampleRateTap
+cmake -S SampleRateTap -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+ctest --test-dir build --output-on-failure -L '^ratio$'
+```
+
+This engine lives in `bridge/` of the SampleRateTap family repository; the
+root build configures both engines, and the `ratio` label selects this one's
+tests. Consume with `add_subdirectory` (or FetchContent) and link
+`tap::ratio`; the DspTap submodule at the repository root rides along
+automatically.
+
+### Embedded targets and the instruction-count ratchet
+
+The deployment cores are CI targets, not aspirations: every push runs the
+emulation-sized test suite on **Cortex-M33** (QEMU mps2-an505 — Raspberry
+Pi Pico 2 class), **Cortex-M55** (mps3-an547) and **Hexagon**
+(qemu-hexagon, static musl), and gates ten fixed conversion workloads
+(direction × float/Q15/Q31 at the economy profile, plus four profile
+variants) against committed per-target instruction
+counts (`bench/baselines.json`, two-sided ±3% — see `scripts/icount.py`),
+run from the repository root:
+The counts are deterministic, so the M7 optimization campaign in
+[PLAN.md](PLAN.md) lands one measured lever at a time:
+
+```sh
+cmake -B build-m55 -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
+      -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
+      -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
+      -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+cmake --build build-m55 -j
+python3 bridge/scripts/icount.py --target m55 --build-dir build-m55 \
+      --baselines bridge/bench/baselines.json --plugin libinsncount.so
+```
+
+<!-- ICOUNT:BEGIN -->
+Executed instructions per fixed workload (`bridge/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bridge/bench/baselines.json`:
+
+| Workload | Cortex-M33 | Cortex-M55 | Hexagon |
+|---|---:|---:|---:|
+| `down_float_eco` | 1,720,707,553 | 73,794,800 | 304,636,424 |
+| `down_float_tr` | 5,473,297,976 | 214,977,684 | 944,365,314 |
+| `down_q15_eco` | 173,755,176 | 57,208,782 | 45,677,158 |
+| `down_q15_se` | 130,967,926 | 46,983,269 | 33,235,309 |
+| `down_q31_eco` | 244,985,862 | 96,697,327 | 45,622,761 |
+| `up_float_eco` | 1,231,730,349 | 55,451,902 | 220,214,529 |
+| `up_float_tr` | 3,110,380,470 | 126,303,581 | 533,810,577 |
+| `up_q15_eco` | 133,914,472 | 44,556,679 | 35,990,589 |
+| `up_q15_se` | 103,390,933 | 39,050,794 | 27,424,288 |
+| `up_q31_eco` | 184,954,171 | 72,647,042 | 36,008,031 |
+<!-- ICOUNT:END -->
+
+## License
+
+MIT (see [LICENSE](../LICENSE)), consistent with the family. Style is the
+shared [Tap House Rules](../STYLE.md), enforced by pre-commit clang-format,
+the drift check, and clang-tidy in CI.

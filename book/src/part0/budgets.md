@@ -111,7 +111,7 @@ this is the Q0.64 phase accumulator the README describes, live from
 `include/srt/polyphase_filter.h`:
 
 ```cpp
-{{#include ../../../include/srt/polyphase_filter.h:p0_phase_step}}
+{{#include ../../../async/include/srt/polyphase_filter.h:p0_phase_step}}
 ```
 
 The fractional position lives in an unsigned 64-bit integer interpreted as
@@ -157,7 +157,7 @@ accident. Here is where every frame of it is decided — the converter's
 entire configuration surface, live from `include/srt/asrc.h`:
 
 ```cpp
-{{#include ../../../include/srt/asrc.h:p0_config}}
+{{#include ../../../async/include/srt/asrc.h:p0_config}}
 ```
 
 The README's latency equation prices the defaults:

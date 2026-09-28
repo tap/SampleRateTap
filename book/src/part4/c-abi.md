@@ -34,7 +34,7 @@ throw an exception at all.
 The entire foreign-function interface:
 
 ```c
-{{#include ../../../tools/capi/srt_capi.h:abi_surface}}
+{{#include ../../../async/capi/srt_capi.h:abi_surface}}
 ```
 
 Create, destroy, push, pull, status, latency, reset, version. The shim
@@ -58,7 +58,7 @@ Here is the other side of the wall, and the file structure is itself a
 fossil of a compile error:
 
 ```cpp
-{{#include ../../../tools/capi/srt_capi.cpp:abi_impl}}
+{{#include ../../../async/capi/srt_capi.cpp:abi_impl}}
 ```
 
 The handle is simply the converter pointer in disguise —
@@ -88,7 +88,7 @@ you are promising to the world, and *nothing else* belongs inside it.
 The shim's entire error vocabulary is one value:
 
 ```cpp
-{{#include ../../../tools/capi/srt_capi.cpp:abi_create}}
+{{#include ../../../async/capi/srt_capi.cpp:abi_create}}
 ```
 
 `srt_create` returns `NULL` on invalid configuration or allocation
@@ -103,14 +103,14 @@ unconditionally. The hardening audit changed every entry point to this
 shape:
 
 ```cpp
-{{#include ../../../tools/capi/srt_capi.cpp:abi_null}}
+{{#include ../../../async/capi/srt_capi.cpp:abi_null}}
 ```
 
 The reasoning is stated in the file's own header comment, and it is worth
 reading as a small essay on API design:
 
 ```cpp
-{{#include ../../../tools/capi/srt_capi.cpp:abi_doc}}
+{{#include ../../../async/capi/srt_capi.cpp:abi_doc}}
 ```
 
 A "check create for NULL" convention *concentrates* failure on precisely
@@ -134,7 +134,7 @@ nothing for anyone else. The audit shipped the header, and its top comment
 is the ABI's real substance — the part no binary interface can encode:
 
 ```c
-{{#include ../../../tools/capi/srt_capi.h:abi_contract}}
+{{#include ../../../async/capi/srt_capi.h:abi_contract}}
 ```
 
 Three promises deserve emphasis, because each answers a real foreign-caller
