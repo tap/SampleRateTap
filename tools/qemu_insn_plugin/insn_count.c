@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 /* Minimal QEMU TCG plugin: counts executed guest instructions and prints
  * one line at exit:
  *
@@ -11,8 +13,6 @@
  *   gcc -shared -fPIC $(pkg-config --cflags glib-2.0) \
  *       -I<dir with qemu-plugin.h> insn_count.c -o libinsncount.so
  */
-// SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
 #include <glib.h>
 #include <inttypes.h>
 #include <qemu-plugin.h>

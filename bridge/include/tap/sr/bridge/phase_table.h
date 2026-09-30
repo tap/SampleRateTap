@@ -1,7 +1,7 @@
 /// @file phase_table.h
 /// @brief Phase-major quantized coefficient table for one direction.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #pragma once
 
 #include <cstddef>

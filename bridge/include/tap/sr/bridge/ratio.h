@@ -1,7 +1,7 @@
 /// @file ratio.h
 /// @brief RatioTap umbrella header: version constants and the library charter.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // RatioTap converts between 44.1 kHz and 48 kHz, synchronously, as fast as
 // possible. One rational ratio pair (L/M = 160/147 up, 147/160 down), one

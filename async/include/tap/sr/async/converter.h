@@ -1,7 +1,7 @@
 /// @file converter.h
 /// @brief Top-level push/pull asynchronous sample rate converter.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #pragma once
 
 #include <algorithm>

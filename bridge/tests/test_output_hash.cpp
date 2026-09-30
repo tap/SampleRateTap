@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Output fingerprints of the converter, for same-job A/B comparison.
 //

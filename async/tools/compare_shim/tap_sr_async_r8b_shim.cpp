@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 /// \file tap_sr_async_r8b_shim.cpp
 /// \brief C entry points over r8brain-free-src's CDSPResampler, so the
 /// comparison notebook (notebooks/asrc_comparison.ipynb) can measure the
@@ -12,8 +14,6 @@
 ///
 /// Errors surface as a nonzero return / -1, never as an exception across
 /// the C boundary.
-// SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
 #include <exception>
 #include <vector>
 

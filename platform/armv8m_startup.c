@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 /* Minimal bare-metal startup for Armv8-M targets under QEMU (Cortex-M55
  * on mps3-an547, Cortex-M33 on mps2-an505),
  * replacing the toolchain crt0 (linked with -nostartfiles):
@@ -22,8 +24,6 @@
  * provided; any future use of others (e.g. compare-exchange) fails loudly
  * at link time.
  */
-// SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>

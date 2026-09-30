@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Deterministic fixed workloads for the instruction-count ratchet
 // (PLAN.md section 7): every M7 optimization lever must move these numbers,
 // measured, before it merges. One scenario per binary, selected at compile
@@ -11,8 +13,6 @@
 // TAP_SR_BRIDGE_SC_PROFILE: 0 = economy, 1 = transparent, 3 = super_economy
 //                   (matching the C ABI tags; 2 = balanced unused here)
 // TAP_SR_BRIDGE_SC_CH:      channel count (default 2)
-// SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
 #include <cmath>
 #include <cstdint>
 #include <cstdio>

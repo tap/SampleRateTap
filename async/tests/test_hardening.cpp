@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Regression tests from the package audit: the pull-block feasibility
 // adaptation, hardened Config validation, resync accounting, consumer
 // reset, degenerate call sizes, fixed-point fade-in — plus QuickQuality,

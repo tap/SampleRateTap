@@ -1,7 +1,7 @@
 /// @file tap_sr_bridge_capi.h
 /// @brief Minimal C ABI over the float converters, for FFI consumers.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // The verification layer's seam (family convention): the notebooks drive the
 // SHIPPING C++ through this ABI via ctypes rather than re-implementing

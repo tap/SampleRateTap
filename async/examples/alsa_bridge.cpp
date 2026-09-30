@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // ALSA duplex bridge: the "Setup 1" harness from docs/HARDWARE_TESTING.md.
 //
 // Two independent audio devices, two threads, real crystals:

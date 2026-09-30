@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 /// @file pi_servo.h
 /// @brief Type-2 (PI) clock-tracking servo driven by FIFO occupancy.
 ///
@@ -38,8 +40,6 @@
 /// loaded with a hold-window average of epsHat (the wide stages phase-track
 /// the sawtooth, so their instantaneous estimate wobbles; the average is the
 /// clean central value), making handoffs transient-free to first order.
-// SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
 #pragma once
 
 #include <algorithm>

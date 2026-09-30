@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Contract battery for the phase-major coefficient table, typed over the
 // three sample formats and exhaustive over every phase of both directions —

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // The bluetooth_bridge composition — the documented answer to "I need
 // 44.1 <-> 48 across independent clocks" (a Bluetooth chip on its own

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Single-threaded spsc_ring tests; the two-thread stress lives in
 // test_spsc_ring_threads.cpp so thread-less (bare-metal) builds can still
 // compile this file.

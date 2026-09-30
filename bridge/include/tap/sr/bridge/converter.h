@@ -1,7 +1,7 @@
 /// @file converter.h
 /// @brief The synchronous 44.1 <-> 48 kHz converter: one direction, streamed.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #pragma once
 
 #include <cstddef>

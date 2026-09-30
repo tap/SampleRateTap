@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Contract battery for the prototype designs: every direction x profile
 // meets its rated stopband with >= 1 dB margin and holds the passband flat,

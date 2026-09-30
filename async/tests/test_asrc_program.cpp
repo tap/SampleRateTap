@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Program-weighted quality: the metric that makes filter_spec::economy()'s
 // promise testable, and the evidence that the k*fs transmission zeros do
 // what the design says (see the book's epilogue chapter and

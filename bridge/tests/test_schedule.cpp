@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Contract battery for the compile-time schedule. Coverage is exhaustive —
 // all 160 and all 147 entries, plus every superblock position for

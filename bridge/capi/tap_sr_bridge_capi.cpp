@@ -1,7 +1,7 @@
 /// @file tap_sr_bridge_capi.cpp
 /// @brief C ABI implementation: a tagged pair of the two float converters.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 
 #include "tap_sr_bridge_capi.h"
 

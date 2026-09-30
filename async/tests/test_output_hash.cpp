@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Output fingerprints of the datapath, for same-job A/B comparison.
 //

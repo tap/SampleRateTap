@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // The golden cross-validation (PLAN section 6.3; HANDOFF's central idea,
 // relocated to where it works): SampleRateTap's fractional_resampler — the

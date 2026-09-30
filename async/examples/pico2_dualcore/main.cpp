@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Dual-core deployment of the ASRC on the RP2350 (docs/HARDWARE_TESTING.md,
 // Setup 2, "Dual-core deployment"): the converter's two ends on the two
 // Cortex-M33 cores, one core per clock domain — the shape the README

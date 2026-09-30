@@ -1,7 +1,7 @@
 /// @file design.h
 /// @brief Direction, quality profiles, and prototype design for 44.1 <-> 48.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #pragma once
 
 #include <cmath>

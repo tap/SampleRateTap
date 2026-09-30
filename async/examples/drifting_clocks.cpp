@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Two real threads, two slightly different clocks.
 //
 // A producer thread pushes a 997 Hz sine at a virtual 48000.0 Hz; a consumer

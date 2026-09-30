@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Timothy Place and the SampleRateTap contributors
 """Deterministic instruction-count ratchet for both engines.
 
 Runs every workload binary of one engine in a build directory under QEMU

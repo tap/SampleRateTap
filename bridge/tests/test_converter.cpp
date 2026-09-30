@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Contract battery for the streaming converter (milestone M3, float golden
 // model). Three independent legs, per PLAN.md section 6: structural

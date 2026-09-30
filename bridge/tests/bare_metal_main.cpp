@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Test runner main for bare-metal emulated targets (Cortex-M33/M55 under
 // qemu-system-arm): there is no argv on the target, so the
 // emulation-appropriate filter is baked in. Excluded are the measurement
@@ -7,8 +9,6 @@
 // run focused on datapath correctness: exact accounting from every phase,
 // impulse/table identity, the committed scipy vectors sample-for-sample,
 // fixed-point DC exactness and wrap safety, flush/reset/pull contracts.
-// SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
 #include <cstdio>
 
 #include <gtest/gtest.h>

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 /* ANCHOR: abi_contract */
 /* SampleRateTap C ABI — FFI surface over the float converter.
  *
@@ -19,8 +21,6 @@
  * targets) — declare foreign types accordingly.
  */
 /* ANCHOR_END: abi_contract */
-// SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
 #pragma once
 
 #include <stddef.h>

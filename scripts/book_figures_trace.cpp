@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Trace dumper for the book's measured figures (scripts/book_figures.py).
 //
 // Runs the converter in deterministic virtual time — the same event-driven

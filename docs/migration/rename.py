@@ -344,6 +344,17 @@ def banner(text: str, path: str) -> str:
     head = 1 if lines and lines[0].startswith("#!") else 0
     spdx = f"{c} SPDX-License-Identifier: MIT"
     copy = f"{c} Copyright 2026 {FAMILY_HOLDER}"
+    # A banner below a leading doc block (async's \file headers put it after
+    # the ANCHOR comments) is removed there and rewritten at the top.
+    old_banner = re.compile(re.escape(c) + r"\s*(SPDX-License-Identifier:|Copyright\b)")
+    # The leading comment block: line comments, C block comments, blanks.
+    comment = re.compile(r"^\s*(" + re.escape(c) + (r"|/\*|\*|$)" if c == "//" else r"|$)"))
+    end = head
+    while end < len(lines) and comment.match(lines[end]):
+        end += 1
+    for i in range(end - 1, head + 4, -1):
+        if old_banner.match(lines[i]):
+            del lines[i]
     window = lines[head:head + 5]
     idx = next((i for i, l in enumerate(window) if re.match(re.escape(c) + r"\s*Copyright\b", l)), None)
     if idx is not None:

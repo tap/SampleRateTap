@@ -1,7 +1,7 @@
 /// @file polyphase_filter.h
 /// @brief Polyphase Kaiser-sinc filter bank and the fractional-delay resampler core.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #pragma once
 
 #include <bit>

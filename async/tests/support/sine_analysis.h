@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Re-export of the shared tap::dsp::analysis sine-fit instrument. The
 // implementation moved to DspTap with the measurement harness; this header
 // keeps the historical include path and the async_test names working.

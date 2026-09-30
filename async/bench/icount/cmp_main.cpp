@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Deterministic fixed workload for the cross-resampler instruction-count
 // comparison (docs/COMPARISON.md). Same shape as icount_main.cpp but the
 // engine is selected at compile time and the ratio is fixed and known —

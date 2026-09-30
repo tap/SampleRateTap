@@ -915,6 +915,21 @@ There is no separate reflow commit, since the hook would absorb it anyway
    - Update `bridge/tools/reference/make_reference_vectors.py`, and
      regenerate `tests/reference/reference_vectors.h`. That header's only
      residual must be its banner (G14).
+   - **Done (v3.1).** `rename.py apply --step 3.8` rewrote the existing
+     banners and added the two lines to every C/C++/Python source without
+     one (68 files); the rule learned to move a banner that sat below a
+     leading doc block (async's `\file` headers, a `/* */` block in the C
+     plugin and the startup file) to the top instead of duplicating it.
+     `make_reference_vectors.py` emits the family holder and
+     `reference_vectors.h` was regenerated in the pinned environment
+     (numpy 2.4.6, scipy 1.17.1): after the pre-commit reformat its only
+     difference is the banner line, as required; `residual/3.8.txt`
+     carries step 3.7's list plus that header and its generator. Measured
+     locally before the push: G3+G5 exact on hexagon (the 14 rows proved
+     per function), m33 and m55; G4 17/17 per target; G7, G9 (0 hits),
+     G11 (all seven notebooks), G14 (0 unlisted); the host gates but G12;
+     clang `-Werror` 170/170 tests with the ratchet workloads built,
+     clang-tidy clean, the book builds.
 
 **Gate for each commit:** G1 (the name map is empty except for the
 renames listed in 3.4 and 3.5), G2, G3, G4, G5, G6, G7, G8, G10, G11,

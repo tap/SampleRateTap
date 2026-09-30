@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Timothy Place and the SampleRateTap contributors
 """ctypes bridge to the shipping RatioTap C++ through the C ABI
 (capi/tap_sr_bridge_capi.h). Family convention: the notebooks measure the real
 library, never a Python re-implementation. (Re)builds build_capi/ on import:

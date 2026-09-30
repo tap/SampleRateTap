@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Test runner main for bare-metal emulated targets (e.g. Cortex-M55 under
 // qemu-system-arm): there is no argv on the target, so the
 // emulation-appropriate filter is baked in. Excluded are the long-running

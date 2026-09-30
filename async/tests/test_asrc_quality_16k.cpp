@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // 16 kHz -> 16 kHz quality coverage (a real deployment rate, e.g.
 // reference-microphone processing). Same methodology as
 // test_asrc_quality.cpp, configured through Config::forSampleRate — the

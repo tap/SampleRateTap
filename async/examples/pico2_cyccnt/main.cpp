@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Real-silicon cycle measurement of the ASRC hot path on the RP2350's
 // Cortex-M33 (docs/HARDWARE_TESTING.md, Setup 2). The steady-state workload
 // is the same duplex push(32)/pull(32) loop as runPipeline() in

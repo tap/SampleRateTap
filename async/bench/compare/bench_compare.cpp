@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Computational comparison against general-purpose resamplers at a fixed,
 // known near-unity ratio (docs/COMPARISON.md).
 //

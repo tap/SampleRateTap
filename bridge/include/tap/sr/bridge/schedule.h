@@ -1,7 +1,7 @@
 /// @file schedule.h
 /// @brief The compile-time (phase, input_advance) schedule of one direction.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #pragma once
 
 #include <array>

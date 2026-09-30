@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // ANCHOR: st_overview
 /// \file sample_traits.h
 /// \brief Sample-type customization point for the resampling datapath.

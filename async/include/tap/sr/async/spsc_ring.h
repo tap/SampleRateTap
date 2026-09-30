@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 /// @file spsc_ring.h
 /// @brief Lock-free single-producer single-consumer ring buffer.
 ///
@@ -7,8 +9,6 @@
 /// Uses the cached cross-index technique (each side caches the other side's
 /// index and refreshes it only when apparently full/empty) to minimize
 /// cache-line ping-pong between the two threads.
-// SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
 #pragma once
 
 #include <algorithm>

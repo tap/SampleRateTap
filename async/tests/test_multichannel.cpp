@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Multichannel independence: every channel of one converter instance gets a
 // distinct tone, and after conversion each channel must contain its own tone
 // at full quality and nothing measurable of any other channel's. This is the

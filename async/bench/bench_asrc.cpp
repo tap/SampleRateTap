@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Host benchmarks for the SampleRateTap hot path. Two layers:
 //  - Kernel: tap::sr::async::interpolate() in isolation (one output sample, one
 //    channel) — the datapath's arithmetic floor.

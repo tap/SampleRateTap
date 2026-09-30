@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Deterministic single-threaded simulation of two independent clock domains
 // driving one converter. Producer and consumer events are interleaved by
 // next-event virtual time, so runs are exactly reproducible.

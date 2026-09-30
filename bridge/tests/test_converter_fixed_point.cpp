@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Contract battery for the fixed-point converters (milestone M4). The engine
 // is format-generic; what needs proving is the numeric contract of each

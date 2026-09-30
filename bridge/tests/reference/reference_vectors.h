@@ -3,7 +3,7 @@
 // per-branch-normalized Kaiser designs, cast to float32. See that script
 // for provenance and the tolerance argument.
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // NOLINTBEGIN(readability-identifier-naming)
 #pragma once
 

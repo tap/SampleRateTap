@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Deterministic fixed workloads for the instruction-count ratchet
 // (docs/PERFORMANCE.md). One scenario per binary, selected at compile time
 // (TAP_SR_ASYNC_SC_KIND / TAP_SR_ASYNC_SC_TYPE) because bare-metal targets have no argv.

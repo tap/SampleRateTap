@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #include <cmath>
 #include <cstdint>
 #include <cstdio>

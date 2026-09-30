@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // ANCHOR: abi_doc
 /// \file tap_sr_async_capi.cpp
 /// \brief C ABI shim over the float converter, for FFI consumers (ctypes,
@@ -11,8 +13,6 @@
 /// documented error convention ("check tap_sr_async_create for NULL") otherwise
 /// invites a crash on exactly the path where the caller forgot to check.
 // ANCHOR_END: abi_doc
-// SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
 #include <cstddef>
 #include <cstdint>
 #include <new>

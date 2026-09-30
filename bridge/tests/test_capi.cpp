@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // The C ABI's version probe pins the family encoding (D13): bit-packed
 // (major << 16) | (minor << 8) | patch, the same value the async engine's

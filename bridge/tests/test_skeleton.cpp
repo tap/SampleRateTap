@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // M1 skeleton battery: pins the library's identity constants and proves the
 // DspTap substrate is wired end to end — everything the M2 table builder

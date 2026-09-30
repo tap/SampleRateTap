@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Two-thread spsc_ring stress test. Compiled only when the platform has
 // std::thread (excluded from bare-metal builds by tests/CMakeLists.txt).
 #include <cstdint>

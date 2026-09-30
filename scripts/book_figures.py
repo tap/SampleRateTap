@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Timothy Place and the SampleRateTap contributors
 """Regenerates the book's figures (book/src/img/*.svg).
 
 Every figure is produced from the same sources the text cites:
