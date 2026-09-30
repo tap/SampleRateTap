@@ -2,3 +2,15 @@
 b84020e738f771c7689ffc1e592f8448b9ce063f
 # Reflow of clang-format alignment after the namespace rename.
 e2f5a484712699592396c1df705c47c9ddab30a3
+# The 2026 monorepo migration's rename commits (PLAN.md step 3), each a
+# mechanical rename plus its clang-format reflow.
+018e91270403bc5d467687f7510062c2dd675378
+3822f71aba310f2cdf9cd224024e75a165ba63ef
+dedf0b8f53482d6f8190ac5fabf5febe88d7e243
+9ce18f1b586d56a1359dcd113e4133ebbabe6003
+fb75b6a22c3ca5ae88eac1250ee048148ccec902
+a47064863a25948b1b07a047868e76462668a32f
+2847630e3e62d1a9f68db3f5b4c417b36be95280
+716c7e1cd367d5a7f1e5598cd0e9bbe394fc1bdd
+# RatioTap's bulk reformat, as rewritten by the import (bridge/docs/HISTORY.md).
+89c7eba2545e6d9e9619437fe242e66390a9b393
