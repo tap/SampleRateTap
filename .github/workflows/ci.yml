@@ -224,11 +224,26 @@ jobs:
         with:
           submodules: recursive
 
+      # The Arm toolchain is ~600 MB of .debs (libstdc++-arm-none-eabi-newlib
+      # alone is 463 MB). A throttled apt mirror turned that into 40-minute
+      # installs three times on 2026-09-30, cancelling jobs whose tests take
+      # 27 min; cached .debs make the install an index refresh.
+      - name: Runner image (for the package cache key)
+        id: apt-image
+        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cache the Arm toolchain packages
+        if: matrix.target != 'hexagon'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/apt-archives
+          key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
       - name: Install Arm toolchain and QEMU
         if: matrix.target != 'hexagon'
-        run: >
-          sudo apt-get update -q &&
-          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
+        run: |
+          mkdir -p ~/apt-archives
+          sudo apt-get update -q
+          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi qemu-system-arm
+          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
 
       - name: Cache Hexagon toolchain
         if: matrix.target == 'hexagon'
@@ -362,11 +377,24 @@ jobs:
         with:
           submodules: recursive
 
+      # The Arm toolchain is ~600 MB of .debs (libstdc++-arm-none-eabi-newlib
+      # alone is 463 MB). A throttled apt mirror turned that into 40-minute
+      # installs three times on 2026-09-30, cancelling jobs whose tests take
+      # 27 min; cached .debs make the install an index refresh.
+      - name: Runner image (for the package cache key)
+        id: apt-image
+        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cache the Arm toolchain packages
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/apt-archives
+          key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
       - name: Install toolchains and QEMU
-        run: >
-          sudo apt-get update -q &&
-          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
-          libglib2.0-dev ninja-build meson flex bison
+        run: |
+          mkdir -p ~/apt-archives
+          sudo apt-get update -q
+          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi qemu-system-arm libglib2.0-dev ninja-build meson flex bison
+          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
 
       - name: Build counting plugin
         run: |
@@ -569,8 +597,24 @@ jobs:
         with:
           submodules: recursive
 
+      # The Arm toolchain is ~600 MB of .debs (libstdc++-arm-none-eabi-newlib
+      # alone is 463 MB). A throttled apt mirror turned that into 40-minute
+      # installs three times on 2026-09-30, cancelling jobs whose tests take
+      # 27 min; cached .debs make the install an index refresh.
+      - name: Runner image (for the package cache key)
+        id: apt-image
+        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cache the Arm toolchain packages
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/apt-archives
+          key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
       - name: Install toolchain
-        run: sudo apt-get update -q && sudo apt-get install -y -q gcc-arm-none-eabi
+        run: |
+          mkdir -p ~/apt-archives
+          sudo apt-get update -q
+          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi
+          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
 
       - name: Build pico2_cyccnt
         run: >

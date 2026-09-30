@@ -29,11 +29,23 @@ jobs:
         with:
           submodules: recursive
 
+      # The Arm toolchain is ~600 MB of .debs; a throttled apt mirror turned
+      # the install into 40-minute jobs on 2026-09-30 (see ci.yml). Cached
+      # .debs make it an index refresh.
+      - name: Runner image (for the package cache key)
+        id: apt-image
+        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cache the Arm toolchain packages
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/apt-archives
+          key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
       - name: Install toolchains and QEMU
-        run: >
-          sudo apt-get update -q &&
-          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
-          libglib2.0-dev ninja-build meson flex bison
+        run: |
+          mkdir -p ~/apt-archives
+          sudo apt-get update -q
+          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi qemu-system-arm libglib2.0-dev ninja-build meson flex bison
+          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
 
       - name: Build counting plugin
         run: |
