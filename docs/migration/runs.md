@@ -40,3 +40,4 @@ check joins the book job at 1c.
 | Step | SHA | ci.yml | style.yml | migration-gates | ci-arm64 | compare | Image | Notes |
 |---|---|---|---|---|---|---|---|---|
 | 0 | `f2b7d04` | 36368216558 (15/15) | 36368217316 (2/2) | — (added at 1c) | — | — | ubuntu-24.04 | no-change baseline: S0's tree plus docs/migration |
+| 1c | `5297394` | 36371392151 (26/26) | 36371392765 (2/2) | 36371392146 (5/5) | 36374781364 | 36374783347 | ubuntu-24.04 20260920.314.1 | 1a `a16d499`, 1b `269bbf7`, 1c `5f67697` + fix-ups `e2d2381` (canonical tidy.sh), `a2d7eb4`/`5297394` (G12 epoch compare). G1/G2 checked from the job logs and QEMU artifacts: 30/30 identical to the snapshot. Merged to main as `976f117` (PR #49, merge commit); main's CI 36407156825, style 36407159032, book-pages 36407156819 all green. |

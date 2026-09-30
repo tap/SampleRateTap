@@ -415,6 +415,16 @@ A step's gate lists the IDs it requires.
   The plan is part of the PR, and becomes `PLAN.md` at step 4.
 - A **draft PR** is open from the first migration push.
 - Apart from step P's PRs, nothing reaches either `main` until step 4.
+- **As executed (v3.1):** the user merged PR #49 after step 1, with a merge
+  commit (`976f117`, 2026-09-28), so steps 0 and 1 are on `main`. Steps 2–4
+  continue on the same branch name restarted from `main`, in a new PR. The
+  gates are unaffected: A/B gates always rebuild S0 and R0, and snapshot
+  gates compare against `docs/migration/snapshot/`. Step 4's post-merge
+  checks already hold: `main` has 186 commits (≥ 140 + 33 + 13), and
+  `--follow` on `bridge/include/tap/ratio/converter.h` reaches RatioTap M3
+  (`a83d6d8`, now `b8bad2e`). Step 4's own merge only needs to keep a merge
+  commit if the new PR carries further merges; otherwise any method keeps
+  the imported history, which is already on `main`.
 - RatioTap is written to only by step P's PRs and by the archive at step 5.
 
 **Push discipline** (R2-CI-1, R2-GATE-9, R2-RUN-15):
@@ -698,6 +708,16 @@ builds.
 
 **Gate 2:** G1–G7, G13 and G14, plus the `compare.yml` run.
 
+**Done (v3.1).** `scripts/icount.py --engine async|bridge` (default
+`async`, so the book's commands keep working) and the root plugin serve
+both engines; bridge's duplicate `cmake/`, `platform/`, plugin and
+`icount.py` are gone, so bare-metal bridge builds use the root toolchain
+files (as CI has since 1c). Measured locally before the push: G3+G5 exact
+on M33 and M55 for all 17 workloads against S0/R0 measured in the same
+session, and exact (+0) against both committed baseline files; G1, G4, G5,
+G6, G7, G10 and G14 pass. The rendered book changes only where it quotes
+the plugin's marker line.
+
 ### Step 3 — Renames (one commit per class, each gated)
 
 Every commit is formatted by the pre-commit hook as it is made, so the
@@ -793,10 +813,10 @@ G13 and G14, plus G9 from 3.7.
 - Doxyfile main page → `README.md`.
 - Delete `docs/migration/`, keeping `runs.md` if wanted.
 - Mark the PR ready. **Merge with "Create a merge commit".**
-- **Post-merge checks:**
+- **Post-merge checks** (first run after PR #49, see section 6's preamble):
   - `git rev-list --count origin/main` ≥ count(S0) + count(R0) + N.
   - `git log --follow bridge/include/tap/sr/bridge/converter.h` reaches
-    RatioTap M3 (`06769f2` before rewriting).
+    RatioTap M3 (`a83d6d8` before rewriting, `b8bad2e` after).
 - **Follow-up commit:** append to `.git-blame-ignore-revs` the step-3
   commit SHAs and the rewritten RatioTap reformat commit `89c7eba`.
 - Tag `v0.4.0`.
