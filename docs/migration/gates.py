@@ -100,20 +100,25 @@ def configure_build(src, bld, opts, target=None, build_type="Release"):
 
 # -- name and path maps (from rename.py, at the current step) --------------
 
-def map_old_path(repo: str, rel: str) -> str | None:
-    """Where a step-0 path lives in the gated tree."""
+def map_old_path(repo: str, rel: str, is_file: bool = False) -> str | None:
+    """Where a step-0 path lives in the gated tree. A file path maps as
+    itself (so asrc.h -> converter.h applies); anything else may be a
+    directory (an include dir in a flag), which arrives without the
+    trailing slash the map's prefixes carry."""
     if repo == "ratio":
         # RatioTap's test-only copy of SampleRateTap is the async engine here.
         if rel.startswith("submodules/sampleratetap/"):
-            return map_old_path("async", rel[len("submodules/sampleratetap/"):])
+            return map_old_path("async", rel[len("submodules/sampleratetap/"):], is_file)
         if rel.startswith("submodules/dsptap"):
             return rel
+        if is_file:
+            return rename.map_r0_path(rel, step())
         mapped = rename.map_r0_path(rel + "/", step())
         return mapped.rstrip("/") if mapped is not None else None
     if rel.startswith("submodules/"):
         return rel
-    # Directory paths (include dirs) arrive without the trailing slash the
-    # map's prefixes carry.
+    if is_file:
+        return rename.map_s0_path(rel, step())
     mapped = rename.map_s0_path(rel + "/", step())
     if mapped is not None and mapped.rstrip("/") != rel:
         return mapped.rstrip("/")
@@ -158,7 +163,8 @@ def norm_token(t: str, src: str, bld: str, repo: str | None) -> str:
     def path_map(m):
         rel = m.group(1)
         if repo is not None:
-            mapped = map_old_path(repo, rel) if rel else rel
+            is_file = pathlib.PurePosixPath(rel).suffix in (".c", ".cc", ".cpp", ".h", ".hpp", ".ld", ".cmake")
+            mapped = map_old_path(repo, rel, is_file) if rel else rel
             rel = mapped if mapped is not None else "<DROPPED>/" + rel
         return "<SRC>/" + rel if rel else "<SRC>"
     t = re.sub(re.escape(src) + r"/?([^\s\"']*)", path_map, t)
@@ -383,7 +389,7 @@ def g12(new: pathlib.Path):
         for block in text.split("== ")[1:]:
             lines = block.splitlines()
             old_path = lines[0].split()[0]
-            new_path = map_old_path(repo, old_path)
+            new_path = map_old_path(repo, old_path, is_file=True)
             want_log = [log_key(l[6:]) for l in lines if l.startswith("log   ")]
             want_blame = {}
             for l in lines:
@@ -538,7 +544,7 @@ def notebooks(args):
     pairs = []
     for old_tree, repo in ((oa, "async"), (orat, "ratio")):
         for nb in sorted((old_tree / "notebooks").glob("*.ipynb")):
-            new_rel = map_old_path(repo, str(nb.relative_to(old_tree)))
+            new_rel = map_old_path(repo, str(nb.relative_to(old_tree)), is_file=True)
             pairs.append((repo, nb, new / new_rel))
     for repo, old_nb, new_nb in pairs:
         results = []
