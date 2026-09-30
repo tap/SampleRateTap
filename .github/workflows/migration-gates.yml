@@ -69,11 +69,25 @@ jobs:
           grep -q "^R0 $R0" new/docs/migration/tips.txt
           echo "step: $(cat new/docs/migration/step.txt)"
 
+      # The Arm toolchain is ~600 MB of .debs; a throttled apt mirror ran this
+      # step past the job's 90 minutes on 2026-09-30 (see ci.yml). Cached
+      # .debs make the install an index refresh.
+      - name: Runner image (for the package cache key)
+        id: apt-image
+        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cache the gate tools' packages
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/apt-archives
+          key: apt-gate-tools-${{ steps.apt-image.outputs.os }}-1
       - name: Install tools
         run: |
+          mkdir -p ~/apt-archives
           sudo apt-get update -q
-          sudo apt-get install -y -q python3-pyelftools clang-format-18 libglib2.0-dev \
+          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" \
+            python3-pyelftools clang-format-18 libglib2.0-dev \
             gcc-arm-none-eabi qemu-system-arm ninja-build meson flex bison
+          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
           # rename.py formats like the pre-commit hook (clang-format 18.1.3).
           sudo ln -sf "$(command -v clang-format-18)" /usr/local/bin/clang-format
           echo "image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
