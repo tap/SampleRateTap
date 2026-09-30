@@ -32,8 +32,8 @@ extern "C" {
 /* ANCHOR: abi_surface */
 typedef struct SrtHandle SrtHandle;
 
-/* ABI/version probe: returns SRT_VERSION_MAJOR*10000 +
- * SRT_VERSION_MINOR*100 + SRT_VERSION_PATCH (e.g. 100 for 0.1.0). */
+/* ABI/version probe: returns TAP_SR_VERSION_MAJOR*10000 +
+ * TAP_SR_VERSION_MINOR*100 + TAP_SR_VERSION_PATCH (e.g. 100 for 0.1.0). */
 unsigned srt_version(void);
 
 /* preset: 0 = fast, 1 = balanced, 2 = transparent.

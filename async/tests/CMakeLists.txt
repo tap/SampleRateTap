@@ -5,13 +5,13 @@ include(FetchContent)
 # exist and GoogleTest is built single-threaded otherwise. The probe is
 # skipped entirely on bare metal: newlib ships pthread.h/regex.h stub
 # headers that make POSIX feature detection succeed spuriously.
-if(NOT SRT_BARE_METAL)
+if(NOT TAP_SR_BARE_METAL)
     find_package(Threads QUIET)
 endif()
 if(NOT Threads_FOUND)
     set(gtest_disable_pthreads ON CACHE BOOL "" FORCE)
 endif()
-if(SRT_BARE_METAL)
+if(TAP_SR_BARE_METAL)
     # Value-checked feature macros only: GTEST_HAS_DEATH_TEST is tested with
     # #ifdef in gtest 1.14, so it must stay undefined (no GTEST_OS_* is
     # detected on bare metal, which disables it).
@@ -53,7 +53,7 @@ if(Threads_FOUND)
     target_link_libraries(srt_tests PRIVATE Threads::Threads)
 endif()
 
-if(SRT_BARE_METAL)
+if(TAP_SR_BARE_METAL)
     # One-shot mode (e.g. Cortex-M55 under qemu-system-arm): a custom main
     # bakes in the emulation-sized filter (no argv on the target), and the
     # run is judged on gtest's summary text because semihosting does not
@@ -62,7 +62,7 @@ if(SRT_BARE_METAL)
     target_link_libraries(srt_tests PRIVATE GTest::gtest)
     add_test(NAME srt_tests_emulated COMMAND srt_tests)
     set_tests_properties(srt_tests_emulated PROPERTIES
-        PASS_REGULAR_EXPRESSION "SRT_TESTS_COMPLETE rc=0"
+        PASS_REGULAR_EXPRESSION "TAP_SR_TESTS_COMPLETE rc=0"
         FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
         TIMEOUT 1800
         LABELS async)

@@ -1,0 +1,16 @@
+# G4 allowlist: functions whose normalized disassembly may differ from
+# step 0's, per G4 label (spaces as '-') and binary pair. Each row:
+#
+#   <label> <pair> <function>  -- <reason>
+#
+# The gate stays exact everywhere else: any other function that differs
+# fails, a row whose function is identical fails (rows cannot linger), and
+# the allowed diff is printed in full on every run for review.
+#
+# Step 3.3 (D13): the family version 0.4.0 replaces async's 0.1.0 and
+# bridge's 0.3.0. Each C ABI version function returns a constant folded
+# from TAP_SR_VERSION_*, so its one immediate changes (100 -> 400 decimal;
+# 0x000300 -> 0x000400 bit-packed) and nothing else does. The rows follow
+# the functions' 3.5 renames.
+host-C-ABI async srt_version    -- D13: returns TAP_SR_VERSION_* folded; 0.1.0 -> 0.4.0
+host-C-ABI bridge ratio_version -- D13: returns TAP_SR_VERSION_* folded; 0.3.0 -> 0.4.0

@@ -23,7 +23,7 @@ set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 # The Threads probe is skipped on bare metal: newlib ships pthread.h stubs
 # that make POSIX feature detection succeed spuriously.
-if(NOT SRT_BARE_METAL AND NOT TAP_RATIO_BARE_METAL)
+if(NOT TAP_SR_BARE_METAL AND NOT TAP_SR_BARE_METAL)
     find_package(Threads QUIET)
 endif()
 if(NOT Threads_FOUND)

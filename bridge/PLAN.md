@@ -286,7 +286,7 @@ executed (it measures the shipping C++, not a Python re-implementation).
     walk broke Arm's unrolled forward codegen (M55 up_q15 +3.3%), while
     outlining the mirrored arm broke Hexagon's (down_q31 +3.3% called,
     +2.7% inlined) — so the mirrored-arm out-lining is gated per target
-    (TAP_RATIO_MIRRORED_DOT_ATTR), the same measured-per-target pattern as
+    (TAP_SR_BRIDGE_MIRRORED_DOT_ATTR), the same measured-per-target pattern as
     the tap::dsp kernel gates. Worst residual rides inside the ±3% gate
     (Hexagon down_q31 +2.7%); Arm came out slightly ahead (M33 Q31 −2.5%).
   - **M7e — DspTap pin 28a34a1 → 0eb09fa: shared Kaiser-window Bessel
@@ -446,7 +446,7 @@ asset. Everything moves from SampleRateTap `include/tap/sr/async/` /
 3. `fir_kernels.h` — `dot_row` (with the SMLALD Q15 path and its
    `__ARM_FEATURE_DSP`/MVE gating), `dot_tile_frame_major`,
    `dot_rows_frame_major`, the restrict macro. Macro prefix `SRT_` →
-   `TAP_DSP_` (incl. `SRT_CP_MIN_CHANNELS` → `TAP_DSP_CP_MIN_CHANNELS`).
+   `TAP_DSP_` (incl. `TAP_SR_ASYNC_CP_MIN_CHANNELS` → `TAP_DSP_CP_MIN_CHANNELS`).
    Bit-exactness comments travel with the code. Kernel parity tests (planar
    vs channel-parallel bit-exact per type) extracted from the SampleRateTap
    suite.

@@ -427,7 +427,7 @@ cmake -B build -DSRT_BUILD_EXAMPLES=ON && cmake --build build -j
 cd examples/pico2_cyccnt   && cmake -B build -DPICO_BOARD=pico2 && cmake --build build -j
 cd examples/pico2_dualcore && cmake -B build -DPICO_BOARD=pico2 && cmake --build build -j
 # Flash the UF2s, open the USB serial port, and wait for the sentinel
-# lines: SRT_PICO2_DONE / SRT_PICO2_DUALCORE_DONE with per-phase PASS/FAIL.
+# lines: TAP_SR_PICO2_DONE / TAP_SR_PICO2_DUALCORE_DONE with per-phase PASS/FAIL.
 ```
 
 If you have the hardware this project's authors did not have on their

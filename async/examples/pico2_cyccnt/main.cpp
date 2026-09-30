@@ -7,7 +7,7 @@
 // *instruction* counts because they are deterministic; real cost is in
 // *cycles*, which only hardware counters give. Dividing the mean cycles/frame
 // printed here by the M33 QEMU steady-state instruction counts (the workload
-// built at 2 s and at 4 s, -DSRT_SC_SECONDS=4, differenced so the one-time
+// built at 2 s and at 4 s, -DTAP_SR_ASYNC_SC_SECONDS=4, differenced so the one-time
 // construction a baseline also carries drops out; measured 2026-09-26):
 //
 //   pipeline_q15   (2ch, balanced)  1,138 insns/frame
@@ -172,7 +172,7 @@ int main() {
     runCase<float>("float", "balanced", tap::sr::async::filter_spec::balanced(), 1);
 #endif
 
-    std::printf("SRT_PICO2_DONE\n");
+    std::printf("TAP_SR_PICO2_DONE\n");
     while (true)
         sleep_ms(1000);
 }

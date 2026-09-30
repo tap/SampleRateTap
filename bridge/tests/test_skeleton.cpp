@@ -28,7 +28,7 @@ namespace {
         EXPECT_EQ(tap::sr::bridge::k_phases_up, 160u);
         EXPECT_EQ(tap::sr::bridge::k_phases_down, 147u);
         EXPECT_EQ(std::gcd(tap::sr::bridge::k_phases_up, tap::sr::bridge::k_phases_down), 1u);
-        EXPECT_EQ(TAP_RATIO_VERSION_MAJOR, 0);
+        EXPECT_EQ(TAP_SR_VERSION_MAJOR, 0);
     }
 
     // The substrate chain the M2 table builder will use, end to end at this

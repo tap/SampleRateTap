@@ -159,7 +159,7 @@ therefore lives or dies by how freely it may reorder memory operations.
 A `restrict` that merely deletes one runtime check on an in-order ARM
 core instead unlocks the scheduler on a DSP.
 
-The portable lesson is about division of labor: `SRT_RESTRICT` was added
+The portable lesson is about division of labor: `TAP_DSP_RESTRICT` was added
 for a measured GCC reason, and the *same annotation* paid a much larger,
 unlooked-for dividend on the DSP compiler. Aliasing facts belong in the
 source, stated once, precisely — because you cannot predict which

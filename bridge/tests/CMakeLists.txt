@@ -4,13 +4,13 @@ include(FetchContent)
 # std::thread, so GoogleTest is built single-threaded there. The probe is
 # skipped entirely on bare metal: newlib ships pthread.h/regex.h stub
 # headers that make POSIX feature detection succeed spuriously.
-if(NOT TAP_RATIO_BARE_METAL)
+if(NOT TAP_SR_BARE_METAL)
     find_package(Threads QUIET)
 endif()
 if(NOT Threads_FOUND)
     set(gtest_disable_pthreads ON CACHE BOOL "" FORCE)
 endif()
-if(TAP_RATIO_BARE_METAL)
+if(TAP_SR_BARE_METAL)
     # Value-checked feature macros only: GTEST_HAS_DEATH_TEST is tested with
     # #ifdef in gtest 1.14, so it must stay undefined (no GTEST_OS_* is
     # detected on bare metal, which disables it).
@@ -48,7 +48,7 @@ if(Threads_FOUND)
     target_link_libraries(tap_ratio_tests PRIVATE Threads::Threads)
 endif()
 
-if(TAP_RATIO_BARE_METAL)
+if(TAP_SR_BARE_METAL)
     # One-shot mode (Cortex-M33/M55 under qemu-system-arm): a custom main
     # bakes in the emulation-sized filter (no argv on the target), and the
     # run is judged on gtest's summary text because semihosting does not
@@ -57,7 +57,7 @@ if(TAP_RATIO_BARE_METAL)
     target_link_libraries(tap_ratio_tests PRIVATE GTest::gtest)
     add_test(NAME tap_ratio_tests_emulated COMMAND tap_ratio_tests)
     set_tests_properties(tap_ratio_tests_emulated PROPERTIES
-        PASS_REGULAR_EXPRESSION "TAP_RATIO_TESTS_COMPLETE rc=0"
+        PASS_REGULAR_EXPRESSION "TAP_SR_TESTS_COMPLETE rc=0"
         FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
         TIMEOUT 1800
         LABELS ratio)

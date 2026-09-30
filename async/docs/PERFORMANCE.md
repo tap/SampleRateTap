@@ -205,7 +205,7 @@ table is already enforced by test thresholds.
   count-identical on both targets (control). Outputs unchanged
   bit-for-bit.
 - [x] **PR C2** — vectorization audit (hypothesis 2). Verified with
-  -fopt-info-vec: blend_row vectorizes (was alias-versioned; SRT_RESTRICT
+  -fopt-info-vec: blend_row vectorizes (was alias-versioned; TAP_DSP_RESTRICT
   removes the runtime check), Q15 dot_row auto-vectorizes, float dot_row is
   scalar **by design** (strict double accumulation forbids reassociation;
   vectorizing requires explicit multi-accumulator partial sums, which
@@ -258,7 +258,7 @@ table is already enforced by test thresholds.
   recorded as hypothesis C6 below.
 - [x] **PR C6** — channel-parallel dot for high channel counts
   (frame-major history + register-blocked 8/4/2/1 channel tiles,
-  `SRT_CP_MIN_CHANNELS` = 4, hosts only). Profile first (callgrind,
+  `TAP_SR_ASYNC_CP_MIN_CHANNELS` = 4, hosts only). Profile first (callgrind,
   12ch Q15): per-channel dot MACs ≈ 85% of instructions, deinterleave
   ~2% — the dots were the target. Results, same-minute A/B:
   **float 8/12/16-channel −38/−38/−42% wall-clock with AVX2+FMA**

@@ -25,11 +25,11 @@
 // and pays for the call instead (down_q31: +3.3% outlined, +2.7% inlined),
 // so there the attribute is empty and the helper inlines away.
 #if defined(__hexagon__)
-#define TAP_RATIO_MIRRORED_DOT_ATTR
+#define TAP_SR_BRIDGE_MIRRORED_DOT_ATTR
 #elif defined(_MSC_VER)
-#define TAP_RATIO_MIRRORED_DOT_ATTR __declspec(noinline)
+#define TAP_SR_BRIDGE_MIRRORED_DOT_ATTR __declspec(noinline)
 #else
-#define TAP_RATIO_MIRRORED_DOT_ATTR __attribute__((noinline))
+#define TAP_SR_BRIDGE_MIRRORED_DOT_ATTR __attribute__((noinline))
 #endif
 
 namespace tap::sr::bridge {
@@ -363,7 +363,7 @@ namespace tap::sr::bridge {
         /// on its own. Bit-exactness is the reversed kernel's contract:
         /// identical bits to dotting the materialized mirrored row.
         template <std::size_t T>
-        TAP_RATIO_MIRRORED_DOT_ATTR S dot_mirrored(const coeff* row, const S* hist) const noexcept {
+        TAP_SR_BRIDGE_MIRRORED_DOT_ATTR S dot_mirrored(const coeff* row, const S* hist) const noexcept {
             return tap::dsp::dot_row_reversed<S>(row, hist, T != 0 ? T : m_table.taps());
         }
 

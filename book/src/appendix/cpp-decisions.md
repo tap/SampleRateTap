@@ -443,7 +443,7 @@ points in that space.
 |---|---|---|---|
 | aggregate configs + designated initializers | positional constructors; builder chains | named fields make adjacent-double swaps impossible; defaults stay declarative; declaration-order enforcement | `include/tap/sr/async/polyphase_filter.h` (`filter_spec` presets); `include/tap/sr/async/converter.h` (`config`); `include/tap/sr/async/pi_servo.h` (`servo_config`) |
 
-## 11. `SRT_RESTRICT`: a portable `__restrict__`, adopted on measurement
+## 11. `TAP_DSP_RESTRICT`: a portable `__restrict__`, adopted on measurement
 
 C++ has no standard `restrict`. The library defines a two-line macro over
 the compiler extensions and applies it to the kernel pointer parameters —
@@ -461,7 +461,7 @@ vectorization audit (PERFORMANCE.md, PR C2) did not assume aliasing was a
 problem; it asked the compiler. `-fopt-info-vec` showed `blend_row`
 vectorizing — but behind a runtime aliasing check, the loop compiled
 twice with a pointer-overlap branch choosing between versions.
-`SRT_RESTRICT` on the row/history pointers removes the check, and the
+`TAP_DSP_RESTRICT` on the row/history pointers removes the check, and the
 measured effect is recorded with the honesty this project's performance
 docs enforce: **M55 `pipeline_float` −1.35% instructions, every other
 embedded scenario exactly 0.00%, x86 same-state A/B −3.7% wall-clock.**
@@ -477,12 +477,12 @@ rather than a raw keyword.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `SRT_RESTRICT` macro on kernel pointers | nothing (alias-versioned loops); structural non-aliasing proofs | verified with `-fopt-info-vec`, measured: M55 float −1.35% insns, x86 −3.7% wall-clock; states a true invariant | `include/tap/sr/async/polyphase_filter.h` macro + comment; `docs/PERFORMANCE.md` C2 |
+| `TAP_DSP_RESTRICT` macro on kernel pointers | nothing (alias-versioned loops); structural non-aliasing proofs | verified with `-fopt-info-vec`, measured: M55 float −1.35% insns, x86 −3.7% wall-clock; states a true invariant | `include/tap/sr/async/polyphase_filter.h` macro + comment; `docs/PERFORMANCE.md` C2 |
 
 ## 12. Compile-time feature gates — and the measured cost of a runtime one
 
 Target-specific code paths are selected by preprocessor and `constexpr`
-machinery, never by runtime flags. `SRT_Q15_SMLALD` turns on the dual-MAC
+machinery, never by runtime flags. `TAP_DSP_Q15_SMLALD` turns on the dual-MAC
 Q15 dot product exactly where it wins:
 
 ```cpp
@@ -493,14 +493,14 @@ Q15 dot product exactly where it wins:
 the M55 the compiler already auto-vectorizes the scalar loop with MVE and
 the intrinsic would replace vectors with dual-MACs (the gate's comment;
 PERFORMANCE.md C4 verified 0.00% change on every M55 scenario).
-`SRT_CHANNEL_PARALLEL` enables the frame-major channel axis on hosts only,
+`TAP_DSP_CHANNEL_PARALLEL` enables the frame-major channel axis on hosts only,
 and inside the class it becomes a `constexpr` member flag that
 `if constexpr` and plain constant folding erase from non-participating
 builds:
 
 ```cpp
 static constexpr bool k_channel_parallel =
-    SRT_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
+    TAP_DSP_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
 ```
 
 The reason this is dogma rather than taste is that the alternative was
@@ -518,7 +518,7 @@ again" into "provably byte-identical again."
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| preprocessor + `constexpr` flags + `if constexpr` gates | runtime mode flags | a runtime bool in the hot loop measured +6–8% on the M55 ratchet; compile-time gates keep non-participating targets' codegen byte-identical (0.00%) | `include/tap/sr/async/polyphase_filter.h` (`SRT_Q15_SMLALD`, `SRT_CHANNEL_PARALLEL`, `k_channel_parallel`, `append_one` comment); `docs/PERFORMANCE.md` C4/C6 |
+| preprocessor + `constexpr` flags + `if constexpr` gates | runtime mode flags | a runtime bool in the hot loop measured +6–8% on the M55 ratchet; compile-time gates keep non-participating targets' codegen byte-identical (0.00%) | `include/tap/sr/async/polyphase_filter.h` (`TAP_DSP_Q15_SMLALD`, `TAP_DSP_CHANNEL_PARALLEL`, `k_channel_parallel`, `append_one` comment); `docs/PERFORMANCE.md` C4/C6 |
 
 ## 13. `std::function` in the simulator, templated callables in the library
 

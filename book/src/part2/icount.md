@@ -102,7 +102,7 @@ everything, decided at compile time.
 `bench/icount/icount_main.cpp` defines seven scenarios — `interpolate()` in
 isolation and the full push/pull pipeline, each in float/Q15/Q31, plus a
 12-channel Q15 pipeline for the 7.1.4 deployment shape — selected by
-preprocessor definitions (`SRT_SC_KIND`, `SRT_SC_TYPE`, `SRT_SC_CH`) into
+preprocessor definitions (`TAP_SR_ASYNC_SC_KIND`, `TAP_SR_ASYNC_SC_TYPE`, `TAP_SR_ASYNC_SC_CH`) into
 one binary each, because the bare-metal targets have no argv to select with
 at runtime. Each binary runs a deterministic loop (two virtual seconds of
 audio through the pipeline; 200 000 interpolations for the kernels),
@@ -116,9 +116,9 @@ accumulates a checksum, and ends with:
 A total is the whole binary's cost, construction included, so a pipeline
 baseline divided by its 96 000 frames is *not* the per-frame cost: on the
 M33 the converter's soft-double filter design alone is close to a billion
-instructions. `SRT_SC_SECONDS` (default 2, the only length ever baselined)
+instructions. `TAP_SR_ASYNC_SC_SECONDS` (default 2, the only length ever baselined)
 exists for that question. Build the pipeline scenarios again at
-`-DSRT_SC_SECONDS=4` and difference the counts: what doubles is the
+`-DTAP_SR_ASYNC_SC_SECONDS=4` and difference the counts: what doubles is the
 per-frame steady state, and what stays is construction.
 
 The three gated targets each run under the QEMU mode that matches their

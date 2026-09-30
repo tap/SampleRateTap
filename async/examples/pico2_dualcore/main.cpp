@@ -534,7 +534,7 @@ int main() {
     std::printf("OVERALL: %s (A %s, B %s)\n", overall ? "PASS" : "FAIL",
                 res[0].ran ? (res[0].pass ? "PASS" : "FAIL") : "SKIP",
                 res[1].ran ? (res[1].pass ? "PASS" : "FAIL") : "SKIP");
-    std::printf("SRT_PICO2_DUALCORE_DONE\n");
+    std::printf("TAP_SR_PICO2_DUALCORE_DONE\n");
     while (true)
         sleep_ms(1000);
 }

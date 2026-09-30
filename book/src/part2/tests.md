@@ -310,7 +310,7 @@ CTest watches for a sentinel:
 ```cmake
     add_test(NAME srt_tests_emulated COMMAND srt_tests)
     set_tests_properties(srt_tests_emulated PROPERTIES
-        PASS_REGULAR_EXPRESSION "SRT_TESTS_COMPLETE rc=0"
+        PASS_REGULAR_EXPRESSION "TAP_SR_TESTS_COMPLETE rc=0"
         FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
         TIMEOUT 1800)
 ```
@@ -333,7 +333,7 @@ realized this, and the guard went in:
     const int selected = ::testing::UnitTest::GetInstance()->test_to_run_count();
     if (selected < 15) {
         std::printf("only %d tests selected (expected >= 15): filter is broken\n", selected);
-        std::printf("SRT_TESTS_COMPLETE rc=1\n");
+        std::printf("TAP_SR_TESTS_COMPLETE rc=1\n");
         return 1;
     }
 ```

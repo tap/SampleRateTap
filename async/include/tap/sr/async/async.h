@@ -13,8 +13,8 @@
 // Copyright 2026 SampleRateTap contributors
 #pragma once
 
-#define SRT_VERSION_MAJOR 0
-#define SRT_VERSION_MINOR 1
-#define SRT_VERSION_PATCH 0
+#define TAP_SR_VERSION_MAJOR 0
+#define TAP_SR_VERSION_MINOR 4
+#define TAP_SR_VERSION_PATCH 0
 
 #include "tap/sr/async/converter.h"

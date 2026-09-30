@@ -84,7 +84,7 @@ bit-for-bit" as a checked result, not a hope. This library treats
 bit-exactness as the boundary between an optimization (free to ship) and
 an algorithm change (needs its own quality evidence); you will see the
 same distinction drawn twice more in this chapter. Second, the
-`SRT_RESTRICT` qualifiers are C2's contribution: without them the
+`TAP_DSP_RESTRICT` qualifiers are C2's contribution: without them the
 compiler versioned these loops behind runtime aliasing checks (verified
 with `-fopt-info-vec`, not assumed).
 
@@ -342,7 +342,7 @@ edge measured rather than assumed:
   than planar — integer accumulation is exactly reassociable, so the
   planar Q15/Q31 dots already auto-vectorize over taps, and the tap axis
   beats the channel axis when both are available.
-- **Channels ≥ 4** (`SRT_CP_MIN_CHANNELS`, overridable for A/B runs):
+- **Channels ≥ 4** (`TAP_SR_ASYNC_CP_MIN_CHANNELS`, overridable for A/B runs):
   below that, lane utilization loses to the planar path's simplicity.
 - **Hosts only**: the embedded targets keep their proven codegen (Helium
   on M55, SMLALD on M33-class, Hexagon's measured scalar floor); the
@@ -442,7 +442,7 @@ cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DSRT_BUILD_BENCHMARKS=ON \
 cmake --build build-bench -j && \
   ./build-bench/bench/srt_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
 cmake -B build-planar -DCMAKE_BUILD_TYPE=Release -DSRT_BUILD_BENCHMARKS=ON \
-      -DCMAKE_CXX_FLAGS="-march=native -DSRT_CP_MIN_CHANNELS=999"
+      -DCMAKE_CXX_FLAGS="-march=native -DTAP_SR_ASYNC_CP_MIN_CHANNELS=999"
 cmake --build build-planar -j && \
   ./build-planar/bench/srt_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
 

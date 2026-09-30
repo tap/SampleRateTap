@@ -94,7 +94,7 @@ size_t ratio_taps(const ratio_converter* c) {
 }
 
 unsigned ratio_version(void) {
-    return (TAP_RATIO_VERSION_MAJOR << 16) | (TAP_RATIO_VERSION_MINOR << 8) | TAP_RATIO_VERSION_PATCH;
+    return (TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH;
 }
 
 } // extern "C"

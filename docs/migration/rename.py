@@ -221,6 +221,9 @@ SUBS = [
     ("3.3", w("TAP_RATIO_BARE_METAL"), "TAP_SR_BARE_METAL"),
     ("3.3", LB + r"SRT_PICO2_", "TAP_SR_PICO2_"),
     ("3.3", w("SRT_GD"), "TAP_SR_ASYNC_GD"),
+    # D13: the family version the bridge notebook prints (ratio_demo.ipynb);
+    # G11 executes both trees, so the step-0 output maps to the new value.
+    ("3.3", r"RatioTap 0\.3\.0", "RatioTap 0.4.0"),
     # 3.4 CMake: options (D9), targets, projects, test prefix and labels (D16).
     ("3.4", w("SRT_WERROR"), "TAP_SR_ASYNC_WERROR"),
     ("3.4", w("TAP_RATIO_WERROR"), "TAP_SR_BRIDGE_WERROR"),
@@ -485,7 +488,12 @@ def check(args) -> int:
 # step-0 tree contains and that record history (the plan, the migration
 # kit, bridge/docs/HISTORY.md); changed C/C++ files are clang-formatted.
 
-APPLY_SKIP = ["docs/migration/*", "docs/MONOREPO_PLAN.md", "bridge/docs/HISTORY.md", "submodules/*"]
+# The TapHouse-synced files are byte-checked by CI and change only through
+# taphouse; a rule that matches their prose (STYLE.md's macro example)
+# leaves a reviewed G14 residual instead.
+APPLY_SKIP = ["docs/migration/*", "docs/MONOREPO_PLAN.md", "bridge/docs/HISTORY.md", "submodules/*",
+              "STYLE.md", ".clang-format", ".clang-tidy", ".pre-commit-config.yaml", "scripts/tidy.sh",
+              ".claude/hooks/session-start.sh"]
 
 
 def apply(args) -> int:

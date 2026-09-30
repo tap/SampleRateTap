@@ -37,9 +37,9 @@
 #include "tap/sr/bridge/phase_table.h" // IWYU pragma: export
 #include "tap/sr/bridge/schedule.h"    // IWYU pragma: export
 
-#define TAP_RATIO_VERSION_MAJOR 0
-#define TAP_RATIO_VERSION_MINOR 3
-#define TAP_RATIO_VERSION_PATCH 0
+#define TAP_SR_VERSION_MAJOR 0
+#define TAP_SR_VERSION_MINOR 4
+#define TAP_SR_VERSION_PATCH 0
 
 namespace tap::sr::bridge {
 

@@ -37,7 +37,7 @@ namespace {
 extern "C" {
 
 unsigned srt_version(void) noexcept {
-    return SRT_VERSION_MAJOR * 10000u + SRT_VERSION_MINOR * 100u + SRT_VERSION_PATCH;
+    return TAP_SR_VERSION_MAJOR * 10000u + TAP_SR_VERSION_MINOR * 100u + TAP_SR_VERSION_PATCH;
 }
 
 // ANCHOR: abi_create

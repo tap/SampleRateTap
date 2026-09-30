@@ -6,11 +6,11 @@
 // dominate. The checksum both defeats dead-code elimination and pins down
 // cross-run determinism.
 //
-// RATIO_SC_DIR:     0 = up (44.1 -> 48), 1 = down (48 -> 44.1)
-// RATIO_SC_TYPE:    0 = float, 1 = Q15, 2 = Q31
-// RATIO_SC_PROFILE: 0 = economy, 1 = transparent, 3 = super_economy
+// TAP_SR_BRIDGE_SC_DIR:     0 = up (44.1 -> 48), 1 = down (48 -> 44.1)
+// TAP_SR_BRIDGE_SC_TYPE:    0 = float, 1 = Q15, 2 = Q31
+// TAP_SR_BRIDGE_SC_PROFILE: 0 = economy, 1 = transparent, 3 = super_economy
 //                   (matching the C ABI tags; 2 = balanced unused here)
-// RATIO_SC_CH:      channel count (default 2)
+// TAP_SR_BRIDGE_SC_CH:      channel count (default 2)
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the RatioTap contributors.
 #include <cmath>
@@ -25,8 +25,8 @@
 
 namespace {
 
-#ifndef RATIO_SC_CH
-#define RATIO_SC_CH 2
+#ifndef TAP_SR_BRIDGE_SC_CH
+#define TAP_SR_BRIDGE_SC_CH 2
 #endif
 
     template <typename S>
@@ -58,23 +58,23 @@ namespace {
     template <typename S>
     double run() {
         using tap::sr::bridge::direction;
-#if RATIO_SC_DIR == 0
+#if TAP_SR_BRIDGE_SC_DIR == 0
         constexpr direction k_dir     = direction::up_to_48k;
         constexpr double    k_rate_in = 44100.0;
 #else
         constexpr direction k_dir     = direction::down_to_44k1;
         constexpr double    k_rate_in = 48000.0;
 #endif
-#if RATIO_SC_PROFILE == 0
+#if TAP_SR_BRIDGE_SC_PROFILE == 0
         const tap::sr::bridge::profile k_prof = tap::sr::bridge::profile::economy();
-#elif RATIO_SC_PROFILE == 1
+#elif TAP_SR_BRIDGE_SC_PROFILE == 1
         const tap::sr::bridge::profile k_prof = tap::sr::bridge::profile::transparent();
-#elif RATIO_SC_PROFILE == 2
+#elif TAP_SR_BRIDGE_SC_PROFILE == 2
         const tap::sr::bridge::profile k_prof = tap::sr::bridge::profile::balanced();
 #else
         const tap::sr::bridge::profile k_prof = tap::sr::bridge::profile::super_economy();
 #endif
-        constexpr std::size_t k_ch    = RATIO_SC_CH;
+        constexpr std::size_t k_ch    = TAP_SR_BRIDGE_SC_CH;
         constexpr std::size_t k_block = 32;
 
         tap::sr::bridge::basic_converter<S, k_dir> conv(k_ch, k_prof);
@@ -107,9 +107,9 @@ namespace {
 } // namespace
 
 int main() {
-#if RATIO_SC_TYPE == 0
+#if TAP_SR_BRIDGE_SC_TYPE == 0
     const double checksum = run<float>();
-#elif RATIO_SC_TYPE == 1
+#elif TAP_SR_BRIDGE_SC_TYPE == 1
     const double checksum = run<std::int16_t>();
 #else
     const double checksum = run<std::int32_t>();

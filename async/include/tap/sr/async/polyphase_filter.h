@@ -22,13 +22,13 @@
 // gates (SMLALD dual-MAC on DSP-extension Arm, the channel-parallel layout
 // selection) moved to DspTap's fir_kernels.h with the rest of the shared FIR
 // substrate; the measurements that sized them are recorded there and in
-// docs/PERFORMANCE.md (hypotheses 2/4/5/C4-C6). The historical SRT_ macro
-// names keep working, forwarded to the TAP_DSP_ gates.
-#define SRT_RESTRICT TAP_DSP_RESTRICT
-#define SRT_Q15_SMLALD TAP_DSP_Q15_SMLALD
-#define SRT_CHANNEL_PARALLEL TAP_DSP_CHANNEL_PARALLEL
-#ifndef SRT_CP_MIN_CHANNELS
-#define SRT_CP_MIN_CHANNELS TAP_DSP_CP_MIN_CHANNELS
+// docs/PERFORMANCE.md (hypotheses 2/4/5/C4-C6). The gates are the TAP_DSP_
+// macros themselves; the override below is this engine's own.
+#ifdef SRT_CP_MIN_CHANNELS
+#error "SRT_CP_MIN_CHANNELS was renamed TAP_SR_ASYNC_CP_MIN_CHANNELS in SampleRateTap 0.4.0"
+#endif
+#ifndef TAP_SR_ASYNC_CP_MIN_CHANNELS
+#define TAP_SR_ASYNC_CP_MIN_CHANNELS TAP_DSP_CP_MIN_CHANNELS
 #endif
 
 namespace tap::sr::async {
@@ -236,7 +236,7 @@ namespace tap::sr::async {
     /// dotRow() per channel, instead of re-blending inside interpolate() for
     /// every channel.
     template <sample_type S>
-    inline void blend_row(const polyphase_filter_bank<S>& bank, typename sample_traits<S>::coeff* SRT_RESTRICT row,
+    inline void blend_row(const polyphase_filter_bank<S>& bank, typename sample_traits<S>::coeff* TAP_DSP_RESTRICT row,
                           double mu) noexcept {
         using tr         = sample_traits<S>;
         const double pos = mu * static_cast<double>(bank.numPhases());
@@ -260,8 +260,8 @@ namespace tap::sr::async {
     /// which is what makes this path cheap on targets without a double-precision
     /// FPU. Resolution is 2^-64 samples (finer than the double-mu path's 2^-52).
     template <sample_type S>
-    inline void blend_row_phase(const polyphase_filter_bank<S>&                bank,
-                                typename sample_traits<S>::coeff* SRT_RESTRICT row, std::uint64_t phase) noexcept {
+    inline void blend_row_phase(const polyphase_filter_bank<S>&                    bank,
+                                typename sample_traits<S>::coeff* TAP_DSP_RESTRICT row, std::uint64_t phase) noexcept {
         using tr               = sample_traits<S>;
         const int         lg   = std::countr_zero(bank.num_phases()); // L is a power of two
         const std::size_t p    = static_cast<std::size_t>(phase >> (64 - lg));
@@ -327,8 +327,8 @@ namespace tap::sr::async {
         // ANCHOR_END: rs_class_doc
       public:
         /// Frame-major channel-parallel mode is compiled in only on CP targets
-        /// and only for floating-point samples (see SRT_CHANNEL_PARALLEL).
-        static constexpr bool k_channel_parallel = SRT_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
+        /// and only for floating-point samples (see TAP_DSP_CHANNEL_PARALLEL).
+        static constexpr bool k_channel_parallel = TAP_DSP_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
 
         /// Allocates histories and the pop scratch buffer; setup time only.
         fractional_resampler(const polyphase_filter_bank<S>& bank, std::size_t channels, std::size_t chunk_frames = 64)
@@ -337,7 +337,7 @@ namespace tap::sr::async {
             , m_chunk(chunk_frames)
             , m_hist_cap(bank.taps() + chunk_frames)
             , m_scratch(chunk_frames * channels)
-            , m_frame_major(k_channel_parallel && channels >= SRT_CP_MIN_CHANNELS)
+            , m_frame_major(k_channel_parallel && channels >= TAP_SR_ASYNC_CP_MIN_CHANNELS)
             , m_hist(m_frame_major ? 1 : channels)
             , m_row(bank.taps()) {
             if (m_channels == 0 || m_chunk == 0) {
@@ -429,7 +429,7 @@ namespace tap::sr::async {
                 // Q15 on SMLALD targets routes mono through blendRow+dotRow as
                 // well: dotRow carries the dual-MAC loop, and the two paths are
                 // bit-exact by construction (see dotRow).
-                constexpr bool k_prefer_dot_row = SRT_Q15_SMLALD && std::is_same_v<S, std::int16_t>;
+                constexpr bool k_prefer_dot_row = TAP_DSP_Q15_SMLALD && std::is_same_v<S, std::int16_t>;
                 if (m_channels == 1 && !k_prefer_dot_row) { // fused blend+mac; no scratch traffic
                     out[n] = interpolate_phase(*m_bank, window(0), m);
                 }
@@ -502,8 +502,8 @@ namespace tap::sr::async {
         std::vector<S>                  m_scratch; // interleaved staging for bulk pops
         // ANCHOR: rs_members
         // History storage: planar (one delay line per channel, hist_[c]) below
-        // SRT_CP_MIN_CHANNELS, frame-major (single interleaved line, hist_[0])
-        // at or above it on SRT_CHANNEL_PARALLEL targets. end_/histCap_ count
+        // TAP_SR_ASYNC_CP_MIN_CHANNELS, frame-major (single interleaved line, hist_[0])
+        // at or above it on TAP_DSP_CHANNEL_PARALLEL targets. end_/histCap_ count
         // frames in both modes.
         bool                                          m_frame_major;
         std::vector<std::vector<S>>                   m_hist;

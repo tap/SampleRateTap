@@ -27,11 +27,11 @@ int main() {
     const int selected = ::testing::UnitTest::GetInstance()->test_to_run_count();
     if (selected < 25) {
         std::printf("only %d tests selected (expected >= 25): filter is broken\n", selected);
-        std::printf("TAP_RATIO_TESTS_COMPLETE rc=1\n");
+        std::printf("TAP_SR_TESTS_COMPLETE rc=1\n");
         return 1;
     }
     // CTest's pass criterion: printed only if we get all the way here, so a
     // crash after gtest's summary cannot register as a pass.
-    std::printf("TAP_RATIO_TESTS_COMPLETE rc=%d\n", rc);
+    std::printf("TAP_SR_TESTS_COMPLETE rc=%d\n", rc);
     return rc;
 }

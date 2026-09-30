@@ -151,7 +151,12 @@ def load_flags(bld: pathlib.Path, src: pathlib.Path, repo: str | None):
         f = norm_token(e["file"], src_s, bld_s, repo)
         if "<DEPS>" in f:
             continue
-        res[f] = norm
+        # CMake emits a target's definitions sorted by name, so a renamed
+        # macro moves in the command line (3.3: SRT_SC_* past
+        # TAP_DSP_FFT_CMSIS). Compared as the sorted set CMake makes them;
+        # every other flag keeps its order.
+        defs = sorted(t for t in norm if t.startswith("-D"))
+        res[f] = [t for t in norm if not t.startswith("-D")] + defs
     return res
 
 
@@ -315,17 +320,43 @@ def demangled_mapper(s: str) -> str:
     return map_text(s)
 
 
+def g4_allowances(label: str) -> dict[str, set[str]]:
+    """allow-g4.txt rows for one G4 label: pair name -> functions that must
+    differ (a row whose function is identical is stale and fails)."""
+    allowed = collections.defaultdict(set)
+    for line in (HERE / "allow-g4.txt").read_text().splitlines():
+        line = line.split("--")[0].strip()
+        if not line or line.startswith("#"):
+            continue
+        lbl, pair, func = line.split(maxsplit=2)
+        if lbl == label.replace(" ", "-"):
+            allowed[pair].add(func)
+    return allowed
+
+
 def g4(pairs, objdump, nm, label):
-    bad = []
+    bad, shown = [], 0
+    allowed = g4_allowances(label)
     for name, old_elf, new_elf in pairs:
         a = disasm(old_elf, objdump, nm, demangled_mapper)
         b = disasm(new_elf, objdump, nm, lambda s: s)
         diffs = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
-        if diffs:
-            bad.append(f"{name}: {len(diffs)} function(s) differ, e.g. {diffs[:3]}")
+        extra = [k for k in diffs if k not in allowed.get(name, set())]
+        stale = sorted(allowed.get(name, set()) - set(diffs))
+        if extra:
+            bad.append(f"{name}: {len(extra)} function(s) differ, e.g. {extra[:3]}")
+        if stale:
+            bad.append(f"{name}: allow-g4.txt names identical function(s) {stale}")
+        for k in diffs:
+            if k in allowed.get(name, set()):
+                shown += 1
+                print(f"    {name}: {k} differs as allowed:")
+                for line in difflib.unified_diff(a.get(k, []), b.get(k, []), "step-0", "gated", lineterm="", n=0):
+                    print("       ", line)
     for b in bad[:20]:
         print("   ", b)
-    report(f"G4 {label}", not bad, f"{len(pairs)} binaries compared")
+    report(f"G4 {label}", not bad, f"{len(pairs)} binaries compared"
+           + (f", {shown} function(s) at their allow-g4.txt diff" if shown else ""))
 
 
 # -- host ------------------------------------------------------------------

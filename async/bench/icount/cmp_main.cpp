@@ -10,14 +10,14 @@
 // instruction counts are measured once and recorded in docs/COMPARISON.md,
 // not gated.
 //
-// SRT_CMP_ENGINE: 0 = SampleRateTap (balanced), 1 = libsamplerate
+// TAP_SR_ASYNC_CMP_ENGINE: 0 = SampleRateTap (balanced), 1 = libsamplerate
 //                 SRC_SINC_MEDIUM_QUALITY, 2 = libsamplerate
 //                 SRC_SINC_BEST_QUALITY, 3 = r8brain 120 dB at its default
 //                 2% transition band, 4 = r8brain 120 dB at 8% (the
 //                 lowest-latency setting still flat to 20 kHz, like balanced),
 //                 5 = SampleRateTap (balanced) Q15 — no competitor analog
 //
-// SRT_CMP_SECONDS (default 2) sets the workload length. Every count includes
+// TAP_SR_ASYNC_CMP_SECONDS (default 2) sets the workload length. Every count includes
 // one-time construction (filter design, table and FFT setup), so CMake builds
 // each engine at 2 s and 4 s: the difference is the steady-state cost of 2 s
 // of audio, the remainder is construction (docs/COMPARISON.md reports both).
@@ -28,12 +28,12 @@
 #include <numbers>
 #include <vector>
 
-#if SRT_CMP_ENGINE == 0 || SRT_CMP_ENGINE == 5
+#if TAP_SR_ASYNC_CMP_ENGINE == 0 || TAP_SR_ASYNC_CMP_ENGINE == 5
 #include <type_traits>
 
 #include "tap/sr/async/polyphase_filter.h"
 #include "tap/sr/async/sample_traits.h"
-#elif SRT_CMP_ENGINE <= 2
+#elif TAP_SR_ASYNC_CMP_ENGINE <= 2
 #include <samplerate.h>
 #else
 #include <memory>
@@ -45,11 +45,11 @@ namespace {
 
     constexpr std::size_t kCh    = 2;
     constexpr std::size_t kBlock = 32;
-#ifndef SRT_CMP_SECONDS
-#define SRT_CMP_SECONDS 2
+#ifndef TAP_SR_ASYNC_CMP_SECONDS
+#define TAP_SR_ASYNC_CMP_SECONDS 2
 #endif
-    constexpr std::size_t kBlocks = SRT_CMP_SECONDS * 48000 / kBlock; // input at 48 kHz
-    constexpr double      kRatio  = 1.0 + 200e-6;                     // output rate / input rate
+    constexpr std::size_t kBlocks = TAP_SR_ASYNC_CMP_SECONDS * 48000 / kBlock; // input at 48 kHz
+    constexpr double      kRatio  = 1.0 + 200e-6;                              // output rate / input rate
 
     std::vector<float> sineInput(std::size_t frames) {
         std::vector<float> out(frames * kCh);
@@ -60,9 +60,9 @@ namespace {
         return out;
     }
 
-#if SRT_CMP_ENGINE == 0 || SRT_CMP_ENGINE == 5
+#if TAP_SR_ASYNC_CMP_ENGINE == 0 || TAP_SR_ASYNC_CMP_ENGINE == 5
 
-#if SRT_CMP_ENGINE == 0
+#if TAP_SR_ASYNC_CMP_ENGINE == 0
     using Sample = float;
 #else
     using Sample = std::int16_t;
@@ -109,10 +109,10 @@ namespace {
         return sink;
     }
 
-#elif SRT_CMP_ENGINE <= 2
+#elif TAP_SR_ASYNC_CMP_ENGINE <= 2
 
     double run() {
-#if SRT_CMP_ENGINE == 1
+#if TAP_SR_ASYNC_CMP_ENGINE == 1
         constexpr int kConverter = SRC_SINC_MEDIUM_QUALITY;
 #else
         constexpr int kConverter = SRC_SINC_BEST_QUALITY;
@@ -155,7 +155,7 @@ namespace {
     // r8brain is mono per instance with double-precision I/O: one instance per
     // channel, float<->double (de)interleave counted, as any float caller pays.
     double run() {
-#if SRT_CMP_ENGINE == 3
+#if TAP_SR_ASYNC_CMP_ENGINE == 3
         constexpr double kTransBandPct = 2.0;
 #else
         constexpr double kTransBandPct = 8.0;

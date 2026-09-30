@@ -23,7 +23,7 @@ if(NOT TARGET srt_r8brain)
     target_include_directories(srt_r8brain SYSTEM INTERFACE ${r8brain_SOURCE_DIR})
     # The filter cache's std::mutex. Bare-metal targets have no threads; the
     # icount workloads supply a single-threaded stand-in there instead.
-    if(NOT SRT_BARE_METAL)
+    if(NOT TAP_SR_BARE_METAL)
         find_package(Threads REQUIRED)
         target_link_libraries(srt_r8brain INTERFACE Threads::Threads)
     endif()

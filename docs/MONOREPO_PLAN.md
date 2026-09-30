@@ -772,6 +772,28 @@ There is no separate reflow commit, since the hook would absorb it anyway
      test trees.
    - `SRT_PICO2_*` → `TAP_SR_PICO2_*`.
    - Guest icount markers are unchanged.
+   - **Done (v3.1).** `rename.py apply --step 3.3` (41 files) plus the hand
+     edits G14 lists in `residual/3.3.txt`: `TAP_SR_VERSION_*` = 0.4.0 in
+     both umbrella headers (`bluetooth_bridge.cpp` includes both, so the
+     renamed macros must be token-identical in the same commit), the D7
+     `#error` tripwire for `SRT_CP_MIN_CHANNELS`, the 1c toolchain lines
+     retired (each file sets `TAP_SR_BARE_METAL` once), and
+     `ratio_demo.ipynb` re-executed in the pinned environment for its
+     version line (figures byte-identical; four timestamp hunks). The
+     version value reaches two gates: the C ABI `srt_version` /
+     `ratio_version` return the folded constant, allowed and printed by
+     `allow-g4.txt` (100 → 400 decimal, 0x300 → 0x400 bit-packed, nothing
+     else differs), and G11 maps the notebook's printed `RatioTap 0.3.0` to
+     `0.4.0` by a 3.3 rule, since it executes both trees. `STYLE.md`'s macro
+     example stays canonical (residual, G9-allowlisted until step 5) and the
+     TapHouse-synced files joined `APPLY_SKIP`. G7 now compares `-D`
+     definitions as the sorted set CMake emits them in, since the renamed
+     `SRT_SC_*` moved past `TAP_DSP_FFT_CMSIS` in the Arm command lines
+     with no change to the set. Measured locally before the push: G3+G5
+     exact on hexagon (the 14 rows proved per function), m33 and m55 for all
+     17 workloads; G4 17/17 per target; G7, G11 (all seven notebooks), G14
+     (0 unlisted), the host gates but G12 (shallow clone); clang `-Werror`
+     159/159 tests, clang-tidy clean, the book builds.
 4. **CMake, dependency enforcement and workflows:**
    - Targets: `tap::sr::async`, `tap::sr::bridge`, umbrella `tap::sr`.
    - Internal targets renamed, including the ctest entries

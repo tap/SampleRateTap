@@ -12,6 +12,7 @@ committed at step 0 and deleted at step 4 (`runs.md` may be kept).
 | `snapshot/` | the step-0 snapshot those collectors compare against |
 | `allow.txt` | G1 allowlist: test rows a job may gain (never lose) |
 | `allow-g3.txt` | G3 allowlist: per (target, engine, workload), one symbol and the exact icount delta it accounts for (3.2's Hexagon `memcpy` rows) |
+| `allow-g4.txt` | G4 allowlist: per label and binary pair, functions whose codegen may differ (3.3's two C ABI version functions, D13); the diff is printed on every run |
 | `fncount.c` | qemu plugin for G3's proof of each `allow-g3.txt` row: exact per-function instruction counts, compared as a multiset over every other symbol |
 | `runs.md` | provenance of the snapshot, and the run record of every gated SHA (G13) |
 | `gates.py` | the gates as the `migration-gates` workflow runs them: `host`, `cross --target`, `notebooks` |
