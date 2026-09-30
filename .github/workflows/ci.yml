@@ -28,7 +28,7 @@ env:
 # job configures the ROOT once and builds both engines; a job that tests
 # only one engine selects it at ctest time by label (async / ratio — the
 # bridge engine keeps RatioTap's `ratio` label until step 3.4 renames it,
-# docs/MONOREPO_PLAN.md D16). Per-engine options keep each engine's own
+# PLAN.md D16). Per-engine options keep each engine's own
 # warning policy.
 jobs:
   build-and-test:

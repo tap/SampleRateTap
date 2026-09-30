@@ -1,8 +1,0 @@
-T srt_create
-T srt_designed_latency_seconds
-T srt_destroy
-T srt_pull
-T srt_push
-T srt_reset_from_consumer
-T srt_status
-T srt_version

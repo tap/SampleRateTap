@@ -1,4 +1,4 @@
-# The family's dependency rule and its enforcement (docs/MONOREPO_PLAN.md
+# The family's dependency rule and its enforcement (PLAN.md
 # 4.2): async and bridge each depend on tap::dsp only, and a sibling appears
 # only under an engine's tests/ and examples/. Four checks per engine, each
 # registered under the engine's label so every job that runs that engine's

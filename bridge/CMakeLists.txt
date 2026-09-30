@@ -49,7 +49,7 @@ option(TAP_SR_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF
 # The sibling async engine, dev-only (never part of the shipped tap::sr::bridge
 # target): the golden cross-validation test and the bluetooth_bridge example
 # compose against its near-unity ASRC. Consumed headers-only via include path,
-# so this engine's code never links async's target (MONOREPO_PLAN.md 4.2);
+# so this engine's code never links async's target (PLAN.md 4.2);
 # tap::dsp serves its "tap/dsp/..." includes.
 if(TAP_SR_BUILD_TESTS OR TAP_SR_BUILD_EXAMPLES)
     add_library(tap_sr_async_headers INTERFACE)

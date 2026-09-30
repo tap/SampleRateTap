@@ -23,7 +23,7 @@ quantization, measurement instruments).
 > against committed scipy reference vectors sample-for-sample), Q31
 > (tracks float within −147 dB), and Q15 (format-limited: pair it with
 > `economy`, which is both cheaper *and* quieter than `transparent` at 16
-> bits), plus the golden cross-validation against SampleRateTap's async
+> bits), plus the golden cross-validation against the family's `async`
 > engine (every phase, floor at the one deliberate design difference), the
 > `bluetooth_bridge` example, the C ABI, and the executed demo notebook.
 > v0.2 was the measured optimization campaign — superblock walk, committed
@@ -57,7 +57,7 @@ Direction is a compile-time type (`converter_to_48k` / `converter_to_44k1`,
 plus `_q15` / `_q31` fixed-point variants); `pull(out, n, pop_fn)` is the
 callback-driven shape, and `frames_needed(n)` is exact arithmetic. For
 44.1↔48 across *independent clocks* (a Bluetooth chip on its own crystal),
-compose with SampleRateTap — `examples/bluetooth_bridge.cpp` is the
+compose with the family's `async` engine — `examples/bluetooth_bridge.cpp` is the
 documented recipe: +200 ppm crystal, servo locked, 997 Hz recovered
 exactly, 1.9 ms total latency.
 
@@ -69,9 +69,8 @@ exactly, 1.9 ms total latency.
   decomposition) to hard-commit to phase counts of exactly 147 and 160.
 - **No asynchronous conversion.** If the two ends of your chain run on
   different crystals — *even at nominally 44.1-vs-48* — that is the
-  [SampleRateTap](https://github.com/tap/SampleRateTap) near-unity ASRC's
-  problem, reached by composition: RatioTap converts the *number*, the
-  ASRC absorbs the *clock*. Which engine applies is a property of the
+  family's [`async`](../async/README.md) engine's problem, reached by
+  composition: `bridge` converts the *number*, `async` absorbs the *clock*. Which engine applies is a property of the
   clock topology, never inferred from a float ratio. The
   `bluetooth_bridge` example (milestone M6) documents the composition.
 - **Speed-first.** Direction is a compile-time parameter; the default
@@ -83,7 +82,7 @@ exactly, 1.9 ms total latency.
 
 ```
                     ┌────────────────────────────┐
-                    │           DspTap           │  shared substrate (submodule)
+                    │           DspTap           │  shared substrate (submodules/dsptap)
                     │  kaiser design · sample    │
                     │  traits (float/Q15/Q31) ·  │
                     │  FIR dot kernels · row-sum │
@@ -91,13 +90,13 @@ exactly, 1.9 ms total latency.
                     └──────┬──────────────┬──────┘
                            │              │
               ┌────────────┴───┐   ┌──────┴─────────┐
-              │ SampleRateTap  │   │    RatioTap    │
+              │ tap::sr::async │   │ tap::sr::bridge│
               │ async, near-   │   │ sync, 44.1↔48, │
               │ unity, servo   │   │ speed-first    │
               └────────────┬───┘   └──────┬─────────┘
                            │              │
-                           └──── test-only│dependency:
-                                golden cross-validation
+                           └── test-only ─┘  bridge's golden cross-validation
+                               (bridge/tests/, bridge/examples/bluetooth_bridge)
 ```
 
 ## Build

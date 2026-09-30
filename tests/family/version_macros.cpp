@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
-// D13 (docs/MONOREPO_PLAN.md): one family version, TAP_SR_VERSION_*, defined
+// D13 (PLAN.md): one family version, TAP_SR_VERSION_*, defined
 // in each engine's umbrella header with no shared header (so the engines
 // stay independent, 4.2 check 1). The two definitions must agree, and this
 // is the family's pinned release. Compile-only: its static_asserts are the

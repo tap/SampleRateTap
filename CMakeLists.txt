@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.24)
 # converter. Each engine is a subproject with its own target; this file
 # composes them over one tap::dsp, declares the family options (D9) and the
 # umbrella target, and adds the family's own tests (the dependency rule of
-# docs/MONOREPO_PLAN.md 4.2).
+# PLAN.md 4.2).
 project(SampleRateTap VERSION 0.4.0 LANGUAGES CXX)
 enable_testing()
 

@@ -1,8 +1,10 @@
-# Gate runs
+# Gate runs of the 2026 monorepo migration
 
-One row per gated SHA (MONOREPO_PLAN.md section 5): the run IDs of every
-named workflow (G13), the runner image, and the Arm toolchain and QEMU
-package versions the QEMU legs installed.
+One row per gated SHA (`PLAN.md` section 5): the run IDs of every named
+workflow (G13), the runner image, and the Arm toolchain and QEMU package
+versions the QEMU legs installed. The gates' working set (`docs/migration/`:
+the step-0 snapshot, the rename map, the residual allowlists and `gates.py`)
+was deleted at step 4 and lives in the history of PR #50.
 
 ## Step 0 — the snapshot's evidence
 
@@ -49,3 +51,4 @@ check joins the book job at 1c.
 | 3.5 | `fb75b6a` | 36719417466 | 36719418989 | 36719417431 (5/5) | 36719419845 | 36719424520 | ubuntu-24.04 | 3.5 `fb75b6a` (C ABI tap_sr_<engine>_*; D13 version encoding; CApi.VersionIsBitPacked links the shipped library where TAP_SR_BUILD_CAPI builds it; `allow-g4.txt` rows follow the renamed version functions). The M33 async QEMU job was cancelled once by its 40-min timeout after a 17-min apt stall and passed on re-run (27 min test, as on 3.4). |
 | 3.6 | `a470648` | 36733812782 | 36733814890 | 36733812830 (5/5) | 36733862639 | 36733866387 | ubuntu-24.04 | 3.6 `a470648` (ratchet binaries tap_sr_<engine>_icount_*; prefix only). The M33 ratchet job was cancelled once by its timeout with the whole budget spent in apt (a mirror stall) and passed on re-run. |
 | 3.7 | `79b609d` | 36766985835 | 36766987242 | 36766985803 (5/5) | 36767023183 | 36767027796 | ubuntu-24.04 | 3.7 `2847630` (docs and prose; G9 applies) + `a2b8e5e` and `79b609d` (ci.yml, compare.yml and migration-gates.yml cache the Arm toolchain .debs: a throttled apt mirror had cancelled the M33 async QEMU job three times and the gates' hexagon leg once, their whole budget spent in the install step). First green run with no re-run since 3.4. |
+| 3.8 | `716c7e1` | 36770412255 | 36770413419 | 36770412174 (5/5) | 36770413039 | 36770416792 | ubuntu-24.04 | 3.8 `716c7e1` (the D14 banner on every source file; `reference_vectors.h` regenerated, banner-only diff). The last gated rename step; step 4 (the family docs) retires the gates. |

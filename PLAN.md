@@ -954,6 +954,22 @@ G13 and G14, plus G9 from 3.7.
 - **Follow-up commit:** append to `.git-blame-ignore-revs` the step-3
   commit SHAs and the rewritten RatioTap reformat commit `89c7eba`.
 - Tag `v0.4.0`.
+- **Done (v3.1), except the PR actions.** This document is `PLAN.md`; the
+  family `README.md` (engines, the no-routing rule, options, version,
+  build, layout, the dependency rule, provenance) and `CLAUDE.md` (the
+  load-bearing rules: D12, 4.2, R4, the substrate discipline, D13, D7;
+  build and test; the embedded legs and the ratchet; style; history with
+  `git bisect start --first-parent`); `async/PLAN.md` (charter, contract,
+  status, roadmap from the known debt and the migration's follow-ups) and
+  `async/README.md` reframed as the engine; `bridge/PLAN.md` reframed
+  (its M0–M7 history kept, §2 and §9 updated) with `bridge/README.md` and
+  `bridge/CLAUDE.md` reduced to the charter; the Doxyfile main page is the
+  family README; `docs/migration/` and `migration-gates.yml` are deleted,
+  the run record kept as `docs/MIGRATION_RUNS.md`. Measured before the
+  push: the tree configures, builds and passes 170/170 tests, the book
+  builds, doxygen runs with fewer warnings than before (5, two of them
+  the README's relative links read as `\ref`). Marking the PR ready, the
+  merge, the blame-ignore follow-up and the tag are the maintainer's.
 
 ### Step 5 — Outside the repository
 

@@ -1,4 +1,4 @@
-# D7 tripwire (docs/MONOREPO_PLAN.md): the options the tap::sr monorepo
+# D7 tripwire (PLAN.md): the options the tap::sr monorepo
 # migration retired fail the configure loudly. CMake only warns about an
 # unused -D, so a stale -DSRT_WERROR=ON would otherwise drop a gate silently.
 # Included by the root and, when configured on their own, by both engines.
@@ -11,7 +11,7 @@ foreach(_retired IN ITEMS
     if(DEFINED ${_retired} OR DEFINED CACHE{${_retired}})
         message(FATAL_ERROR
             "${_retired} was retired by the tap::sr monorepo migration; "
-            "the family options are TAP_SR_* (docs/MONOREPO_PLAN.md D7, D9)")
+            "the family options are TAP_SR_* (PLAN.md D7, D9)")
     endif()
 endforeach()
 unset(_retired)

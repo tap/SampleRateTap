@@ -9,3 +9,4 @@ CMakeUserPresets.json
 !.claude/hooks/
 book/book/
 __pycache__/
+docs/html/

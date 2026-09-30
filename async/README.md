@@ -1,10 +1,11 @@
-# SampleRateTap
+# `async` — the near-unity asynchronous converter
 
 [![CI](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 
-Header-only C++20 **asynchronous sample rate converter** (ASRC) for the
+The `tap::sr::async` engine of the [SampleRateTap family](../README.md): a
+header-only C++20 **asynchronous sample rate converter** (ASRC) for the
 *near-unity* case: two audio clock domains at nominally the same rate (e.g.
 48 kHz ↔ 48 kHz) sourced from independent oscillators, each within a few
 hundred ppm and drifting slowly. One thread pushes input samples at the input
@@ -378,12 +379,12 @@ of operations per block).
 
 ## Position in the Tap family
 
-SampleRateTap is one of two rate converters in the **Tap** family, both
-built on the same shared substrate:
+`async` is one of the two engines of the `tap::sr` family, both built on
+the same shared substrate and living in one tree:
 
 ```
                     ┌────────────────────────────┐
-                    │           DspTap           │  shared substrate (submodule)
+                    │           DspTap           │  shared substrate (submodules/dsptap)
                     │  kaiser design · sample    │
                     │  traits (float/Q15/Q31) ·  │
                     │  FIR dot kernels · row-sum │
@@ -391,13 +392,13 @@ built on the same shared substrate:
                     └──────┬──────────────┬──────┘
                            │              │
               ┌────────────┴───┐   ┌──────┴─────────┐
-              │ SampleRateTap  │   │    RatioTap    │
+              │ tap::sr::async │   │ tap::sr::bridge│
               │ async, near-   │   │ sync, 44.1↔48, │
               │ unity, servo   │   │ speed-first    │
               └────────────┬───┘   └──────┬─────────┘
                            │              │
-                           └──── test-only│dependency:
-                                golden cross-validation
+                           └── test-only ─┘  bridge's golden cross-validation
+                               (bridge/tests/, bridge/examples/bluetooth_bridge)
 ```
 
 [DspTap](https://github.com/tap/DspTap) (vendored at `submodules/dsptap`)
@@ -414,15 +415,15 @@ inferred from a float ratio:
 - Same nominal rate on both sides, independent oscillators (ppm drift) —
   this library.
 - 44.1 ↔ 48 kHz on one clock (file conversion, a single interface) —
-  RatioTap.
+  `bridge`.
 - 44.1 ↔ 48 kHz across *independent* oscillators (a Bluetooth chip on its
-  own crystal) — both, composed: RatioTap converts the *number*, this
-  library absorbs the *clock*. RatioTap's `bluetooth_bridge` example is
+  own crystal) — both, composed: `bridge` converts the *number*, this
+  engine absorbs the *clock*. `bridge`'s `bluetooth_bridge` example is
   the documented recipe (+200 ppm crystal, servo locked, 997 Hz recovered
   exactly, 2.0 ms total latency).
 
-The two converters check each other: RatioTap's suite cross-validates its
-output against this library's async engine at −98 dB (down) / −90 dB (up)
+The two engines check each other: `bridge`'s suite cross-validates its
+output against this engine at −98 dB (down) / −90 dB (up)
 on its default `economy` profile, over every polyphase phase.
 
 ## Limitations

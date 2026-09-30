@@ -1,15 +1,21 @@
-# RatioTap — Plan
+# `bridge` — Plan
 
-This is the authoritative plan for RatioTap v0.1. It supersedes the design
-brief in [HANDOFF.md](HANDOFF.md) where the two disagree (the deltas are
-listed in that file's status preamble). The DSP reference material in the
-handoff doc (§3–§6) remains current.
+The plan of the `tap::sr::bridge` engine, written as RatioTap's (v0.1–v0.2)
+and carried into the SampleRateTap family in 2026 (the family plan,
+[`../PLAN.md`](../PLAN.md), records the migration: engine names, D5; the
+dependency rule, 4.2; the coverage rule that places this engine among its
+siblings, section 2). It supersedes the design brief in
+[HANDOFF.md](HANDOFF.md) where the two disagree (the deltas are listed in
+that file's status preamble). The DSP reference material in the handoff doc
+(§3–§6) remains current. Milestones M0–M7 below are complete; the
+repository-level items they mention (RatioTap's own CI, the test-only
+SampleRateTap dependency) describe the pre-family layout and are history.
 
 ---
 
 ## 1. Charter
 
-**RatioTap converts between 44.1 kHz and 48 kHz, synchronously, as fast as
+**`bridge` converts between 44.1 kHz and 48 kHz, synchronously, as fast as
 possible.** One rational ratio pair (160/147 up, 147/160 down), one clock,
 and the entire optimization budget spent on exactly that.
 
@@ -22,12 +28,12 @@ policy:
   (superblock codegen, baked tables, multistage) is allowed to hard-commit
   to L ∈ {147, 160}.
 - **No asynchronous conversion.** If the two ends of your signal chain run
-  on different crystals — even at nominally 44.1-vs-48 — that is
-  [SampleRateTap](https://github.com/tap/SampleRateTap)'s near-unity ASRC
-  problem, reached by *composition* (see §5, `bluetooth_bridge`). Which
-  engine applies is a property of the clock topology, not the number.
-  RatioTap's API makes the caller state this by choosing a type; nothing is
-  ever inferred from a float ratio.
+  on different crystals — even at nominally 44.1-vs-48 — that is the
+  family's `async` engine's near-unity ASRC problem, reached by
+  *composition* (see §5, `bluetooth_bridge`). Which engine applies is a
+  property of the clock topology, not the number (family rule D12). The API
+  makes the caller state this by choosing a type; nothing is ever inferred
+  from a float ratio.
 - **Speed-first.** Where quality-vs-speed trades exist, the default profile
   takes the speed side of any trade that is inaudible (see §4, `economy`),
   and the direction is a compile-time parameter so the hot loop can
@@ -37,7 +43,7 @@ policy:
 
 ```
                     ┌────────────────────────────┐
-                    │           DspTap           │  shared substrate (submodule)
+                    │           DspTap           │  shared substrate (submodules/dsptap)
                     │  kaiser design · sample    │
                     │  traits (float/Q15/Q31) ·  │
                     │  FIR dot kernels · row-sum │
@@ -45,22 +51,24 @@ policy:
                     └──────┬──────────────┬──────┘
                            │              │
               ┌────────────┴───┐   ┌──────┴─────────┐
-              │ SampleRateTap  │   │    RatioTap    │
+              │ tap::sr::async │   │ tap::sr::bridge│
               │ async, near-   │   │ sync, 44.1↔48, │
               │ unity, servo   │   │ speed-first    │
               └────────────┬───┘   └──────┬─────────┘
                            │              │
-                           └──── test-only│dependency:
-                                cross-validation (§6)
+                           └── test-only ─┘  bridge's golden cross-validation
+                               (bridge/tests/, bridge/examples/bluetooth_bridge)
 ```
 
 - **Production dependency: DspTap only**, pinned as `submodules/dsptap` and
   linked as the `tap::dsp` INTERFACE target — the same pattern as TapTools
-  and MuTap. Changes to shared code land in DspTap first; RatioTap bumps its
-  pin (DspTap's documented release flow).
-- **SampleRateTap is a test-only dependency** (FetchContent in the test
-  tree), used solely for the golden cross-validation in §6. It never appears
-  in the shipped headers.
+  and MuTap. Changes to shared code land in DspTap first; the family bumps
+  its pin (DspTap's documented release flow).
+- **`async` is a test-only sibling**: its headers reach this engine's tests
+  and examples through the dev-only `tap_sr_async_headers` include target,
+  solely for the golden cross-validation in §6 and `bluetooth_bridge`. It
+  never appears in the shipped headers (family rule 4.2, enforced by the
+  root `tests/`).
 - **TapHouse** provides style/tooling (`.clang-format`, `.clang-tidy`,
   `pre-commit`, drift checks, SessionStart hook) from day one.
 
@@ -121,7 +129,7 @@ pinned by `PhaseTable.StorageBudgetsArePinned`); Q15 halves them again.
 speed-first charter; the README must state the reasoning (the §4 argument:
 nothing *can* fold below 20.1 kHz going down; images land ≥ 22.05 kHz going
 up) rather than just the number, and the program-weighted measurement style
-from SampleRateTap's `economy` preset applies here too. The 18 kHz edge is
+from `async`'s `economy` preset applies here too. The 18 kHz edge is
 the same species of inaudible trade that put economy at 19 kHz rather than
 transparent's 20: the 18–19 kHz shelf moves into the transition band
 (measured −1.4 dB at 19 kHz going down, −0.5 dB going up). Content that
@@ -148,11 +156,11 @@ The documented answer to "I need 44.1↔48 across independent clocks"
 (Bluetooth chip on its own crystal being the motivating case):
 
 ```
-receive:  BT codec (44.1 @ BT clock) → RatioTap 44.1→48 → ASRC push │ pull @ local 48k
-send:     local 48k → ASRC push │ pull @ BT pace → RatioTap 48→44.1 → BT codec
+receive:  BT codec (44.1 @ BT clock) → bridge 44.1→48 → ASRC push │ pull @ local 48k
+send:     local 48k → ASRC push │ pull @ BT pace → bridge 48→44.1 → BT codec
 ```
 
-RatioTap is clock-agnostic (a pure sample-count transformer), so the ASRC
+`bridge` is clock-agnostic (a pure sample-count transformer), so the ASRC
 sees nominal-48k-vs-48k with the BT crystal's ppm offset passed through
 unchanged (ppm is dimensionless) — exactly its designed near-unity regime.
 `examples/bluetooth_bridge.cpp` ships both directions and is the reason the
@@ -172,7 +180,7 @@ lives at the seam.
    correctness never rests solely on agreement between two things we built
    ourselves — the shared kaiser code would otherwise be a common-mode
    failure.
-3. **Cross-validation against SampleRateTap** (test-only dependency): drive
+3. **Cross-validation against `async`** (test-only sibling): drive
    `fractional_resampler` with **pinned eps = L/M − 1** (no servo — the
    near-unity servo cannot and need not acquire an 8% offset), identical
    input, exhaustive over all phases; assert agreement within the ASRC's
@@ -314,7 +322,7 @@ executed (it measures the shipping C++, not a Python re-implementation).
     above were measured through the same dilution (the audio-path
     improvements were correspondingly larger). A construct-only ratchet
     scenario, or measuring a second workload length and differencing as
-    SampleRateTap now does (steady state = 4 s − 2 s), would restore the
+    `async` now does (steady state = 4 s − 2 s), would restore the
     gate's sensitivity.
 
   - **Hexagon harness isolation (monorepo migration step P.2; re-record,
@@ -371,7 +379,7 @@ still holds on the new default, re-measured in the same test batteries.*
   original "nothing measurable below 20 kHz" phrasing overstated economy —
   that claim holds at the *transparent* tier; economy's honest in-band bound
   is the stopband. Deepening exactly these in-band images for low-frequency
-  program energy is the k·fs image-zeros lever (M7, SampleRateTap's
+  program energy is the k·fs image-zeros lever (M7, `async`'s
   `design_prototype_compensated`).
 - `transparent`, both directions: alias/image products ≤ **−121 dB**
   (design floors −121.7 dB); passband flat to 20 kHz within ±0.00001 dB.
@@ -379,13 +387,13 @@ still holds on the new default, re-measured in the same test batteries.*
   statistical sampling (began in M2: `test_phase_table.cpp` holds the
   row-sum and DC guarantees for every phase of all four tables).
 - Cross-validation agreement (§6.3) **measured** (M5,
-  `test_cross_validation.cpp`): SampleRateTap's `fractional_resampler` at
+  `test_cross_validation.cpp`): `async`'s `fractional_resampler` at
   pinned eps = L/M − 1, identical plain-Kaiser prototype, zero-prepend
   window alignment and 1/(2L)-group-delay-skew compensation — worst
   disagreement **3.5×10⁻⁶ down (−109 dB) / 1.2×10⁻⁵ up (−99 dB)**, every
   phase of both superblocks covered, unchanged between async L=512 and
   L=1024 (the mu-interpolation residual sits below the one deliberate
-  filter difference, RatioTap's per-branch DC normalization).
+  filter difference, `bridge`'s per-branch DC normalization).
 - Bit-exact repeatability per §3. Fixed-point parity pinned (M4,
   `test_converter_fixed_point.cpp`): **Q31 tracks the float golden model
   within 5×10⁻⁸ per sample (−147 dB)** on the reference noise, and measures
@@ -405,13 +413,13 @@ still holds on the new default, re-measured in the same test batteries.*
 
 ## 9. Open items
 
-- **Naming bikeshed** (§3): final alias names for the four
-  direction × common-type instantiations. Decide before M3 makes them
-  public.
-- **SampleRateTap include-path rename** (`include/tap/sr/async/` →
-  `include/tap/samplerate/`): agreed direction, separate PR in that repo,
-  same era as Appendix B (shared anchor-repointing work), not a RatioTap
-  blocker.
+- ~~Naming bikeshed~~ (§3): settled at M3 — `converter_to_48k` /
+  `converter_to_44k1` and their `_q15` / `_q31` variants.
+- ~~SampleRateTap include-path rename~~: superseded by the family migration
+  (`tap/sr/async/`, `tap/sr/bridge/`; `../PLAN.md` D5 and step 3.1).
+- **2× and 4× rates** (88.2 ↔ 96, 176.4 ↔ 192): the family plan's follow-up
+  2.2 — the profile Hz values become rate-relative; not part of the
+  migration.
 - **Book/white-paper chapter** ("the degenerate case"): explicitly deferred
   past v0.1. Code is written anchor-friendly (`ANCHOR:` comments on the
   load-bearing excerpts) from day one so the chapter can be added without
