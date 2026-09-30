@@ -3,15 +3,15 @@
  *
  * Build the shared library with -DTAP_SR_BUILD_CAPI=ON. This header is the
  * contract for C/cffi/Julia consumers (the ctypes notebooks re-declare the
- * same prototypes); it must stay in sync with srt_capi.cpp.
+ * same prototypes); it must stay in sync with tap_sr_async_capi.cpp.
  *
  * Thread contract (identical to the C++ API): one producer thread calls
- * srt_push at the input clock, one consumer thread calls srt_pull at the
- * output clock; srt_status may be called from any thread;
- * srt_reset_from_consumer only from the consumer thread; srt_create /
- * srt_destroy from any single thread, never concurrently with push/pull.
+ * tap_sr_async_push at the input clock, one consumer thread calls tap_sr_async_pull at the
+ * output clock; tap_sr_async_status may be called from any thread;
+ * tap_sr_async_reset_from_consumer only from the consumer thread; tap_sr_async_create /
+ * tap_sr_async_destroy from any single thread, never concurrently with push/pull.
  *
- * Errors: srt_create returns NULL on invalid configuration or allocation
+ * Errors: tap_sr_async_create returns NULL on invalid configuration or allocation
  * failure. Every function tolerates a NULL handle (no-op / zero return),
  * so an unchecked failed create degrades to silence, not a crash.
  *
@@ -30,35 +30,37 @@ extern "C" {
 #endif
 
 /* ANCHOR: abi_surface */
-typedef struct SrtHandle SrtHandle;
+typedef struct tap_sr_async_converter tap_sr_async_converter;
 
-/* ABI/version probe: returns TAP_SR_VERSION_MAJOR*10000 +
- * TAP_SR_VERSION_MINOR*100 + TAP_SR_VERSION_PATCH (e.g. 100 for 0.1.0). */
-unsigned srt_version(void);
+/* ABI/version probe: the family version, bit-packed as
+ * (TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH
+ * (0x000400 for 0.4.0); tap_sr_bridge_version returns the same value. */
+unsigned tap_sr_async_version(void);
 
 /* preset: 0 = fast, 1 = balanced, 2 = transparent.
  * targetLatencyFrames = 0 selects the library default (48). */
-SrtHandle* srt_create(double sampleRateHz, size_t channels, size_t targetLatencyFrames, int preset);
+tap_sr_async_converter* tap_sr_async_create(double sampleRateHz, size_t channels, size_t targetLatencyFrames,
+                                            int preset);
 
-void srt_destroy(SrtHandle* h);
+void tap_sr_async_destroy(tap_sr_async_converter* h);
 
 /* Producer thread. Returns frames accepted (< frames on FIFO-full). */
-size_t srt_push(SrtHandle* h, const float* interleaved, size_t frames);
+size_t tap_sr_async_push(tap_sr_async_converter* h, const float* interleaved, size_t frames);
 
 /* Consumer thread. Always fills `frames` output frames (silence while
  * filling / on underrun); returns frames synthesized from real input. */
-size_t srt_pull(SrtHandle* h, float* interleaved, size_t frames);
+size_t tap_sr_async_pull(tap_sr_async_converter* h, float* interleaved, size_t frames);
 
 /* out[0]=state (0 Filling, 1 Acquiring, 2 Locked), out[1]=ppm,
  * out[2]=fifoFillFrames, out[3]=underruns, out[4]=overruns,
  * out[5]=resyncs. */
-void srt_status(const SrtHandle* h, double out[6]);
+void tap_sr_async_status(const tap_sr_async_converter* h, double out[6]);
 
-double srt_designed_latency_seconds(const SrtHandle* h);
+double tap_sr_async_designed_latency_seconds(const tap_sr_async_converter* h);
 
 /* Consumer thread: discard all buffered input, forget the ppm estimate,
  * return to Filling. */
-void srt_reset_from_consumer(SrtHandle* h);
+void tap_sr_async_reset_from_consumer(tap_sr_async_converter* h);
 /* ANCHOR_END: abi_surface */
 
 #ifdef __cplusplus

@@ -592,16 +592,16 @@ behind `operator new`) is still a fine place to get memory from.
 ## 15. The C ABI: opaque handles, `reinterpret_cast`, and `impl()` outside `extern "C"`
 
 The FFI surface (`tools/capi/`) wraps the float converter behind an
-opaque `SrtHandle*`. The pattern is textbook, but two details record
+opaque `tap_sr_async_converter*`. The pattern is textbook, but two details record
 decisions. First, the handle is a declared-but-never-defined struct, and
 the conversion is a `reinterpret_cast` in a pair of helpers:
 
 ```cpp
-extern "C" { struct SrtHandle; } // opaque
+extern "C" { struct tap_sr_async_converter; } // opaque
 
 namespace {
-tap::sr::async::converter* impl(SrtHandle* h) noexcept { ... }
-const tap::sr::async::converter* impl(const SrtHandle* h) noexcept { ... }
+tap::sr::async::converter* impl(tap_sr_async_converter* h) noexcept { ... }
+const tap::sr::async::converter* impl(const tap_sr_async_converter* h) noexcept { ... }
 }
 ```
 
@@ -618,16 +618,16 @@ The rejected alternatives for the handle: exposing the class definition
 headers don't have, per section 1), or a lookup table of integer handles
 (indirection and lifetime bookkeeping to solve a problem the opaque
 pointer already solves). Around the handle, the shim converts the C++
-error model to C conventions at the boundary: `srt_create` catches
+error model to C conventions at the boundary: `tap_sr_async_create` catches
 everything and returns null; every entry point tolerates a null handle,
-because — the file's own comment — the documented "check srt_create for
+because — the file's own comment — the documented "check tap_sr_async_create for
 NULL" convention "otherwise invites a crash on exactly the path where the
 caller forgot to check." An unchecked failure degrades to silence, not a
 crash, which for an audio library is the correct failure sound.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| opaque `SrtHandle*` + `reinterpret_cast`; `impl()` overloads outside `extern "C"`; null-tolerant entry points | exposed class; handle tables; unguarded entries | ABI boundary with zero C++ leakage; C linkage forbids overloads; unchecked create must fail soft | `tools/capi/srt_capi.cpp`, `tools/capi/srt_capi.h` |
+| opaque `tap_sr_async_converter*` + `reinterpret_cast`; `impl()` overloads outside `extern "C"`; null-tolerant entry points | exposed class; handle tables; unguarded entries | ABI boundary with zero C++ leakage; C linkage forbids overloads; unchecked create must fail soft | `tools/capi/tap_sr_async_capi.cpp`, `tools/capi/tap_sr_async_capi.h` |
 
 ## 16. Deleted copy operations: these are identity types
 

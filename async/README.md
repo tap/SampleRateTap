@@ -78,7 +78,7 @@ one-clock-domain-per-core RP2350 deployment, self-validating).
 
 **Consuming the library**: `add_subdirectory` or `FetchContent` only —
 there are no install/package rules yet. Version 0.1.0 (`TAP_SR_VERSION_*` in
-`tap/sr/async/async.h`, `srt_version()` over the C ABI); pre-1.0, the API may
+`tap/sr/async/async.h`, `tap_sr_async_version()` over the C ABI); pre-1.0, the API may
 still change between versions.
 
 ## The book

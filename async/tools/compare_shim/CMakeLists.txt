@@ -4,7 +4,7 @@
 # with bench/compare via cmake/r8brain.cmake, so both measure the same engine.
 include(${PROJECT_SOURCE_DIR}/cmake/r8brain.cmake)
 
-add_library(srt_r8b_shim SHARED srt_r8b_shim.cpp)
-target_compile_features(srt_r8b_shim PRIVATE cxx_std_20)
-target_link_libraries(srt_r8b_shim PRIVATE tap_sr_async_r8brain tap_sr_async_warnings)
-set_target_properties(srt_r8b_shim PROPERTIES POSITION_INDEPENDENT_CODE ON)
+add_library(tap_sr_async_r8b_shim SHARED tap_sr_async_r8b_shim.cpp)
+target_compile_features(tap_sr_async_r8b_shim PRIVATE cxx_std_20)
+target_link_libraries(tap_sr_async_r8b_shim PRIVATE tap_sr_async_r8brain tap_sr_async_warnings)
+set_target_properties(tap_sr_async_r8b_shim PROPERTIES POSITION_INDEPENDENT_CODE ON)

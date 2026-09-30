@@ -545,7 +545,7 @@ jobs:
           -DTAP_SR_BUILD_COMPARE_BENCH=ON
           -DTAP_SR_BUILD_COMPARE_SHIM=ON
           -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF
-          && cmake --build build-host -j 4 --target tap_sr_async_bench_compare srt_r8b_shim
+          && cmake --build build-host -j 4 --target tap_sr_async_bench_compare tap_sr_async_r8b_shim
 
       - name: Build M55 comparison workload
         run: >

@@ -23,3 +23,14 @@ bridge-*.txt + bridge.Family.HeadersCompileInIsolation  -- 4.2 check 2
 bridge-*.txt + bridge.Family.IncludesStayInEngine  -- 4.2 check 3
 bridge-*.txt + bridge.Family.HeaderCountIsPinned  -- 4.2 check 4
 bridge-*.txt + family.VersionMacrosAgree  -- D13, under both labels
+
+# Step 3.5 (D13): the C ABI version probe's encoding, pinned per engine
+# against the shipped shared library, so the test exists where
+# TAP_SR_BUILD_CAPI is on: the host gate, Linux and macOS (ci.yml capi: ON).
+async-labels.txt + async.CApi.VersionIsBitPacked  -- D13 encoding
+async-linux-gcc.txt + async.CApi.VersionIsBitPacked  -- D13 encoding
+async-linux-clang.txt + async.CApi.VersionIsBitPacked  -- D13 encoding
+async-macos-appleclang.txt + async.CApi.VersionIsBitPacked  -- D13 encoding
+bridge-labels.txt + bridge.CApi.VersionIsBitPacked  -- D13 encoding
+bridge-linux.txt + bridge.CApi.VersionIsBitPacked  -- D13 encoding
+bridge-macos.txt + bridge.CApi.VersionIsBitPacked  -- D13 encoding

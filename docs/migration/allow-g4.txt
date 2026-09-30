@@ -12,5 +12,7 @@
 # from TAP_SR_VERSION_*, so its one immediate changes (100 -> 400 decimal;
 # 0x000300 -> 0x000400 bit-packed) and nothing else does. The rows follow
 # the functions' 3.5 renames.
-host-C-ABI async srt_version    -- D13: returns TAP_SR_VERSION_* folded; 0.1.0 -> 0.4.0
-host-C-ABI bridge ratio_version -- D13: returns TAP_SR_VERSION_* folded; 0.3.0 -> 0.4.0
+# 3.5 renames the functions (keys are step-0 names after the rename map) and
+# moves async's probe to the family's bit-packed encoding (D13).
+host-C-ABI async tap_sr_async_version   -- D13: returns TAP_SR_VERSION_* folded; 0.1.0 decimal (100) -> 0.4.0 bit-packed (0x400)
+host-C-ABI bridge tap_sr_bridge_version -- D13: returns TAP_SR_VERSION_* folded; 0.3.0 -> 0.4.0 (0x300 -> 0x400)

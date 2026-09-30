@@ -44,6 +44,15 @@ target_link_libraries(tap_sr_bridge_tests PRIVATE
     tap::sr::bridge
     tap_sr_async_headers
     tap_sr_bridge_warnings)
+# D13: the C ABI's version probe, pinned against the shipped shared library
+# wherever it is built. The test declares the probe itself, so the C header
+# stays out of this TU; the library target is defined after this directory,
+# which target_link_libraries allows.
+if(TAP_SR_BUILD_CAPI)
+    target_sources(tap_sr_bridge_tests PRIVATE test_capi.cpp)
+    target_link_libraries(tap_sr_bridge_tests PRIVATE tap_sr_bridge_capi)
+endif()
+
 if(Threads_FOUND)
     target_link_libraries(tap_sr_bridge_tests PRIVATE Threads::Threads)
 endif()

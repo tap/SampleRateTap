@@ -1,14 +1,14 @@
 // ANCHOR: abi_doc
-/// \file srt_capi.cpp
+/// \file tap_sr_async_capi.cpp
 /// \brief C ABI shim over the float converter, for FFI consumers (ctypes,
-/// cffi, Julia, ...). Build with TAP_SR_BUILD_CAPI=ON; srt_capi.h is the
+/// cffi, Julia, ...). Build with TAP_SR_BUILD_CAPI=ON; tap_sr_async_capi.h is the
 /// contract (thread affinity, error convention); see
 /// notebooks/asrc_demo.ipynb for a worked client.
 ///
 /// The shim is intentionally minimal: an opaque handle, the push/pull hot
 /// path, telemetry, and designed latency. Errors surface as null handles or
 /// zero return values, and every entry point tolerates a null handle — the
-/// documented error convention ("check srt_create for NULL") otherwise
+/// documented error convention ("check tap_sr_async_create for NULL") otherwise
 /// invites a crash on exactly the path where the caller forgot to check.
 // ANCHOR_END: abi_doc
 // SPDX-License-Identifier: MIT
@@ -21,14 +21,14 @@
 
 // ANCHOR: abi_impl
 extern "C" {
-struct SrtHandle; // opaque
+struct tap_sr_async_converter; // opaque
 }
 
 namespace {
-    tap::sr::async::converter* impl(SrtHandle* h) noexcept {
+    tap::sr::async::converter* impl(tap_sr_async_converter* h) noexcept {
         return reinterpret_cast<tap::sr::async::converter*>(h);
     }
-    const tap::sr::async::converter* impl(const SrtHandle* h) noexcept {
+    const tap::sr::async::converter* impl(const tap_sr_async_converter* h) noexcept {
         return reinterpret_cast<const tap::sr::async::converter*>(h);
     }
 } // namespace
@@ -36,14 +36,15 @@ namespace {
 
 extern "C" {
 
-unsigned srt_version(void) noexcept {
-    return TAP_SR_VERSION_MAJOR * 10000u + TAP_SR_VERSION_MINOR * 100u + TAP_SR_VERSION_PATCH;
+unsigned tap_sr_async_version(void) noexcept {
+    // The family encoding (D13), the same value tap_sr_bridge_version returns.
+    return (TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH;
 }
 
 // ANCHOR: abi_create
 /// preset: 0 = fast, 1 = balanced, 2 = transparent.
-SrtHandle* srt_create(double sample_rate_hz, std::size_t channels, std::size_t target_latency_frames,
-                      int preset) noexcept {
+tap_sr_async_converter* tap_sr_async_create(double sample_rate_hz, std::size_t channels,
+                                            std::size_t target_latency_frames, int preset) noexcept {
     tap::sr::async::config cfg;
     cfg.sample_rate_hz = sample_rate_hz;
     cfg.channels       = channels;
@@ -53,7 +54,7 @@ SrtHandle* srt_create(double sample_rate_hz, std::size_t channels, std::size_t t
                  : preset == 2 ? tap::sr::async::filter_spec::transparent()
                                : tap::sr::async::filter_spec::balanced();
     try {
-        return reinterpret_cast<SrtHandle*>(new tap::sr::async::converter(cfg));
+        return reinterpret_cast<tap_sr_async_converter*>(new tap::sr::async::converter(cfg));
     }
     catch (...) {
         return nullptr;
@@ -61,23 +62,23 @@ SrtHandle* srt_create(double sample_rate_hz, std::size_t channels, std::size_t t
 }
 // ANCHOR_END: abi_create
 
-void srt_destroy(SrtHandle* h) noexcept {
+void tap_sr_async_destroy(tap_sr_async_converter* h) noexcept {
     delete impl(h);
 }
 
 // ANCHOR: abi_null
-std::size_t srt_push(SrtHandle* h, const float* interleaved, std::size_t frames) noexcept {
+std::size_t tap_sr_async_push(tap_sr_async_converter* h, const float* interleaved, std::size_t frames) noexcept {
     return h ? impl(h)->push(interleaved, frames) : 0;
 }
 
-std::size_t srt_pull(SrtHandle* h, float* interleaved, std::size_t frames) noexcept {
+std::size_t tap_sr_async_pull(tap_sr_async_converter* h, float* interleaved, std::size_t frames) noexcept {
     return h ? impl(h)->pull(interleaved, frames) : 0;
 }
 // ANCHOR_END: abi_null
 
 /// out[0]=state (0 Filling, 1 Acquiring, 2 Locked), out[1]=ppm,
 /// out[2]=fifo_fill_frames, out[3]=underruns, out[4]=overruns, out[5]=resyncs.
-void srt_status(const SrtHandle* h, double out[6]) noexcept {
+void tap_sr_async_status(const tap_sr_async_converter* h, double out[6]) noexcept {
     if (!h) {
         for (int i = 0; i < 6; ++i)
             out[i] = 0.0;
@@ -92,11 +93,11 @@ void srt_status(const SrtHandle* h, double out[6]) noexcept {
     out[5]                                   = static_cast<double>(s.resyncs);
 }
 
-double srt_designed_latency_seconds(const SrtHandle* h) noexcept {
+double tap_sr_async_designed_latency_seconds(const tap_sr_async_converter* h) noexcept {
     return h ? impl(h)->designed_latency_seconds() : 0.0;
 }
 
-void srt_reset_from_consumer(SrtHandle* h) noexcept {
+void tap_sr_async_reset_from_consumer(tap_sr_async_converter* h) noexcept {
     if (h)
         impl(h)->reset_from_consumer();
 }

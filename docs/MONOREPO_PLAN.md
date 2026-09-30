@@ -841,6 +841,27 @@ There is no separate reflow commit, since the hook would absorb it anyway
    - The version functions per D13, and a new `CApi.VersionIsBitPacked`
      test, listed in the G1 name map.
    - Bindings renamed per D8.
+   - **Done (v3.1).** `rename.py apply --step 3.5` (19 files: the C ABI
+     functions, handle types, headers and libraries, the shim's exports
+     and its source file, the `<target>_EXPORTS` defines, and the bridge
+     binding `ratiotap_py.py` → `tap_sr_bridge_py.py`; async's notebooks
+     keep their inline ctypes loader, since no module existed at S0) plus
+     the hand edits G14 lists in `residual/3.5.txt`: `tap_sr_async_version`
+     returns the family's bit-packed encoding (its decimal `100` becomes
+     `0x400`, the value `tap_sr_bridge_version` returns), and
+     `CApi.VersionIsBitPacked` per engine links the shipped shared library
+     and pins the encoding and 0.4.0, declaring the probe itself so the C
+     header stays out of the tidy gate; the test exists where
+     `TAP_SR_BUILD_CAPI` builds the library (the host gate, Linux and
+     macOS), which `allow.txt` lists per job file. G4's `allow-g4.txt` rows
+     follow the renamed functions and print their diffs. Measured locally
+     before the push: G3+G5 exact on hexagon (the 14 rows proved per
+     function), m33 and m55; G4 17/17 per target and the two allowed C ABI
+     functions; G7 (with the `_EXPORTS` rule), G10 (the renamed symbols
+     plus D13's version functions), G11 (all seven notebooks; the step-0
+     `libsrt_r8b_shim.so` line maps through a `lib…` rule like the C ABI
+     libraries'), G14 (0 unlisted); the host gates but G12; GCC and clang
+     `-Werror` 170/170 tests, clang-tidy clean, the book builds.
 6. **Ratchet binaries:** prefix only, `tap_sr_<engine>_icount_*`. Workload
    names and baseline keys do not change.
 7. **Docs and prose:**

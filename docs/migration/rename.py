@@ -138,6 +138,9 @@ def map_later_paths(path: str, through: str) -> str | None:
     if at_least(through, "3.5"):
         path = re.sub(r"\bsrt_capi\.", "tap_sr_async_capi.", path)
         path = re.sub(r"\bratio_capi\.", "tap_sr_bridge_capi.", path)
+        # The shim source follows its target; the bridge binding module (D8).
+        path = re.sub(r"\bsrt_r8b_shim\.", "tap_sr_async_r8b_shim.", path)
+        path = re.sub(r"\bratiotap_py\.", "tap_sr_bridge_py.", path)
     return path
 
 
@@ -262,14 +265,21 @@ SUBS = [
     ("3.4", r"LABELS ratio\b", "LABELS bridge"),
     # 3.5 C ABI (D8): functions, handle types, libraries, headers, shim.
     ("3.5", w("SrtHandle"), "tap_sr_async_converter"),
+    ("3.5", w("libsrt_r8b_shim"), "libtap_sr_async_r8b_shim"),
     ("3.5", w("srt_r8b_shim"), "tap_sr_async_r8b_shim"),
     ("3.5", w("srt_r8b_oneshot"), "tap_sr_async_r8b_oneshot"),
     ("3.5", w("srt_r8b_latency_frames"), "tap_sr_async_r8b_latency_frames"),
     ("3.5", w("libsrt_capi"), "libtap_sr_async_capi"),
     ("3.5", w("libratio_capi"), "libtap_sr_bridge_capi"),
+    # CMake's <target>_EXPORTS define follows the library targets.
+    ("3.5", w("srt_capi_EXPORTS"), "tap_sr_async_capi_EXPORTS"),
+    ("3.5", w("ratio_capi_EXPORTS"), "tap_sr_bridge_capi_EXPORTS"),
     ("3.5", w("srt_capi"), "tap_sr_async_capi"),
     ("3.5", w("ratio_capi"), "tap_sr_bridge_capi"),
     ("3.5", w("RatioTapCapi"), "tap_sr_bridge_capi_standalone"),
+    # D8: one binding module per engine, named for it (async's notebooks
+    # keep their inline ctypes loader; no module existed at S0).
+    ("3.5", w("ratiotap_py"), "tap_sr_bridge_py"),
 ] + [
     ("3.5", w("srt_" + f), "tap_sr_async_" + f)
     for f in ["version", "create", "destroy", "push", "pull", "status",
