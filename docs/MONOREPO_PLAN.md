@@ -886,6 +886,29 @@ There is no separate reflow commit, since the hook would absorb it anyway
        `asrc_block_size_study` 24).
    - RatioTap URLs; the `git clone …/RatioTap` instructions.
    - **G9 applies from this commit.**
+   - **Done (v3.1).** No rename rule: the prose pass by hand, G14 listing
+     every hunk in `residual/3.7.txt` (19 files). G9's own survey found 71
+     hits, 69 of them structural and now allowlisted in `snapshot/g9.txt`
+     with their reasons: the plan (48; it describes the migration and
+     becomes `PLAN.md` at step 4), the D7 tripwire list (17, in
+     `cmake/retired_options.cmake` since 3.4), the 4.2 include grep that
+     names `srt/` on purpose (3) and the `#ifdef` half of the macro
+     tripwire (1). The prose: `-L '^ratio$'` → `bridge` in bridge's
+     README and CLAUDE.md; the C ABI chapter's probe is the bit-packed
+     family version (D13) with the `tap_sr_async_*` prefix and the family
+     build path; RatioTap's links, badge and clone instructions point at
+     the `bridge` engine in this repository (book Part 0 and V, async
+     README and COMPARISON.md, bridge README); the book's `asrc.h` is
+     `converter.h` (D15; the chapter keeps its URL) and its `srt`
+     namespace `tap::sr::async`; the `@file` lines the 3.1 moves left
+     behind; and the example and bench paths under the family build tree.
+     The mechanical renames of 3.2–3.6 had already reached the notebook
+     markdown and the non-book docs, so nothing else remained there;
+     `bridge/PLAN.md` is step 4's rewrite. Measured locally before the
+     push: G9 0 hits; G3+G5 exact on hexagon (the 14 rows proved per
+     function), m33 and m55; G4 17/17 per target; G7, G14 (0 unlisted);
+     the host gates but G12; clang `-Werror` 170/170 tests, clang-tidy
+     clean, the book builds.
 8. **Banners (D14):**
    - Rewrite the 35 existing banner lines.
    - **Add** banners to every C/C++/Python source file that has none.

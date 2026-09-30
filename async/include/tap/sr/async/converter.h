@@ -1,4 +1,4 @@
-/// @file asrc.h
+/// @file converter.h
 /// @brief Top-level push/pull asynchronous sample rate converter.
 // SPDX-License-Identifier: MIT
 // Copyright 2026 SampleRateTap contributors

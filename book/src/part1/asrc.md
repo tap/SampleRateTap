@@ -1,11 +1,11 @@
-# Composition: `asrc.h`
+# Composition: `converter.h`
 
 > The whole is something beside the parts.
 >
 > — Aristotle, *Metaphysics*
 
 Every previous chapter built a component that is correct on its own terms.
-This chapter is about the file that has no terms of its own: `asrc.h`
+This chapter is about the file that has no terms of its own: `converter.h`
 contains almost no algorithm, no mathematics, and fewer than three hundred
 lines that mostly call other files' code. It is also where the only serious
 bug in the library's history lived. Both facts have the same cause.

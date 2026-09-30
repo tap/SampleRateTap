@@ -1,4 +1,4 @@
-/// @file srt.h
+/// @file async.h
 /// @brief Umbrella header for the SampleRateTap near-unity asynchronous sample
 ///        rate converter library.
 ///

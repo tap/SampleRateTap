@@ -1,6 +1,6 @@
-# RatioTap
+# bridge — synchronous 44.1 ↔ 48 kHz (formerly RatioTap)
 
-[![CI](https://github.com/tap/RatioTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/RatioTap/actions/workflows/ci.yml)
+[![CI](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 
@@ -106,7 +106,7 @@ exactly, 1.9 ms total latency.
 git clone --recurse-submodules https://github.com/tap/SampleRateTap
 cmake -S SampleRateTap -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-ctest --test-dir build --output-on-failure -L '^ratio$'
+ctest --test-dir build --output-on-failure -L '^bridge$'
 ```
 
 This engine lives in `bridge/` of the SampleRateTap family repository; the

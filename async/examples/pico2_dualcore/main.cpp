@@ -19,7 +19,7 @@
 // crosses cores is the explicit Shared block of 32-bit atomics below — kept
 // 32-bit for the same reason the library keeps its telemetry 32-bit: on the
 // M33, 64-bit std::atomic is not lock-free and would route through a
-// library lock (see the footnote in asrc.h).
+// library lock (see the footnote in converter.h).
 //
 // Both pacing schedules derive from the same 64-bit microsecond timebase
 // (the RP2350 timer is one shared block read by both cores), so the

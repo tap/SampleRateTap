@@ -158,8 +158,9 @@ their own declarations, so the header says it explicitly. This is the kind
 of sentence you only think to write after watching Part IV's 32-bit ports
 in action.
 
-**`tap_sr_async_version()` is a probe.** It returns
-`major*10000 + minor*100 + patch` — `100` for today's 0.1.0. A version
+**`tap_sr_async_version()` is a probe.** It returns the family version
+bit-packed, `(major << 16) | (minor << 8) | patch` — `0x000400` (1024) for
+0.4.0, the value `tap_sr_bridge_version()` returns as well. A version
 *macro* would vanish into the caller's compile; a version *function*
 reports what the loaded shared library actually is, which is the question
 an FFI user is really asking when their symbols don't match their
@@ -297,16 +298,16 @@ these eight functions.
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BUILD_CAPI=ON
 cmake --build build --target tap_sr_async_capi -j
 
-# The exported surface — eight srt_* symbols, unmangled, and nothing else
+# The exported surface — eight tap_sr_async_* symbols, unmangled, and nothing else
 # from this file (the impl() helpers are invisible, as promised):
-nm -D --defined-only build/tools/capi/libtap_sr_async_capi.so | grep srt_
+nm -D --defined-only build/async/capi/libtap_sr_async_capi.so | grep tap_sr_async_
 
-# The one-integer smoke test (0.1.0 -> 100):
+# The one-integer smoke test (0.4.0 -> 1024, i.e. 0x000400):
 python3 -c "import ctypes; \
-  print(ctypes.CDLL('build/tools/capi/libtap_sr_async_capi.so').tap_sr_async_version())"
+  print(ctypes.CDLL('build/async/capi/libtap_sr_async_capi.so').tap_sr_async_version())"
 
 # The null-tolerance convention, exercised directly — no crash, zero frames:
-python3 -c "import ctypes; lib = ctypes.CDLL('build/tools/capi/libtap_sr_async_capi.so'); \
+python3 -c "import ctypes; lib = ctypes.CDLL('build/async/capi/libtap_sr_async_capi.so'); \
   lib.tap_sr_async_create.restype = ctypes.c_void_p; \
   print('bad create:', lib.tap_sr_async_create(ctypes.c_double(-1.0), 0, 0, 1)); \
   print('push on NULL:', lib.tap_sr_async_push(None, None, 128))"

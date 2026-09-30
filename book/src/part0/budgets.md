@@ -325,7 +325,7 @@ above: the Q15/Q31 datapaths as a customization point rather than a fork.
 the 48-frame line item — and doubles as the servo's sensor. `pi_servo.h`
 polices the quality budget's FM account, rejecting the occupancy sawtooth
 to the −120 dBc figure this chapter bounded. The fractional resampler
-carries the Q0.64 accumulator you have already read. And `asrc.h`
+carries the Q0.64 accumulator you have already read. And `converter.h`
 composes the whole, enforcing the feasibility rule so the latency budget
 can never be underfunded into a dropout cycle.
 

@@ -231,7 +231,7 @@ it is a real cost for devices that construct at boot.
   0.5 ms filter delay, and embedded-class compute. For genuine rate
   *conversion*, put a synchronous resampler in the chain —
   soxr/libsamplerate/r8brain, or for exactly 44.1↔48 the family's own
-  [RatioTap](https://github.com/tap/RatioTap), which cross-validates its
+  [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge) engine, which cross-validates its
   output against this library's engine.
 - **Coarse-block operation is a different regime** (cent-scale low-rate FM
   over a 54–62 dB floor — measured in

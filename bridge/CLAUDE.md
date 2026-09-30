@@ -63,7 +63,7 @@ the tidy job and a local clang `-Werror` build as second compilers before pushin
 # from the repository root (this engine lives in bridge/; the root builds both)
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BRIDGE_WERROR=ON
 cmake --build build
-ctest --test-dir build --output-on-failure -L '^ratio$'
+ctest --test-dir build --output-on-failure -L '^bridge$'
 scripts/tidy.sh          # local mirror of the CI clang-tidy gate
 ```
 

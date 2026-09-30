@@ -404,7 +404,7 @@ built on the same shared substrate:
 provides the Kaiser prototype design, the float/Q15/Q31 sample-format
 traits, the measured FIR dot-product kernels, the row-sum quantization,
 and the analysis instruments shared by the tests and notebooks.
-[RatioTap](https://github.com/tap/RatioTap) is the synchronous sibling:
+The [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge) engine (formerly RatioTap) is the synchronous sibling:
 exactly one rational ratio pair (160/147 up, 147/160 down — 44.1 ↔ 48 kHz),
 one clock, speed-first.
 
@@ -429,7 +429,7 @@ on its default `economy` profile, over every polyphase phase.
 
 - Near-unity ratios only (±`max_deviation_ppm`, default 1000 ppm). No
   44.1 ↔ 48 kHz conversion — that job belongs to
-  [RatioTap](https://github.com/tap/RatioTap), and 44.1 ↔ 48 across
+  the [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge) engine, and 44.1 ↔ 48 across
   independent clocks to the composition of the two (see
   [Position in the Tap family](#position-in-the-tap-family)).
 - The rate estimate is derived from FIFO counts only. With block-quantized

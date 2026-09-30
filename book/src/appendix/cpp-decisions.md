@@ -146,7 +146,7 @@ it: Q0.15 × Q1.14 products summed exactly, one rounding in `finalize()`).
 Free functions cannot carry associated types; you would need separate type
 traits anyway, and the customization point would smear across two
 mechanisms. Second, ADL on builtin types like `int16_t` has no associated
-namespace to hook — the overloads would all pile into `srt` and be
+namespace to hook — the overloads would all pile into `tap::sr::async` and be
 distinguishable only by overload resolution, silently, which is exactly
 how a Q15/Q31 mixup would compile and produce garbage.
 
@@ -261,7 +261,7 @@ Everywhere the library needs power-of-two arithmetic it reaches for
 C++20's `<bit>`: `std::bit_ceil` rounds the ring capacity up
 (`spsc_ring`'s constructor), rounds the phase count up
 (`polyphase_filter_bank`), and sizes the FIFO (`ring_capacity_elems` in
-`asrc.h`); `std::countr_zero` recovers log₂(L) in the phase-indexed
+`converter.h`); `std::countr_zero` recovers log₂(L) in the phase-indexed
 kernels so the polyphase branch is the top bits of the Q0.64 phase word:
 
 ```cpp
@@ -303,7 +303,7 @@ library carries an explicit ordering argument, and each ordering is the
 publishes data, `acquire` on the load that consumes a foreign index,
 `relaxed` on a thread's loads of its own index — and `relaxed` on all
 telemetry, whose fields are documented as "individually coherent, not
-mutually" (`status()` in `asrc.h`).
+mutually" (`status()` in `converter.h`).
 
 The rejected alternative is `seq_cst`-by-default — writing
 `head_.store(x)` and letting the strongest ordering paper over the
@@ -587,7 +587,7 @@ behind `operator new`) is still a fine place to get memory from.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `std::vector` storage, default allocator | allocator/PMR parameters; fixed arrays; arenas | allocation is construction-only by contract, so allocators optimize a non-problem at the cost of infecting every signature; sizes are runtime config | `include/tap/sr/async/spsc_ring.h`, `polyphase_filter.h`, `asrc.h` (members); RT contract in section 4 |
+| `std::vector` storage, default allocator | allocator/PMR parameters; fixed arrays; arenas | allocation is construction-only by contract, so allocators optimize a non-problem at the cost of infecting every signature; sizes are runtime config | `include/tap/sr/async/spsc_ring.h`, `polyphase_filter.h`, `converter.h` (members); RT contract in section 4 |
 
 ## 15. The C ABI: opaque handles, `reinterpret_cast`, and `impl()` outside `extern "C"`
 
@@ -696,7 +696,7 @@ that cannot unwind at all.
 **`std::jthread` (or any thread) in the library.** The library owns *no*
 threads. It is a passive object with a two-agent contract — "one producer
 thread calls push() at the input clock; one consumer thread calls pull()
-at the output clock" (`asrc.h`) — and the threads belong to the caller,
+at the output clock" (`converter.h`) — and the threads belong to the caller,
 because they already exist: they are the audio device callbacks. Spawning
 threads would also be unbuildable on half the CI matrix; the bare-metal
 targets have no `std::thread` at all, which is why even the *tests*

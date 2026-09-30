@@ -29,8 +29,13 @@ allow * RATIO_ICOUNT_DONE  -- guest marker, kept (step 2)
 allow async/bench/icount/CMakeLists.txt srt_(float|q15)\b  -- workload names
 allow .github/workflows/compare.yml srt_(float|q15)\b  -- workload names
 # The D7 tripwires name the retired macros and options on purpose.
-allow * #error.*SRT_CP_MIN_CHANNELS  -- D7 tripwire
-allow CMakeLists.txt (?:SRT|TAP_RATIO)_\w+  -- step-3.4 stale-option tripwire list
+allow * #(ifdef|error).*SRT_CP_MIN_CHANNELS  -- D7 tripwire (3.3)
+allow cmake/retired_options.cmake .*  -- the D7 FATAL_ERROR tripwire list (3.4)
+# The 4.2 include grep names the retired header root it rejects (3.4).
+allow tests/family/check_includes.cmake srt/  -- 4.2 check 3
+allow tests/CMakeLists.txt srt/  -- 4.2 check 3, in its comment
+# The plan describes the migration in the old names; it becomes PLAN.md at step 4.
+allow docs/MONOREPO_PLAN.md .*  -- the plan
 # History and records.
 allow STYLE.md .*  -- reconciled through taphouse at step 5
 allow bridge/HANDOFF.md .*  -- history

@@ -413,11 +413,11 @@ budgets.
 # No hardware: two OS threads 500 ppm apart, lock and estimate on live
 # (jittery) scheduling — the software rehearsal of the bridge:
 cmake -B build -DTAP_SR_BUILD_EXAMPLES=ON && cmake --build build -j
-./build/examples/drifting_clocks
+./build/async/examples/drifting_clocks
 
 # Setup 1 (Linux + two audio devices; tap_sr_async_alsa_bridge builds when ALSA
 # is found). Real clocks, synthetic tone, telemetry + capture:
-./build/examples/tap_sr_async_alsa_bridge --in hw:1,0 --out hw:2,0 \
+./build/async/examples/tap_sr_async_alsa_bridge --in hw:1,0 --out hw:2,0 \
     --tone 997 --csv trace.csv --dump post_asrc.f32 --seconds 3600
 # Then: ppm column of trace.csv is the thermal-drift instrument; analyze
 # post_asrc.f32 with the AES17 machinery in notebooks/asrc_comparison.ipynb.
