@@ -10,7 +10,7 @@
 //
 // Cross-core safety, stated explicitly: the library's runtime contract is
 // one producer agent and one consumer agent around a lock-free SPSC ring
-// with acquire/release atomics (srt/spsc_ring.h; "one producer thread and
+// with acquire/release atomics (tap/sr/async/spsc_ring.h; "one producer thread and
 // one consumer thread" in the README's Limitations). The contract is about
 // agents and memory ordering, not about std::thread: the RP2350's cores
 // share coherent SRAM (no data caches in front of it), so two CORES satisfy
@@ -43,7 +43,7 @@
 #include "hardware/clocks.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
-#include "srt/asrc.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 

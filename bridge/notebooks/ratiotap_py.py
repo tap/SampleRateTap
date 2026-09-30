@@ -1,5 +1,5 @@
 """ctypes bridge to the shipping RatioTap C++ through the C ABI
-(tools/capi/ratio_capi.h). Family convention: the notebooks measure the real
+(capi/ratio_capi.h). Family convention: the notebooks measure the real
 library, never a Python re-implementation. (Re)builds build_capi/ on import:
 the build is incremental, and loading a library left over from an older
 checkout would silently measure old code.
@@ -41,7 +41,7 @@ def _run(cmd):
 
 
 def _build():
-    _run(["cmake", "-S", str(ROOT / "tools" / "capi"), "-B", str(BUILD), "-DCMAKE_BUILD_TYPE=Release"])
+    _run(["cmake", "-S", str(ROOT / "capi"), "-B", str(BUILD), "-DCMAKE_BUILD_TYPE=Release"])
     _run(["cmake", "--build", str(BUILD), "-j"])
 
 

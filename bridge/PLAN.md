@@ -69,7 +69,7 @@ policy:
 | Decision | Choice |
 |---|---|
 | Namespace | `tap::ratio` |
-| Include path | `include/tap/ratio/…` (the DspTap-style convention: path mirrors namespace) |
+| Include path | `include/tap/sr/bridge/…` (the DspTap-style convention: path mirrors namespace) |
 | Direction | **Compile-time** template parameter; two concrete instantiations. Working names: `basic_converter<Sample, direction>` with `direction::up_to_48k` / `direction::down_to_44k1` and aliases per sample type (bikeshed open, see §9) |
 | Sample types | `float`, Q15 (`int16_t`), Q31 (`int32_t`) via `tap::dsp::sample_traits`. **Q15 is the flagship embedded profile** (Bluetooth-adjacent M33/M55 deployments) |
 | Coefficient tables | Phase-major (each output = one contiguous dot product), exact L = 147/160 phases, no inter-phase interpolation, no extra wrap row |
@@ -408,7 +408,7 @@ still holds on the new default, re-measured in the same test batteries.*
 - **Naming bikeshed** (§3): final alias names for the four
   direction × common-type instantiations. Decide before M3 makes them
   public.
-- **SampleRateTap include-path rename** (`include/srt/` →
+- **SampleRateTap include-path rename** (`include/tap/sr/async/` →
   `include/tap/samplerate/`): agreed direction, separate PR in that repo,
   same era as Appendix B (shared anchor-repointing work), not a RatioTap
   blocker.
@@ -424,14 +424,14 @@ still holds on the new default, re-measured in the same test batteries.*
 ## Appendix A — M0 PR outline: DspTap "shared FIR substrate"
 
 *Lands first. Follows DspTap's "Adding a primitive" checklist for each
-asset. Everything moves from SampleRateTap `include/srt/` /
+asset. Everything moves from SampleRateTap `include/tap/sr/async/` /
 `tests/`; provenance noted per file (the DspTap origin-story pattern).*
 
 **New headers under `include/tap/dsp/`:**
 
 1. `kaiser.h` — `bessel_i0`, `kaiser_beta`, `estimate_taps`, `sinc`,
    `design_prototype`, `design_prototype_compensated` (from
-   `srt/detail/kaiser.h`, namespace → `tap::dsp`, keeping the
+   `tap/dsp/kaiser.h`, namespace → `tap::dsp`, keeping the
    runtime-design design-note docstring). Contract tests ported from
    `test_kaiser.cpp`.
 2. `sample_traits.h` — the **format-core stratum only**: `coeff`/`accum`
@@ -491,14 +491,14 @@ by the gates below.*
    SessionStart hook already runs submodule init, so web sessions keep
    working unchanged.)
 2. **Shims / refactors**:
-   - `srt/detail/kaiser.h` → re-export shim (`tap::samplerate::detail`
+   - `tap/dsp/kaiser.h` → re-export shim (`tap::samplerate::detail`
      using-declarations for the design functions; historical include path
      keeps compiling).
-   - `srt/sample_traits.h` → keeps its name and full interface, now
+   - `tap/sr/async/sample_traits.h` → keeps its name and full interface, now
      implemented as a refinement of `tap::dsp::sample_traits` (core stratum
      inherited/aliased; blend stratum defined here; the `sample_type`
      concept refines the DspTap core concept).
-   - `srt/polyphase_filter.h` → dot kernels consumed from
+   - `tap/sr/async/polyphase_filter.h` → dot kernels consumed from
      `tap::dsp` via using-declarations; the bank constructor calls the
      shared `quantize.h` utility; the mu-blend functions and the bank stay.
    - `tests/support/` analysis headers → thin includes of the
@@ -513,7 +513,7 @@ by the gates below.*
    ±3% CI gate on all three embedded targets** — the strongest available
    proof that relocation cost nothing on the hot path; book builds clean.
 
-**Follow-up PR, same era, not part of M0**: `include/srt/` →
+**Follow-up PR, same era, not part of M0**: `include/tap/sr/async/` →
 `include/tap/samplerate/` rename with forwarding headers at the old paths
 (deprecation window), completing the `srt` → `tap::samplerate` namespace
 migration. Kept separate so the M0 diff stays reviewable.

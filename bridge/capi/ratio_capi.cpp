@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "tap/ratio/ratio.h"
+#include "tap/sr/bridge/ratio.h"
 
 namespace {
 

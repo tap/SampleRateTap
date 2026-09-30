@@ -108,10 +108,10 @@ So the fractional position µ must be carried to about 21 fractional bits
 before timing quantization alone could threaten 120 dB. Here is what the
 library actually does, in the inner loop of the fractional resampler —
 this is the Q0.64 phase accumulator the README describes, live from
-`include/srt/polyphase_filter.h`:
+`include/tap/sr/async/polyphase_filter.h`:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:p0_phase_step}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:p0_phase_step}}
 ```
 
 The fractional position lives in an unsigned 64-bit integer interpreted as
@@ -154,10 +154,10 @@ toward.
 
 Latency is the easiest budget to state and the easiest to spend by
 accident. Here is where every frame of it is decided — the converter's
-entire configuration surface, live from `include/srt/asrc.h`:
+entire configuration surface, live from `include/tap/sr/async/converter.h`:
 
 ```cpp
-{{#include ../../../async/include/srt/asrc.h:p0_config}}
+{{#include ../../../async/include/tap/sr/async/converter.h:p0_config}}
 ```
 
 The README's latency equation prices the defaults:

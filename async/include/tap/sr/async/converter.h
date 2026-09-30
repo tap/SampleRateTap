@@ -13,10 +13,10 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "srt/pi_servo.h"
-#include "srt/polyphase_filter.h"
-#include "srt/sample_traits.h"
-#include "srt/spsc_ring.h"
+#include "tap/sr/async/pi_servo.h"
+#include "tap/sr/async/polyphase_filter.h"
+#include "tap/sr/async/sample_traits.h"
+#include "tap/sr/async/spsc_ring.h"
 
 namespace tap::samplerate {
 

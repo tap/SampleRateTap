@@ -21,7 +21,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "tap/ratio/ratio.h"
+#include "tap/sr/bridge/ratio.h"
 
 namespace {
 

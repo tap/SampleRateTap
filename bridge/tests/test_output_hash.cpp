@@ -28,7 +28,7 @@
 
 #include <gtest/gtest.h>
 
-#include "tap/ratio/converter.h"
+#include "tap/sr/bridge/converter.h"
 
 namespace {
 

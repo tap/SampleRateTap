@@ -40,7 +40,7 @@ quantization, measurement instruments).
 ## Quick start
 
 ```cpp
-#include <tap/ratio/ratio.h>
+#include <tap/sr/bridge/ratio.h>
 
 tap::ratio::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
 // profiles: economy() (default, 18 kHz passband) | balanced() (19 kHz,

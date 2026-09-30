@@ -65,11 +65,11 @@ Acquiring or Locked — plus two exceptional transitions. Here is the filling
 and resync machinery as it ships:
 
 ```cpp
-{{#include ../../../async/include/srt/asrc.h:asrc_filling}}
+{{#include ../../../async/include/tap/sr/async/converter.h:asrc_filling}}
 ```
 
 ```cpp
-{{#include ../../../async/include/srt/asrc.h:asrc_resync}}
+{{#include ../../../async/include/tap/sr/async/converter.h:asrc_resync}}
 ```
 
 Filling exists because the resampler cannot produce its first output until
@@ -160,7 +160,7 @@ to demonstrate it.
 The fix is the first thing `pull()` now does:
 
 ```cpp
-{{#include ../../../async/include/srt/asrc.h:asrc_feasibility}}
+{{#include ../../../async/include/tap/sr/async/converter.h:asrc_feasibility}}
 ```
 
 The design choices inside those lines carry the interesting reasoning:
@@ -237,7 +237,7 @@ is written down.
 ## The underrun tail, end to end
 
 ```cpp
-{{#include ../../../async/include/srt/asrc.h:asrc_underrun}}
+{{#include ../../../async/include/tap/sr/async/converter.h:asrc_underrun}}
 ```
 
 Read this excerpt slowly and you can see the whole chapter in ten lines:

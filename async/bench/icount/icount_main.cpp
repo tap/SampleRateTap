@@ -17,7 +17,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "srt/asrc.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 

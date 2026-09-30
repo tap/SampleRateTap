@@ -31,8 +31,8 @@
 #include <samplerate.h>
 #include <soxr.h>
 
-#include "srt/polyphase_filter.h"
-#include "srt/sample_traits.h"
+#include "tap/sr/async/polyphase_filter.h"
+#include "tap/sr/async/sample_traits.h"
 
 namespace {
 

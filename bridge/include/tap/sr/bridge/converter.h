@@ -13,9 +13,9 @@
 
 #include "tap/dsp/fir_kernels.h"
 #include "tap/dsp/sample_traits.h"
-#include "tap/ratio/design.h"
-#include "tap/ratio/phase_table.h"
-#include "tap/ratio/schedule.h"
+#include "tap/sr/bridge/design.h"
+#include "tap/sr/bridge/phase_table.h"
+#include "tap/sr/bridge/schedule.h"
 
 // Out-of-lining attribute for the mirrored-phase dot (see dot_mirrored):
 // measured per target, gated per target, the same pattern as the tap::dsp

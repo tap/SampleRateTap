@@ -30,7 +30,7 @@
 
 #include <alsa/asoundlib.h>
 
-#include "srt/srt.h"
+#include "tap/sr/async/async.h"
 
 namespace {
 

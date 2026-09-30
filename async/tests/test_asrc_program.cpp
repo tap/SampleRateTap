@@ -9,10 +9,10 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.h"
 #include "support/multitone_analysis.h"
 #include "support/sine_analysis.h"
 #include "support/two_clock_sim.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 

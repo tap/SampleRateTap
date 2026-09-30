@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <new>
 
-#include "srt/srt.h"
+#include "tap/sr/async/async.h"
 
 // ANCHOR: abi_impl
 extern "C" {

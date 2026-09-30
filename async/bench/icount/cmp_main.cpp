@@ -31,8 +31,8 @@
 #if SRT_CMP_ENGINE == 0 || SRT_CMP_ENGINE == 5
 #include <type_traits>
 
-#include "srt/polyphase_filter.h"
-#include "srt/sample_traits.h"
+#include "tap/sr/async/polyphase_filter.h"
+#include "tap/sr/async/sample_traits.h"
 #elif SRT_CMP_ENGINE <= 2
 #include <samplerate.h>
 #else

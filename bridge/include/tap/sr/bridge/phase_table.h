@@ -10,7 +10,7 @@
 
 #include "tap/dsp/quantize.h"
 #include "tap/dsp/sample_traits.h"
-#include "tap/ratio/design.h"
+#include "tap/sr/bridge/design.h"
 
 namespace tap::ratio {
 

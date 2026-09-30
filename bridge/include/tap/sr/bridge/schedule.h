@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "tap/ratio/design.h"
+#include "tap/sr/bridge/design.h"
 
 namespace tap::ratio {
 

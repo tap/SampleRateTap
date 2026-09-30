@@ -32,10 +32,10 @@
 // HANDOFF.md is the original design brief.
 #pragma once
 
-#include "tap/ratio/converter.h"   // IWYU pragma: export
-#include "tap/ratio/design.h"      // IWYU pragma: export
-#include "tap/ratio/phase_table.h" // IWYU pragma: export
-#include "tap/ratio/schedule.h"    // IWYU pragma: export
+#include "tap/sr/bridge/converter.h"   // IWYU pragma: export
+#include "tap/sr/bridge/design.h"      // IWYU pragma: export
+#include "tap/sr/bridge/phase_table.h" // IWYU pragma: export
+#include "tap/sr/bridge/schedule.h"    // IWYU pragma: export
 
 #define TAP_RATIO_VERSION_MAJOR 0
 #define TAP_RATIO_VERSION_MINOR 3

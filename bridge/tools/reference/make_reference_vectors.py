@@ -6,7 +6,7 @@ The input is deterministic xorshift noise quantized to float32. For each
 direction x profile, the expected output is computed by scipy.signal.upfirdn
 (a polyphase engine we did not write) in float64, using coefficients from the
 same published Kaiser math as tap::dsp::design_prototype plus RatioTap's
-per-branch DC normalization (tap/ratio/design.h), then cast to float32.
+per-branch DC normalization (tap/sr/bridge/design.h), then cast to float32.
 
 The streaming converter is zero-primed and causal, so its output must equal
 upfirdn's from sample 0 — transient included — within float32 rounding: the

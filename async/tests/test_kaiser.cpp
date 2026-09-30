@@ -5,12 +5,12 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/detail/kaiser.h"
-#include "srt/polyphase_filter.h"
+#include "tap/dsp/kaiser.h"
+#include "tap/sr/async/polyphase_filter.h"
 
 namespace {
 
-    using namespace tap::samplerate::detail;
+    using namespace tap::dsp;
 
     TEST(Kaiser, BesselI0ReferenceValues) {
         EXPECT_DOUBLE_EQ(bessel_i0(0.0), 1.0);

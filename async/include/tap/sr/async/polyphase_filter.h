@@ -13,10 +13,10 @@
 #include <type_traits>
 #include <vector>
 
-#include "srt/detail/kaiser.h"
-#include "srt/sample_traits.h"
 #include "tap/dsp/fir_kernels.h"
+#include "tap/dsp/kaiser.h"
 #include "tap/dsp/quantize.h"
+#include "tap/sr/async/sample_traits.h"
 
 // The kernel hot loops (dot_row, the channel-parallel tiles) and their target
 // gates (SMLALD dual-MAC on DSP-extension Arm, the channel-parallel layout
@@ -149,12 +149,12 @@ namespace tap::samplerate {
             std::vector<double> proto(n);
             const double        cutoff_norm = (spec.passband_hz + spec.stopband_hz) / sample_rate_hz;
             if (spec.image_zeros) {
-                detail::design_prototype_compensated(proto, m_phases, cutoff_norm,
-                                                     detail::kaiser_beta(spec.stopband_atten_db),
-                                                     spec.passband_hz / sample_rate_hz);
+                tap::dsp::design_prototype_compensated(proto, m_phases, cutoff_norm,
+                                                       tap::dsp::kaiser_beta(spec.stopband_atten_db),
+                                                       spec.passband_hz / sample_rate_hz);
             }
             else {
-                detail::design_prototype(proto, m_phases, cutoff_norm, detail::kaiser_beta(spec.stopband_atten_db));
+                tap::dsp::design_prototype(proto, m_phases, cutoff_norm, tap::dsp::kaiser_beta(spec.stopband_atten_db));
             }
 
             m_table.resize((m_phases + 1) * m_taps);

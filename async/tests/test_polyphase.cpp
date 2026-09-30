@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/polyphase_filter.h"
+#include "tap/sr/async/polyphase_filter.h"
 
 namespace {
 

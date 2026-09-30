@@ -11,7 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "tap/dsp/fir_kernels.h"
-#include "tap/ratio/phase_table.h"
+#include "tap/sr/bridge/phase_table.h"
 
 namespace {
 

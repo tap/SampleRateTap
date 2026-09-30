@@ -32,7 +32,7 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 

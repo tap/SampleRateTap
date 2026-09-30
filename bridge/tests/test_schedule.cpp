@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "tap/ratio/schedule.h"
+#include "tap/sr/bridge/schedule.h"
 
 namespace {
 

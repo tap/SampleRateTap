@@ -32,9 +32,9 @@
 #include <numbers>
 #include <vector>
 
-#include "srt/asrc.h"
 #include "tap/dsp/analysis/sine_analysis.h"
-#include "tap/ratio/converter.h"
+#include "tap/sr/async/converter.h"
+#include "tap/sr/bridge/converter.h"
 
 int main() {
     // The Bluetooth chip's crystal runs +200 ppm off the local clock.

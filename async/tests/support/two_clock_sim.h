@@ -9,7 +9,7 @@
 #include <functional>
 #include <vector>
 
-#include "srt/asrc.h"
+#include "tap/sr/async/converter.h"
 
 namespace srt_test {
 

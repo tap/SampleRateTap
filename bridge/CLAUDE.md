@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 **RatioTap** — synchronous 44.1 ↔ 48 kHz sample rate conversion, as fast as possible. Header-only
-C++20 under `include/tap/ratio/`, namespace `tap::ratio`, built on the shared Tap-family FIR
+C++20 under `include/tap/sr/bridge/`, namespace `tap::ratio`, built on the shared Tap-family FIR
 substrate from DspTap (`submodules/dsptap`, linked as `tap::dsp`).
 
 **PLAN.md is the authoritative roadmap** — charter, settled architecture decisions, milestones

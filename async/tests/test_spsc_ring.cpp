@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/spsc_ring.h"
+#include "tap/sr/async/spsc_ring.h"
 
 namespace {
 

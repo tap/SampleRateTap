@@ -3,7 +3,7 @@ project(RatioTap VERSION 0.3.0 LANGUAGES CXX)
 
 # ==============================================================================
 # RatioTap — synchronous 44.1 <-> 48 kHz sample rate conversion, as fast as
-# possible. Header-only C++20 (include/tap/ratio/), built on the Tap family's
+# possible. Header-only C++20 (include/tap/sr/bridge/), built on the Tap family's
 # shared FIR substrate from DspTap (kaiser design, sample-format traits, dot
 # kernels, quantization, measurement instruments). See PLAN.md for the charter
 # and milestones; this is the M1 skeleton.
@@ -78,7 +78,7 @@ if(TAP_RATIO_BUILD_EXAMPLES)
 endif()
 
 if(TAP_RATIO_BUILD_CAPI)
-    add_subdirectory(tools/capi)
+    add_subdirectory(capi)
 endif()
 
 if(TAP_RATIO_BUILD_ICOUNT_BENCH)

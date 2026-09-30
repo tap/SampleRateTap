@@ -24,8 +24,8 @@
 #include <gtest/gtest.h>
 
 #include "reference/reference_vectors.h"
-#include "srt/polyphase_filter.h"
-#include "tap/ratio/converter.h"
+#include "tap/sr/async/polyphase_filter.h"
+#include "tap/sr/bridge/converter.h"
 
 namespace {
 

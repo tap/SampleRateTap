@@ -17,7 +17,7 @@
 #include "tap/dsp/kaiser.h"
 #include "tap/dsp/quantize.h"
 #include "tap/dsp/sample_traits.h"
-#include "tap/ratio/ratio.h"
+#include "tap/sr/bridge/ratio.h"
 
 namespace {
 

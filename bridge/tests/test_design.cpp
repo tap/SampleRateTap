@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "tap/ratio/design.h"
+#include "tap/sr/bridge/design.h"
 
 namespace {
 

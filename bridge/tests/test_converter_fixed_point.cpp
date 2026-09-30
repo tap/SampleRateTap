@@ -20,7 +20,7 @@
 
 #include "reference/reference_vectors.h"
 #include "tap/dsp/analysis/sine_analysis.h"
-#include "tap/ratio/converter.h"
+#include "tap/sr/bridge/converter.h"
 
 namespace {
 

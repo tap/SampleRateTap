@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/pi_servo.h"
+#include "tap/sr/async/pi_servo.h"
 
 namespace {
 
