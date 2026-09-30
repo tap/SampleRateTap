@@ -15,6 +15,7 @@ other gate is green (R2-GATE-8).
   rename.py build --through STEP --out DIR [--s0-repo P] [--r0-repo P]
                   [--no-format]
   rename.py check --through STEP [--tree DIR] [--allow FILE] [...]
+  rename.py apply --step STEP [--tree DIR]   (one class, in place)
 
 STEP is one of 1c, 2, 3.1 ... 3.8 (4 behaves as 3.8). A step's classes
 apply cumulatively: --through 3.3 applies paths, 3.1, 3.2 and 3.3.
@@ -170,6 +171,13 @@ SUBS = [
     ("3.1", r"(?<![\w/])srt/", "tap/sr/async/"),
     ("3.1", r"(?<![\w/])tap/ratio/", "tap/sr/bridge/"),
     ("3.1", r"(?<![\w/])tools/capi/ratio_capi", "capi/ratio_capi"),
+    # bridge's C ABI moves up one level (bridge/tools/capi -> bridge/capi):
+    # its standalone build and the notebook binding follow.
+    ("3.1", r"\$\{CMAKE_CURRENT_SOURCE_DIR\}/\.\./\.\.", "${CMAKE_CURRENT_SOURCE_DIR}/..",
+     "path:bridge/*capi/CMakeLists.txt"),
+    ("3.1", r"cmake -S tools/capi ", "cmake -S capi ", "path:bridge/*capi/CMakeLists.txt"),
+    ("3.1", r'ROOT / "tools" / "capi"', 'ROOT / "capi"', "path:bridge/notebooks/*.py"),
+    ("3.1", r"`tools/capi/`", "`capi/`", "path:bridge/notebooks/*.ipynb"),
     ("1c", r"add_subdirectory\(tools/capi\)", "add_subdirectory(capi)", "path:async/CMakeLists.txt"),
     # 1c: the book's anchor includes follow the 1a moves.
     ("1c", r"(\{\{#(?:include|rustdoc_include) (?:\.\./)+)include/srt/", r"\1async/include/srt/", "path:book/src/*"),
@@ -283,7 +291,10 @@ def apply_subs(text: str, path: str, through: str) -> str:
     # A rule's optional fourth field scopes it: "code" skips CMake files,
     # "cmake" applies only to them (CMake targets rename at 3.4, C++ at 3.2),
     # and "path:<glob>" limits it to matching files.
-    for step, pat, rep, *scope in SUBS:
+    # Classes apply in step order whatever their position in SUBS (a 1c
+    # rule listed after a 3.1 rule must still run first); stable within a
+    # class, where list order matters.
+    for step, pat, rep, *scope in sorted(SUBS, key=lambda r: STEPS.index(r[0])):
         if not at_least(through, step):
             continue
         if scope and scope[0].startswith("path:"):
@@ -466,6 +477,75 @@ def check(args) -> int:
     return 1 if bad else 0
 
 
+# --------------------------------------------------------------------------
+# apply: make ONE rename class's change in a working tree, the way the
+# step-3 commits are produced, so every commit is exactly what the map says
+# (plus its reviewed residual). Paths move with git mv; text rules whose
+# class is exactly STEP run over every tracked text file except the ones no
+# step-0 tree contains and that record history (the plan, the migration
+# kit, bridge/docs/HISTORY.md); changed C/C++ files are clang-formatted.
+
+APPLY_SKIP = ["docs/migration/*", "docs/MONOREPO_PLAN.md", "bridge/docs/HISTORY.md", "submodules/*"]
+
+
+def apply(args) -> int:
+    tree = pathlib.Path(args.tree).resolve()
+    step_ = args.step
+    files = subprocess.run(["git", "-C", str(tree), "ls-files", "-z"], check=True,
+                           capture_output=True).stdout.decode().split("\0")
+    files = [f for f in files if f and (tree / f).is_file()]
+    moved = 0
+    for f in files:
+        if any(fnmatch.fnmatch(f, g) for g in APPLY_SKIP):
+            continue
+        new = map_later_paths(f, step_)
+        if new == f:
+            continue
+        if new is None:
+            subprocess.run(["git", "-C", str(tree), "rm", "-q", f], check=True)
+        else:
+            (tree / new).parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["git", "-C", str(tree), "mv", f, new], check=True)
+        moved += 1
+    files = subprocess.run(["git", "-C", str(tree), "ls-files", "-z"], check=True,
+                           capture_output=True).stdout.decode().split("\0")
+    changed_cxx, edited = [], 0
+    for f in files:
+        if not f or any(fnmatch.fnmatch(f, g) for g in APPLY_SKIP):
+            continue
+        path = tree / f
+        if not path.is_file():
+            continue
+        blob = path.read_bytes()
+        if not is_text(blob):
+            continue
+        text = blob.decode("utf-8", errors="surrogateescape")
+        new = text
+        for rule in SUBS:
+            st, pat, rep, *scope = rule
+            if st != step_:
+                continue
+            if scope and scope[0].startswith("path:"):
+                if not fnmatch.fnmatch(f, scope[0][5:]):
+                    continue
+            elif scope and (scope[0] == "cmake") != is_cmake(f):
+                continue
+            new = re.sub(pat, rep, new)
+        if step_ == "3.8":
+            new = banner(new, f)
+        if new != text:
+            path.write_bytes(new.encode("utf-8", errors="surrogateescape"))
+            edited += 1
+            if pathlib.PurePosixPath(f).suffix in CXX_SUFFIXES:
+                changed_cxx.append(str(path))
+    if changed_cxx and not args.no_format:
+        subprocess.run([shutil.which("clang-format") or "clang-format", "-i", "--style=file"]
+                       + changed_cxx, check=True, cwd=tree)
+    print(f"apply {step_}: {moved} path(s) moved or removed, {edited} file(s) edited, "
+          f"{len(changed_cxx)} C/C++ file(s) formatted")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -480,7 +560,13 @@ def main() -> int:
         else:
             p.add_argument("--tree", default=".")
             p.add_argument("--allow")
+    p = sub.add_parser("apply", help="apply one rename class to a working tree")
+    p.add_argument("--step", required=True, choices=STEPS)
+    p.add_argument("--tree", default=".")
+    p.add_argument("--no-format", action="store_true")
     args = ap.parse_args()
+    if args.cmd == "apply":
+        return apply(args)
     if args.cmd == "build":
         build(args)
         return 0
