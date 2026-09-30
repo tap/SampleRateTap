@@ -864,6 +864,17 @@ There is no separate reflow commit, since the hook would absorb it anyway
      `-Werror` 170/170 tests, clang-tidy clean, the book builds.
 6. **Ratchet binaries:** prefix only, `tap_sr_<engine>_icount_*`. Workload
    names and baseline keys do not change.
+   - **Done (v3.1).** `rename.py apply --step 3.6` (7 files: the two icount
+     CMake target prefixes, `scripts/icount.py`'s engine prefixes, the
+     comparison workloads' comments and the book's prose); no hand edits,
+     and `residual/3.6.txt` carries step 3.5's list with the two
+     `icount.py` hunks re-hashed. Guest markers, workload names and both
+     `baselines.json` files are unchanged. Measured locally before the
+     push: G3+G5 exact on hexagon (the 14 rows proved per function), m33
+     and m55 with the binaries paired under their new prefix; G4 17/17 per
+     target; G7, G14 (0 unlisted); the host gates but G12; clang `-Werror`
+     170/170 tests with the ratchet workloads built, clang-tidy clean, the
+     book builds.
 7. **Docs and prose:**
    - The book: 23 files. This includes `part4/c-abi.md`'s decimal-encoding
      prose (lines 161-162 and 305-306) and the D15 naming-decision prose.

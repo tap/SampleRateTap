@@ -6,7 +6,7 @@
 // ratio, so the comparison is engine-vs-engine with no servo on either side.
 //
 // These binaries are intentionally named cmp_icount_* so the ratchet
-// (scripts/icount.py, glob srt_icount_*) never sees them: competitor
+// (scripts/icount.py, glob tap_sr_async_icount_*) never sees them: competitor
 // instruction counts are measured once and recorded in docs/COMPARISON.md,
 // not gated.
 //

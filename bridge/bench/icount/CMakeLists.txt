@@ -23,10 +23,10 @@ foreach(_sc IN LISTS _ratio_icount_scenarios)
     list(GET _parts 2 _type)
     list(GET _parts 3 _profile)
     list(GET _parts 4 _ch)
-    add_executable(ratio_icount_${_name} icount_main.cpp)
-    target_compile_definitions(ratio_icount_${_name} PRIVATE
+    add_executable(tap_sr_bridge_icount_${_name} icount_main.cpp)
+    target_compile_definitions(tap_sr_bridge_icount_${_name} PRIVATE
         TAP_SR_BRIDGE_SC_DIR=${_dir} TAP_SR_BRIDGE_SC_TYPE=${_type}
         TAP_SR_BRIDGE_SC_PROFILE=${_profile} TAP_SR_BRIDGE_SC_CH=${_ch})
-    target_link_libraries(ratio_icount_${_name} PRIVATE
+    target_link_libraries(tap_sr_bridge_icount_${_name} PRIVATE
         tap::sr::bridge tap_sr_bridge_warnings)
 endforeach()

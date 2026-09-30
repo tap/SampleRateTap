@@ -374,7 +374,7 @@ python3 scripts/icount.py --target hexagon --build-dir build-hex-ic \
 
 # The C5 negative result's disassembly evidence, reproduced on today's
 # binary (the count should be zero — the intrinsics were reverted):
-llvm-objdump -d build-hex-ic/bench/icount/srt_icount_pipeline_q15 | grep -c vrmpy
+llvm-objdump -d build-hex-ic/bench/icount/tap_sr_async_icount_pipeline_q15 | grep -c vrmpy
 ```
 
 The last command is this chapter's thesis in one line. The claim "the

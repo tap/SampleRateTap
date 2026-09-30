@@ -15,16 +15,16 @@ foreach(_sc IN LISTS _srt_icount_scenarios)
     list(GET _parts 1 _kind)
     list(GET _parts 2 _type)
     list(GET _parts 3 _ch)
-    add_executable(srt_icount_${_name} icount_main.cpp)
-    target_compile_definitions(srt_icount_${_name} PRIVATE
+    add_executable(tap_sr_async_icount_${_name} icount_main.cpp)
+    target_compile_definitions(tap_sr_async_icount_${_name} PRIVATE
         TAP_SR_ASYNC_SC_KIND=${_kind} TAP_SR_ASYNC_SC_TYPE=${_type} TAP_SR_ASYNC_SC_CH=${_ch})
-    target_link_libraries(srt_icount_${_name} PRIVATE
+    target_link_libraries(tap_sr_async_icount_${_name} PRIVATE
         tap::sr::async tap_sr_async_warnings)
 endforeach()
 
 # Cross-resampler comparison workloads (docs/COMPARISON.md): same fixed
 # workload through our datapath and through libsamplerate and r8brain, built for the
-# same target. Named cmp_icount_* so the ratchet's srt_icount_* glob never
+# same target. Named cmp_icount_* so the ratchet's tap_sr_async_icount_* glob never
 # picks them up — competitor counts are recorded in docs, not gated.
 option(TAP_SR_ICOUNT_COMPARE "Build resampler-comparison icount workloads" OFF)
 if(TAP_SR_ICOUNT_COMPARE)

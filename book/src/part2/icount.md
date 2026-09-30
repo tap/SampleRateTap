@@ -144,7 +144,7 @@ produce a plausible count. `icount.py` refuses to record anything unless
 
 ## The ratchet, and why it is two-sided
 
-`scripts/icount.py` glues plugin to workloads: find every `srt_icount_*`
+`scripts/icount.py` glues plugin to workloads: find every `tap_sr_async_icount_*`
 binary in the build directory, run each under the target's QEMU with the
 plugin, and compare against the committed `bench/baselines.json` at a
 tolerance of ±3%. A scenario with no recorded baseline fails. A recorded
@@ -185,7 +185,7 @@ anything.
 One boundary of the ratchet is drawn in a CMake naming convention. The
 cross-resampler comparison workloads (`docs/COMPARISON.md` runs the same
 fixed task through this library and through libsamplerate, per target) are
-built as `cmp_icount_*` precisely so that `icount.py`'s `srt_icount_*` glob
+built as `cmp_icount_*` precisely so that `icount.py`'s `tap_sr_async_icount_*` glob
 never picks them up: competitor counts are *recorded* in the docs with
 their date and toolchain, but not *gated*. The distinction is deliberate.
 A gate on someone else's code would fail on their releases, punish this
@@ -315,7 +315,7 @@ python3 scripts/icount.py --target m55 --build-dir build-m55 \
 
 # Determinism: run any one binary twice and compare the counts exactly.
 qemu-system-arm -M mps3-an547 -nographic -semihosting -d plugin \
-    -plugin /tmp/libinsncount.so -kernel build-m55/bench/icount/srt_icount_pipeline_q15
+    -plugin /tmp/libinsncount.so -kernel build-m55/bench/icount/tap_sr_async_icount_pipeline_q15
 
 # See the two-sided gate work: re-run icount.py with --tolerance 0.0001
 # and watch benign recompilation deltas fail in *both* directions.

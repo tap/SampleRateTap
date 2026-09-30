@@ -44,8 +44,8 @@ import sys
 # repositories' originals on purpose: they are part of what the counted
 # binaries execute.
 ENGINES = {
-    "async": {"prefix": "srt_icount_", "done": "SRT_ICOUNT_DONE"},
-    "bridge": {"prefix": "ratio_icount_", "done": "RATIO_ICOUNT_DONE"},
+    "async": {"prefix": "tap_sr_async_icount_", "done": "SRT_ICOUNT_DONE"},
+    "bridge": {"prefix": "tap_sr_bridge_icount_", "done": "RATIO_ICOUNT_DONE"},
 }
 # Printed by the host-side plugin; never affects the guest's count.
 COUNT_MARKER = "TAP_SR_INSN_COUNT"
