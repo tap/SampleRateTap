@@ -22,6 +22,7 @@ import argparse
 import bisect
 import collections
 import difflib
+import fnmatch
 import glob
 import json
 import os
@@ -386,7 +387,10 @@ def host(args):
     got = collections.defaultdict(set)
     for t in tests:
         labels = next((p["value"] for p in t.get("properties", []) if p["name"] == "LABELS"), [])
-        got[",".join(sorted(labels))].add(f"{t['name']}\t{','.join(sorted(labels))}")
+        # A test carrying both engine labels (the family's D13 check, 3.4)
+        # runs under either engine's selection, so it belongs to both.
+        for lab in labels or [""]:
+            got[lab].add(f"{t['name']}\t{','.join(sorted(labels))}")
     allow = [l.split("--")[0].split() for l in (HERE / "allow.txt").read_text().splitlines()
              if l.strip() and not l.startswith("#")]
     for engine, label in (("async", "async"), ("bridge", "bridge" if at_least("3.4") else "ratio")):
@@ -398,7 +402,8 @@ def host(args):
                 lab = "bridge" if lab == "ratio" else lab
             want.add(f"{name}\t{lab}")
         have = got.get(label, set())
-        added = {a[2] for a in allow if len(a) >= 3 and a[0] == f"{engine}-labels.txt" and a[1] == "+"}
+        added = {a[2] for a in allow
+                 if len(a) >= 3 and fnmatch.fnmatch(f"{engine}-labels.txt", a[0]) and a[1] == "+"}
         missing = sorted(want - have)
         extra = sorted(n for n in have - want if n.split("\t")[0] not in added)
         for m in missing[:10]:
@@ -716,7 +721,18 @@ def notebook_text(path: pathlib.Path, mapper) -> list[str]:
         if "nondeterministic" in cell.get("metadata", {}).get("tags", []):
             lines.append(f"[cell {i}: nondeterministic, skipped]")
             continue
+        # The kernel may split one print across stream chunks (a bare "\n"
+        # chunk after its line was seen once); consecutive chunks of one
+        # stream are one text, as the notebook renders them.
+        merged = []
         for o in cell.get("outputs", []):
+            if o.get("output_type") == "stream" and merged and merged[-1].get("output_type") == "stream" \
+                    and merged[-1].get("name") == o.get("name"):
+                merged[-1] = {"output_type": "stream", "name": o.get("name"),
+                              "text": "".join(merged[-1].get("text", "")) + "".join(o.get("text", ""))}
+            else:
+                merged.append(o)
+        for o in merged:
             if o.get("output_type") == "stream":
                 text = "".join(o.get("text", ""))
             elif "data" in o and "text/plain" in o["data"]:

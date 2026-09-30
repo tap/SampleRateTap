@@ -23,7 +23,7 @@ it. The one interface every FFI on earth speaks (`ctypes`, `cffi`, Julia's
 the C ABI: plain functions, plain data, names that mean what they say.
 
 So the library ships a shim: `tools/capi/`, about ninety lines of C++
-presenting a C face, built as a shared library with `-DSRT_BUILD_CAPI=ON`.
+presenting a C face, built as a shared library with `-DTAP_SR_BUILD_CAPI=ON`.
 This chapter is small because the shim is small, but three of its design
 decisions were paid for the hard way — one by a compile error, one by an
 audit finding, and one by a toolchain that turned out to be unable to
@@ -294,7 +294,7 @@ these eight functions.
 
 ```sh
 # Build the shared library:
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DSRT_BUILD_CAPI=ON
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BUILD_CAPI=ON
 cmake --build build --target srt_capi -j
 
 # The exported surface — eight srt_* symbols, unmangled, and nothing else

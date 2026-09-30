@@ -41,7 +41,7 @@ jobs:
       - name: Configure (compile database)
         run: >
           cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+          -DTAP_SR_BUILD_ICOUNT_BENCH=ON
       - name: clang-tidy (project TUs; the submodule, third_party and fetched deps excluded)
         run: |
           python3 -c "import json; print('\n'.join(e['file'] for e in json.load(open('build/compile_commands.json')) if 'submodules' not in e['file'] and 'third_party' not in e['file'] and '_deps' not in e['file']))" > /tmp/tidy-files.txt

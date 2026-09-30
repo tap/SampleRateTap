@@ -24,7 +24,7 @@
 // deployment the push side lives on the BT thread and the pull side in the
 // audio callback (both ends are noexcept and allocation-free).
 //
-// Build:  cmake -B build -DTAP_RATIO_BUILD_EXAMPLES=ON && cmake --build build
+// Build:  cmake -B build -DTAP_SR_BUILD_EXAMPLES=ON && cmake --build build
 // Run:    ./build/examples/bluetooth_bridge
 
 #include <cmath>

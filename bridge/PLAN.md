@@ -487,7 +487,7 @@ re-export shim is the template throughout. Behavior change: none — proven
 by the gates below.*
 
 1. **Submodule**: add `submodules/dsptap`, link `tap::dsp` into the
-   `SampleRateTap::SampleRateTap` INTERFACE target. (The TapHouse
+   `tap::sr::async` INTERFACE target. (The TapHouse
    SessionStart hook already runs submodule init, so web sessions keep
    working unchanged.)
 2. **Shims / refactors**:

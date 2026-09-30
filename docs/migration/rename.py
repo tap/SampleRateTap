@@ -255,7 +255,10 @@ SUBS = [
     ("3.4", w("srt_bench"), "tap_sr_async_bench"),
     ("3.4", w("srt_alsa_bridge"), "tap_sr_async_alsa_bridge"),
     ("3.4", w("srt_r8brain"), "tap_sr_async_r8brain"),
+    ("3.4", w("srt_headers"), "tap_sr_async_headers"),
     ("3.4", r'TEST_PREFIX "ratio\."', 'TEST_PREFIX "bridge."'),
+    # The QEMU legs select the engine by label (D16).
+    ("3.4", r"(?m)^(\s*label: )ratio$", r"\1bridge", "path:.github/workflows/*.yml"),
     ("3.4", r"LABELS ratio\b", "LABELS bridge"),
     # 3.5 C ABI (D8): functions, handle types, libraries, headers, shim.
     ("3.5", w("SrtHandle"), "tap_sr_async_converter"),

@@ -1,7 +1,7 @@
 // ANCHOR: abi_doc
 /// \file srt_capi.cpp
 /// \brief C ABI shim over the float converter, for FFI consumers (ctypes,
-/// cffi, Julia, ...). Build with SRT_BUILD_CAPI=ON; srt_capi.h is the
+/// cffi, Julia, ...). Build with TAP_SR_BUILD_CAPI=ON; srt_capi.h is the
 /// contract (thread affinity, error convention); see
 /// notebooks/asrc_demo.ipynb for a worked client.
 ///

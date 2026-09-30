@@ -7,7 +7,7 @@
 #
 # Usage:
 #   cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake \
-#         -DSRT_BUILD_EXAMPLES=OFF ...
+#         -DTAP_SR_BUILD_EXAMPLES=OFF ...
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 

@@ -308,7 +308,7 @@ gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/path/to/plugin-header \
 # Cross-build the fixed workloads and run the ratchet (arm-none-eabi-gcc):
 cmake -B build-m55 -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
-      -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF -DSRT_BUILD_ICOUNT_BENCH=ON
+      -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF -DTAP_SR_BUILD_ICOUNT_BENCH=ON
 cmake --build build-m55 -j
 python3 scripts/icount.py --target m55 --build-dir build-m55 \
         --plugin /tmp/libinsncount.so

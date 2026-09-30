@@ -296,9 +296,9 @@ jupyter execute notebooks/asrc_comparison.ipynb
 # The computational head-to-head on your own host (requires the system
 # libsamplerate and soxr development packages, found via pkg-config):
 cmake -B build-cmp -DCMAKE_BUILD_TYPE=Release \
-      -DSRT_BUILD_BENCHMARKS=ON -DSRT_BUILD_COMPARE_BENCH=ON
+      -DTAP_SR_BUILD_BENCHMARKS=ON -DTAP_SR_BUILD_COMPARE_BENCH=ON
 cmake --build build-cmp -j
-./build-cmp/bench/compare/srt_bench_compare
+./build-cmp/bench/compare/tap_sr_async_bench_compare
 ```
 
 The comparison notebook pins SampleRateTap's own results with assertions,

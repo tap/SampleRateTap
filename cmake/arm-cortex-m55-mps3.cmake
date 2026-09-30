@@ -3,7 +3,7 @@
 #
 # Usage:
 #   cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
-#         -DSRT_BUILD_EXAMPLES=OFF ...
+#         -DTAP_SR_BUILD_EXAMPLES=OFF ...
 # with arm-none-eabi-g++ and qemu-system-arm on PATH.
 #
 # Notes:

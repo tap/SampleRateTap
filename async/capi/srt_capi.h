@@ -1,7 +1,7 @@
 /* ANCHOR: abi_contract */
 /* SampleRateTap C ABI — FFI surface over the float converter.
  *
- * Build the shared library with -DSRT_BUILD_CAPI=ON. This header is the
+ * Build the shared library with -DTAP_SR_BUILD_CAPI=ON. This header is the
  * contract for C/cffi/Julia consumers (the ctypes notebooks re-declare the
  * same prototypes); it must stay in sync with srt_capi.cpp.
  *

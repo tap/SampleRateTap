@@ -437,14 +437,14 @@ ctest --test-dir build -R 'MultiChannel' --output-on-failure
 # A/B the channel axis yourself: benchmark, then rebuild with the
 # threshold pushed out of reach and benchmark again (use -march=native
 # to see the AVX2 headline; SSE2 shows a few percent):
-cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DSRT_BUILD_BENCHMARKS=ON \
+cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BUILD_BENCHMARKS=ON \
       -DCMAKE_CXX_FLAGS="-march=native"
 cmake --build build-bench -j && \
-  ./build-bench/bench/srt_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
-cmake -B build-planar -DCMAKE_BUILD_TYPE=Release -DSRT_BUILD_BENCHMARKS=ON \
+  ./build-bench/bench/tap_sr_async_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
+cmake -B build-planar -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BUILD_BENCHMARKS=ON \
       -DCMAKE_CXX_FLAGS="-march=native -DTAP_SR_ASYNC_CP_MIN_CHANNELS=999"
 cmake --build build-planar -j && \
-  ./build-planar/bench/srt_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
+  ./build-planar/bench/tap_sr_async_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
 
 # Break it on purpose: change `advance = 2` to `advance = 1` in the
 # forward-wrap branch of process(), rebuild, and watch

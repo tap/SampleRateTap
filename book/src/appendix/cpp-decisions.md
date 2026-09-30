@@ -28,7 +28,7 @@ declares exactly one library target, and it has no compiled artifact:
 
 ```cmake
 add_library(SampleRateTap INTERFACE)
-add_library(SampleRateTap::SampleRateTap ALIAS SampleRateTap)
+add_library(tap::sr::async ALIAS SampleRateTap)
 target_compile_features(SampleRateTap INTERFACE cxx_std_20)
 ```
 
@@ -37,7 +37,7 @@ exclusively — the README's *Consuming the library* section says so in as
 many words: "there are no install/package rules yet." The tests, examples,
 benchmarks and the C ABI shim are all opt-in options that default off when
 the project is not top-level, and the warning flags live on a separate
-`srt_warnings` target so that the library's own `-Wall -Wextra -Wpedantic
+`tap_sr_async_warnings` target so that the library's own `-Wall -Wextra -Wpedantic
 -Wconversion` discipline is never propagated into a consumer's build
 (`CMakeLists.txt` carries the comment: "not propagated to consumers").
 

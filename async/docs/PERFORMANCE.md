@@ -177,7 +177,7 @@ table is already enforced by test thresholds.
   pico2_cyccnt can measure the truth on hardware.
 
 - **MSVC /W4 triage outstanding**: the Windows CI leg builds with
-  `SRT_WERROR=OFF` until the /W4 output has been triaged (ci.yml carries
+  `TAP_SR_ASYNC_WERROR=OFF` until the /W4 output has been triaged (ci.yml carries
   the matching comment).
 - **Tail-latency benchmark not implemented**: the Metrics table promises
   p99/max per-call `pull(128)` timing; no benchmark measures it yet.
@@ -191,7 +191,7 @@ table is already enforced by test thresholds.
 ## Sequencing & status
 
 - [x] **PR A** — this document, Google Benchmark infrastructure
-  (`SRT_BUILD_BENCHMARKS`), host baselines, README perf section + update
+  (`TAP_SR_BUILD_BENCHMARKS`), host baselines, README perf section + update
   script, CI bench smoke job.
 - [x] **PR B** — QEMU instruction-count harness, `bench/baselines.json`
   ratchet job in CI. M55 leg gating.

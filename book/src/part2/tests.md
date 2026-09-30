@@ -308,8 +308,8 @@ process status through the emulator — means the run is judged on text.
 CTest watches for a sentinel:
 
 ```cmake
-    add_test(NAME srt_tests_emulated COMMAND srt_tests)
-    set_tests_properties(srt_tests_emulated PROPERTIES
+    add_test(NAME tap_sr_async_tests_emulated COMMAND tap_sr_async_tests)
+    set_tests_properties(tap_sr_async_tests_emulated PROPERTIES
         PASS_REGULAR_EXPRESSION "TAP_SR_TESTS_COMPLETE rc=0"
         FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
         TIMEOUT 1800)

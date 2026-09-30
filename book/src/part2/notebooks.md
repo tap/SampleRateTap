@@ -298,7 +298,7 @@ summary of code is just one more markdown cell.
 
 ```sh
 # Build the C ABI once; the notebooks find (or build) it themselves:
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DSRT_BUILD_CAPI=ON
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BUILD_CAPI=ON
 cmake --build build --target srt_capi -j
 
 # Re-run each instrument end to end; any pinned regression fails the run

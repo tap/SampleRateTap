@@ -261,7 +261,7 @@ ctest --test-dir build -R TwoThreadStress --output-on-failure
 
 # The same stress under ThreadSanitizer (as CI runs it):
 cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DCMAKE_CXX_FLAGS="-fsanitize=thread" -DSRT_BUILD_EXAMPLES=OFF
+      -DCMAKE_CXX_FLAGS="-fsanitize=thread" -DTAP_SR_BUILD_EXAMPLES=OFF
 cmake --build build-tsan -j && ctest --test-dir build-tsan -R spsc_ring
 
 # Break it on purpose: change memory_order_release to relaxed in write(),

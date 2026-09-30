@@ -44,7 +44,7 @@ stream to a file and analyze it offline with the notebook tooling
 machinery) — the clocks are real even if the signal never goes analog.
 
 [`examples/alsa_bridge.cpp`](../examples/alsa_bridge.cpp) (built as
-`srt_alsa_bridge` when ALSA is found) implements this harness: `--csv` logs
+`tap_sr_async_alsa_bridge` when ALSA is found) implements this harness: `--csv` logs
 the per-second `status()` telemetry for plotting the ppm trace, `--dump`
 captures the post-ASRC float stream for the offline analysis above, and
 `--tone <hz>` substitutes a synthetic sine paced by the input device's real

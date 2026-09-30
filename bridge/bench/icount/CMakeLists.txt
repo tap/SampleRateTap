@@ -28,5 +28,5 @@ foreach(_sc IN LISTS _ratio_icount_scenarios)
         TAP_SR_BRIDGE_SC_DIR=${_dir} TAP_SR_BRIDGE_SC_TYPE=${_type}
         TAP_SR_BRIDGE_SC_PROFILE=${_profile} TAP_SR_BRIDGE_SC_CH=${_ch})
     target_link_libraries(ratio_icount_${_name} PRIVATE
-        tap::ratio tap_ratio_warnings)
+        tap::sr::bridge tap_sr_bridge_warnings)
 endforeach()

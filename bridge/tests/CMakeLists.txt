@@ -28,7 +28,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-add_executable(tap_ratio_tests
+add_executable(tap_sr_bridge_tests
     test_converter.cpp
     test_converter_fixed_point.cpp
     test_cross_validation.cpp
@@ -39,13 +39,13 @@ add_executable(tap_ratio_tests
     test_skeleton.cpp)
 # The tests' own headers (the committed reference vectors) resolve relative
 # to this directory.
-target_include_directories(tap_ratio_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(tap_ratio_tests PRIVATE
-    tap::ratio
-    srt_headers
-    tap_ratio_warnings)
+target_include_directories(tap_sr_bridge_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(tap_sr_bridge_tests PRIVATE
+    tap::sr::bridge
+    tap_sr_async_headers
+    tap_sr_bridge_warnings)
 if(Threads_FOUND)
-    target_link_libraries(tap_ratio_tests PRIVATE Threads::Threads)
+    target_link_libraries(tap_sr_bridge_tests PRIVATE Threads::Threads)
 endif()
 
 if(TAP_SR_BARE_METAL)
@@ -53,16 +53,16 @@ if(TAP_SR_BARE_METAL)
     # bakes in the emulation-sized filter (no argv on the target), and the
     # run is judged on gtest's summary text because semihosting does not
     # reliably propagate exit codes through the emulator.
-    target_sources(tap_ratio_tests PRIVATE bare_metal_main.cpp)
-    target_link_libraries(tap_ratio_tests PRIVATE GTest::gtest)
-    add_test(NAME tap_ratio_tests_emulated COMMAND tap_ratio_tests)
-    set_tests_properties(tap_ratio_tests_emulated PROPERTIES
+    target_sources(tap_sr_bridge_tests PRIVATE bare_metal_main.cpp)
+    target_link_libraries(tap_sr_bridge_tests PRIVATE GTest::gtest)
+    add_test(NAME tap_sr_bridge_tests_emulated COMMAND tap_sr_bridge_tests)
+    set_tests_properties(tap_sr_bridge_tests_emulated PROPERTIES
         PASS_REGULAR_EXPRESSION "TAP_SR_TESTS_COMPLETE rc=0"
         FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
         TIMEOUT 1800
-        LABELS ratio)
+        LABELS bridge)
 else()
-    target_link_libraries(tap_ratio_tests PRIVATE GTest::gtest_main)
+    target_link_libraries(tap_sr_bridge_tests PRIVATE GTest::gtest_main)
     # Generous timeouts: discovery and the DSP-measurement tests run orders
     # of magnitude slower under instruction-set emulation (e.g. qemu-hexagon).
     include(GoogleTest)
@@ -70,6 +70,6 @@ else()
     # shares a tree with SampleRateTap's (FixedPoint.* exists in both, and
     # CTest applies a duplicated name's properties to every copy); the
     # monorepo plan's gates key tests by these names.
-    gtest_discover_tests(tap_ratio_tests TEST_PREFIX "ratio." DISCOVERY_TIMEOUT 120
-                         PROPERTIES TIMEOUT 900 LABELS ratio)
+    gtest_discover_tests(tap_sr_bridge_tests TEST_PREFIX "bridge." DISCOVERY_TIMEOUT 120
+                         PROPERTIES TIMEOUT 900 LABELS bridge)
 endif()

@@ -28,7 +28,7 @@ slips that occur roughly once every `1/ppm` samples.
 
 ```cmake
 add_subdirectory(SampleRateTap)            # or FetchContent
-target_link_libraries(app PRIVATE SampleRateTap::SampleRateTap)
+target_link_libraries(app PRIVATE tap::sr::async)
 ```
 
 ```cpp
@@ -55,7 +55,7 @@ the lock acquisition and rate estimate. For a visual tour — lock, measured
 transparency vs. a naive FIFO, spectrograms, latency, drift tracking,
 dropout recovery — see
 [notebooks/asrc_demo.ipynb](notebooks/asrc_demo.ipynb), which drives the
-library through its C ABI (`-DSRT_BUILD_CAPI=ON`, `tools/capi/`) via ctypes
+library through its C ABI (`-DTAP_SR_BUILD_CAPI=ON`, `tools/capi/`) via ctypes
 (the notebook environment is pinned, with hashes, in `requirements.lock`:
 `pip install --require-hashes -r requirements.lock`; the first cell
 rebuilds the shared library incrementally on every run). A second notebook,
@@ -316,10 +316,10 @@ two USB audio dongles, a Pi + Pico 2, two Pis over Ethernet), see
 
 Methodology, optimization roadmap and regression gating live in
 [docs/PERFORMANCE.md](docs/PERFORMANCE.md). Build the benchmarks with
-`-DSRT_BUILD_BENCHMARKS=ON` (host only). A measured computational
+`-DTAP_SR_BUILD_BENCHMARKS=ON` (host only). A measured computational
 head-to-head against libsamplerate, soxr and r8brain-free-src — host
 wall-clock and embedded instruction counts, steady state and construction
-(`-DSRT_BUILD_COMPARE_BENCH=ON`, `SRT_ICOUNT_COMPARE`) — lives in
+(`-DTAP_SR_BUILD_COMPARE_BENCH=ON`, `TAP_SR_ICOUNT_COMPARE`) — lives in
 [docs/COMPARISON.md](docs/COMPARISON.md).
 
 <!-- ICOUNT:BEGIN -->

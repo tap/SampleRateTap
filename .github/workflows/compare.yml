@@ -55,9 +55,8 @@ jobs:
             fi
             cmake -B build-$tgt -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_TOOLCHAIN_FILE=$tc \
-              -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
-              -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
-              -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
+              -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
+              -DTAP_SR_BUILD_ICOUNT_BENCH=ON -DTAP_SR_ICOUNT_COMPARE=ON
             cmake --build build-$tgt -j 4
             # Each engine at 2 s and 4 s: the difference is steady state, the
             # remainder construction (async/bench/icount/cmp_main.cpp).
@@ -117,9 +116,8 @@ jobs:
           export PATH="$HOME/qemu-hexagon-plugins:$(dirname "$clangxx"):$PATH"
           cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
-            -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
-            -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
-            -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
+            -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
+            -DTAP_SR_BUILD_ICOUNT_BENCH=ON -DTAP_SR_ICOUNT_COMPARE=ON
           cmake --build build-hex -j 4
           for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8; do
                          echo cmp_icount_$e cmp_icount_${e}_4s; done); do

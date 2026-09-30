@@ -56,7 +56,7 @@ told where the target's loader and shared libraries live (`qemu-hexagon
 -L /path/to/sysroot`), and that path would have to thread through CMake,
 CTest, CI, and every developer's shell. Static linking deletes the whole
 problem: the binary is self-contained, the emulator invocation is just
-`qemu-hexagon ./srt_tests`, and nothing about the sysroot can drift out of
+`qemu-hexagon ./tap_sr_async_tests`, and nothing about the sysroot can drift out of
 sync. For a test rig this is the right trade without much argument — the
 binaries are throwaway artifacts, nobody cares that they are megabytes
 instead of kilobytes. Keep this decision in mind, though. It comes back at
@@ -355,7 +355,7 @@ interesting half you want to hear about from CI, not from a customer.
 # on PATH; .github/workflows/ci.yml "hexagon-qemu" has the toolchain URLs):
 cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
-      -DSRT_BUILD_EXAMPLES=OFF
+      -DTAP_SR_BUILD_EXAMPLES=OFF
 cmake --build build-hex -j
 ctest --test-dir build-hex --output-on-failure \
       -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation'
@@ -367,7 +367,7 @@ ctest --test-dir build-hex --output-on-failure \
 # icount-ratchet job in ci.yml shows the 4-minute from-source build):
 cmake -B build-hex-ic -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
-      -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF -DSRT_BUILD_ICOUNT_BENCH=ON
+      -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF -DTAP_SR_BUILD_ICOUNT_BENCH=ON
 cmake --build build-hex-ic -j
 python3 scripts/icount.py --target hexagon --build-dir build-hex-ic \
         --plugin /path/to/libinsncount.so

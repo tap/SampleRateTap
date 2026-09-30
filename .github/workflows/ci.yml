@@ -81,10 +81,9 @@ jobs:
         run: >
           cmake -B build
           -DCMAKE_BUILD_TYPE=Release
-          -DSRT_WERROR=${{ matrix.async_werror }}
-          -DTAP_RATIO_WERROR=${{ matrix.bridge_werror }}
-          -DSRT_BUILD_CAPI=${{ matrix.capi }}
-          -DTAP_RATIO_BUILD_CAPI=${{ matrix.capi }}
+          -DTAP_SR_ASYNC_WERROR=${{ matrix.async_werror }}
+          -DTAP_SR_BRIDGE_WERROR=${{ matrix.bridge_werror }}
+          -DTAP_SR_BUILD_CAPI=${{ matrix.capi }}
 
       - name: Build
         run: cmake --build build --config Release -j 4
@@ -122,8 +121,8 @@ jobs:
         run: >
           cmake -B build
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          -DSRT_BUILD_EXAMPLES=OFF
-          -DTAP_RATIO_WERROR=ON
+          -DTAP_SR_BUILD_EXAMPLES=OFF
+          -DTAP_SR_BRIDGE_WERROR=ON
           -DCMAKE_CXX_FLAGS="${{ matrix.flags }}"
 
       - name: Build
@@ -170,7 +169,7 @@ jobs:
           - target: hexagon
             title: Hexagon cross
             engine: bridge
-            label: ratio
+            label: bridge
             timeout: 30
             jobs: 4
             build_type: Release
@@ -188,7 +187,7 @@ jobs:
           - target: m55
             title: Cortex-M55 cross
             engine: bridge
-            label: ratio
+            label: bridge
             timeout: 20
             jobs: 1
             build_type: MinSizeRel
@@ -207,7 +206,7 @@ jobs:
           - target: m33
             title: Cortex-M33 cross
             engine: bridge
-            label: ratio
+            label: bridge
             timeout: 20
             jobs: 1
             build_type: MinSizeRel
@@ -277,8 +276,7 @@ jobs:
           cmake -B build
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}
-          -DSRT_BUILD_EXAMPLES=OFF
-          -DTAP_RATIO_BUILD_EXAMPLES=OFF
+          -DTAP_SR_BUILD_EXAMPLES=OFF
 
       - name: Build
         run: cmake --build build -j 4
@@ -320,7 +318,7 @@ jobs:
   #         -DCMAKE_C_COMPILER=xt-clang
   #         -DCMAKE_CXX_COMPILER=xt-clang++
   #         "-DCMAKE_CROSSCOMPILING_EMULATOR=xt-run;--xtensa-core=$XTENSA_CORE"
-  #         -DSRT_BUILD_EXAMPLES=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
+  #         -DTAP_SR_BUILD_EXAMPLES=OFF
   #     - name: Build
   #       run: cmake --build build -j
   #     - name: Test on ISS
@@ -462,9 +460,8 @@ jobs:
             hexagon) tc=cmake/hexagon-linux-musl.cmake ;;
           esac
           cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$tc \
-            -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
-            -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
-            -DSRT_BUILD_ICOUNT_BENCH=ON -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+            -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
+            -DTAP_SR_BUILD_ICOUNT_BENCH=ON
           cmake --build build -j 4
 
       - name: Ratchet async
@@ -513,15 +510,14 @@ jobs:
         run: >
           cmake -B build
           -DCMAKE_BUILD_TYPE=Release
-          -DSRT_BUILD_BENCHMARKS=ON
-          -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
-          -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
+          -DTAP_SR_BUILD_BENCHMARKS=ON
+          -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF
 
       - name: Build
         run: cmake --build build -j 4
 
       - name: Run (smoke)
-        run: ./build/async/bench/srt_bench --benchmark_min_time=0.01s
+        run: ./build/async/bench/tap_sr_async_bench --benchmark_min_time=0.01s
 
   # Keeps the manually-triggered comparison paths (compare.yml,
   # async/bench/compare) compiling per push; build-only — the measured
@@ -545,20 +541,19 @@ jobs:
         run: >
           cmake -B build-host
           -DCMAKE_BUILD_TYPE=Release
-          -DSRT_BUILD_BENCHMARKS=ON
-          -DSRT_BUILD_COMPARE_BENCH=ON
-          -DSRT_BUILD_COMPARE_SHIM=ON
-          -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
-          && cmake --build build-host -j 4 --target srt_bench_compare srt_r8b_shim
+          -DTAP_SR_BUILD_BENCHMARKS=ON
+          -DTAP_SR_BUILD_COMPARE_BENCH=ON
+          -DTAP_SR_BUILD_COMPARE_SHIM=ON
+          -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF
+          && cmake --build build-host -j 4 --target tap_sr_async_bench_compare srt_r8b_shim
 
       - name: Build M55 comparison workload
         run: >
           cmake -B build-m55
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
-          -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
-          -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
-          -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
+          -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF
+          -DTAP_SR_BUILD_ICOUNT_BENCH=ON -DTAP_SR_ICOUNT_COMPARE=ON
           && cmake --build build-m55 -j 4 --target cmp_icount_lsr_medium
           cmp_icount_srt_q15 cmp_icount_r8b_120
 

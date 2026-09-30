@@ -807,6 +807,33 @@ There is no separate reflow commit, since the hook would absorb it anyway
    - **All five workflows** (`ci`, `style`, `ci-arm64`, `compare`,
      `book-pages`) updated in the same commit.
    - The four 4.2 enforcement checks land here with their own tests.
+   - **Done (v3.1).** `rename.py apply --step 3.4` (52 files, plus the
+     `srt_headers` → `tap_sr_async_headers` and QEMU `label: ratio` →
+     `bridge` rules) and the hand edits G14 lists in `residual/3.4.txt`:
+     the root declares the D9 options once (the engines' own `option()`
+     calls find the cache entry), `project(SampleRateTap VERSION 0.4.0)`,
+     the engine subprojects `tap_sr_async` / `tap_sr_bridge` with no
+     VERSION, async's INTERFACE target renamed `tap_sr_async` with one
+     alias, the umbrella `tap::sr`, `cmake/retired_options.cmake` (the D7
+     `FATAL_ERROR` tripwire for all 16 retired options, included by the
+     root and by an engine configured on its own), and the doubled `-D`
+     lines the unification left in the workflows removed. The 4.2 checks
+     are the root `tests/`: per engine, `Family.LinkInterfaceIsDspOnly`
+     (check 1), `Family.HeadersCompileInIsolation` (check 2: one generated
+     TU per public header, only `tap::dsp` and the engine's include on the
+     path, built by the test so a leaked include fails the test),
+     `Family.IncludesStayInEngine` (check 3) and `Family.HeaderCountIsPinned`
+     (check 4: 6 and 5), under the engine's label so every job that runs the
+     engine's tests runs them; plus D13's `family.VersionMacrosAgree` under
+     both labels (compile-only, so it runs on every leg). G1 puts a test in
+     every engine bucket its labels name, and `allow.txt` rows may glob the
+     job file. Measured locally before the push: G3+G5 exact on hexagon
+     (the 14 rows proved per function), m33 and m55; G4 17/17 per target
+     and the two allowed C ABI functions; G7, G11 (all seven notebooks,
+     after `notebook_text` learned to join split stream chunks), G14 (0
+     unlisted); host gates but G12; GCC and clang `-Werror` 168/168 tests
+     (159 + the 9 family tests), clang-tidy clean, the book builds; the
+     tripwire and each check script fail their negative case.
 5. **C ABI:**
    - `srt_*` → `tap_sr_async_*` and `ratio_*` → `tap_sr_bridge_*`, including
      handle types, header names and library names.

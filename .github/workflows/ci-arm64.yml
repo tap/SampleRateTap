@@ -30,7 +30,7 @@ jobs:
           submodules: recursive
 
       - name: Configure (Release)
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSRT_WERROR=ON
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_ASYNC_WERROR=ON
 
       - name: Build
         run: cmake --build build -j 4
@@ -49,7 +49,7 @@ jobs:
         run: >
           cmake -B build-tsan
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          -DSRT_BUILD_EXAMPLES=OFF
+          -DTAP_SR_BUILD_EXAMPLES=OFF
           -DCMAKE_CXX_FLAGS="-fsanitize=thread"
 
       - name: Build (TSan)

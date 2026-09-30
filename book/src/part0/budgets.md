@@ -352,9 +352,9 @@ ctest --test-dir build -R AsrcQuality --output-on-failure
 ctest --test-dir build -R Latency --output-on-failure
 
 # The host compute budget (Google Benchmark; the README table's source):
-cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DSRT_BUILD_BENCHMARKS=ON
+cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BUILD_BENCHMARKS=ON
 cmake --build build-bench -j
-./build-bench/bench/srt_bench
+./build-bench/bench/tap_sr_async_bench
 
 # The embedded compute budget: fixed workloads under QEMU, compared to
 # the committed baselines at ±3% (needs the cross toolchain and a

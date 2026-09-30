@@ -9,3 +9,17 @@
 #   - CApi.VersionIsBitPacked (3.5, D13)
 #   - the four 4.2 dependency-enforcement tests (3.4)
 # No test may disappear.
+
+# Step 3.4: the family's own tests (plan 4.2 and D13), registered by the root
+# tests/ under an engine's label, so they run wherever that engine's tests
+# run: every host and QEMU job. The job file is a glob.
+async-*.txt + async.Family.LinkInterfaceIsDspOnly  -- 4.2 check 1
+async-*.txt + async.Family.HeadersCompileInIsolation  -- 4.2 check 2
+async-*.txt + async.Family.IncludesStayInEngine  -- 4.2 check 3
+async-*.txt + async.Family.HeaderCountIsPinned  -- 4.2 check 4
+async-*.txt + family.VersionMacrosAgree  -- D13, under both labels
+bridge-*.txt + bridge.Family.LinkInterfaceIsDspOnly  -- 4.2 check 1
+bridge-*.txt + bridge.Family.HeadersCompileInIsolation  -- 4.2 check 2
+bridge-*.txt + bridge.Family.IncludesStayInEngine  -- 4.2 check 3
+bridge-*.txt + bridge.Family.HeaderCountIsPinned  -- 4.2 check 4
+bridge-*.txt + family.VersionMacrosAgree  -- D13, under both labels

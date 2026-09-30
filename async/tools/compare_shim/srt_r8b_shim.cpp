@@ -1,7 +1,7 @@
 /// \file srt_r8b_shim.cpp
 /// \brief C entry points over r8brain-free-src's CDSPResampler, so the
 /// comparison notebook (notebooks/asrc_comparison.ipynb) can measure the
-/// real C++ engine through ctypes. Build with SRT_BUILD_COMPARE_SHIM=ON.
+/// real C++ engine through ctypes. Build with TAP_SR_BUILD_COMPARE_SHIM=ON.
 ///
 /// Two calls, both taking r8brain's own design knobs verbatim (transition
 /// band in percent, stop-band attenuation in dB, linear or minimum phase):
