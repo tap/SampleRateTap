@@ -1,0 +1,38 @@
+# G3 allowlist: the exact instruction-count delta one workload may show
+# against its step-0 measurement, confined to one named symbol. Each row:
+#
+#   <target> <engine> <workload> <symbol> <delta>  -- <reason>
+#
+# The gate stays exact: a workload's delta must EQUAL its row (a delta with
+# no row, or a row with no workload, fails), checksums and the workload set
+# stay exact, and gates.py re-proves each row with fncount.c: the executed
+# instruction counts per function, as a multiset over every other symbol,
+# must be identical between the two trees, and the named symbol must differ
+# by exactly the row's delta. Nothing in tap:: code may move.
+#
+# Provenance (step 3.2, PR #50, gates hexagon run 36655090366, reproduced
+# locally to the instruction): the namespace rename changes the length of
+# the exception-message literals in the headers ("async_sample_rate_converter: "
+# -> "tap::sr::async::converter: " under D15; "tap::ratio::" ->
+# "tap::sr::bridge::"), which shifts .rodata, so the format string of the
+# workload's final "*_ICOUNT_DONE" printf lands at a different alignment.
+# Static musl's Hexagon memcpy takes an alignment-dependent path, and only
+# the memcpy calls inside that one printf change cost. The Arm legs run
+# main(0, NULL) under -nostartfiles and print through semihosting, which
+# has no such path, so M33 and M55 stay exact with no row. The delta is
+# one value per sample format because the workload of each format prints
+# the same characters.
+hexagon async pipeline12_q15 memcpy -87  -- D15 literal lengths move the marker format string
+hexagon async pipeline_float memcpy -57  -- D15 literal lengths move the marker format string
+hexagon async pipeline_q15 memcpy -87    -- D15 literal lengths move the marker format string
+hexagon async pipeline_q31 memcpy -87    -- D15 literal lengths move the marker format string
+hexagon bridge down_float_eco memcpy -78 -- namespace literal lengths move the marker format string
+hexagon bridge down_float_tr memcpy -78  -- namespace literal lengths move the marker format string
+hexagon bridge down_q15_eco memcpy -47   -- namespace literal lengths move the marker format string
+hexagon bridge down_q15_se memcpy -47    -- namespace literal lengths move the marker format string
+hexagon bridge down_q31_eco memcpy -47   -- namespace literal lengths move the marker format string
+hexagon bridge up_float_eco memcpy -78   -- namespace literal lengths move the marker format string
+hexagon bridge up_float_tr memcpy -78    -- namespace literal lengths move the marker format string
+hexagon bridge up_q15_eco memcpy -47     -- namespace literal lengths move the marker format string
+hexagon bridge up_q15_se memcpy -47      -- namespace literal lengths move the marker format string
+hexagon bridge up_q31_eco memcpy -47     -- namespace literal lengths move the marker format string

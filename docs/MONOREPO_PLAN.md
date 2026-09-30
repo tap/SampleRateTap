@@ -389,7 +389,7 @@ Each run records in `docs/migration/runs.md`: the run IDs,
 |---|---|---|---|
 | G1 | snapshot | **Test multiset per (job, engine).** `ctest --show-only=json-v1`; names are unique through D16's prefixes. The collector asserts that the list is non-empty itself, because `--no-tests=error` is ignored under `-N` and `--show-only`. New rows need an entry in `docs/migration/allow.txt`. `bridge` newly runs under Linux Clang, where it passes clang `-Werror` 78/78; TSan runs `-L async` only | Dropped tests; label aliasing |
 | G2 | snapshot | **On-target test multiset.** `[ RUN ]` lines from each QEMU leg's `Testing/Temporary/LastTest.log`, which every QEMU job uploads. `--output-on-failure` prints nothing on success, so the CI log alone is not enough. Keyed by (target, engine) | Losses hidden by the floors (up to 34 for bridge on M33); Hexagon exclusion drift |
-| G3 | A/B | **Exact icount.** `icount.py --compare-json`: the gated SHA's measured counts equal step 0's counts **measured in the same job**, exactly. The measured workload **set** equals the baseline key set. Committed `baselines.json` files must be **byte-unchanged**. Everyday CI keeps ±3 % against the committed files, since unpinned apt toolchains drift (R2-CI-10) | Codegen and harness changes. Verified deterministic: RatioTap's M33 counts match the baselines to the instruction, and the namespace rename leaves all 10 unchanged |
+| G3 | A/B | **Exact icount.** `icount.py --compare-json`: the gated SHA's measured counts equal step 0's counts **measured in the same job**, exactly. The measured workload **set** equals the baseline key set. Committed `baselines.json` files must be **byte-unchanged**. Everyday CI keeps ±3 % against the committed files, since unpinned apt toolchains drift (R2-CI-10). **Allowance (3.2):** `docs/migration/allow-g3.txt` may name, per (target, engine, workload), one symbol and the exact delta it accounts for; the gate then requires that exact delta, and re-proves the row with `fncount.c` (per-function counts: every other symbol identical as a multiset, the named one at exactly the delta). No row may name `tap::` code | Codegen and harness changes. Verified deterministic: RatioTap's M33 counts match the baselines to the instruction, and the namespace rename leaves all 10 unchanged |
 | G4 | A/B | **Codegen identity of icount and C ABI binaries only.** Split the disassembly at `STT_FUNC` bounds and skip non-function bytes. Key functions by demangled name after the rename map, and compare them as a sorted multiset. Strip addresses and RIP displacements. Symbolize literal-pool words **through relocations** (a gate-only link with `-Wl,--emit-relocs`, or per-TU `objdump -dr`), and resolve string-literal pointers to their text after the name and path maps. Normalizer prototype: `audit2-gates/norm3.py`. **Test binaries are excluded:** a pure namespace rename changes their codegen (stack-slot swaps in `check_cross_validation`), and gtest embeds `__FILE__` | Real codegen changes in shipped code |
 | G5 | A/B | **Output identity.** P.2's per-engine tests print `[ measured ] hash <workload> <fnv64>` for every direction × format × profile. The gate compares these lines between A and B **per host, in one job**, and compares the QEMU `checksum=` lines, which `icount.py` now prints. **Hashes are never pinned as constants:** async's float `interpolate()` hashes differently when FMA is available, so a pinned hash would fail on arm64 and macOS (R2-GATE-3) | Coefficient, table and datapath changes that leave icount unchanged |
 | G6 | snapshot | **Cross-validation lines**, including the tolerance arguments. P.2 makes the test print its limit | A loosened tolerance. Also covered by G14 |
@@ -742,6 +742,21 @@ There is no separate reflow commit, since the hook would absorb it anyway
    - The D15 mapping.
    - Test namespace `srt_test` → `async_test`. `ratio_ref` is unchanged; it
      is not a retired name.
+   - **Done (v3.1), with one Hexagon allowance.** Codegen (G4), outputs
+     (G5) and the M33/M55 counts are exact. On Hexagon 14 workloads count
+     47–87 instructions fewer, all in musl's `memcpy`: the renamed
+     exception-message literals change length, `.rodata` shifts, and the
+     workload's final `*_ICOUNT_DONE` format string lands at an alignment
+     whose `memcpy` path is shorter. Reproduced locally to the instruction
+     with a per-function plugin (`docs/migration/fncount.c`): every symbol
+     but `memcpy` executes an identical count in both trees. The 14 rows
+     are in `docs/migration/allow-g3.txt`, and the gate re-proves them on
+     every run (G3 row). The Arm legs print through semihosting from
+     `main(0, NULL)` and have no such path. G4's Hexagon normalizer learned
+     the PC-relative `add(pc,##imm)` form (the packet address is the base),
+     the redundant `immext` value and the bare branch targets in the same
+     commit; an absolute `##imm` is symbolized only into writable data,
+     since this static musl link reaches read-only data PC-relatively.
 3. **Macros:**
    - `SRT_VERSION_*` / `TAP_RATIO_VERSION_*` → `TAP_SR_VERSION_*` = 0.4.0 in
      both umbrella headers (D13).
@@ -848,7 +863,15 @@ G13 and G14, plus G9 from 3.7.
   - Outputs are identical (G5), and codegen of shipped code is identical
     (G4).
   - Instruction counts are identical (G3), except P.2's one Hexagon
-    re-record, which is a harness change made before the snapshot.
+    re-record, which is a harness change made before the snapshot, and
+    the 3.2 Hexagon allowance (`docs/migration/allow-g3.txt`): 47–87
+    instructions per workload inside musl's `memcpy` in the final marker
+    `printf`, from the renamed literals moving `.rodata`; every function
+    of shipped code counts identically, and the gate proves it. The
+    committed Hexagon baselines are therefore high by those amounts after
+    the migration, inside the daily ±3 % gate; a post-migration re-record
+    (and a marker print whose cost is layout-independent) is a follow-up,
+    outside this plan's non-goals.
 - **No new engine, profile or API function**, apart from D13's version
   function and its test.
 - **DspTap code is untouched.** Its docs change through a DspTap PR, and

@@ -220,27 +220,37 @@ def disasm(elf: str, objdump: str, nm: str, mapper) -> dict:
         for sec in ef.iter_sections():
             if sec["sh_addr"] and sec["sh_type"] in ("SHT_PROGBITS", "SHT_NOBITS", "SHT_INIT_ARRAY", "SHT_FINI_ARRAY"):
                 data = sec.data() if sec["sh_type"] != "SHT_NOBITS" else b""
-                secs.append((sec["sh_addr"], sec["sh_size"], sec.name, data))
+                secs.append((sec["sh_addr"], sec["sh_size"], sec.name, data, bool(sec["sh_flags"] & 1)))  # SHF_WRITE
 
     def section(v):
-        for a, size, name, data in secs:
+        for a, size, name, data, writable in secs:
             if a <= v < a + size:
-                return name, a, data
+                return name, a, data, writable
         return None
 
-    def symbolize(v):
+    def symbolize(v, strict=False):
+        """strict: the value may be a plain constant (an absolute ##imm on
+        Hexagon, where the static musl link reaches every read-only datum
+        PC-relatively), so it is symbolized only into writable data; anything
+        else stays raw, and a raw value that moves is a visible diff, never a
+        hidden one."""
+        sec = section(v)
+        if strict and not (sec is not None and sec[3]):
+            return f"{v:#x}"
         i = bisect.bisect_right(addrs, v) - 1
         if i >= 0:
             a, size, n = syms[i]
             if v == a or v < a + size:
                 return f"<{n}+{v - a:#x}>"
-        sec = section(v)
         if sec is None:
             return f"{v:#x}"
-        name, a, data = sec
+        name, a, data, _ = sec
         o = v - a
         e = data.find(b"\0", o) if o < len(data) else -1
-        if 0 <= e - o <= 400 and e > o:
+        # Only from a string's first byte: a numeric constant that lands
+        # inside the string pool must not read as the string's tail.
+        at_start = o == 0 or (o < len(data) and data[o - 1] == 0)
+        if at_start and 0 <= e - o <= 400 and e > o:
             b = data[o:e]
             if all(32 <= c < 127 or c in (9, 10) for c in b):
                 # Mapped as a C string literal, quotes included: some rules
@@ -259,8 +269,10 @@ def disasm(elf: str, objdump: str, nm: str, mapper) -> dict:
         i = bisect.bisect_right(starts, addr) - 1
         return i >= 0 and addr < funcs_at[i][1]
 
-    funcs, cur = {}, None
-    for line in out([objdump, "-d", "--no-show-raw-insn", "-C", elf]).splitlines():
+    listing = out([objdump, "-d", "--no-show-raw-insn", "-C", elf])
+    hexagon = "elf32-hexagon" in listing[:400]
+    funcs, cur, packet = {}, None, 0
+    for line in listing.splitlines():
         m = re.match(r"^[0-9a-f]+ <(.*)>:$", line)
         if m:
             cur = mapper(m.group(1))
@@ -269,7 +281,7 @@ def disasm(elf: str, objdump: str, nm: str, mapper) -> dict:
         m = re.match(r"^\s*([0-9a-f]+):\s+(.*)$", line)
         if not m or cur is None or not in_code(int(m.group(1), 16)):
             continue
-        ins = mapper(m.group(2))
+        addr, ins = int(m.group(1), 16), mapper(m.group(2))
         # Target addresses first: a PLT name like <new(...)@plt> contains '@'.
         ins = re.sub(r"\b[0-9a-f]+ <([^>]*)>", r"<\1>", ins)
         ins = re.sub(r"\s+#\s.*$", "", ins)
@@ -278,6 +290,23 @@ def disasm(elf: str, objdump: str, nm: str, mapper) -> dict:
         w = re.match(r"^\.word\s+0x([0-9a-f]+)$", ins)
         if w:
             ins = ".word " + symbolize(int(w.group(1), 16))
+        # Hexagon: "pc" in add(pc,##imm) is the packet's address; the packet
+        # opens with "{". The immext that carries an immediate's upper bits
+        # is redundant with the extended instruction, which objdump prints
+        # with the full value, so its own value is dropped. An absolute ##imm
+        # is a constant unless it points into writable data (see symbolize).
+        if not hexagon:
+            funcs[cur].append(ins)
+            continue
+        if ins.lstrip().startswith("{"):
+            packet = addr
+        # Branch and call targets are bare addresses (no <symbol>); every
+        # immediate carries a '#', so a bare 0x... is an address.
+        ins = re.sub(r"(?<![#\w])0x([0-9a-f]+)\b", lambda mm: symbolize(int(mm.group(1), 16)), ins)
+        ins = re.sub(r"add\(pc,##(0x[0-9a-f]+)\)",
+                     lambda mm: "add(pc," + symbolize((packet + int(mm.group(1), 16)) & 0xffffffff) + ")", ins)
+        ins = re.sub(r"immext\(#0x[0-9a-f]+\)", "immext(#EXT)", ins)
+        ins = re.sub(r"##(0x[0-9a-f]+)\b", lambda mm: "##" + symbolize(int(mm.group(1), 16), strict=True), ins)
         funcs[cur].append(ins)
     return {k: v for k, v in funcs.items() if v}
 
@@ -458,6 +487,72 @@ def build_plugin(src_c: pathlib.Path, dst: pathlib.Path, header_dir: str):
     run(["gcc", "-shared", "-fPIC", *cflags, f"-I{header_dir}", "-o", str(dst), str(src_c)])
 
 
+def g3_allowances(target: str, engine: str) -> dict[str, tuple[str, int]]:
+    """allow-g3.txt rows for one target and engine: workload -> (symbol, delta)."""
+    allowed = {}
+    for line in (HERE / "allow-g3.txt").read_text().splitlines():
+        line = line.split("--")[0].strip()
+        if not line or line.startswith("#"):
+            continue
+        tgt, eng, workload, symbol, delta = line.split()
+        if tgt == target and eng == engine:
+            if int(delta) == 0 or workload in allowed:
+                raise SystemExit(f"allow-g3.txt: bad row for {workload}")
+            allowed[workload] = (symbol, int(delta))
+    return allowed
+
+
+def fn_counts(target: str, plugin: pathlib.Path, binary: str, nm: str, work: pathlib.Path) -> list[tuple[str, int]]:
+    """(symbol, executed instructions) per text symbol, via fncount.c. Runs
+    the binary exactly as icount.py does (fixed path, argv[0], empty
+    environment), so the total is the count G3 measured."""
+    symfile = work / (pathlib.Path(binary).name + ".syms")
+    rows = []
+    for line in out([nm, "-n", "-S", "--defined-only", binary]).splitlines():
+        m = re.match(r"^([0-9a-f]+) ([0-9a-f]+) [tTwW] (.*)$", line)
+        if m:
+            rows.append(f"{m.group(1)} {m.group(2)} {m.group(3)}")
+    symfile.write_text("\n".join(rows) + "\n")
+    if target != "hexagon":
+        raise SystemExit("fn_counts: only the Hexagon user-mode leg is supported")
+    run_dir = pathlib.Path("/tmp/tap-icount")
+    run_dir.mkdir(exist_ok=True)
+    fixed = run_dir / "w"
+    shutil.copyfile(binary, fixed)
+    fixed.chmod(0o755)
+    qemu = shutil.which("qemu-hexagon")
+    proc = subprocess.run([qemu, "-0", "w", "-d", "plugin", "-plugin", f"{plugin},symfile={symfile}", str(fixed)],
+                          cwd=run_dir, env={}, capture_output=True, text=True, timeout=1200)
+    counts = [(m.group(2), int(m.group(1))) for m in re.finditer(r"^FN (\d+) (.*)$", proc.stdout + proc.stderr, re.M)]
+    if not counts:
+        print(proc.stdout[-2000:], proc.stderr[-2000:])
+        raise SystemExit(f"{binary}: fncount produced no rows")
+    return counts
+
+
+def g3_prove(target, work, plugin, workload, old_bin, new_bin, symbol, delta, nm) -> bool:
+    """The allow-g3.txt row for one workload, re-proved: every symbol but the
+    named one executes the same instruction count in both trees (as a
+    multiset, so renamed functions need no name map), and the named symbol
+    differs by exactly the row's delta."""
+    old_c = fn_counts(target, plugin, old_bin, nm, work)
+    new_c = fn_counts(target, plugin, new_bin, nm, work)
+    old_sym = sum(c for n, c in old_c if n == symbol)
+    new_sym = sum(c for n, c in new_c if n == symbol)
+    old_rest = collections.Counter(c for n, c in old_c if n != symbol)
+    new_rest = collections.Counter(c for n, c in new_c if n != symbol)
+    ok = new_sym - old_sym == delta and old_rest == new_rest
+    if new_sym - old_sym != delta:
+        print(f"    {workload}: {symbol} {new_sym - old_sym:+d} insns, row says {delta:+d}")
+    if old_rest != new_rest:
+        gone = sorted((c, n) for n, c in old_c if n != symbol and (old_rest - new_rest)[c])[:5]
+        came = sorted((c, n) for n, c in new_c if n != symbol and (new_rest - old_rest)[c])[:5]
+        print(f"    {workload}: other functions moved, e.g. step 0 {gone} vs gated {came}")
+    if ok:
+        print(f"    {workload}: {symbol} {delta:+d}; {sum(old_rest.values())} other symbols identical per function")
+    return ok
+
+
 def cross(args):
     t = args.target
     w = pathlib.Path(args.work).resolve() / t
@@ -489,6 +584,17 @@ def cross(args):
         print("+ " + " ".join(cmd), flush=True)
         return subprocess.run(cmd, capture_output=True, text=True)
 
+    if t == "hexagon":
+        bindir = pathlib.Path(shutil.which("hexagon-unknown-linux-musl-clang++")).parent
+        objdump = str(bindir / "llvm-objdump") if (bindir / "llvm-objdump").exists() else "llvm-objdump"
+        nm = str(bindir / "llvm-nm") if (bindir / "llvm-nm").exists() else "llvm-nm"
+    else:
+        objdump, nm = "arm-none-eabi-objdump", "arm-none-eabi-nm"
+    plugins["fncount"] = w / "libfncount.so"
+    build_plugin(HERE / "fncount.c", plugins["fncount"], args.plugin_header_dir)
+
+    prefixes = {"async": ("srt_icount_", "tap_sr_async_icount_" if at_least("3.6") else "srt_icount_"),
+                "bridge": ("ratio_icount_", "tap_sr_bridge_icount_" if at_least("3.6") else "ratio_icount_")}
     for label, old_tree, old_bld, old_plugin, new_script, new_extra, new_plugin in (
             ("async", oa, w / "old-async", plugins["old-async"],
              new / "scripts/icount.py", ["--engine", "async"] if not (new / "bridge/scripts/icount.py").exists() and at_least("2") else [],
@@ -497,6 +603,7 @@ def cross(args):
              (new / "bridge/scripts/icount.py") if (new / "bridge/scripts/icount.py").exists() else (new / "scripts/icount.py"),
              [] if (new / "bridge/scripts/icount.py").exists() else ["--engine", "bridge"],
              plugins["new-bridge"])):
+        old_prefix, new_prefix = prefixes[label]
         ref = w / f"{label}-old.json"
         ref.unlink(missing_ok=True)
         r = icount(old_tree / "scripts/icount.py", old_bld, old_plugin,
@@ -506,21 +613,50 @@ def cross(args):
         if not ref.exists():
             report(f"G3 {t} {label}", False, "step-0 measurement failed")
             continue
-        r = icount(new_script, w / "new", new_plugin, new_extra + ["--compare-json", str(ref)])
+        got = w / f"{label}-new.json"
+        got.unlink(missing_ok=True)
+        r = icount(new_script, w / "new", new_plugin,
+                   new_extra + ["--baselines", str(new / label / "bench/baselines.json"),
+                                "--tolerance", "1e9", "--json-out", str(got)])
         print(r.stdout[-3000:], r.stderr[-2000:])
-        n = len(json.loads(ref.read_text()).get(t, {}))
-        report(f"G3+G5 {t} {label}", r.returncode == 0, f"{n} workloads, counts and checksums exact")
+        if not got.exists():
+            report(f"G3+G5 {t} {label}", False, "gated-tree measurement failed")
+            continue
+        want_m = json.loads(ref.read_text()).get(t, {})
+        got_m = json.loads(got.read_text()).get(t, {})
+        allowed = g3_allowances(t, label)
+        ok = bool(want_m) and set(want_m) == set(got_m)
+        if not ok:
+            print(f"    workload sets differ: -{sorted(set(want_m) - set(got_m))} +{sorted(set(got_m) - set(want_m))}")
+        for k in sorted(set(allowed) - set(want_m)):
+            print(f"    {k}: allow-g3.txt row names no measured workload")
+            ok = False
+        proved = 0
+        for k in sorted(set(want_m) & set(got_m)):
+            delta = got_m[k]["insns"] - want_m[k]["insns"]
+            symbol, want_delta = allowed.get(k, (None, 0))
+            if got_m[k]["checksum"] != want_m[k]["checksum"]:
+                print(f"    {k}: checksum {got_m[k]['checksum']} vs {want_m[k]['checksum']} MISMATCH")
+                ok = False
+            if delta != want_delta:
+                print(f"    {k}: {delta:+d} insns vs step 0, allowed {want_delta:+d} MISMATCH")
+                ok = False
+            elif symbol is not None:
+                old_bin = glob.glob(str(old_bld / "**" / (old_prefix + k)), recursive=True)
+                new_bin = glob.glob(str(w / "new" / "**" / (new_prefix + k)), recursive=True)
+                if len(old_bin) == 1 and len(new_bin) == 1 and \
+                        g3_prove(t, w, plugins["fncount"], k, old_bin[0], new_bin[0], symbol, want_delta, nm):
+                    proved += 1
+                else:
+                    ok = False
+        report(f"G3+G5 {t} {label}", ok,
+               f"{len(want_m)} workloads, checksums exact, counts exact"
+               + (f" ({proved} at their allow-g3.txt delta, proved per function)" if allowed else ""))
 
     # G4: icount binaries, paired by workload name.
-    if t == "hexagon":
-        bindir = pathlib.Path(shutil.which("hexagon-unknown-linux-musl-clang++")).parent
-        objdump = str(bindir / "llvm-objdump") if (bindir / "llvm-objdump").exists() else "llvm-objdump"
-        nm = str(bindir / "llvm-nm") if (bindir / "llvm-nm").exists() else "llvm-nm"
-    else:
-        objdump, nm = "arm-none-eabi-objdump", "arm-none-eabi-nm"
     pairs = []
-    for old_bld, prefix, new_prefix in ((w / "old-async", "srt_icount_", "tap_sr_async_icount_" if at_least("3.6") else "srt_icount_"),
-                                        (w / "old-ratio", "ratio_icount_", "tap_sr_bridge_icount_" if at_least("3.6") else "ratio_icount_")):
+    for old_bld, (prefix, new_prefix) in ((w / "old-async", prefixes["async"]),
+                                          (w / "old-ratio", prefixes["bridge"])):
         for f in sorted(glob.glob(str(old_bld / "**" / (prefix + "*")), recursive=True)):
             if not (os.path.isfile(f) and os.access(f, os.X_OK)):
                 continue

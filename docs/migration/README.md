@@ -11,6 +11,8 @@ committed at step 0 and deleted at step 4 (`runs.md` may be kept).
 | `collect.py` | collectors for the snapshot gates (G1, G2, G6, G9, G10, G12) |
 | `snapshot/` | the step-0 snapshot those collectors compare against |
 | `allow.txt` | G1 allowlist: test rows a job may gain (never lose) |
+| `allow-g3.txt` | G3 allowlist: per (target, engine, workload), one symbol and the exact icount delta it accounts for (3.2's Hexagon `memcpy` rows) |
+| `fncount.c` | qemu plugin for G3's proof of each `allow-g3.txt` row: exact per-function instruction counts, compared as a multiset over every other symbol |
 | `runs.md` | provenance of the snapshot, and the run record of every gated SHA (G13) |
 | `gates.py` | the gates as the `migration-gates` workflow runs them: `host`, `cross --target`, `notebooks` |
 | `step.txt` | the step the current commit is gated as; selects the rename classes every gate expects |
@@ -36,4 +38,5 @@ committed at step 0 and deleted at step 4 (`runs.md` may be kept).
   replaces. A loosened cross-validation tolerance in that tree is reported
   as one residual hunk.
 - **A/B gates** (G3, G4, G5, G7, G11) never read files here except
-  `tips.txt`: they rebuild S0/R0 and the gated SHA in one job.
+  `tips.txt` and G3's `allow-g3.txt` (proved by `fncount.c`): they rebuild
+  S0/R0 and the gated SHA in one job.
