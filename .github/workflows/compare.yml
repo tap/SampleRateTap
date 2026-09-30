@@ -68,7 +68,7 @@ jobs:
                 -kernel build-$tgt/async/bench/icount/$bin 2>&1)
               echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
                 echo "$out"; echo "::error::$tgt $bin did not complete"; exit 1; }
-              n=$(echo "$out" | grep -o 'SRT_INSN_COUNT [0-9]*' | cut -d' ' -f2)
+              n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
               echo "CMP_COUNT $tgt $bin $n"
             done
           done
@@ -127,6 +127,6 @@ jobs:
               build-hex/async/bench/icount/$bin 2>&1)
             echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
               echo "$out"; echo "::error::hexagon $bin did not complete"; exit 1; }
-            n=$(echo "$out" | grep -o 'SRT_INSN_COUNT [0-9]*' | cut -d' ' -f2)
+            n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
             echo "CMP_COUNT hexagon $bin $n"
           done

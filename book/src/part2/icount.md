@@ -72,7 +72,7 @@ running a single-threaded workload, so the simple counter is exact — and
 the precondition is written down where the next porter will read it.
 
 The second function is the entire output interface: an `atexit` callback
-prints one line, `SRT_INSN_COUNT <n>`, through `qemu_plugin_outs()`. That
+prints one line, `TAP_SR_INSN_COUNT <n>`, through `qemu_plugin_outs()`. That
 choice has a trap the driver script had to learn about:
 
 ```python

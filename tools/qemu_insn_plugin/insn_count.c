@@ -1,7 +1,7 @@
 /* Minimal QEMU TCG plugin: counts executed guest instructions and prints
  * one line at exit:
  *
- *   SRT_INSN_COUNT <n>
+ *   TAP_SR_INSN_COUNT <n>
  *
  * Used by scripts/icount.py for the deterministic performance ratchet
  * (docs/PERFORMANCE.md). Counting uses the inline-add fast path; the single
@@ -35,7 +35,7 @@ static void tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb* tb) {
 static void at_exit(qemu_plugin_id_t id, void* userdata) {
     (void)id;
     (void)userdata;
-    g_autofree gchar* msg = g_strdup_printf("SRT_INSN_COUNT %" PRIu64 "\n", insn_count);
+    g_autofree gchar* msg = g_strdup_printf("TAP_SR_INSN_COUNT %" PRIu64 "\n", insn_count);
     qemu_plugin_outs(msg);
 }
 /* ANCHOR_END: pf_hooks */

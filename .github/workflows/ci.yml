@@ -333,10 +333,12 @@ jobs:
   # bridge/PLAN.md section 7): fixed workloads under QEMU with a counting
   # plugin, gated two-sided at ±3% against each engine's
   # bench/baselines.json. Noise-free, so a hard gate is safe on shared
-  # runners. One job per engine until migration step 2 unifies the harness:
-  # each engine still has its own plugin marker and icount.py.
+  # runners. One job per target measures both engines with the shared
+  # harness (tools/qemu_insn_plugin, scripts/icount.py --engine); each
+  # engine is still its own gated step, so one engine's regression never
+  # hides the other's numbers.
   icount-ratchet:
-    name: Instruction-count ratchet (${{ matrix.engine }})
+    name: Instruction-count ratchet (${{ matrix.target }})
     # Pinned image: the counts are a function of the apt toolchain, the
     # plugin build and QEMU, so the job must not straddle an image rollout.
     runs-on: ubuntu-24.04
@@ -344,15 +346,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - engine: async
-            plugin_src: tools/qemu_insn_plugin/insn_count.c
-            icount: scripts/icount.py
-            bench: -DSRT_BUILD_ICOUNT_BENCH=ON
-          - engine: bridge
-            plugin_src: bridge/tools/qemu_insn_plugin/insn_count.c
-            icount: bridge/scripts/icount.py
-            bench: -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+        target: [m55, m33, hexagon]
     env:
       # Commit the v8.2.2 tag pointed at when pinned (tags are movable;
       # commit SHAs are not), with the header's digest verified on download.
@@ -365,10 +359,6 @@ jobs:
       # Same hard pin as the qemu job: this job also writes the shared
       # toolchain cache, so it verifies against the same digest.
       HEXAGON_TOOLCHAIN_SHA256: "55b41922318f6331590ab7baa7f5dbdd99c109327a9c44a52c5e9878fab148c1"
-      # Both engines' tests and examples OFF: workloads only.
-      WORKLOADS_ONLY: >-
-        -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF
-        -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -388,7 +378,7 @@ jobs:
             echo "::error::qemu-plugin.h checksum mismatch"; exit 1
           fi
           gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/tmp \
-            -o /tmp/libinsncount.so ${{ matrix.plugin_src }}
+            -o /tmp/libinsncount.so tools/qemu_insn_plugin/insn_count.c
 
       # What produced the counts: the runner image and the toolchain packages
       # (the counts move when either does).
@@ -399,45 +389,11 @@ jobs:
           dpkg-query -W gcc-arm-none-eabi qemu-system-arm
           echo "os=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
 
-      # Release (-O2), matching how the baselines were recorded.
-      - name: Build M55 workloads
-        run: >
-          cmake -B build-m55
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake
-          $WORKLOADS_ONLY ${{ matrix.bench }}
-          && cmake --build build-m55 -j 4
-
-      - name: Ratchet M55
-        run: >
-          python3 ${{ matrix.icount }} --target m55
-          --build-dir build-m55 --plugin /tmp/libinsncount.so
-          --baselines ${{ matrix.engine }}/bench/baselines.json
-
-      - name: Build M33 workloads
-        if: ${{ !cancelled() }}
-        run: >
-          cmake -B build-m33
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake
-          $WORKLOADS_ONLY ${{ matrix.bench }}
-          && cmake --build build-m33 -j 4
-
-      - name: Ratchet M33
-        if: ${{ !cancelled() }}
-        run: >
-          python3 ${{ matrix.icount }} --target m33
-          --build-dir build-m33 --plugin /tmp/libinsncount.so
-          --baselines ${{ matrix.engine }}/bench/baselines.json
-
       # Neither Debian's nor the CodeLinaro toolchain's qemu-hexagon enables
       # TCG plugins, so the Hexagon leg builds its own from the pinned QEMU
       # release (linux-user target only, ~4 min, cached thereafter).
-      # The remaining ratchet steps run even if an earlier target failed
-      # (each target's numbers are independent evidence). The job still
-      # fails if any step failed.
       - name: Cache plugin-enabled qemu-hexagon
-        if: ${{ !cancelled() }}
+        if: matrix.target == 'hexagon'
         id: qemu-hex
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
@@ -448,7 +404,7 @@ jobs:
           key: qemu-hexagon-plugins-${{ steps.image.outputs.os }}-${{ env.QEMU_SRC_URL }}-1
 
       - name: Build plugin-enabled qemu-hexagon
-        if: ${{ !cancelled() && steps.qemu-hex.outputs.cache-hit != 'true' }}
+        if: matrix.target == 'hexagon' && steps.qemu-hex.outputs.cache-hit != 'true'
         run: |
           curl -sfLo /tmp/qemu-src.tar.xz "$QEMU_SRC_URL"
           actual=$(sha256sum /tmp/qemu-src.tar.xz | cut -d' ' -f1)
@@ -465,15 +421,15 @@ jobs:
           cp build/qemu-hexagon ~/qemu-hexagon-plugins/
 
       - name: Cache Hexagon toolchain
-        if: ${{ !cancelled() }}
+        if: matrix.target == 'hexagon'
         id: cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/hexagon
           key: hexagon-toolchain-${{ env.HEXAGON_TOOLCHAIN_SHA256 }}-1
 
-      - name: Ratchet Hexagon
-        if: ${{ !cancelled() }}
+      - name: Hexagon toolchain and plugin-enabled qemu on PATH
+        if: matrix.target == 'hexagon'
         run: |
           if [ "${{ steps.cache.outputs.cache-hit }}" != "true" ]; then
             scripts/fetch_hexagon_toolchain.sh
@@ -484,27 +440,59 @@ jobs:
             echo "::error::hexagon cross compiler not found under ~/hexagon"
             exit 1
           fi
-          bindir=$(dirname "$clangxx")
-          export PATH="$HOME/qemu-hexagon-plugins:$bindir:$PATH"
           test -x "$HOME/qemu-hexagon-plugins/qemu-hexagon" || {
             echo "::error::plugin-enabled qemu-hexagon missing"; exit 1; }
           # qemu exits 1 with or without plugin support here (no guest binary
           # was given), so probe by the error text, not the exit code.
-          if qemu-hexagon -plugin help 2>&1 | grep -q "unknown option"; then
+          if "$HOME/qemu-hexagon-plugins/qemu-hexagon" -plugin help 2>&1 | grep -q "unknown option"; then
             echo "::error::built qemu-hexagon lacks plugin support"; exit 1
           fi
-          cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
-            $WORKLOADS_ONLY ${{ matrix.bench }}
-          cmake --build build-hex -j 4
-          python3 ${{ matrix.icount }} --target hexagon \
-            --build-dir build-hex --plugin /tmp/libinsncount.so \
-            --baselines ${{ matrix.engine }}/bench/baselines.json
+          # Each GITHUB_PATH line is prepended, so the last one wins: the
+          # plugin-enabled qemu-hexagon must shadow any the toolchain bundles.
+          echo "$(dirname "$clangxx")" >> "$GITHUB_PATH"
+          echo "$HOME/qemu-hexagon-plugins" >> "$GITHUB_PATH"
 
-      # Each engine README's instruction-count table derives 1:1 from its
-      # committed baselines; regenerating it must produce no diff.
-      - name: Docs freshness
+      # Release (-O2), matching how the baselines were recorded; both engines'
+      # workloads in one tree, tests and examples off.
+      - name: Build workloads (both engines)
+        run: |
+          case "${{ matrix.target }}" in
+            m55) tc=cmake/arm-cortex-m55-mps3.cmake ;;
+            m33) tc=cmake/arm-cortex-m33-mps2.cmake ;;
+            hexagon) tc=cmake/hexagon-linux-musl.cmake ;;
+          esac
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$tc \
+            -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
+            -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
+            -DSRT_BUILD_ICOUNT_BENCH=ON -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+          cmake --build build -j 4
+
+      - name: Ratchet async
+        run: >
+          python3 scripts/icount.py --engine async --target ${{ matrix.target }}
+          --build-dir build --plugin /tmp/libinsncount.so
+
+      # Runs even if async failed: each engine's numbers are independent
+      # evidence. The job still fails if either step failed.
+      - name: Ratchet bridge
         if: ${{ !cancelled() }}
+        run: >
+          python3 scripts/icount.py --engine bridge --target ${{ matrix.target }}
+          --build-dir build --plugin /tmp/libinsncount.so
+
+  # Each engine README's instruction-count table derives 1:1 from its
+  # committed baselines; regenerating it must produce no diff.
+  icount-docs:
+    name: Icount docs freshness (${{ matrix.engine }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [async, bridge]
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Docs freshness
         run: |
           python3 scripts/update_icount_docs.py --engine ${{ matrix.engine }}
           git diff --exit-code ${{ matrix.engine }}/README.md || {

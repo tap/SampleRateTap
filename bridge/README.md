@@ -123,8 +123,9 @@ Pi Pico 2 class), **Cortex-M55** (mps3-an547) and **Hexagon**
 (qemu-hexagon, static musl), and gates ten fixed conversion workloads
 (direction × float/Q15/Q31 at the economy profile, plus four profile
 variants) against committed per-target instruction
-counts (`bench/baselines.json`, two-sided ±3% — see `scripts/icount.py`),
-run from the repository root:
+counts (`bench/baselines.json`, two-sided ±3%), measured by the family's
+shared harness (`scripts/icount.py --engine bridge`, `tools/qemu_insn_plugin/`)
+from the repository root:
 The counts are deterministic, so the M7 optimization campaign in
 [PLAN.md](PLAN.md) lands one measured lever at a time:
 
@@ -135,8 +136,8 @@ cmake -B build-m55 -DCMAKE_BUILD_TYPE=Release \
       -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
       -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
 cmake --build build-m55 -j
-python3 bridge/scripts/icount.py --target m55 --build-dir build-m55 \
-      --baselines bridge/bench/baselines.json --plugin libinsncount.so
+python3 scripts/icount.py --engine bridge --target m55 --build-dir build-m55 \
+      --plugin libinsncount.so
 ```
 
 <!-- ICOUNT:BEGIN -->
