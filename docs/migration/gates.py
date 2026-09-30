@@ -193,41 +193,71 @@ def g7(old: dict, new: dict, label: str):
 
 def disasm(elf: str, objdump: str, nm: str, mapper) -> dict:
     """Normalized instruction lists keyed by mapped demangled function name
-    (after the MONOREPO_PLAN G4 normalizer: addresses and RIP displacements
-    stripped, literal-pool words symbolized, string literals resolved)."""
+    (the MONOREPO_PLAN G4 normalizer). Stripped: addresses, call/branch
+    targets' addresses (their symbol names stay), RIP displacements and
+    disassembler comments. A literal-pool word becomes a string literal's
+    text if it points at one, the symbol it points INTO (by nm -S extent)
+    if any, or else the name of the section it points into; other words
+    stay raw constants. The data layout may move when a string's length
+    changes (D15's exception prefixes); the code must not."""
     from elftools.elf.elffile import ELFFile
     syms = []
-    for line in out([nm, "-C", "-n", elf]).splitlines():
-        p = line.split(" ", 2)
-        if len(p) == 3 and p[1] not in "aUwN":
-            syms.append((int(p[0], 16), mapper(p[2])))
+    for line in out([nm, "-C", "-n", "-S", elf]).splitlines():
+        m = re.match(r"^([0-9a-f]+)(?: ([0-9a-f]+))? (\S) (.*)$", line)
+        if m and m.group(3) not in "aUwNv":
+            size = int(m.group(2), 16) if m.group(2) else 0
+            syms.append((int(m.group(1), 16), size, mapper(m.group(4))))
     syms.sort()
-    addrs = [a for a, _ in syms]
-    lo, hi = (addrs[0], addrs[-1]) if addrs else (0, 0)
-    segs = []
+    addrs = [a for a, _, _ in syms]
+    secs, funcs_at = [], []
     with open(elf, "rb") as fh:
-        for s in ELFFile(fh).iter_sections():
-            if s["sh_addr"] and s["sh_type"] == "SHT_PROGBITS":
-                segs.append((s["sh_addr"], s.data()))
+        ef = ELFFile(fh)
+        symtab = ef.get_section_by_name(".symtab")
+        for sy in (symtab.iter_symbols() if symtab else []):
+            if sy["st_info"]["type"] == "STT_FUNC" and sy["st_size"] > 0:
+                start = sy["st_value"] & ~1  # Thumb bit
+                funcs_at.append((start, start + sy["st_size"]))
+        for sec in ef.iter_sections():
+            if sec["sh_addr"] and sec["sh_type"] in ("SHT_PROGBITS", "SHT_NOBITS", "SHT_INIT_ARRAY", "SHT_FINI_ARRAY"):
+                data = sec.data() if sec["sh_type"] != "SHT_NOBITS" else b""
+                secs.append((sec["sh_addr"], sec["sh_size"], sec.name, data))
 
-    def sym(v):
-        i = bisect.bisect_right(addrs, v) - 1
-        if i < 0:
-            return hex(v)
-        a, n = syms[i]
-        return f"{n}+{v - a:#x}"
-
-    def cstr(v):
-        for a, d in segs:
-            if a <= v < a + len(d):
-                o = v - a
-                e = d.find(b"\0", o)
-                if e < 0 or e - o > 400:
-                    return None
-                b = d[o:e]
-                if b and all(32 <= c < 127 or c in (9, 10) for c in b):
-                    return mapper(b.decode())
+    def section(v):
+        for a, size, name, data in secs:
+            if a <= v < a + size:
+                return name, a, data
         return None
+
+    def symbolize(v):
+        i = bisect.bisect_right(addrs, v) - 1
+        if i >= 0:
+            a, size, n = syms[i]
+            if v == a or v < a + size:
+                return f"<{n}+{v - a:#x}>"
+        sec = section(v)
+        if sec is None:
+            return f"{v:#x}"
+        name, a, data = sec
+        o = v - a
+        e = data.find(b"\0", o) if o < len(data) else -1
+        if 0 <= e - o <= 400 and e > o:
+            b = data[o:e]
+            if all(32 <= c < 127 or c in (9, 10) for c in b):
+                # Mapped as a C string literal, quotes included: some rules
+                # (D15's exception prefix) anchor on the opening quote.
+                return repr(mapper('"' + b.decode() + '"')[1:-1])
+        return f"<data in {name}>"
+
+    # Only bytes inside an STT_FUNC's extent are code. Bare-metal links put
+    # read-only data (string pools, typeinfo, vtables) in .text too, and
+    # objdump decodes it as instructions; its bytes move whenever a string
+    # changes length, which G5's checksums and G3's counts already cover.
+    funcs_at.sort()
+    starts = [a for a, _ in funcs_at]
+
+    def in_code(addr):
+        i = bisect.bisect_right(starts, addr) - 1
+        return i >= 0 and addr < funcs_at[i][1]
 
     funcs, cur = {}, None
     for line in out([objdump, "-d", "--no-show-raw-insn", "-C", elf]).splitlines():
@@ -236,22 +266,20 @@ def disasm(elf: str, objdump: str, nm: str, mapper) -> dict:
             cur = mapper(m.group(1))
             funcs.setdefault(cur, [])
             continue
-        m = re.match(r"^\s*[0-9a-f]+:\s+(.*)$", line)
-        if not m or cur is None:
+        m = re.match(r"^\s*([0-9a-f]+):\s+(.*)$", line)
+        if not m or cur is None or not in_code(int(m.group(1), 16)):
             continue
-        ins = mapper(m.group(1))
-        ins = re.sub(r"\s+#.*$", "", ins)
-        ins = re.sub(r"\s*[@;].*$", "", ins)
-        ins = re.sub(r"-?0x[0-9a-f]+\(%rip\)", "REL(%rip)", ins)
+        ins = mapper(m.group(2))
+        # Target addresses first: a PLT name like <new(...)@plt> contains '@'.
         ins = re.sub(r"\b[0-9a-f]+ <([^>]*)>", r"<\1>", ins)
+        ins = re.sub(r"\s+#\s.*$", "", ins)
+        ins = re.sub(r"\s+[@;]\s.*$", "", ins)
+        ins = re.sub(r"-?0x[0-9a-f]+\(%rip\)", "REL(%rip)", ins)
         w = re.match(r"^\.word\s+0x([0-9a-f]+)$", ins)
         if w:
-            v = int(w.group(1), 16)
-            if lo <= v <= hi + 0x100000:
-                s = cstr(v)
-                ins = ".word " + (repr(s) if s is not None else "<" + sym(v) + ">")
+            ins = ".word " + symbolize(int(w.group(1), 16))
         funcs[cur].append(ins)
-    return funcs
+    return {k: v for k, v in funcs.items() if v}
 
 
 def demangled_mapper(s: str) -> str:
