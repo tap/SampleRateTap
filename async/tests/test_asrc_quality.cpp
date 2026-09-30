@@ -19,13 +19,13 @@ namespace {
     // transfer) and measures the residual after removing the fitted fundamental
     // from the last second of output. The output normalized frequency is the
     // input normalized frequency scaled by fsIn/fsOut.
-    double measure_snr_db(const tap::samplerate::filter_spec& spec, double freq_hz) {
-        tap::samplerate::config cfg;
+    double measure_snr_db(const tap::sr::async::filter_spec& spec, double freq_hz) {
+        tap::sr::async::config cfg;
         cfg.channels = 1;
         cfg.filter   = spec;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim                      sim{
-                                 .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        tap::sr::async::converter asrc(cfg);
+        async_test::two_clock_sim sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu_in = freq_hz / k_fs;
         sim.gen            = [&](std::uint64_t i) {
             return static_cast<float>(k_amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));
@@ -41,13 +41,13 @@ namespace {
             }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
+        EXPECT_EQ(asrc.status().state, tap::sr::async::converter_state::locked);
         const double nu_out_expected = nu_in * (1.0 + k_eps);
-        const auto   fit             = srt_test::fit_sine_tracked(tail, nu_out_expected);
+        const auto   fit             = async_test::fit_sine_tracked(tail, nu_out_expected);
         EXPECT_NEAR(fit.amplitude, k_amp, 0.01);
         // The tracked frequency must still match the true clock ratio closely.
         EXPECT_NEAR(fit.freq_norm / nu_out_expected, 1.0, 2e-6);
-        const double snr = srt_test::snr_db(fit);
+        const double snr = async_test::snr_db(fit);
         std::printf("[ measured ] %5.0f Hz, %zu phases: SNR %.1f dB\n", freq_hz, spec.num_phases, snr);
         return snr;
     }
@@ -58,22 +58,22 @@ namespace {
     // phase-table rows, which falls ~12 dB per doubling of numPhases and rises
     // ~12 dB per octave of signal frequency.
     TEST(AsrcQuality, Balanced997Hz) {
-        EXPECT_GT(measure_snr_db(tap::samplerate::filter_spec::balanced(), 997.0), 128.0);
+        EXPECT_GT(measure_snr_db(tap::sr::async::filter_spec::balanced(), 997.0), 128.0);
     }
     TEST(AsrcQuality, Balanced6kHz) {
-        EXPECT_GT(measure_snr_db(tap::samplerate::filter_spec::balanced(), 6000.0), 114.0);
+        EXPECT_GT(measure_snr_db(tap::sr::async::filter_spec::balanced(), 6000.0), 114.0);
     }
     TEST(AsrcQuality, Balanced12kHz) {
-        EXPECT_GT(measure_snr_db(tap::samplerate::filter_spec::balanced(), 12000.0), 106.0);
+        EXPECT_GT(measure_snr_db(tap::sr::async::filter_spec::balanced(), 12000.0), 106.0);
     }
     TEST(AsrcQuality, Balanced19_5kHz) {
-        EXPECT_GT(measure_snr_db(tap::samplerate::filter_spec::balanced(), 19500.0), 100.0);
+        EXPECT_GT(measure_snr_db(tap::sr::async::filter_spec::balanced(), 19500.0), 100.0);
     }
     TEST(AsrcQuality, Transparent997Hz) {
-        EXPECT_GT(measure_snr_db(tap::samplerate::filter_spec::transparent(), 997.0), 128.0);
+        EXPECT_GT(measure_snr_db(tap::sr::async::filter_spec::transparent(), 997.0), 128.0);
     }
     TEST(AsrcQuality, Transparent19_5kHz) {
-        EXPECT_GT(measure_snr_db(tap::samplerate::filter_spec::transparent(), 19500.0), 103.0);
+        EXPECT_GT(measure_snr_db(tap::sr::async::filter_spec::transparent(), 19500.0), 103.0);
     }
 
 } // namespace

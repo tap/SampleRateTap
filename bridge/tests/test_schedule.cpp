@@ -16,10 +16,10 @@
 
 namespace {
 
-    using tap::ratio::direction;
-    using tap::ratio::frames_needed;
-    using tap::ratio::k_schedule;
-    using tap::ratio::ratio_traits;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::frames_needed;
+    using tap::sr::bridge::k_schedule;
+    using tap::sr::bridge::ratio_traits;
 
     // The schedule is a compile-time constant; pin a few facts statically.
     static_assert(k_schedule<direction::up_to_48k>.size() == 160);

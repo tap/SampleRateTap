@@ -25,11 +25,11 @@ struct SrtHandle; // opaque
 }
 
 namespace {
-    tap::samplerate::async_sample_rate_converter* impl(SrtHandle* h) noexcept {
-        return reinterpret_cast<tap::samplerate::async_sample_rate_converter*>(h);
+    tap::sr::async::converter* impl(SrtHandle* h) noexcept {
+        return reinterpret_cast<tap::sr::async::converter*>(h);
     }
-    const tap::samplerate::async_sample_rate_converter* impl(const SrtHandle* h) noexcept {
-        return reinterpret_cast<const tap::samplerate::async_sample_rate_converter*>(h);
+    const tap::sr::async::converter* impl(const SrtHandle* h) noexcept {
+        return reinterpret_cast<const tap::sr::async::converter*>(h);
     }
 } // namespace
 // ANCHOR_END: abi_impl
@@ -44,16 +44,16 @@ unsigned srt_version(void) noexcept {
 /// preset: 0 = fast, 1 = balanced, 2 = transparent.
 SrtHandle* srt_create(double sample_rate_hz, std::size_t channels, std::size_t target_latency_frames,
                       int preset) noexcept {
-    tap::samplerate::config cfg;
+    tap::sr::async::config cfg;
     cfg.sample_rate_hz = sample_rate_hz;
     cfg.channels       = channels;
     if (target_latency_frames != 0)
         cfg.target_latency_frames = target_latency_frames;
-    cfg.filter = preset == 0   ? tap::samplerate::filter_spec::fast()
-                 : preset == 2 ? tap::samplerate::filter_spec::transparent()
-                               : tap::samplerate::filter_spec::balanced();
+    cfg.filter = preset == 0   ? tap::sr::async::filter_spec::fast()
+                 : preset == 2 ? tap::sr::async::filter_spec::transparent()
+                               : tap::sr::async::filter_spec::balanced();
     try {
-        return reinterpret_cast<SrtHandle*>(new tap::samplerate::async_sample_rate_converter(cfg));
+        return reinterpret_cast<SrtHandle*>(new tap::sr::async::converter(cfg));
     }
     catch (...) {
         return nullptr;
@@ -83,13 +83,13 @@ void srt_status(const SrtHandle* h, double out[6]) noexcept {
             out[i] = 0.0;
         return;
     }
-    const tap::samplerate::converter_status s = impl(h)->status();
-    out[0]                                    = static_cast<double>(static_cast<int>(s.state));
-    out[1]                                    = s.ppm;
-    out[2]                                    = s.fifo_fill_frames;
-    out[3]                                    = static_cast<double>(s.underruns);
-    out[4]                                    = static_cast<double>(s.overruns);
-    out[5]                                    = static_cast<double>(s.resyncs);
+    const tap::sr::async::converter_status s = impl(h)->status();
+    out[0]                                   = static_cast<double>(static_cast<int>(s.state));
+    out[1]                                   = s.ppm;
+    out[2]                                   = s.fifo_fill_frames;
+    out[3]                                   = static_cast<double>(s.underruns);
+    out[4]                                   = static_cast<double>(s.overruns);
+    out[5]                                   = static_cast<double>(s.resyncs);
 }
 
 double srt_designed_latency_seconds(const SrtHandle* h) noexcept {

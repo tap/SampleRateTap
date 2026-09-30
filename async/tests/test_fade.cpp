@@ -12,9 +12,9 @@ namespace {
     // observable: the first produced frame is strongly attenuated and the
     // output reaches the full DC value once the ramp has passed.
     TEST(Fade, OutputRampsAfterFill) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
+        tap::sr::async::converter asrc(cfg);
 
         std::vector<float> in(32, 0.5f);
         std::vector<float> out(32);

@@ -97,7 +97,7 @@ candidate.
 Virtual dispatch also answers a question nobody asked. Dynamic dispatch
 buys the ability to choose the implementation *at run time* — but a
 converter's sample type is fixed at the moment you write
-`async_sample_rate_converter_q15`. Paying the vtable price for flexibility that
+`converter_q15`. Paying the vtable price for flexibility that
 is never exercised is the definition of the wrong tool.
 
 ### Why not CRTP
@@ -363,13 +363,13 @@ the file *enforce* it:
 ```
 
 The datapath templates constrain themselves with it —
-`template <sample_type S> class basic_async_sample_rate_converter` — and the
+`template <sample_type S> class basic_converter` — and the
 payoff is the shape of the failure. Instantiate the converter with
 `double` (no specialization exists) and, without the concept, the error
 would surface wherever the template machinery first touched the undefined
 traits — some line deep inside `interpolate()`, wearing five frames of
 instantiation context. With the concept, the compiler rejects
-`basic_async_sample_rate_converter<double>` *at the declaration you wrote*,
+`basic_converter<double>` *at the declaration you wrote*,
 and its diagnostic walks the `requires`-expression clause by clause: which
 operation is missing, what signature it expected. The concept turns "a
 missing operation somewhere" into a checklist. Write a partial
@@ -422,7 +422,7 @@ python3 -c "print(32767*65535, 2**31-1, 1 - 32767*65535/(2**31-1))"
 #     and DcGainIsUnityQ15 fails its ±4 tolerance.
 #  2. In finalize (Q15), delete clamp_sat and cast directly — the full-scale
 #     sine test detects wraparound as a blown second difference.
-#  3. Instantiate tap::samplerate::basic_async_sample_rate_converter<double> anywhere and
+#  3. Instantiate tap::sr::async::basic_converter<double> anywhere and
 #     read the concept diagnostic: every missing operation, by name, at the
 #     line you wrote.
 ```

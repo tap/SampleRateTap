@@ -19,7 +19,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace tap::samplerate {
+namespace tap::sr::async {
 
     // ANCHOR: contract
     /// Lock-free SPSC ring buffer of trivially copyable elements.
@@ -137,4 +137,4 @@ namespace tap::samplerate {
         // ANCHOR_END: layout
     };
 
-} // namespace tap::samplerate
+} // namespace tap::sr::async

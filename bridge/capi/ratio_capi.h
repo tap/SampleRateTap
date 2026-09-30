@@ -29,7 +29,7 @@ typedef struct ratio_converter ratio_converter;
 ratio_converter* ratio_create(int direction, int profile, unsigned channels);
 void             ratio_destroy(ratio_converter* c);
 
-/// Exact accounting (see tap::ratio::basic_converter).
+/// Exact accounting (see tap::sr::bridge::basic_converter).
 uint64_t ratio_outputs_for(const ratio_converter* c, uint64_t in_frames);
 uint64_t ratio_frames_needed(const ratio_converter* c, uint64_t out_frames);
 

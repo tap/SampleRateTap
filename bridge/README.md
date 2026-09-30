@@ -42,7 +42,7 @@ quantization, measurement instruments).
 ```cpp
 #include <tap/sr/bridge/ratio.h>
 
-tap::ratio::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
+tap::sr::bridge::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
 // profiles: economy() (default, 18 kHz passband) | balanced() (19 kHz,
 // the pre-v0.3 default) | transparent() (120 dB pristine tier) |
 // super_economy() (16 kHz voice/comms tier — audible top-octave shelf)
@@ -112,7 +112,7 @@ ctest --test-dir build --output-on-failure -L '^ratio$'
 This engine lives in `bridge/` of the SampleRateTap family repository; the
 root build configures both engines, and the `ratio` label selects this one's
 tests. Consume with `add_subdirectory` (or FetchContent) and link
-`tap::ratio`; the DspTap submodule at the repository root rides along
+`tap::sr::bridge`; the DspTap submodule at the repository root rides along
 automatically.
 
 ### Embedded targets and the instruction-count ratchet

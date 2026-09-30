@@ -41,7 +41,7 @@
 #define TAP_RATIO_VERSION_MINOR 3
 #define TAP_RATIO_VERSION_PATCH 0
 
-namespace tap::ratio {
+namespace tap::sr::bridge {
 
     /// The fixed rational ratio pair this library exists for: 44.1 -> 48 kHz
     /// upsamples by 160/147; 48 -> 44.1 kHz downsamples by 147/160. Phase
@@ -51,4 +51,4 @@ namespace tap::ratio {
     inline constexpr unsigned k_phases_up   = 160; ///< L for 44.1 -> 48
     inline constexpr unsigned k_phases_down = 147; ///< L for 48 -> 44.1
 
-} // namespace tap::ratio
+} // namespace tap::sr::bridge

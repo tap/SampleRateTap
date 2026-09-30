@@ -68,7 +68,7 @@ policy:
 
 | Decision | Choice |
 |---|---|
-| Namespace | `tap::ratio` |
+| Namespace | `tap::sr::bridge` |
 | Include path | `include/tap/sr/bridge/…` (the DspTap-style convention: path mirrors namespace) |
 | Direction | **Compile-time** template parameter; two concrete instantiations. Working names: `basic_converter<Sample, direction>` with `direction::up_to_48k` / `direction::down_to_44k1` and aliases per sample type (bikeshed open, see §9) |
 | Sample types | `float`, Q15 (`int16_t`), Q31 (`int32_t`) via `tap::dsp::sample_traits`. **Q15 is the flagship embedded profile** (Bluetooth-adjacent M33/M55 deployments) |
@@ -190,7 +190,7 @@ executed (it measures the shipping C++, not a Python re-implementation).
   Appendices A and B). DspTap gains the shared FIR substrate; SampleRateTap
   adopts it via submodule with re-export shims. Gate: both repos' CI green,
   SampleRateTap icount baselines unchanged (proving the move is free).
-- **M1 — skeleton.** CMake (`tap::ratio` INTERFACE target), TapHouse
+- **M1 — skeleton.** CMake (`tap::sr::bridge` INTERFACE target), TapHouse
   adoption, DspTap submodule, host CI (Linux/macOS/Windows + ASan/UBSan),
   README carrying the §1 charter, LICENSE (MIT).
 - **M2 — design spike + tables.** The notebook that designs both prototypes
@@ -457,7 +457,7 @@ asset. Everything moves from SampleRateTap `include/tap/sr/async/` /
    `llround(exact × scale)`).
 5. `analysis/sine_analysis.h`, `analysis/multitone_analysis.h` — the
    measurement instruments from `tests/support/`, generalized out of the
-   `tap::samplerate` test namespace.
+   `tap::sr::async` test namespace.
 
 **Documentation:**
 
@@ -491,7 +491,7 @@ by the gates below.*
    SessionStart hook already runs submodule init, so web sessions keep
    working unchanged.)
 2. **Shims / refactors**:
-   - `tap/dsp/kaiser.h` → re-export shim (`tap::samplerate::detail`
+   - `tap/dsp/kaiser.h` → re-export shim (`tap::sr::async::detail`
      using-declarations for the design functions; historical include path
      keeps compiling).
    - `tap/sr/async/sample_traits.h` → keeps its name and full interface, now
@@ -515,7 +515,7 @@ by the gates below.*
 
 **Follow-up PR, same era, not part of M0**: `include/tap/sr/async/` →
 `include/tap/samplerate/` rename with forwarding headers at the old paths
-(deprecation window), completing the `srt` → `tap::samplerate` namespace
+(deprecation window), completing the `srt` → `tap::sr::async` namespace
 migration. Kept separate so the M0 diff stays reviewable.
 
 ---

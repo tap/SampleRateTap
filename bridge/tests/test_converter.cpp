@@ -22,11 +22,11 @@
 
 namespace {
 
-    using tap::ratio::basic_converter;
-    using tap::ratio::direction;
-    using tap::ratio::k_schedule;
-    using tap::ratio::profile;
-    using tap::ratio::ratio_traits;
+    using tap::sr::bridge::basic_converter;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::k_schedule;
+    using tap::sr::bridge::profile;
+    using tap::sr::bridge::ratio_traits;
 
     template <direction D>
     using conv = basic_converter<float, D>;

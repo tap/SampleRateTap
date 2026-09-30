@@ -15,9 +15,9 @@
 
 namespace {
 
-    using tap::ratio::basic_phase_table;
-    using tap::ratio::direction;
-    using tap::ratio::profile;
+    using tap::sr::bridge::basic_phase_table;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::profile;
 
     template <typename S>
     class phase_table_test : public ::testing::Test {};

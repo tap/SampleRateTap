@@ -12,7 +12,7 @@
 #include "tap/dsp/sample_traits.h"
 #include "tap/sr/bridge/design.h"
 
-namespace tap::ratio {
+namespace tap::sr::bridge {
 
     // ANCHOR: rt_phase_table
     /// Immutable polyphase coefficient table, designed at construction.
@@ -92,4 +92,4 @@ namespace tap::ratio {
     };
     // ANCHOR_END: rt_phase_table
 
-} // namespace tap::ratio
+} // namespace tap::sr::bridge

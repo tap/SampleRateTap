@@ -10,7 +10,7 @@
 
 #include "tap/sr/bridge/design.h"
 
-namespace tap::ratio {
+namespace tap::sr::bridge {
 
     // ANCHOR: rt_schedule
     /// One output frame's step: which polyphase branch to dot, and how many
@@ -59,4 +59,4 @@ namespace tap::ratio {
     }
     // ANCHOR_END: rt_schedule
 
-} // namespace tap::ratio
+} // namespace tap::sr::bridge

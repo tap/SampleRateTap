@@ -58,7 +58,7 @@ namespace {
             return static_cast<S>(v);
         }
         else {
-            return tap::samplerate::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return tap::sr::async::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
         }
     }
 
@@ -94,11 +94,11 @@ namespace {
     }
 
     template <class S>
-    void hash_one(const char* preset_name, const tap::samplerate::filter_spec& spec, double ppm) {
-        const tap::samplerate::polyphase_filter_bank<S> bank(spec, k_fs);
-        tap::samplerate::fractional_resampler<S>        rs(bank, k_channels);
-        const std::vector<S>                            x   = multitone<S>();
-        std::size_t                                     fed = 0;
+    void hash_one(const char* preset_name, const tap::sr::async::filter_spec& spec, double ppm) {
+        const tap::sr::async::polyphase_filter_bank<S> bank(spec, k_fs);
+        tap::sr::async::fractional_resampler<S>        rs(bank, k_channels);
+        const std::vector<S>                           x   = multitone<S>();
+        std::size_t                                    fed = 0;
         auto pop = [&](S* dst, std::size_t max_frames) noexcept -> std::size_t {
             std::size_t n = 0;
             for (; n < max_frames && fed < k_in_frames; ++n, ++fed) {
@@ -122,7 +122,7 @@ namespace {
                     static_cast<unsigned long long>(fnv1a64(y.data(), y.size() * sizeof(S))));
     }
 
-    void hash_preset(const char* preset_name, const tap::samplerate::filter_spec& spec) {
+    void hash_preset(const char* preset_name, const tap::sr::async::filter_spec& spec) {
         for (const double ppm : k_ppm_offsets) {
             hash_one<float>(preset_name, spec, ppm);
             hash_one<std::int16_t>(preset_name, spec, ppm);
@@ -131,16 +131,16 @@ namespace {
     }
 
     TEST(OutputHash, Fast) {
-        hash_preset("fast", tap::samplerate::filter_spec::fast());
+        hash_preset("fast", tap::sr::async::filter_spec::fast());
     }
     TEST(OutputHash, Economy) {
-        hash_preset("economy", tap::samplerate::filter_spec::economy());
+        hash_preset("economy", tap::sr::async::filter_spec::economy());
     }
     TEST(OutputHash, Balanced) {
-        hash_preset("balanced", tap::samplerate::filter_spec::balanced());
+        hash_preset("balanced", tap::sr::async::filter_spec::balanced());
     }
     TEST(OutputHash, Transparent) {
-        hash_preset("transparent", tap::samplerate::filter_spec::transparent());
+        hash_preset("transparent", tap::sr::async::filter_spec::transparent());
     }
 
 } // namespace

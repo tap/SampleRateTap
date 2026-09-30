@@ -18,7 +18,7 @@
 #include "tap/sr/async/sample_traits.h"
 #include "tap/sr/async/spsc_ring.h"
 
-namespace tap::samplerate {
+namespace tap::sr::async {
 
     // ANCHOR: p0_config
     /// Converter configuration. The defaults give ~1.5 ms designed latency at
@@ -41,7 +41,7 @@ namespace tap::samplerate {
         /// see filter_spec::scaledTo and servo_config::scaledTo — and is the
         /// recommended starting point for any non-48 kHz deployment:
         ///
-        ///   tap::samplerate::Config cfg = tap::samplerate::Config::forSampleRate(16000.0);
+        ///   tap::sr::async::Config cfg = tap::sr::async::Config::forSampleRate(16000.0);
         ///   cfg.channels = ...;            // then adjust as usual
         ///
         /// Frame-denominated fields (targetLatencyFrames, fifoFrames) are
@@ -97,9 +97,9 @@ namespace tap::samplerate {
     /// design and may throw; push(), pull(), status() and resetFromConsumer() are
     /// noexcept, lock-free and allocation-free.
     template <sample_type S>
-    class basic_async_sample_rate_converter {
+    class basic_converter {
       public:
-        explicit basic_async_sample_rate_converter(const config& cfg)
+        explicit basic_converter(const config& cfg)
             : m_cfg(validated(cfg))
             , m_bank(m_cfg.filter, m_cfg.sample_rate_hz)
             , m_resampler(m_bank, m_cfg.channels, k_pop_chunk_frames)
@@ -110,7 +110,7 @@ namespace tap::samplerate {
             , m_high_water_frames(
                   std::max(3 * m_cfg.target_latency_frames, m_fill_threshold_frames + m_cfg.target_latency_frames)) {
             if (m_ring.capacity() / m_cfg.channels <= m_high_water_frames) {
-                throw std::invalid_argument("async_sample_rate_converter: fifoFrames too small");
+                throw std::invalid_argument("tap::sr::async::converter: fifoFrames too small");
             }
             // Largest setpoint the FIFO capacity supports while keeping the
             // high-watermark relation; bounds the adaptive raise in pull().
@@ -123,8 +123,8 @@ namespace tap::samplerate {
             m_effective_target.store(static_cast<std::uint32_t>(m_target_frames), std::memory_order_relaxed);
         }
 
-        basic_async_sample_rate_converter(const basic_async_sample_rate_converter&)            = delete;
-        basic_async_sample_rate_converter& operator=(const basic_async_sample_rate_converter&) = delete;
+        basic_converter(const basic_converter&)            = delete;
+        basic_converter& operator=(const basic_converter&) = delete;
 
         /// Producer thread: offer `frames` interleaved input frames at the input
         /// clock. Returns frames accepted; fewer than `frames` means the FIFO was
@@ -340,12 +340,12 @@ namespace tap::samplerate {
             const auto finite = [](double v) { return std::isfinite(v); };
             if (cfg.channels == 0 || cfg.target_latency_frames == 0 || !finite(cfg.sample_rate_hz)
                 || cfg.sample_rate_hz <= 0.0) {
-                throw std::invalid_argument("async_sample_rate_converter: bad Config");
+                throw std::invalid_argument("tap::sr::async::converter: bad Config");
             }
             const filter_spec& f = cfg.filter;
             if (!finite(f.passband_hz) || !finite(f.stopband_hz) || !finite(f.stopband_atten_db)
                 || f.passband_hz + f.stopband_hz > cfg.sample_rate_hz) {
-                throw std::invalid_argument("async_sample_rate_converter: bad filter_spec "
+                throw std::invalid_argument("tap::sr::async::converter: bad filter_spec "
                                             "(need passbandHz + stopbandHz <= sampleRateHz)");
             }
             const servo_config& sv = cfg.servo;
@@ -355,7 +355,7 @@ namespace tap::samplerate {
                 || !finite(sv.quiet_hold_seconds) || !finite(sv.unlock_threshold_frames)
                 || !finite(sv.max_deviation_ppm) || sv.max_deviation_ppm <= 0.0
                 || sv.max_deviation_ppm > 100000.0) { // |eps| stays far from the Q0.64 int64 limit
-                throw std::invalid_argument("async_sample_rate_converter: bad servo_config");
+                throw std::invalid_argument("tap::sr::async::converter: bad servo_config");
             }
             // Size products evaluated later must not wrap on 32-bit size_t.
             const auto mul_ok = [](std::size_t a, std::size_t b) {
@@ -365,7 +365,7 @@ namespace tap::samplerate {
             if (!mul_ok(phases + 1, f.taps_per_phase)
                 || !mul_ok(cfg.target_latency_frames + f.taps_per_phase, 8 * cfg.channels)
                 || !mul_ok(cfg.fifo_frames, 2 * cfg.channels)) {
-                throw std::invalid_argument("async_sample_rate_converter: Config sizes overflow");
+                throw std::invalid_argument("tap::sr::async::converter: Config sizes overflow");
             }
             return cfg;
         }
@@ -406,10 +406,10 @@ namespace tap::samplerate {
     };
 
     /// The float converter.
-    using async_sample_rate_converter = basic_async_sample_rate_converter<float>;
+    using converter = basic_converter<float>;
     /// Q15 fixed-point converter (int16_t samples; see sample_traits<int16_t>).
-    using async_sample_rate_converter_q15 = basic_async_sample_rate_converter<std::int16_t>;
+    using converter_q15 = basic_converter<std::int16_t>;
     /// Q31 fixed-point converter (int32_t samples; see sample_traits<int32_t>).
-    using async_sample_rate_converter_q31 = basic_async_sample_rate_converter<std::int32_t>;
+    using converter_q31 = basic_converter<std::int32_t>;
 
-} // namespace tap::samplerate
+} // namespace tap::sr::async

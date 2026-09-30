@@ -23,15 +23,15 @@ namespace {
     // 24 pink-weighted tones, 60 Hz - 16 kHz, through a +200 ppm offset; the
     // residual after removing every tone is everything the converter got wrong,
     // weighted the way real program material weights it.
-    double measure_program_snr_db(const tap::samplerate::filter_spec& spec) {
-        tap::samplerate::config cfg;
+    double measure_program_snr_db(const tap::sr::async::filter_spec& spec) {
+        tap::sr::async::config cfg;
         cfg.channels = 1;
         cfg.filter   = spec;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
-        const double                                 fs_in = k_fs * (1.0 + k_eps);
-        srt_test::two_clock_sim                      sim{
-                                 .asrc = asrc, .fs_in = fs_in, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
-        const auto comb = srt_test::tone_comb::pink(24, 60.0, 16000.0, 0.9);
+        tap::sr::async::converter asrc(cfg);
+        const double              fs_in = k_fs * (1.0 + k_eps);
+        async_test::two_clock_sim sim{
+            .asrc = asrc, .fs_in = fs_in, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        const auto comb = async_test::tone_comb::pink(24, 60.0, 16000.0, 0.9);
         sim.gen         = [&](std::uint64_t i) { return static_cast<float>(comb.sample_at(i, fs_in)); };
         std::vector<float> tail;
         tail.reserve(48000);
@@ -42,8 +42,8 @@ namespace {
             }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
-        const double snr = srt_test::program_weighted_snr_db(tail, comb, fs_in, k_fs);
+        EXPECT_EQ(asrc.status().state, tap::sr::async::converter_state::locked);
+        const double snr = async_test::program_weighted_snr_db(tail, comb, fs_in, k_fs);
         std::printf("[ measured ] program-weighted (24 pink tones), %zu phases x %zu taps: %.1f dB\n", spec.num_phases,
                     spec.taps_per_phase, snr);
         return snr;
@@ -52,13 +52,13 @@ namespace {
 
     // Worst-case single sine near Nyquist, for the honesty line in economy()'s
     // documentation: this preset trades exactly this number.
-    double measure_sine_snr_db(const tap::samplerate::filter_spec& spec, double freq_hz) {
-        tap::samplerate::config cfg;
+    double measure_sine_snr_db(const tap::sr::async::filter_spec& spec, double freq_hz) {
+        tap::sr::async::config cfg;
         cfg.channels = 1;
         cfg.filter   = spec;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim                      sim{
-                                 .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        tap::sr::async::converter asrc(cfg);
+        async_test::two_clock_sim sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu_in = freq_hz / k_fs;
         sim.gen            = [&](std::uint64_t i) {
             return static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));
@@ -70,8 +70,8 @@ namespace {
                 tail.insert(tail.end(), x, x + frames);
             }
         });
-        const auto   fit = srt_test::fit_sine_tracked(tail, nu_in * (1.0 + k_eps));
-        const double snr = srt_test::snr_db(fit);
+        const auto   fit = async_test::fit_sine_tracked(tail, nu_in * (1.0 + k_eps));
+        const double snr = async_test::snr_db(fit);
         std::printf("[ measured ] economy %5.0f Hz sine: %.1f dB\n", freq_hz, snr);
         return snr;
     }
@@ -80,7 +80,7 @@ namespace {
     // tones (with a deliberate 0.137 ppm ratio offset, mimicking servo
     // settling residue) must measure at the double-precision fit floor.
     TEST(ProgramWeighted, InstrumentFloor) {
-        const auto         comb = srt_test::tone_comb::pink(24, 60.0, 16000.0, 0.9);
+        const auto         comb = async_test::tone_comb::pink(24, 60.0, 16000.0, 0.9);
         const double       rho  = 1.0 + 0.137e-6;
         std::vector<float> tail(48000);
         for (std::size_t i = 0; i < tail.size(); ++i) {
@@ -92,7 +92,7 @@ namespace {
             }
             tail[i] = static_cast<float>(v);
         }
-        const double snr = srt_test::program_weighted_snr_db(tail, comb, k_fs * (1.0 + k_eps), k_fs);
+        const double snr = async_test::program_weighted_snr_db(tail, comb, k_fs * (1.0 + k_eps), k_fs);
         std::printf("[ measured ] instrument floor (synthetic exact tones): %.1f dB\n", snr);
         // float storage of the tail quantizes at ~ -150 dB; the fit must reach
         // it (measured 151.9 dB).
@@ -106,12 +106,12 @@ namespace {
     // while its worst-case sine near Nyquist honestly reads ~96 dB-class.
     TEST(ProgramWeighted, BalancedBaseline) {
         // Measured 134.5 dB.
-        EXPECT_GT(measure_program_snr_db(tap::samplerate::filter_spec::balanced()), 128.0);
+        EXPECT_GT(measure_program_snr_db(tap::sr::async::filter_spec::balanced()), 128.0);
     }
     TEST(ProgramWeighted, EconomyNearBalanced) {
         // Measured 131.6 dB — 2.9 dB under balanced at 2/3 the per-sample
         // compute. This single number is the preset's reason to exist.
-        const double eco = measure_program_snr_db(tap::samplerate::filter_spec::economy());
+        const double eco = measure_program_snr_db(tap::sr::async::filter_spec::economy());
         EXPECT_GT(eco, 125.0);
     }
     TEST(ProgramWeighted, EconomyWorstCaseSineIsDocumented) {
@@ -119,7 +119,7 @@ namespace {
         // "96 dB-class"; the extra gap to 77 dB at 19.5 kHz is the L=512
         // interpolation floor at 0.40625 of the sample rate plus the design's
         // transition starting at 18 kHz.)
-        EXPECT_GT(measure_sine_snr_db(tap::samplerate::filter_spec::economy(), 19500.0), 70.0);
+        EXPECT_GT(measure_sine_snr_db(tap::sr::async::filter_spec::economy(), 19500.0), 70.0);
     }
 
 } // namespace

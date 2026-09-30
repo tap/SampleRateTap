@@ -46,7 +46,7 @@
 #include <cmath>
 #include <numbers>
 
-namespace tap::samplerate {
+namespace tap::sr::async {
 
     // ANCHOR: sv_config
     /// Servo tuning. Defaults suit a 48 kHz near-unity converter.
@@ -263,4 +263,4 @@ namespace tap::samplerate {
         lock_stage   m_stage      = lock_stage::acquire;
     };
 
-} // namespace tap::samplerate
+} // namespace tap::sr::async

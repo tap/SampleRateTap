@@ -83,10 +83,10 @@ namespace {
     };
 
     template <typename S>
-    void srtBench(benchmark::State& state, const tap::samplerate::filter_spec& spec, std::size_t channels) {
-        const tap::samplerate::polyphase_filter_bank<S> bank(spec, 48000.0);
-        tap::samplerate::fractional_resampler<S>        rs(bank, channels);
-        InputTap                                        inFloat(48000, channels);
+    void srtBench(benchmark::State& state, const tap::sr::async::filter_spec& spec, std::size_t channels) {
+        const tap::sr::async::polyphase_filter_bank<S> bank(spec, 48000.0);
+        tap::sr::async::fractional_resampler<S>        rs(bank, channels);
+        InputTap                                       inFloat(48000, channels);
         // Requantize the shared float source once at setup for fixed-point runs.
         std::vector<S> buf(48000 * channels);
         {
@@ -96,8 +96,8 @@ namespace {
                 if constexpr (std::is_floating_point_v<S>)
                     buf[i] = tmp[i];
                 else
-                    buf[i] = tap::samplerate::detail::round_sat<S>(
-                        static_cast<double>(tmp[i]) * static_cast<double>(std::numeric_limits<S>::max()));
+                    buf[i] = tap::sr::async::detail::round_sat<S>(static_cast<double>(tmp[i])
+                                                                  * static_cast<double>(std::numeric_limits<S>::max()));
             }
         }
         std::size_t pos = 0;
@@ -217,13 +217,13 @@ namespace {
 
     // --- ~120 dB tier: mono / stereo / 8ch -------------------------------------
     void BM_SRT_Balanced_1ch(benchmark::State& s) {
-        srtBench<float>(s, tap::samplerate::filter_spec::balanced(), 1);
+        srtBench<float>(s, tap::sr::async::filter_spec::balanced(), 1);
     }
     void BM_SRT_Balanced_2ch(benchmark::State& s) {
-        srtBench<float>(s, tap::samplerate::filter_spec::balanced(), 2);
+        srtBench<float>(s, tap::sr::async::filter_spec::balanced(), 2);
     }
     void BM_SRT_Balanced_8ch(benchmark::State& s) {
-        srtBench<float>(s, tap::samplerate::filter_spec::balanced(), 8);
+        srtBench<float>(s, tap::sr::async::filter_spec::balanced(), 8);
     }
     void BM_LSR_Medium_1ch(benchmark::State& s) {
         lsrBench(s, SRC_SINC_MEDIUM_QUALITY, 1);
@@ -277,7 +277,7 @@ namespace {
 
     // --- ~140 dB tier, stereo ---------------------------------------------------
     void BM_SRT_Transparent_2ch(benchmark::State& s) {
-        srtBench<float>(s, tap::samplerate::filter_spec::transparent(), 2);
+        srtBench<float>(s, tap::sr::async::filter_spec::transparent(), 2);
     }
     void BM_LSR_Best_2ch(benchmark::State& s) {
         lsrBench(s, SRC_SINC_BEST_QUALITY, 2);
@@ -300,7 +300,7 @@ namespace {
     // --- Fixed-point (no competitor analog; libsamplerate, soxr and r8brain
     // are floating-point engines — this is the row embedded targets actually run) ------
     void BM_SRT_Q15_Balanced_2ch(benchmark::State& s) {
-        srtBench<std::int16_t>(s, tap::samplerate::filter_spec::balanced(), 2);
+        srtBench<std::int16_t>(s, tap::sr::async::filter_spec::balanced(), 2);
     }
     BENCHMARK(BM_SRT_Q15_Balanced_2ch);
 

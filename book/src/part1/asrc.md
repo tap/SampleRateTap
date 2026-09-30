@@ -16,7 +16,7 @@ any single file.
 The cast, assembled: a `polyphase_filter_bank` designed at construction, a
 `fractional_resampler` that owns the history and the phase, a `spsc_ring`
 carrying interleaved frames between the two clock domains, and a `pi_servo`
-turning ring occupancy into a rate estimate. `basic_async_sample_rate_converter`
+turning ring occupancy into a rate estimate. `basic_converter`
 wires them together and adds the four things none of them could own alone:
 a lifecycle state machine, an under/overrun policy, telemetry, and
 validation.

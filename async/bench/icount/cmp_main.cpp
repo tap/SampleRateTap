@@ -76,15 +76,15 @@ namespace {
             if constexpr (std::is_floating_point_v<S>)
                 out[i] = in[i];
             else
-                out[i] = tap::samplerate::detail::round_sat<S>(static_cast<double>(in[i])
-                                                               * static_cast<double>(std::numeric_limits<S>::max()));
+                out[i] = tap::sr::async::detail::round_sat<S>(static_cast<double>(in[i])
+                                                              * static_cast<double>(std::numeric_limits<S>::max()));
         }
         return out;
     }
 
     double run() {
-        const tap::samplerate::polyphase_filter_bank<Sample> bank(tap::samplerate::filter_spec::balanced(), 48000.0);
-        tap::samplerate::fractional_resampler<Sample>        rs(bank, kCh);
+        const tap::sr::async::polyphase_filter_bank<Sample> bank(tap::sr::async::filter_spec::balanced(), 48000.0);
+        tap::sr::async::fractional_resampler<Sample>        rs(bank, kCh);
         const auto  input = toSample<Sample>(sineInput(12000)); // 0.25 s, cycled
         std::size_t pos   = 0;
         const auto  pop   = [&](Sample* dst, std::size_t n) {

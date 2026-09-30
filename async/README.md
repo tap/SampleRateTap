@@ -34,10 +34,10 @@ target_link_libraries(app PRIVATE SampleRateTap::SampleRateTap)
 ```cpp
 #include <tap/sr/async/async.h>
 
-tap::samplerate::config cfg;
+tap::sr::async::config cfg;
 cfg.sample_rate_hz = 48000.0;
 cfg.channels = 2;
-tap::samplerate::async_sample_rate_converter asrc(cfg);   // allocates + designs filter; may throw
+tap::sr::async::converter asrc(cfg);   // allocates + designs filter; may throw
 
 // Input-device thread (input clock):
 asrc.push(input_interleaved, frames);       // noexcept, lock-free
@@ -46,7 +46,7 @@ asrc.push(input_interleaved, frames);       // noexcept, lock-free
 asrc.pull(output_interleaved, frames);      // noexcept, lock-free; silence
                                            // until filled/locked
 
-tap::samplerate::converter_status st = asrc.status();            // any thread: state, ppm, fill,
+tap::sr::async::converter_status st = asrc.status();            // any thread: state, ppm, fill,
                                            // underruns/overruns/resyncs
 ```
 
@@ -233,7 +233,7 @@ reference-microphone processing — but `filter_spec` band edges and
 `servo_config` bandwidths are absolute Hz designed for ~48 kHz, and running
 another rate with unscaled defaults silently costs quality (measured:
 ~32 dB at 16 kHz). Start any non-48 kHz deployment from
-`tap::samplerate::config::for_sample_rate(rate_hz)`, which rescales both (plus the servo
+`tap::sr::async::config::for_sample_rate(rate_hz)`, which rescales both (plus the servo
 hold times); `filter_spec::scaled_to` / `servo_config::scaled_to` exist for
 custom presets. Measured through that factory
 (`tests/test_asrc_quality_16k.cpp`), 16 kHz matches the 48 kHz
@@ -360,14 +360,14 @@ Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 
 
 ## Sample types
 
-The datapath is templated on the sample type via `tap::samplerate::sample_traits`
+The datapath is templated on the sample type via `tap::sr::async::sample_traits`
 (`include/tap/sr/async/sample_traits.h`). Three formats are provided:
 
 | Type | Alias | Format | Measured SNR (997 Hz / 19.5 kHz, half scale, +200 ppm) |
 |---|---|---|---|
-| `float` | `async_sample_rate_converter` | float I/O, double accumulation | 135 dB / 105 dB |
-| `std::int32_t` | `async_sample_rate_converter_q31` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
-| `std::int16_t` | `async_sample_rate_converter_q15` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
+| `float` | `converter` | float I/O, double accumulation | 135 dB / 105 dB |
+| `std::int32_t` | `converter_q31` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
+| `std::int16_t` | `converter_q15` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
 
 The fixed-point datapaths have integer-only inner loops (the μ blend factor
 is converted once per output sample), making them the appropriate choice for

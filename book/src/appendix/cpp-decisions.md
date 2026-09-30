@@ -74,11 +74,11 @@ by a concept:
 
 ```cpp
 template <sample_type S>
-class basic_async_sample_rate_converter { ... };
+class basic_converter { ... };
 
-using async_sample_rate_converter    = basic_async_sample_rate_converter<float>;
-using async_sample_rate_converter_q15 = basic_async_sample_rate_converter<std::int16_t>;
-using async_sample_rate_converter_q31 = basic_async_sample_rate_converter<std::int32_t>;
+using converter    = basic_converter<float>;
+using converter_q15 = basic_converter<std::int16_t>;
+using converter_q31 = basic_converter<std::int32_t>;
 ```
 
 The first rejected alternative is virtual dispatch: an abstract
@@ -600,8 +600,8 @@ the conversion is a `reinterpret_cast` in a pair of helpers:
 extern "C" { struct SrtHandle; } // opaque
 
 namespace {
-tap::samplerate::async_sample_rate_converter* impl(SrtHandle* h) noexcept { ... }
-const tap::samplerate::async_sample_rate_converter* impl(const SrtHandle* h) noexcept { ... }
+tap::sr::async::converter* impl(SrtHandle* h) noexcept { ... }
+const tap::sr::async::converter* impl(const SrtHandle* h) noexcept { ... }
 }
 ```
 
@@ -638,7 +638,7 @@ spsc_ring(const spsc_ring&) = delete;
 spsc_ring& operator=(const spsc_ring&) = delete;
 ```
 
-and likewise `basic_async_sample_rate_converter`. The rejected alternative —
+and likewise `basic_converter`. The rejected alternative —
 letting the compiler generate copies, or writing "deep copy" semantics —
 fails the simplest question first: *what would a copy even mean?* A ring
 mid-stream has a producer thread and a consumer thread holding a

@@ -5,7 +5,7 @@
 /// \brief Sample-type customization point for the resampling datapath.
 ///
 /// The datapath (polyphase_filter_bank, the interpolation kernel,
-/// fractional_resampler, basic_async_sample_rate_converter) is templated on the
+/// fractional_resampler, basic_converter) is templated on the
 /// sample type through sample_traits<T>. Three sample types are provided:
 ///
 ///  - float        : float I/O and coefficients, double accumulation
@@ -35,7 +35,7 @@
 
 #include "tap/dsp/sample_traits.h"
 
-namespace tap::samplerate {
+namespace tap::sr::async {
 
     namespace detail {
 
@@ -162,4 +162,4 @@ namespace tap::samplerate {
     static_assert(sample_type<std::int32_t>);
     // ANCHOR_END: st_concept
 
-} // namespace tap::samplerate
+} // namespace tap::sr::async

@@ -11,7 +11,7 @@
 
 #include "tap/dsp/kaiser.h"
 
-namespace tap::ratio {
+namespace tap::sr::bridge {
 
     // ANCHOR: rt_direction
     /// Conversion direction — a compile-time parameter, per the charter: the
@@ -132,7 +132,7 @@ namespace tap::ratio {
         using traits = ratio_traits<D>;
         if (!(std::isfinite(p.passband_hz) && std::isfinite(p.stopband_atten_db)) || p.passband_hz <= 0.0
             || p.passband_hz >= traits::k_stopband_edge_hz || p.stopband_atten_db <= 0.0 || p.taps<D>() < 4) {
-            throw std::invalid_argument("tap::ratio::design_prototype: bad profile");
+            throw std::invalid_argument("tap::sr::bridge::design_prototype: bad profile");
         }
         std::vector<double> h(traits::k_phases * p.taps<D>());
         const double        cutoff_norm = (p.passband_hz + traits::k_stopband_edge_hz) / traits::k_input_rate_hz;
@@ -163,4 +163,4 @@ namespace tap::ratio {
     }
     // ANCHOR_END: rt_design
 
-} // namespace tap::ratio
+} // namespace tap::sr::bridge

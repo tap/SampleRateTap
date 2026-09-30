@@ -47,7 +47,7 @@
 
 namespace {
 
-    using Asrc = tap::samplerate::async_sample_rate_converter_q15;
+    using Asrc = tap::sr::async::converter_q15;
 
     constexpr std::size_t kBlockFrames  = 32;
     constexpr std::size_t kMaxChannels  = 12;
@@ -301,18 +301,18 @@ namespace {
     // balanced() with band edges scaled to 16 kHz: identical L/T — same table
     // size and same per-frame cycle cost — with pass/stop at the same normalized
     // frequencies (README "Measured performance"; tests/test_asrc_quality_16k.cpp).
-    tap::samplerate::filter_spec balanced16k() {
-        tap::samplerate::filter_spec f = tap::samplerate::filter_spec::balanced();
-        f.passband_hz                  = 20000.0 * 16.0 / 48.0;
-        f.stopband_hz                  = 28000.0 * 16.0 / 48.0;
+    tap::sr::async::filter_spec balanced16k() {
+        tap::sr::async::filter_spec f = tap::sr::async::filter_spec::balanced();
+        f.passband_hz                 = 20000.0 * 16.0 / 48.0;
+        f.stopband_hz                 = 28000.0 * 16.0 / 48.0;
         return f;
     }
 
-    const char* stateName(tap::samplerate::converter_state s) {
+    const char* stateName(tap::sr::async::converter_state s) {
         switch (s) {
-        case tap::samplerate::converter_state::filling:
+        case tap::sr::async::converter_state::filling:
             return "Filling";
-        case tap::samplerate::converter_state::acquiring:
+        case tap::sr::async::converter_state::acquiring:
             return "Acquiring";
         default:
             return "Locked";
@@ -329,7 +329,7 @@ namespace {
         const double              w = 2.0 * std::numbers::pi * 997.0 / rateHz;
         for (std::size_t f = 0; f < kInputFrames; ++f) {
             const auto v =
-                tap::samplerate::detail::round_sat<std::int16_t>(0.5 * std::sin(w * static_cast<double>(f)) * 32767.0);
+                tap::sr::async::detail::round_sat<std::int16_t>(0.5 * std::sin(w * static_cast<double>(f)) * 32767.0);
             for (std::size_t c = 0; c < channels; ++c)
                 out[f * channels + c] = v;
         }
@@ -339,7 +339,7 @@ namespace {
     PhaseResult runPhase(const PhaseSpec& ph) {
         PhaseResult r;
 
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.sample_rate_hz        = ph.rateHz;
         cfg.channels              = ph.channels;
         cfg.target_latency_frames = kTargetLatencyFrames;
@@ -411,8 +411,8 @@ namespace {
             if (off + kBlockFrames * ph.channels > input.size())
                 off = 0;
 
-            const tap::samplerate::converter_status st = asrc->status();
-            if (!locked && st.state == tap::samplerate::converter_state::locked) {
+            const tap::sr::async::converter_status st = asrc->status();
+            if (!locked && st.state == tap::sr::async::converter_state::locked) {
                 locked    = true;
                 lockUs    = time_us_64() - tStart;
                 undAtLock = st.underruns;
@@ -451,9 +451,9 @@ namespace {
         g.stop.store(true, std::memory_order_release);
         while (!g.consumerDone.load(std::memory_order_acquire))
             tight_loop_contents();
-        const Snapshot                          fin = readSnapshot();
-        const tap::samplerate::converter_status st  = asrc->status();
-        ppmFinal                                    = st.ppm;
+        const Snapshot                         fin = readSnapshot();
+        const tap::sr::async::converter_status st  = asrc->status();
+        ppmFinal                                   = st.ppm;
         g.asrc.store(nullptr, std::memory_order_release);
 
         // PASS = the deployment-shape claims, made falsifiable:

@@ -32,9 +32,9 @@
 
 namespace {
 
-    using tap::ratio::basic_converter;
-    using tap::ratio::direction;
-    using tap::ratio::profile;
+    using tap::sr::bridge::basic_converter;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::profile;
 
     constexpr std::size_t k_channels  = 2;
     constexpr std::size_t k_in_frames = 2940; // a whole number of 147-frame schedule periods

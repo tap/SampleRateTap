@@ -13,15 +13,15 @@ namespace {
 
     // Direction is a compile-time template parameter in C++; the C ABI makes
     // it a runtime tag over the two instantiations.
-    template <tap::ratio::direction D>
-    using conv = tap::ratio::basic_converter<float, D>;
+    template <tap::sr::bridge::direction D>
+    using conv = tap::sr::bridge::basic_converter<float, D>;
 
 } // namespace
 
 struct ratio_converter {
-    int                                        dir; // 0 up, 1 down
-    conv<tap::ratio::direction::up_to_48k>*    up   = nullptr;
-    conv<tap::ratio::direction::down_to_44k1>* down = nullptr;
+    int                                             dir; // 0 up, 1 down
+    conv<tap::sr::bridge::direction::up_to_48k>*    up   = nullptr;
+    conv<tap::sr::bridge::direction::down_to_44k1>* down = nullptr;
 
     ~ratio_converter() {
         delete up;
@@ -35,20 +35,20 @@ ratio_converter* ratio_create(int direction, int profile, unsigned channels) {
     if ((direction != 0 && direction != 1) || profile < 0 || profile > 3 || channels == 0) {
         return nullptr;
     }
-    const tap::ratio::profile p = profile == 0   ? tap::ratio::profile::economy()
-                                  : profile == 1 ? tap::ratio::profile::transparent()
-                                  : profile == 2 ? tap::ratio::profile::balanced()
-                                                 : tap::ratio::profile::super_economy();
+    const tap::sr::bridge::profile p = profile == 0   ? tap::sr::bridge::profile::economy()
+                                       : profile == 1 ? tap::sr::bridge::profile::transparent()
+                                       : profile == 2 ? tap::sr::bridge::profile::balanced()
+                                                      : tap::sr::bridge::profile::super_economy();
     try {
         // unique_ptr owns the wrapper until the converter constructor has
         // succeeded, so a throw below cannot leak it.
         auto c = std::make_unique<ratio_converter>();
         c->dir = direction;
         if (direction == 0) {
-            c->up = new conv<tap::ratio::direction::up_to_48k>(channels, p);
+            c->up = new conv<tap::sr::bridge::direction::up_to_48k>(channels, p);
         }
         else {
-            c->down = new conv<tap::ratio::direction::down_to_44k1>(channels, p);
+            c->down = new conv<tap::sr::bridge::direction::down_to_44k1>(channels, p);
         }
         return c.release();
     }

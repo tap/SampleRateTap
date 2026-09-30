@@ -12,20 +12,20 @@ namespace {
     constexpr double k_fs = 48000.0;
 
     TEST(Polyphase, DcGainIsUnityAcrossMu) {
-        const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::balanced(), k_fs);
-        std::vector<float>                                  ones(bank.taps(), 1.0f);
-        std::mt19937                                        rng(7);
-        std::uniform_real_distribution<double>              uni(0.0, 1.0);
+        const tap::sr::async::polyphase_filter_bank<float> bank(tap::sr::async::filter_spec::balanced(), k_fs);
+        std::vector<float>                                 ones(bank.taps(), 1.0f);
+        std::mt19937                                       rng(7);
+        std::uniform_real_distribution<double>             uni(0.0, 1.0);
         for (int i = 0; i < 64; ++i) {
             const double mu = uni(rng);
-            EXPECT_NEAR(tap::samplerate::interpolate(bank, ones.data(), mu), 1.0, 1e-4) << "mu=" << mu;
+            EXPECT_NEAR(tap::sr::async::interpolate(bank, ones.data(), mu), 1.0, 1e-4) << "mu=" << mu;
         }
     }
 
     TEST(Polyphase, ExtraRowEqualsPhaseZeroAdvancedOneTap) {
-        const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::balanced(), k_fs);
-        const std::size_t                                   L = bank.num_phases();
-        const std::size_t                                   T = bank.taps();
+        const tap::sr::async::polyphase_filter_bank<float> bank(tap::sr::async::filter_spec::balanced(), k_fs);
+        const std::size_t                                  L = bank.num_phases();
+        const std::size_t                                  T = bank.taps();
         // Rows are stored tap-reversed over an oldest-first window, so "advanced
         // by one input sample" means row L shifted one slot toward newer samples:
         // phase(L)[u] == phase(0)[u-1], with the oldest slot of row L zero.
@@ -38,7 +38,7 @@ namespace {
     // Worst-case fractional-delay error against the analytic sine, swept over mu.
     // The interpolated output at fractional position mu corresponds to input time
     // tau = J - T/2 + mu + 1/(2L) where J is the newest sample index in the window.
-    double max_error_db(const tap::samplerate::polyphase_filter_bank<float>& bank, double freq_hz) {
+    double max_error_db(const tap::sr::async::polyphase_filter_bank<float>& bank, double freq_hz) {
         const double       nu = freq_hz / k_fs;
         const std::size_t  T  = bank.taps();
         const double       L  = static_cast<double>(bank.num_phases());
@@ -54,7 +54,7 @@ namespace {
                 const double tau      = static_cast<double>(J) - static_cast<double>(T) / 2.0 + mu + 1.0 / (2.0 * L);
                 const double expected = std::sin(2.0 * std::numbers::pi * nu * tau);
                 const double err =
-                    std::abs(static_cast<double>(tap::samplerate::interpolate(bank, hist, mu)) - expected);
+                    std::abs(static_cast<double>(tap::sr::async::interpolate(bank, hist, mu)) - expected);
                 max_err = std::max(max_err, err);
             }
         }
@@ -62,7 +62,7 @@ namespace {
     }
 
     TEST(Polyphase, FractionalDelayAccuracyBalanced) {
-        const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::balanced(), k_fs);
+        const tap::sr::async::polyphase_filter_bank<float> bank(tap::sr::async::filter_spec::balanced(), k_fs);
         // Error budget: this absolute-error sweep sees BOTH the inter-phase
         // interpolation floor and the prototype's in-spec passband ripple (a
         // gain deviation of r dB reads here as 20*log10(10^(r/20)-1): the
@@ -81,7 +81,7 @@ namespace {
     }
 
     TEST(Polyphase, FractionalDelayAccuracyTransparent) {
-        const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::transparent(), k_fs);
+        const tap::sr::async::polyphase_filter_bank<float> bank(tap::sr::async::filter_spec::transparent(), k_fs);
         EXPECT_LT(max_error_db(bank, 997.0), -104.0);
         EXPECT_LT(max_error_db(bank, 19000.0), -80.0);
     }
@@ -89,18 +89,18 @@ namespace {
     TEST(Polyphase, MuWrapIsContinuousWithWindowShift) {
         // interpolate(hist, mu -> 1) must equal interpolate(hist shifted by one
         // newer sample, mu = 0): the whole-sample slip invariant.
-        const tap::samplerate::polyphase_filter_bank<float> bank(tap::samplerate::filter_spec::balanced(), k_fs);
-        const std::size_t                                   T = bank.taps();
-        std::vector<float>                                  x(2 * T);
-        std::mt19937                                        rng(99);
-        std::uniform_real_distribution<float>               uni(-1.0f, 1.0f);
+        const tap::sr::async::polyphase_filter_bank<float> bank(tap::sr::async::filter_spec::balanced(), k_fs);
+        const std::size_t                                  T = bank.taps();
+        std::vector<float>                                 x(2 * T);
+        std::mt19937                                       rng(99);
+        std::uniform_real_distribution<float>              uni(-1.0f, 1.0f);
         for (auto& v : x) {
             v = uni(rng);
         }
         const float* hist_old = x.data();     // window ending at x[T-1]
         const float* hist_new = x.data() + 1; // window ending at x[T]
-        const float  at_wrap  = tap::samplerate::interpolate(bank, hist_old, 1.0 - 1e-9);
-        const float  at_zero  = tap::samplerate::interpolate(bank, hist_new, 0.0);
+        const float  at_wrap  = tap::sr::async::interpolate(bank, hist_old, 1.0 - 1e-9);
+        const float  at_zero  = tap::sr::async::interpolate(bank, hist_new, 0.0);
         EXPECT_NEAR(at_wrap, at_zero, 1e-4);
     }
 

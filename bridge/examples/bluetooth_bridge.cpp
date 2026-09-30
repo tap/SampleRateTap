@@ -43,12 +43,12 @@ int main() {
     constexpr double k_amp     = 0.5;
 
     // Stage 1 (BT side): exact rational 44.1 -> 48, economy profile.
-    tap::ratio::converter_to_48k ratio(1);
+    tap::sr::bridge::converter_to_48k ratio(1);
 
     // Stage 2 (clock boundary): near-unity ASRC at nominal 48 kHz.
-    tap::samplerate::config cfg;
+    tap::sr::async::config cfg;
     cfg.channels = 1;
-    tap::samplerate::async_sample_rate_converter asrc(cfg);
+    tap::sr::async::converter asrc(cfg);
 
     // Deterministic two-clock simulation: for every local 48 kHz output
     // block we owe the BT domain dt * 44100 * (1 + ppm) input samples;
@@ -92,7 +92,7 @@ int main() {
     const auto st = asrc.status();
     // The ASRC sees the BT crystal's ppm, unchanged through the fixed ratio.
     std::printf("asrc state: %s, ppm estimate: %+.1f (crystal: %+.1f)\n",
-                st.state == tap::samplerate::converter_state::locked ? "locked" : "not locked", st.ppm, k_bt_ppm);
+                st.state == tap::sr::async::converter_state::locked ? "locked" : "not locked", st.ppm, k_bt_ppm);
 
     // The recovered tone at the local clock: 997 Hz exactly (the tone rode
     // the BT crystal, and the bridge absorbed both the ratio and the drift).
@@ -103,7 +103,7 @@ int main() {
                 ratio.latency_input_frames() / 44100.0 * 1e3 + asrc.designed_latency_seconds() * 1e3,
                 ratio.latency_input_frames() / 44100.0 * 1e3, asrc.designed_latency_seconds() * 1e3);
 
-    const bool ok = st.state == tap::samplerate::converter_state::locked && st.underruns == 0
+    const bool ok = st.state == tap::sr::async::converter_state::locked && st.underruns == 0
                     && std::abs(fit.amplitude - k_amp) < 0.01 && std::abs(fit.freq_norm * 48000.0 - k_tone_hz) < 0.05
                     && tap::dsp::analysis::snr_db(fit) > 70.0;
     std::printf("%s\n", ok ? "OK" : "FAILED");

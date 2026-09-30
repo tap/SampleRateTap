@@ -32,7 +32,7 @@
 #define TAP_RATIO_MIRRORED_DOT_ATTR __attribute__((noinline))
 #endif
 
-namespace tap::ratio {
+namespace tap::sr::bridge {
 
     // ANCHOR: rt_converter_doc
     /// Streaming fixed-ratio converter for one direction (compile-time D).
@@ -79,7 +79,7 @@ namespace tap::ratio {
             , m_hist(channels)
             , m_scratch(k_pop_chunk * channels) {
             if (channels == 0) {
-                throw std::invalid_argument("tap::ratio::basic_converter: channels == 0");
+                throw std::invalid_argument("tap::sr::bridge::basic_converter: channels == 0");
             }
             for (auto& h : m_hist) {
                 h.assign(m_hist_cap, tap::dsp::sample_traits<S>::silence());
@@ -170,7 +170,7 @@ namespace tap::ratio {
             if (out_frames == 0) {
                 return 0;
             }
-            return m_pending + tap::ratio::frames_needed<D>(m_pos, out_frames - 1);
+            return m_pending + tap::sr::bridge::frames_needed<D>(m_pos, out_frames - 1);
         }
 
         /// Exact output frames the next in_frames input frames will yield from
@@ -440,4 +440,4 @@ namespace tap::ratio {
     using converter_to_48k_q31  = basic_converter<std::int32_t, direction::up_to_48k>;
     using converter_to_44k1_q31 = basic_converter<std::int32_t, direction::down_to_44k1>;
 
-} // namespace tap::ratio
+} // namespace tap::sr::bridge

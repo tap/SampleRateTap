@@ -31,7 +31,7 @@
 #define SRT_CP_MIN_CHANNELS TAP_DSP_CP_MIN_CHANNELS
 #endif
 
-namespace tap::samplerate {
+namespace tap::sr::async {
 
     // ANCHOR: bank_spec
     /// Specification of the interpolation prototype filter.
@@ -516,4 +516,4 @@ namespace tap::samplerate {
         bool m_primed = false;
     };
 
-} // namespace tap::samplerate
+} // namespace tap::sr::async

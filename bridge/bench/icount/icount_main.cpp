@@ -57,7 +57,7 @@ namespace {
 
     template <typename S>
     double run() {
-        using tap::ratio::direction;
+        using tap::sr::bridge::direction;
 #if RATIO_SC_DIR == 0
         constexpr direction k_dir     = direction::up_to_48k;
         constexpr double    k_rate_in = 44100.0;
@@ -66,18 +66,18 @@ namespace {
         constexpr double    k_rate_in = 48000.0;
 #endif
 #if RATIO_SC_PROFILE == 0
-        const tap::ratio::profile k_prof = tap::ratio::profile::economy();
+        const tap::sr::bridge::profile k_prof = tap::sr::bridge::profile::economy();
 #elif RATIO_SC_PROFILE == 1
-        const tap::ratio::profile k_prof = tap::ratio::profile::transparent();
+        const tap::sr::bridge::profile k_prof = tap::sr::bridge::profile::transparent();
 #elif RATIO_SC_PROFILE == 2
-        const tap::ratio::profile k_prof = tap::ratio::profile::balanced();
+        const tap::sr::bridge::profile k_prof = tap::sr::bridge::profile::balanced();
 #else
-        const tap::ratio::profile k_prof = tap::ratio::profile::super_economy();
+        const tap::sr::bridge::profile k_prof = tap::sr::bridge::profile::super_economy();
 #endif
         constexpr std::size_t k_ch    = RATIO_SC_CH;
         constexpr std::size_t k_block = 32;
 
-        tap::ratio::basic_converter<S, k_dir> conv(k_ch, k_prof);
+        tap::sr::bridge::basic_converter<S, k_dir> conv(k_ch, k_prof);
 
         // 0.25 s of input, cycled block-aligned (12000 % 32 == 0, so the
         // waveform seam repeats identically every cycle: deterministic).
