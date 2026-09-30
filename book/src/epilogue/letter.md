@@ -115,7 +115,7 @@ thing diagnoses the bug for you.
 Every preset except `fast` now ships this design:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:pw_image_zeros}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:pw_image_zeros}}
 ```
 
 At *equal tap count*, `balanced`'s passband stays flat to ±0.003 dB, its
@@ -196,7 +196,7 @@ With the instrument in place, the suggestion could finally become a
 shippable preset:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:pw_economy}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:pw_economy}}
 ```
 
 And the promise could be measured instead of asserted:

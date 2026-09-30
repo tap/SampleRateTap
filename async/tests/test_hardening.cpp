@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Regression tests from the package audit: the pull-block feasibility
 // adaptation, hardened Config validation, resync accounting, consumer
 // reset, degenerate call sizes, fixed-point fade-in — plus QuickQuality,
@@ -11,9 +13,9 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.h"
 #include "support/sine_analysis.h"
 #include "support/two_clock_sim.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 
@@ -25,7 +27,7 @@ namespace {
     // its effective setpoint to the observed block; these runs must lock with
     // zero underruns and report the raise.
     void run_feasibility(std::size_t pull_block) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = 1;
         // Lock-stage promotion gates compare smoothed occupancy error against
         // frame thresholds; with very coarse blocks the block-quantization
@@ -37,13 +39,13 @@ namespace {
             cfg.servo.lock_threshold_frames   = static_cast<double>(pull_block) / 8.0;
             cfg.servo.unlock_threshold_frames = static_cast<double>(pull_block) * 1.5;
         }
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim                      sim{.asrc      = asrc,
-                                                         .fs_in     = k_fs * (1.0 + 200e-6),
-                                                         .fs_out    = k_fs,
-                                                         .channels  = 1,
-                                                         .chunk_in  = 32,
-                                                         .chunk_out = pull_block};
+        tap::sr::async::converter asrc(cfg);
+        async_test::two_clock_sim sim{.asrc      = asrc,
+                                      .fs_in     = k_fs * (1.0 + 200e-6),
+                                      .fs_out    = k_fs,
+                                      .channels  = 1,
+                                      .chunk_in  = 32,
+                                      .chunk_out = pull_block};
         sim.gen = [](std::uint64_t i) { return static_cast<float>(0.5 * std::sin(0.13 * static_cast<double>(i))); };
         // Coarse blocks keep the servo in Track, where instantaneous ppm swings
         // with the block-beat FM — average it, as the 48 kHz lock test does.
@@ -56,7 +58,7 @@ namespace {
             }
         });
         const auto st = asrc.status();
-        EXPECT_EQ(st.state, tap::samplerate::converter_state::locked) << "pull=" << pull_block;
+        EXPECT_EQ(st.state, tap::sr::async::converter_state::locked) << "pull=" << pull_block;
         EXPECT_EQ(st.underruns, 0u) << "pull=" << pull_block;
         EXPECT_GT(st.effective_target_latency_frames, 48u) << "pull=" << pull_block;
         EXPECT_NEAR(ppm_sum / static_cast<double>(blocks), 200.0, 25.0) << "pull=" << pull_block;
@@ -73,10 +75,10 @@ namespace {
     }
 
     TEST(Feasibility, SmallPullsKeepConfiguredSetpoint) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
+        tap::sr::async::converter asrc(cfg);
+        async_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         sim.run(5.0, [](const float*, std::size_t, double) {});
         // 32-frame pulls against the 48-frame default were always feasible;
         // the adaptation must not inflate latency for them.
@@ -87,49 +89,47 @@ namespace {
     // silently (NaN coefficient tables, image-passing filters, UB-range eps).
     TEST(ConfigValidation, RejectsSilentMisbehavior) {
         {
-            tap::samplerate::config c;
+            tap::sr::async::config c;
             c.sample_rate_hz = std::numeric_limits<double>::quiet_NaN();
-            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
         }
         {
-            tap::samplerate::config c; // anti-image cutoff above input Nyquist
+            tap::sr::async::config c; // anti-image cutoff above input Nyquist
             c.filter.passband_hz = 23000.0;
             c.filter.stopband_hz = 47000.0;
-            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
         }
         {
-            tap::samplerate::config c; // eps * 2^64 would overflow int64 in the phase path
+            tap::sr::async::config c; // eps * 2^64 would overflow int64 in the phase path
             c.servo.max_deviation_ppm = 400000.0;
-            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
         }
         {
-            tap::samplerate::config c;
+            tap::sr::async::config c;
             c.servo.quiet_bandwidth_hz = std::numeric_limits<double>::infinity();
-            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
         }
         {
-            tap::samplerate::config c;
+            tap::sr::async::config c;
             c.fifo_frames = 64; // below the high-watermark capacity requirement
-            EXPECT_THROW(tap::samplerate::async_sample_rate_converter{c}, std::invalid_argument);
+            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
         }
         // The rate-scaling factory sits exactly on the band-edge sum boundary
         // (passband + stopband == fs up to rounding); it must keep constructing.
-        EXPECT_NO_THROW(
-            tap::samplerate::async_sample_rate_converter{tap::samplerate::config::for_sample_rate(16000.0)});
-        EXPECT_NO_THROW(
-            tap::samplerate::async_sample_rate_converter{tap::samplerate::config::for_sample_rate(44100.0)});
+        EXPECT_NO_THROW(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(16000.0)});
+        EXPECT_NO_THROW(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(44100.0)});
     }
 
     // Audit finding F3: with a setpoint below the resampler's staged-scratch
     // size (16 frames), a hard resync used to drain the ring entirely and
     // cascade straight back into Filling.
     TEST(Resync, SmallSetpointRecovers) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels              = 1;
         cfg.target_latency_frames = 4;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
-        std::vector<float>                           in(32, 0.25f);
-        std::vector<float>                           out(64);
+        tap::sr::async::converter asrc(cfg);
+        std::vector<float>        in(32, 0.25f);
+        std::vector<float>        out(64);
         for (int i = 0; i < 8; ++i) { // reach steady operation
             asrc.push(in.data(), 32), asrc.pull(out.data(), 32);
         }
@@ -147,25 +147,25 @@ namespace {
     }
 
     TEST(Reset, ConsumerResetRelocks) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
+        tap::sr::async::converter asrc(cfg);
+        async_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         sim.run(5.0, [](const float*, std::size_t, double) {});
-        ASSERT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
+        ASSERT_EQ(asrc.status().state, tap::sr::async::converter_state::locked);
         asrc.reset_from_consumer();
-        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::filling);
-        srt_test::two_clock_sim sim2{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
+        EXPECT_EQ(asrc.status().state, tap::sr::async::converter_state::filling);
+        async_test::two_clock_sim sim2{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
         sim2.run(5.0, [](const float*, std::size_t, double) {});
-        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
+        EXPECT_EQ(asrc.status().state, tap::sr::async::converter_state::locked);
     }
 
     TEST(EdgeCalls, ZeroLengthAndOversized) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = 2;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
-        std::vector<float>                           in(2 * 4096, 0.1f);
-        std::vector<float>                           out(2 * 8192);
+        tap::sr::async::converter asrc(cfg);
+        std::vector<float>        in(2 * 4096, 0.1f);
+        std::vector<float>        out(2 * 8192);
         EXPECT_EQ(asrc.push(in.data(), 0), 0u);
         EXPECT_EQ(asrc.pull(out.data(), 0), 0u);
         for (int i = 0; i < 64; ++i) {
@@ -183,12 +183,12 @@ namespace {
     // Fixed-point fade-in: test_fade.cpp covers float only; the Q15 scaleSample
     // branch (round-and-saturate) was untested.
     TEST(FadeQ15, OutputRampsAfterFill) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter_q15 asrc(cfg);
-        std::vector<std::int16_t>                        in(32, 16384);
-        std::vector<std::int16_t>                        out(32);
-        std::vector<std::int16_t>                        made;
+        tap::sr::async::converter_q15 asrc(cfg);
+        std::vector<std::int16_t>     in(32, 16384);
+        std::vector<std::int16_t>     out(32);
+        std::vector<std::int16_t>     made;
         for (int it = 0; it < 400 && made.size() < 200; ++it) {
             asrc.push(in.data(), in.size());
             const std::size_t n = asrc.pull(out.data(), out.size());
@@ -208,14 +208,14 @@ namespace {
     // suites and the Hexagon leg, whose exclusion filters keep out every long
     // quality suite — leaving those targets without any on-target SNR check).
     TEST(QuickQuality, Q15Tone997) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter_q15 asrc(cfg);
-        srt_test::two_clock_sim_t<std::int16_t>          sim{
-                     .asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
+        tap::sr::async::converter_q15             asrc(cfg);
+        async_test::two_clock_sim_t<std::int16_t> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
         const double nu = 997.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
-            return tap::samplerate::detail::round_sat<std::int16_t>(
+            return tap::sr::async::detail::round_sat<std::int16_t>(
                 0.5 * 32767.0 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
         };
         std::vector<float> tail;
@@ -227,26 +227,26 @@ namespace {
             }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        const auto fit = srt_test::fit_sine_tracked(tail, nu * (1.0 + 200e-6));
+        const auto fit = async_test::fit_sine_tracked(tail, nu * (1.0 + 200e-6));
         // Track-stage run (8-frame blocks, 4 s): block-beat FM dominates the
         // tracked-fit residual at ~40+ dB — far below the Quiet-stage Q15
         // figure, far above any gross datapath regression (saturation,
         // wrong-phase rows land below 10 dB). Same floor as MultiChannelShort.
-        EXPECT_GT(srt_test::snr_db(fit), 35.0);
+        EXPECT_GT(async_test::snr_db(fit), 35.0);
     }
 
     TEST(QuickQuality, FullScaleQ15Short) {
         // 1 s near-full-scale variant of FixedPoint.FullScaleSineDoesNotWrapQ15,
         // sized for emulation and named so the bare-metal filter keeps it: the
         // wide-MAC (SMLALD) target previously never saw near-full-scale input.
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter_q15 asrc(cfg);
-        srt_test::two_clock_sim_t<std::int16_t>          sim{
-                     .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
+        tap::sr::async::converter_q15             asrc(cfg);
+        async_test::two_clock_sim_t<std::int16_t> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
         const double nu = 1000.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
-            return tap::samplerate::detail::round_sat<std::int16_t>(
+            return tap::sr::async::detail::round_sat<std::int16_t>(
                 0.99 * 32767.0 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
         };
         std::vector<double> tail;

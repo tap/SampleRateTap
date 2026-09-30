@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // The golden cross-validation (PLAN section 6.3; HANDOFF's central idea,
 // relocated to where it works): SampleRateTap's fractional_resampler — the
@@ -24,15 +24,15 @@
 #include <gtest/gtest.h>
 
 #include "reference/reference_vectors.h"
-#include "srt/polyphase_filter.h"
-#include "tap/ratio/converter.h"
+#include "tap/sr/async/polyphase_filter.h"
+#include "tap/sr/bridge/converter.h"
 
 namespace {
 
-    using tap::ratio::basic_converter;
-    using tap::ratio::direction;
-    using tap::ratio::profile;
-    using tap::ratio::ratio_traits;
+    using tap::sr::bridge::basic_converter;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::profile;
+    using tap::sr::bridge::ratio_traits;
 
     template <direction D>
     void check_cross_validation(std::size_t async_phases, double tolerance) {
@@ -49,15 +49,15 @@ namespace {
         // beta and taps-per-phase; image_zeros off — the compensated design
         // is a different filter), decomposed over the async engine's
         // power-of-two mu-interpolated table.
-        tap::samplerate::filter_spec spec;
+        tap::sr::async::filter_spec spec;
         spec.num_phases        = async_phases;
         spec.taps_per_phase    = p.taps<D>();
         spec.passband_hz       = p.passband_hz;
         spec.stopband_hz       = traits::k_stopband_edge_hz;
         spec.stopband_atten_db = p.stopband_atten_db;
         spec.image_zeros       = false;
-        const tap::samplerate::polyphase_filter_bank<float> bank(spec, traits::k_input_rate_hz);
-        tap::samplerate::fractional_resampler<float>        rs(bank, 1);
+        const tap::sr::async::polyphase_filter_bank<float> bank(spec, traits::k_input_rate_hz);
+        tap::sr::async::fractional_resampler<float>        rs(bank, 1);
 
         // Zero-prepend alignment: prime() consumes the first T frames, so
         // T-1 zeros + x makes the primed window [0, ..., 0, x[0]] — the

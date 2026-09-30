@@ -72,7 +72,7 @@ running a single-threaded workload, so the simple counter is exact — and
 the precondition is written down where the next porter will read it.
 
 The second function is the entire output interface: an `atexit` callback
-prints one line, `SRT_INSN_COUNT <n>`, through `qemu_plugin_outs()`. That
+prints one line, `TAP_SR_INSN_COUNT <n>`, through `qemu_plugin_outs()`. That
 choice has a trap the driver script had to learn about:
 
 ```python
@@ -102,7 +102,7 @@ everything, decided at compile time.
 `bench/icount/icount_main.cpp` defines seven scenarios — `interpolate()` in
 isolation and the full push/pull pipeline, each in float/Q15/Q31, plus a
 12-channel Q15 pipeline for the 7.1.4 deployment shape — selected by
-preprocessor definitions (`SRT_SC_KIND`, `SRT_SC_TYPE`, `SRT_SC_CH`) into
+preprocessor definitions (`TAP_SR_ASYNC_SC_KIND`, `TAP_SR_ASYNC_SC_TYPE`, `TAP_SR_ASYNC_SC_CH`) into
 one binary each, because the bare-metal targets have no argv to select with
 at runtime. Each binary runs a deterministic loop (two virtual seconds of
 audio through the pipeline; 200 000 interpolations for the kernels),
@@ -116,9 +116,9 @@ accumulates a checksum, and ends with:
 A total is the whole binary's cost, construction included, so a pipeline
 baseline divided by its 96 000 frames is *not* the per-frame cost: on the
 M33 the converter's soft-double filter design alone is close to a billion
-instructions. `SRT_SC_SECONDS` (default 2, the only length ever baselined)
+instructions. `TAP_SR_ASYNC_SC_SECONDS` (default 2, the only length ever baselined)
 exists for that question. Build the pipeline scenarios again at
-`-DSRT_SC_SECONDS=4` and difference the counts: what doubles is the
+`-DTAP_SR_ASYNC_SC_SECONDS=4` and difference the counts: what doubles is the
 per-frame steady state, and what stays is construction.
 
 The three gated targets each run under the QEMU mode that matches their
@@ -144,7 +144,7 @@ produce a plausible count. `icount.py` refuses to record anything unless
 
 ## The ratchet, and why it is two-sided
 
-`scripts/icount.py` glues plugin to workloads: find every `srt_icount_*`
+`scripts/icount.py` glues plugin to workloads: find every `tap_sr_async_icount_*`
 binary in the build directory, run each under the target's QEMU with the
 plugin, and compare against the committed `bench/baselines.json` at a
 tolerance of ±3%. A scenario with no recorded baseline fails. A recorded
@@ -185,7 +185,7 @@ anything.
 One boundary of the ratchet is drawn in a CMake naming convention. The
 cross-resampler comparison workloads (`docs/COMPARISON.md` runs the same
 fixed task through this library and through libsamplerate, per target) are
-built as `cmp_icount_*` precisely so that `icount.py`'s `srt_icount_*` glob
+built as `cmp_icount_*` precisely so that `icount.py`'s `tap_sr_async_icount_*` glob
 never picks them up: competitor counts are *recorded* in the docs with
 their date and toolchain, but not *gated*. The distinction is deliberate.
 A gate on someone else's code would fail on their releases, punish this
@@ -308,14 +308,14 @@ gcc -shared -fPIC $(pkg-config --cflags glib-2.0) -I/path/to/plugin-header \
 # Cross-build the fixed workloads and run the ratchet (arm-none-eabi-gcc):
 cmake -B build-m55 -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
-      -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF -DSRT_BUILD_ICOUNT_BENCH=ON
+      -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF -DTAP_SR_BUILD_ICOUNT_BENCH=ON
 cmake --build build-m55 -j
 python3 scripts/icount.py --target m55 --build-dir build-m55 \
         --plugin /tmp/libinsncount.so
 
 # Determinism: run any one binary twice and compare the counts exactly.
 qemu-system-arm -M mps3-an547 -nographic -semihosting -d plugin \
-    -plugin /tmp/libinsncount.so -kernel build-m55/bench/icount/srt_icount_pipeline_q15
+    -plugin /tmp/libinsncount.so -kernel build-m55/bench/icount/tap_sr_async_icount_pipeline_q15
 
 # See the two-sided gate work: re-run icount.py with --tolerance 0.0001
 # and watch benign recompilation deltas fail in *both* directions.

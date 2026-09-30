@@ -97,7 +97,7 @@ PASS requires: Locked within 2 s (phase A; 6 s for B, whose servo is scaled
 with an `OVERALL` line and:
 
 ```
-SRT_PICO2_DUALCORE_DONE
+TAP_SR_PICO2_DUALCORE_DONE
 ```
 
 ## Reading the numbers
@@ -108,7 +108,7 @@ SRT_PICO2_DUALCORE_DONE
   budget goes to whatever feeds it (here: telemetry).
 - **Relation to the QEMU counts**: in steady state `pipeline_q15` costs
   **1,138 insns/frame** and `pipeline12_q15` **3,326 insns/frame** (each
-  workload built at 2 s and at 4 s, `-DSRT_SC_SECONDS=4`, and differenced).
+  workload built at 2 s and at 4 s, `-DTAP_SR_ASYNC_SC_SECONDS=4`, and differenced).
   A committed baseline divided by its 96,000 frames is larger — it also
   carries one-time setup (the soft-double filter design, input synthesis,
   ~0.9–1.2 G instructions) — so the difference is the right counterpart of

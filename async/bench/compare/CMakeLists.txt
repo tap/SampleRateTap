@@ -8,11 +8,11 @@ pkg_check_modules(SAMPLERATE REQUIRED IMPORTED_TARGET samplerate)
 pkg_check_modules(SOXR REQUIRED IMPORTED_TARGET soxr)
 include(${PROJECT_SOURCE_DIR}/cmake/r8brain.cmake)
 
-add_executable(srt_bench_compare bench_compare.cpp)
-target_link_libraries(srt_bench_compare PRIVATE
-    SampleRateTap::SampleRateTap
-    srt_warnings
+add_executable(tap_sr_async_bench_compare bench_compare.cpp)
+target_link_libraries(tap_sr_async_bench_compare PRIVATE
+    tap::sr::async
+    tap_sr_async_warnings
     benchmark::benchmark_main
     PkgConfig::SAMPLERATE
     PkgConfig::SOXR
-    srt_r8brain)
+    tap_sr_async_r8brain)

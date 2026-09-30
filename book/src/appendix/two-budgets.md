@@ -175,7 +175,7 @@ grep -n '1 << 21' notebooks/asrc_rbj_analysis.ipynb scripts/book_figures.py
 
 # The two budgets, drawn through the API: the constructor may throw and
 # allocate; the audio path may not. The real-time contract is a grep away:
-grep -n 'noexcept' include/srt/asrc.h | head
+grep -n 'noexcept' include/tap/sr/async/converter.h | head
 
 # What the construction budget costs where it is NOT cheap: the M33 entry
 # in the instruction-count ledger.

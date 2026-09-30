@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Timothy Place and the SampleRateTap contributors
 """Printed digests of every figure's plotted data, for A/B comparison.
 
 A committed notebook's figures are PNGs, which a text comparison cannot

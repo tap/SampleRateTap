@@ -153,7 +153,7 @@ by a factor of three because its tuning was written in hertz.
 The remedy is the `scaled_to` trio, and the factory that applies it:
 
 ```cpp
-tap::samplerate::config cfg = tap::samplerate::config::for_sample_rate(16000.0);
+tap::sr::async::config cfg = tap::sr::async::config::for_sample_rate(16000.0);
 cfg.channels = ...;            // then adjust as usual
 ```
 
@@ -191,7 +191,7 @@ at ±1.5 × `max_deviation_ppm` — ±1500 ppm against an 8.8% gap — and the
 near-unity datapath has none of the band-limiting machinery a genuine
 downward conversion needs. That conversion is a different problem —
 synchronous, rational, known at compile time — and in the Tap family it
-has a different engine: [RatioTap](https://github.com/tap/RatioTap),
+has a different engine: [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge) (formerly RatioTap),
 built on the same DspTap substrate this book has been reading (the same
 Kaiser design path, sample traits, and dot kernels), with its entire
 optimization budget spent on exactly one ratio pair, 160/147 up and
@@ -332,7 +332,7 @@ ctest --test-dir build -R AsrcQuality16k --output-on-failure
 
 # The -32 dB failure itself, reproduced: in test_asrc_quality_16k.cpp,
 # keep config::for_sample_rate(k_fs) but overwrite the servo with unscaled
-# defaults (cfg.servo = tap::samplerate::servo_config{};) — the converter still builds
+# defaults (cfg.servo = tap::sr::async::servo_config{};) — the converter still builds
 # and locks, and every threshold fails by ~30 dB, falling 6 dB per octave
 # of tone frequency: the FM signature. (Restoring the unscaled *filter*
 # instead fails fast: the constructor rejects band edges above the input
@@ -346,14 +346,12 @@ jupyter nbconvert --execute notebooks/asrc_block_size_study.ipynb
 # with cfg.target_latency_frames set below k_chunk in the source — the
 # adaptive raise reports itself in effective_target_latency_frames instead
 # of dropping out:
-./build/examples/drifting_clocks
+./build/async/examples/drifting_clocks
 
-# The 44.1↔48 composition (RatioTap converts the number, this library
-# absorbs the clock) runs from the sibling repository:
-git clone --recurse-submodules https://github.com/tap/RatioTap
-cmake -S RatioTap -B rt-build -DCMAKE_BUILD_TYPE=Release
-cmake --build rt-build --target bluetooth_bridge -j 4
-./rt-build/examples/bluetooth_bridge
+# The 44.1↔48 composition (bridge converts the number, this engine
+# absorbs the clock) is the bridge engine's example, in the same tree:
+cmake --build build --target bluetooth_bridge -j 4
+./build/bridge/examples/bluetooth_bridge
 ```
 
 The break-it-on-purpose suggestions are, as ever, the chapter in

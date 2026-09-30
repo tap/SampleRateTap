@@ -1,0 +1,53 @@
+/// @file tap_sr_bridge_capi.h
+/// @brief Minimal C ABI over the float converters, for FFI consumers.
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
+//
+// The verification layer's seam (family convention): the notebooks drive the
+// SHIPPING C++ through this ABI via ctypes rather than re-implementing
+// anything in Python. Float only — the notebooks measure the golden model;
+// the fixed-point contracts are pinned by the C++ test suite.
+#pragma once
+
+#include <stddef.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct tap_sr_bridge_converter tap_sr_bridge_converter;
+
+/// Every function below requires a valid converter from a successful
+/// tap_sr_bridge_create; passing NULL is undefined behavior. The one exception is
+/// tap_sr_bridge_destroy, where NULL is a safe no-op (the free() convention).
+
+/// direction: 0 = up (44.1 -> 48), 1 = down (48 -> 44.1).
+/// profile:   0 = economy (default tier), 1 = transparent, 2 = balanced,
+///            3 = super_economy (the voice/comms tier).
+/// Returns NULL on invalid arguments.
+tap_sr_bridge_converter* tap_sr_bridge_create(int direction, int profile, unsigned channels);
+void                     tap_sr_bridge_destroy(tap_sr_bridge_converter* c);
+
+/// Exact accounting (see tap::sr::bridge::basic_converter).
+uint64_t tap_sr_bridge_outputs_for(const tap_sr_bridge_converter* c, uint64_t in_frames);
+uint64_t tap_sr_bridge_frames_needed(const tap_sr_bridge_converter* c, uint64_t out_frames);
+
+/// Push-transform over interleaved float frames; returns frames written.
+/// out must hold tap_sr_bridge_outputs_for(c, in_frames) frames.
+size_t tap_sr_bridge_process(tap_sr_bridge_converter* c, const float* in, size_t in_frames, float* out);
+
+/// Drains the tail (out must hold tap_sr_bridge_flush_output_frames(c) frames).
+size_t   tap_sr_bridge_flush(tap_sr_bridge_converter* c, float* out);
+uint64_t tap_sr_bridge_flush_output_frames(const tap_sr_bridge_converter* c);
+
+void   tap_sr_bridge_reset(tap_sr_bridge_converter* c);
+double tap_sr_bridge_latency_input_frames(const tap_sr_bridge_converter* c);
+size_t tap_sr_bridge_taps(const tap_sr_bridge_converter* c);
+
+/// Library version, packed (major << 16) | (minor << 8) | patch.
+unsigned tap_sr_bridge_version(void);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

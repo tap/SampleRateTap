@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Forced include for the r8brain-free-src comparison workloads only
 // (cmp_icount_r8b_*, docs/COMPARISON.md). r8brain guards its process-wide
 // filter-design cache with std::mutex and offers no hook to replace it;

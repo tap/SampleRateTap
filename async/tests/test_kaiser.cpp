@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #include <cmath>
 #include <complex>
 #include <numbers>
@@ -5,12 +7,12 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/detail/kaiser.h"
-#include "srt/polyphase_filter.h"
+#include "tap/dsp/kaiser.h"
+#include "tap/sr/async/polyphase_filter.h"
 
 namespace {
 
-    using namespace tap::samplerate::detail;
+    using namespace tap::dsp;
 
     TEST(Kaiser, BesselI0ReferenceValues) {
         EXPECT_DOUBLE_EQ(bessel_i0(0.0), 1.0);
@@ -44,7 +46,7 @@ namespace {
         return 20.0 * std::log10(std::abs(acc) / static_cast<double>(num_phases));
     }
 
-    void check_prototype_meets_spec(const tap::samplerate::filter_spec& spec, double fs) {
+    void check_prototype_meets_spec(const tap::sr::async::filter_spec& spec, double fs) {
         const std::size_t   phases = std::bit_ceil(spec.num_phases);
         const std::size_t   n      = phases * spec.taps_per_phase;
         std::vector<double> h(n);
@@ -82,19 +84,19 @@ namespace {
     }
 
     TEST(Kaiser, FastPrototypeMeetsSpec) {
-        check_prototype_meets_spec(tap::samplerate::filter_spec::fast(), 48000.0);
+        check_prototype_meets_spec(tap::sr::async::filter_spec::fast(), 48000.0);
     }
 
     TEST(Kaiser, BalancedPrototypeMeetsSpec) {
-        check_prototype_meets_spec(tap::samplerate::filter_spec::balanced(), 48000.0);
+        check_prototype_meets_spec(tap::sr::async::filter_spec::balanced(), 48000.0);
     }
 
     TEST(Kaiser, TransparentPrototypeMeetsSpec) {
-        check_prototype_meets_spec(tap::samplerate::filter_spec::transparent(), 48000.0);
+        check_prototype_meets_spec(tap::sr::async::filter_spec::transparent(), 48000.0);
     }
 
     TEST(Kaiser, EconomyPrototypeMeetsSpec) {
-        check_prototype_meets_spec(tap::samplerate::filter_spec::economy(), 48000.0);
+        check_prototype_meets_spec(tap::sr::async::filter_spec::economy(), 48000.0);
     }
 
     // The compensated presets must also hold their specs at scaled rates (the
@@ -104,7 +106,7 @@ namespace {
     // sum is identical (measured spread 1.8e-15 -- machine epsilon -- vs 4.7e-6
     // for the plain fast() design, whose spread is its stopband leakage at fs).
     TEST(Kaiser, CompensatedBranchSumsAreUniform) {
-        const auto          spec   = tap::samplerate::filter_spec::balanced();
+        const auto          spec   = tap::sr::async::filter_spec::balanced();
         const std::size_t   phases = std::bit_ceil(spec.num_phases);
         std::vector<double> h(phases * spec.taps_per_phase);
         design_prototype_compensated(h, phases, (spec.passband_hz + spec.stopband_hz) / 48000.0,
@@ -124,8 +126,8 @@ namespace {
     }
 
     TEST(Kaiser, CompensatedSpecsHoldAt16k) {
-        check_prototype_meets_spec(tap::samplerate::filter_spec::balanced().scaled_to(16000.0), 16000.0);
-        check_prototype_meets_spec(tap::samplerate::filter_spec::economy().scaled_to(16000.0), 16000.0);
+        check_prototype_meets_spec(tap::sr::async::filter_spec::balanced().scaled_to(16000.0), 16000.0);
+        check_prototype_meets_spec(tap::sr::async::filter_spec::economy().scaled_to(16000.0), 16000.0);
     }
 
 } // namespace

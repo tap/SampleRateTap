@@ -16,7 +16,7 @@ steady-state instruction counts (`pipeline_q15` 1,138/frame,
 `pipeline12_q15` 3,326/frame) calibrates the "1 QEMU instruction ≈ N RP2350
 cycles" ratio, turning every current and future M33 baseline into a real
 cycle budget. The steady state is the difference of the workload built at
-2 s and at 4 s (`-DSRT_SC_SECONDS=4`); a committed baseline divided by its
+2 s and at 4 s (`-DTAP_SR_ASYNC_SC_SECONDS=4`); a committed baseline divided by its
 96,000 frames also carries the converter's one-time construction (~0.9 G
 instructions of soft-double filter design), which this firmware does not
 time. It also tests the README's claim directly: Q15 stereo fits a 150 MHz
@@ -73,7 +73,7 @@ float) case that cannot allocate prints a `SKIP` row instead. The run ends
 with:
 
 ```
-SRT_PICO2_DONE
+TAP_SR_PICO2_DONE
 ```
 
 ## Reading the numbers

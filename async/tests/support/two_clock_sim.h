@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 SampleRateTap contributors
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Deterministic single-threaded simulation of two independent clock domains
 // driving one converter. Producer and consumer events are interleaved by
 // next-event virtual time, so runs are exactly reproducible.
@@ -9,19 +9,19 @@
 #include <functional>
 #include <vector>
 
-#include "srt/asrc.h"
+#include "tap/sr/async/converter.h"
 
-namespace srt_test {
+namespace async_test {
 
     // ANCHOR: pf_knobs
-    template <tap::samplerate::sample_type S>
+    template <tap::sr::async::sample_type S>
     struct two_clock_sim_t {
-        tap::samplerate::basic_async_sample_rate_converter<S>& asrc;
-        double      fs_in;  ///< input-domain event rate (true input sample rate)
-        double      fs_out; ///< output-domain event rate (true output sample rate)
-        std::size_t channels  = 1;
-        std::size_t chunk_in  = 32; ///< frames pushed per producer event
-        std::size_t chunk_out = 32; ///< frames pulled per consumer event
+        tap::sr::async::basic_converter<S>& asrc;
+        double                              fs_in;  ///< input-domain event rate (true input sample rate)
+        double                              fs_out; ///< output-domain event rate (true output sample rate)
+        std::size_t                         channels  = 1;
+        std::size_t                         chunk_in  = 32; ///< frames pushed per producer event
+        std::size_t                         chunk_out = 32; ///< frames pulled per consumer event
         /// Input signal generator: value at input sample index i (all channels).
         std::function<S(std::uint64_t)> gen = [](std::uint64_t) { return S{}; };
         /// Per-channel generator (sample index, channel); overrides gen when set.
@@ -72,4 +72,4 @@ namespace srt_test {
 
     using two_clock_sim = two_clock_sim_t<float>;
 
-} // namespace srt_test
+} // namespace async_test

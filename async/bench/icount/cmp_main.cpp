@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Deterministic fixed workload for the cross-resampler instruction-count
 // comparison (docs/COMPARISON.md). Same shape as icount_main.cpp but the
 // engine is selected at compile time and the ratio is fixed and known —
@@ -6,18 +8,18 @@
 // ratio, so the comparison is engine-vs-engine with no servo on either side.
 //
 // These binaries are intentionally named cmp_icount_* so the ratchet
-// (scripts/icount.py, glob srt_icount_*) never sees them: competitor
+// (scripts/icount.py, glob tap_sr_async_icount_*) never sees them: competitor
 // instruction counts are measured once and recorded in docs/COMPARISON.md,
 // not gated.
 //
-// SRT_CMP_ENGINE: 0 = SampleRateTap (balanced), 1 = libsamplerate
+// TAP_SR_ASYNC_CMP_ENGINE: 0 = SampleRateTap (balanced), 1 = libsamplerate
 //                 SRC_SINC_MEDIUM_QUALITY, 2 = libsamplerate
 //                 SRC_SINC_BEST_QUALITY, 3 = r8brain 120 dB at its default
 //                 2% transition band, 4 = r8brain 120 dB at 8% (the
 //                 lowest-latency setting still flat to 20 kHz, like balanced),
 //                 5 = SampleRateTap (balanced) Q15 — no competitor analog
 //
-// SRT_CMP_SECONDS (default 2) sets the workload length. Every count includes
+// TAP_SR_ASYNC_CMP_SECONDS (default 2) sets the workload length. Every count includes
 // one-time construction (filter design, table and FFT setup), so CMake builds
 // each engine at 2 s and 4 s: the difference is the steady-state cost of 2 s
 // of audio, the remainder is construction (docs/COMPARISON.md reports both).
@@ -28,12 +30,12 @@
 #include <numbers>
 #include <vector>
 
-#if SRT_CMP_ENGINE == 0 || SRT_CMP_ENGINE == 5
+#if TAP_SR_ASYNC_CMP_ENGINE == 0 || TAP_SR_ASYNC_CMP_ENGINE == 5
 #include <type_traits>
 
-#include "srt/polyphase_filter.h"
-#include "srt/sample_traits.h"
-#elif SRT_CMP_ENGINE <= 2
+#include "tap/sr/async/polyphase_filter.h"
+#include "tap/sr/async/sample_traits.h"
+#elif TAP_SR_ASYNC_CMP_ENGINE <= 2
 #include <samplerate.h>
 #else
 #include <memory>
@@ -45,11 +47,11 @@ namespace {
 
     constexpr std::size_t kCh    = 2;
     constexpr std::size_t kBlock = 32;
-#ifndef SRT_CMP_SECONDS
-#define SRT_CMP_SECONDS 2
+#ifndef TAP_SR_ASYNC_CMP_SECONDS
+#define TAP_SR_ASYNC_CMP_SECONDS 2
 #endif
-    constexpr std::size_t kBlocks = SRT_CMP_SECONDS * 48000 / kBlock; // input at 48 kHz
-    constexpr double      kRatio  = 1.0 + 200e-6;                     // output rate / input rate
+    constexpr std::size_t kBlocks = TAP_SR_ASYNC_CMP_SECONDS * 48000 / kBlock; // input at 48 kHz
+    constexpr double      kRatio  = 1.0 + 200e-6;                              // output rate / input rate
 
     std::vector<float> sineInput(std::size_t frames) {
         std::vector<float> out(frames * kCh);
@@ -60,9 +62,9 @@ namespace {
         return out;
     }
 
-#if SRT_CMP_ENGINE == 0 || SRT_CMP_ENGINE == 5
+#if TAP_SR_ASYNC_CMP_ENGINE == 0 || TAP_SR_ASYNC_CMP_ENGINE == 5
 
-#if SRT_CMP_ENGINE == 0
+#if TAP_SR_ASYNC_CMP_ENGINE == 0
     using Sample = float;
 #else
     using Sample = std::int16_t;
@@ -76,15 +78,15 @@ namespace {
             if constexpr (std::is_floating_point_v<S>)
                 out[i] = in[i];
             else
-                out[i] = tap::samplerate::detail::round_sat<S>(static_cast<double>(in[i])
-                                                               * static_cast<double>(std::numeric_limits<S>::max()));
+                out[i] = tap::sr::async::detail::round_sat<S>(static_cast<double>(in[i])
+                                                              * static_cast<double>(std::numeric_limits<S>::max()));
         }
         return out;
     }
 
     double run() {
-        const tap::samplerate::polyphase_filter_bank<Sample> bank(tap::samplerate::filter_spec::balanced(), 48000.0);
-        tap::samplerate::fractional_resampler<Sample>        rs(bank, kCh);
+        const tap::sr::async::polyphase_filter_bank<Sample> bank(tap::sr::async::filter_spec::balanced(), 48000.0);
+        tap::sr::async::fractional_resampler<Sample>        rs(bank, kCh);
         const auto  input = toSample<Sample>(sineInput(12000)); // 0.25 s, cycled
         std::size_t pos   = 0;
         const auto  pop   = [&](Sample* dst, std::size_t n) {
@@ -109,10 +111,10 @@ namespace {
         return sink;
     }
 
-#elif SRT_CMP_ENGINE <= 2
+#elif TAP_SR_ASYNC_CMP_ENGINE <= 2
 
     double run() {
-#if SRT_CMP_ENGINE == 1
+#if TAP_SR_ASYNC_CMP_ENGINE == 1
         constexpr int kConverter = SRC_SINC_MEDIUM_QUALITY;
 #else
         constexpr int kConverter = SRC_SINC_BEST_QUALITY;
@@ -155,7 +157,7 @@ namespace {
     // r8brain is mono per instance with double-precision I/O: one instance per
     // channel, float<->double (de)interleave counted, as any float caller pays.
     double run() {
-#if SRT_CMP_ENGINE == 3
+#if TAP_SR_ASYNC_CMP_ENGINE == 3
         constexpr double kTransBandPct = 2.0;
 #else
         constexpr double kTransBandPct = 8.0;

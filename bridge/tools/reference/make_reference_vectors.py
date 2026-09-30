@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Timothy Place and the SampleRateTap contributors
 """Generates tests/reference/reference_vectors.h — the independent golden leg
 of the M3 correctness battery (PLAN.md section 6.2).
 
@@ -6,7 +8,7 @@ The input is deterministic xorshift noise quantized to float32. For each
 direction x profile, the expected output is computed by scipy.signal.upfirdn
 (a polyphase engine we did not write) in float64, using coefficients from the
 same published Kaiser math as tap::dsp::design_prototype plus RatioTap's
-per-branch DC normalization (tap/ratio/design.h), then cast to float32.
+per-branch DC normalization (tap/sr/bridge/design.h), then cast to float32.
 
 The streaming converter is zero-primed and causal, so its output must equal
 upfirdn's from sample 0 — transient included — within float32 rounding: the
@@ -85,7 +87,7 @@ out.append("// Independent golden reference: scipy.signal.upfirdn (float64) over
 out.append("// per-branch-normalized Kaiser designs, cast to float32. See that script")
 out.append("// for provenance and the tolerance argument.")
 out.append("// SPDX-License-Identifier: MIT")
-out.append("// Copyright 2026 Timothy Place and the RatioTap contributors.")
+out.append("// Copyright 2026 Timothy Place and the SampleRateTap contributors")
 out.append("// NOLINTBEGIN(readability-identifier-naming)")
 out.append("#pragma once")
 out.append("")

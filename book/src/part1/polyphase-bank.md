@@ -56,7 +56,7 @@ quality tier: pick the two rows adjacent to μ·L and interpolate the
 the quality knob the spec exposes:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:bank_spec}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:bank_spec}}
 ```
 
 The comment's two slopes are the design law for choosing L, and they are
@@ -96,7 +96,7 @@ Here is the file's cleverest line, and it is a line of *allocation*, not of
 algorithm:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:bank_layout}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:bank_layout}}
 ```
 
 The problem it dissolves: blending needs rows `p` and `p + 1`. For
@@ -121,7 +121,7 @@ The bank's fix: **store row L explicitly, as branch 0 advanced by one input
 sample**. It falls out of the construction loop with no special case:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:bank_build}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:bank_build}}
 ```
 
 Follow the index math for `p == phases_`: the prototype index is
@@ -173,7 +173,7 @@ reversal is paid once per converter at build time instead of once per
 sample as backwards addressing, and the payoff is documented downstream in
 this book's optimization chapters: the auto-vectorized Q15 kernels, the
 SMLALD pair-loads on Cortex-M33 (which require adjacent taps to sit in
-ascending order in one 32-bit load), and the `SRT_RESTRICT` blend loop all
+ascending order in one 32-bit load), and the `TAP_DSP_RESTRICT` blend loop all
 assume exactly this orientation. One subtlety the test above already
 banked: "advanced one tap" for the reversed row L means shifted one slot
 *toward the newer end*, which is why the zero lands in slot 0 (the oldest)
@@ -288,11 +288,11 @@ of storing it.
 **The accessor surface is four functions, and their shapes are load-bearing:**
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:bank_accessors}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:bank_accessors}}
 ```
 
 `phase(p)` returns a raw `const Coeff*`, not a `std::span` — the kernels
-consume rows through `SRT_RESTRICT`-qualified pointer parameters (that
+consume rows through `TAP_DSP_RESTRICT`-qualified pointer parameters (that
 no-alias promise is worth measured percentage points; see the
 vectorization-audit chapter), and a span would be unpacked back to a
 pointer at every call site while implying a bounds story the hot path
@@ -301,7 +301,7 @@ the extra row is a first-class citizen of the API, which is exactly how
 `interpolate()` gets to be branch-free:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:bank_interpolate}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:bank_interpolate}}
 ```
 
 Note the one guard that *does* exist — clamping `p` when μ rounds up to

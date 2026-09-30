@@ -170,9 +170,9 @@ limitations, and `docs/COMPARISON.md` is blunt that for genuine rate
 *conversion* you should put a synchronous resampler in the chain: soxr,
 libsamplerate, or — for exactly the 44.1 ↔ 48 pair, built on the same
 DspTap substrate as this library and cross-validated against its engine —
-the family's own [RatioTap](https://github.com/tap/RatioTap). Part V
-returns to that composition and its decision rule: RatioTap converts the
-*number*, the ASRC absorbs the *clock*.
+the family's own `bridge` engine ([`bridge/`](https://github.com/tap/SampleRateTap/tree/main/bridge) in this repository,
+formerly RatioTap). Part V returns to that composition and its decision
+rule: `bridge` converts the *number*, the ASRC absorbs the *clock*.
 
 Here is what the restriction buys. A general-ratio converter must be able
 to place output samples anywhere relative to input samples, at any
@@ -285,7 +285,7 @@ quality target works out to a timing tolerance of about eight
 # the ppm estimate converge:
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-./build/examples/drifting_clocks
+./build/async/examples/drifting_clocks
 
 # Reproduce the measured table — including the −34.7 dB naive-FIFO row
 # and the oracle-fed library ceilings. Needs numpy, matplotlib, and the
@@ -296,9 +296,9 @@ jupyter execute notebooks/asrc_comparison.ipynb
 # The computational head-to-head on your own host (requires the system
 # libsamplerate and soxr development packages, found via pkg-config):
 cmake -B build-cmp -DCMAKE_BUILD_TYPE=Release \
-      -DSRT_BUILD_BENCHMARKS=ON -DSRT_BUILD_COMPARE_BENCH=ON
+      -DTAP_SR_BUILD_BENCHMARKS=ON -DTAP_SR_BUILD_COMPARE_BENCH=ON
 cmake --build build-cmp -j
-./build-cmp/bench/compare/srt_bench_compare
+./build-cmp/bench/compare/tap_sr_async_bench_compare
 ```
 
 The comparison notebook pins SampleRateTap's own results with assertions,

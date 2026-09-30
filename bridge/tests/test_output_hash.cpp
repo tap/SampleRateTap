@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Output fingerprints of the converter, for same-job A/B comparison.
 //
@@ -28,13 +28,13 @@
 
 #include <gtest/gtest.h>
 
-#include "tap/ratio/converter.h"
+#include "tap/sr/bridge/converter.h"
 
 namespace {
 
-    using tap::ratio::basic_converter;
-    using tap::ratio::direction;
-    using tap::ratio::profile;
+    using tap::sr::bridge::basic_converter;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::profile;
 
     constexpr std::size_t k_channels  = 2;
     constexpr std::size_t k_in_frames = 2940; // a whole number of 147-frame schedule periods

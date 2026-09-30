@@ -1,73 +1,53 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this
+engine. The family's rules — the dependency rule, never routing by rate, the substrate
+discipline, style, build and test — are in the root [`CLAUDE.md`](../CLAUDE.md); this file is
+the engine's charter, which is what makes it different from its sibling.
 
 ## What this is
 
-**RatioTap** — synchronous 44.1 ↔ 48 kHz sample rate conversion, as fast as possible. Header-only
-C++20 under `include/tap/ratio/`, namespace `tap::ratio`, built on the shared Tap-family FIR
-substrate from DspTap (`submodules/dsptap`, linked as `tap::dsp`).
-
-**PLAN.md is the authoritative roadmap** — charter, settled architecture decisions, milestones
-(M0–M7), and acceptance criteria. HANDOFF.md is the original design brief with a preamble listing
-which of its decisions were superseded. Read PLAN.md before implementing anything; do not
-re-derive decisions it has already settled (compile-time direction, profile vocabulary, the
-three-leg test strategy, the pinned-eps cross-validation design).
-
-Current state: **v0.2 — M7 codegen phase complete.** v0.1 (M0–M6): design/schedule/tables, the
-streaming converter for float/Q15/Q31 with committed scipy reference vectors, the golden
-cross-validation against SampleRateTap at pinned eps (test-only submodule), bluetooth_bridge +
-C ABI + executed notebook. M7 (v0.2): the embedded CI matrix + instruction-count ratchet
-(Cortex-M33/M55 + Hexagon under QEMU, ten workloads gated two-sided ±3% against
-`bench/baselines.json` — `scripts/icount.py`), then three measured codegen levers — superblock
-walk, committed trip counts, symmetry-halved tables — outputs bit-identical throughout; PLAN.md
-section 7 records each lever's numbers. Remaining levers are deferred until a consumer pulls
-them (they change the output contract). Any change that moves a workload's count beyond ±3%
-must re-record baselines (`icount.py --update` per target) in the same PR; an *improvement*
-beyond tolerance fails the gate too, by design.
+**`bridge`** (`tap::sr::bridge`, formerly RatioTap) — synchronous 44.1 ↔ 48 kHz sample rate
+conversion, as fast as possible. Header-only C++20 under `include/tap/sr/bridge/`, built on the
+shared FIR substrate from DspTap (`tap::dsp`). **`PLAN.md` is the authoritative roadmap** —
+charter, settled architecture decisions, milestones (M0–M7, complete) and acceptance criteria;
+HANDOFF.md is the original design brief with a preamble listing which of its decisions were
+superseded. Read PLAN.md before implementing anything; do not re-derive decisions it has already
+settled (compile-time direction, profile vocabulary, the three-leg test strategy, the pinned-eps
+cross-validation design).
 
 ## The charter constraints (load-bearing)
 
-- **44.1↔48 only.** No other ratios on the public surface, ever; internal scaffolding may be
-  general where it costs nothing, but optimization work is allowed to hard-commit to L ∈ {147, 160}.
-- **Synchronous only.** Async-at-44.1↔48 is SampleRateTap's problem, reached by composition
-  (the future `bluetooth_bridge` example). Never route by rate; the caller declares clock
-  topology by choosing a type.
-- **Speed-first.** Direction is compile-time. Every quality-vs-speed trade that is inaudible
-  goes to speed in the default profile; the pristine profile exists behind the same design path.
-- **Correctness before optimization.** Exhaustive phase coverage (all 147 and all 160 phases),
-  an independent golden reference (scipy/soxr vectors), and the pinned-eps cross-validation
-  against SampleRateTap gate every optimization that follows.
+- **44.1 ↔ 48 only.** No other ratios on the public surface, ever; internal scaffolding may be
+  general where it costs nothing, but optimization work is allowed to hard-commit to
+  L ∈ {147, 160}. The 2× and 4× rate pairs are the family plan's follow-up 2.2, not a widening.
+- **Synchronous only.** Async-at-44.1↔48 is the `async` engine's problem, reached by composition
+  (`examples/bluetooth_bridge.cpp`). Never route by rate; the caller declares clock topology by
+  choosing a type.
+- **Speed-first.** Direction is compile-time. Every quality-vs-speed trade that is inaudible goes
+  to speed in the default profile; the pristine profile exists behind the same design path.
+- **Correctness before optimization.** Exhaustive phase coverage (all 147 and all 160 phases), an
+  independent golden reference (the committed scipy vectors under `tests/reference/`), and the
+  pinned-eps cross-validation against `async` gate every optimization. The cross-validation's
+  independence comes from the scipy leg and the engines' structural difference (family rule R4):
+  a PR that changes its tolerances leaves `tests/reference/` untouched, keeps the scipy leg
+  green, and does not also change `async`'s datapath.
+- **Outputs are bit-identical across codegen levers.** The ratchet (`scripts/icount.py --engine
+  bridge`, `bench/baselines.json`, ten workloads on M33/M55/Hexagon) gates every change
+  two-sided at ±3 %; a change that moves a count re-records the baselines in the same PR, and
+  an improvement beyond tolerance fails too, by design. Remaining levers that change the output
+  contract stay deferred until a consumer pulls them (PLAN.md section 7).
 
-## Substrate discipline
+## Profiles
 
-Shared code (design math, sample traits, kernels, quantization, measurement instruments) lives in
-DspTap and lands there FIRST; this repo bumps the submodule pin. Do not fork substrate code into
-this repo — that divergence is exactly what DspTap exists to prevent. Q15 is the flagship
-embedded profile (Bluetooth-adjacent M33/M55 deployments); float is the golden model against
-scipy references.
-
-## Style
-
-`STYLE.md` is the shared Tap house style; `.clang-format` and `.clang-tidy` enforce it and CI runs
-both (plus a drift check that the config files match the canonical taphouse copies — never edit
-them locally). Run `pre-commit install` once per clone; on Claude Code web the checked-in
-SessionStart hook (`.claude/hooks/session-start.sh`) does this and initializes the submodule at
-session start. clang-tidy compiles with a *clang* front end — code that GCC accepts can still
-fail there, and clang's `-Wconversion` implies `-Wsign-conversion` where GCC's does not, so treat
-the tidy job and a local clang `-Werror` build as second compilers before pushing.
-
-## Build & test
+Q15 is the flagship embedded profile (Bluetooth-adjacent M33/M55 deployments); float is the
+golden model against the scipy references; Q31 tracks the float model at the format limit.
+Tests are typed batteries over `float`/`int16_t`/`int32_t` with exhaustive phase sweeps rather
+than statistical sampling, and measured numbers stated in comments with their provenance.
 
 ```sh
-# from the repository root (this engine lives in bridge/; the root builds both)
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTAP_RATIO_WERROR=ON
+# from the repository root (this engine lives in bridge/; the root builds both engines)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BRIDGE_WERROR=ON
 cmake --build build
-ctest --test-dir build --output-on-failure -L '^ratio$'
-scripts/tidy.sh          # local mirror of the CI clang-tidy gate
+ctest --test-dir build --output-on-failure -L '^bridge$'
 ```
-
-Tests are GoogleTest (FetchContent), and the conventions to preserve as the engine lands: contract
-tests named for the promise they pin, typed batteries over `float`/`int16_t`/`int32_t`, exhaustive
-phase sweeps rather than statistical sampling, and measured numbers stated in comments with their
-provenance.

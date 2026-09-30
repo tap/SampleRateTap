@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Contract battery for the prototype designs: every direction x profile
 // meets its rated stopband with >= 1 dB margin and holds the passband flat,
@@ -16,14 +16,14 @@
 
 #include <gtest/gtest.h>
 
-#include "tap/ratio/design.h"
+#include "tap/sr/bridge/design.h"
 
 namespace {
 
-    using tap::ratio::design_prototype;
-    using tap::ratio::direction;
-    using tap::ratio::profile;
-    using tap::ratio::ratio_traits;
+    using tap::sr::bridge::design_prototype;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::profile;
+    using tap::sr::bridge::ratio_traits;
 
     // Direct DFT magnitude in dB, normalized so the passband sits at 0 dB.
     // f is in Hz at the direction's input rate; the prototype rate is L * fs.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Two-thread spsc_ring stress test. Compiled only when the platform has
 // std::thread (excluded from bare-metal builds by tests/CMakeLists.txt).
 #include <cstdint>
@@ -7,13 +9,13 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/spsc_ring.h"
+#include "tap/sr/async/spsc_ring.h"
 
 namespace {
 
     TEST(spsc_ring, TwoThreadStressPreservesSequence) {
-        constexpr std::uint64_t                   k_total = 10'000'000;
-        tap::samplerate::spsc_ring<std::uint32_t> ring(1024);
+        constexpr std::uint64_t                  k_total = 10'000'000;
+        tap::sr::async::spsc_ring<std::uint32_t> ring(1024);
 
         std::thread producer([&] {
             std::mt19937                               rng(12345);

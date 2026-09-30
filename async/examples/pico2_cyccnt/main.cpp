@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Real-silicon cycle measurement of the ASRC hot path on the RP2350's
 // Cortex-M33 (docs/HARDWARE_TESTING.md, Setup 2). The steady-state workload
 // is the same duplex push(32)/pull(32) loop as runPipeline() in
@@ -7,7 +9,7 @@
 // *instruction* counts because they are deterministic; real cost is in
 // *cycles*, which only hardware counters give. Dividing the mean cycles/frame
 // printed here by the M33 QEMU steady-state instruction counts (the workload
-// built at 2 s and at 4 s, -DSRT_SC_SECONDS=4, differenced so the one-time
+// built at 2 s and at 4 s, -DTAP_SR_ASYNC_SC_SECONDS=4, differenced so the one-time
 // construction a baseline also carries drops out; measured 2026-09-26):
 //
 //   pipeline_q15   (2ch, balanced)  1,138 insns/frame
@@ -29,7 +31,7 @@
 #include "RP2350.h"
 #include "hardware/clocks.h"
 #include "pico/stdlib.h"
-#include "srt/asrc.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 
@@ -65,7 +67,7 @@ namespace {
         if constexpr (std::is_floating_point_v<S>)
             return static_cast<S>(v);
         else
-            return tap::samplerate::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return tap::sr::async::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
     }
 
     template <typename S>
@@ -78,19 +80,19 @@ namespace {
     }
 
     template <typename S>
-    void runCase(const char* typeName, const char* presetName, const tap::samplerate::filter_spec& spec,
+    void runCase(const char* typeName, const char* presetName, const tap::sr::async::filter_spec& spec,
                  std::size_t channels) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = channels;
         cfg.filter   = spec;
 
         // Heap-constructed so allocation failure (e.g. 12ch + float on a tighter
         // build) degrades to a printed SKIP row instead of a hard fault.
-        std::unique_ptr<tap::samplerate::basic_async_sample_rate_converter<S>> asrc;
-        std::vector<S>                                                         input;
-        std::vector<S>                                                         out;
+        std::unique_ptr<tap::sr::async::basic_converter<S>> asrc;
+        std::vector<S>                                      input;
+        std::vector<S>                                      out;
         try {
-            asrc  = std::make_unique<tap::samplerate::basic_async_sample_rate_converter<S>>(cfg);
+            asrc  = std::make_unique<tap::sr::async::basic_converter<S>>(cfg);
             input = sineBlock<S>(kInputFrames * channels, 997.0, 0.5);
             out.resize(kBlockFrames * channels);
         }
@@ -162,17 +164,17 @@ int main() {
                 "cyc/frame", "%core@48k");
 
     for (const std::size_t ch : {std::size_t{1}, std::size_t{2}, std::size_t{12}}) {
-        runCase<std::int16_t>("q15", "fast", tap::samplerate::filter_spec::fast(), ch);
-        runCase<std::int16_t>("q15", "balanced", tap::samplerate::filter_spec::balanced(), ch);
+        runCase<std::int16_t>("q15", "fast", tap::sr::async::filter_spec::fast(), ch);
+        runCase<std::int16_t>("q15", "balanced", tap::sr::async::filter_spec::balanced(), ch);
     }
 #if PICO2_MEASURE_FLOAT
     // Soft FP64 accumulation: expected brutally slow on the M33 (the QEMU
     // baselines put pipeline_float at ~3.8x pipeline_q15 instructions).
-    runCase<float>("float", "fast", tap::samplerate::filter_spec::fast(), 1);
-    runCase<float>("float", "balanced", tap::samplerate::filter_spec::balanced(), 1);
+    runCase<float>("float", "fast", tap::sr::async::filter_spec::fast(), 1);
+    runCase<float>("float", "balanced", tap::sr::async::filter_spec::balanced(), 1);
 #endif
 
-    std::printf("SRT_PICO2_DONE\n");
+    std::printf("TAP_SR_PICO2_DONE\n");
     while (true)
         sleep_ms(1000);
 }

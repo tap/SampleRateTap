@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Contract battery for the phase-major coefficient table, typed over the
 // three sample formats and exhaustive over every phase of both directions —
@@ -11,13 +11,13 @@
 #include <gtest/gtest.h>
 
 #include "tap/dsp/fir_kernels.h"
-#include "tap/ratio/phase_table.h"
+#include "tap/sr/bridge/phase_table.h"
 
 namespace {
 
-    using tap::ratio::basic_phase_table;
-    using tap::ratio::direction;
-    using tap::ratio::profile;
+    using tap::sr::bridge::basic_phase_table;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::profile;
 
     template <typename S>
     class phase_table_test : public ::testing::Test {};

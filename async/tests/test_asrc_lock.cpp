@@ -1,32 +1,34 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #include <cmath>
 #include <numbers>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.h"
 #include "support/two_clock_sim.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 
     constexpr double k_fs = 48000.0;
 
-    tap::samplerate::config mono_config() {
-        tap::samplerate::config cfg;
+    tap::sr::async::config mono_config() {
+        tap::sr::async::config cfg;
         cfg.channels = 1;
         return cfg;
     }
 
     TEST(AsrcLock, LocksAndHoldsAtConstantOffset) {
-        tap::samplerate::async_sample_rate_converter asrc(mono_config());
-        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
-        bool                    locked_by2s = false;
-        double                  ppm_sum     = 0.0;
-        double                  fill_sum    = 0.0;
-        std::size_t             tail_blocks = 0;
+        tap::sr::async::converter asrc(mono_config());
+        async_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
+        bool                      locked_by2s = false;
+        double                    ppm_sum     = 0.0;
+        double                    fill_sum    = 0.0;
+        std::size_t               tail_blocks = 0;
         sim.run(60.0, [&](const float*, std::size_t, double t) {
             const auto st = asrc.status();
-            if (t < 2.0 && st.state == tap::samplerate::converter_state::locked) {
+            if (t < 2.0 && st.state == tap::sr::async::converter_state::locked) {
                 locked_by2s = true;
             }
             if (t > 30.0) { // average over many block-beat cycles
@@ -37,7 +39,7 @@ namespace {
         });
         const auto st = asrc.status();
         EXPECT_TRUE(locked_by2s);
-        EXPECT_EQ(st.state, tap::samplerate::converter_state::locked);
+        EXPECT_EQ(st.state, tap::sr::async::converter_state::locked);
         EXPECT_EQ(st.underruns, 0u);
         EXPECT_EQ(st.overruns, 0u);
         EXPECT_EQ(st.resyncs, 0u);
@@ -51,9 +53,9 @@ namespace {
     }
 
     TEST(AsrcLock, TracksDriftRampWithoutUnlocking) {
-        tap::samplerate::async_sample_rate_converter asrc(mono_config());
-        srt_test::two_clock_sim                      sim{
-                                 .asrc = asrc, .fs_in = k_fs, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        tap::sr::async::converter asrc(mono_config());
+        async_test::two_clock_sim sim{
+            .asrc = asrc, .fs_in = k_fs, .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         // Input clock drifts 0 -> +300 ppm over 30 s (10 ppm/s, far faster than
         // real oscillator wander), then holds for the loop to reconverge.
         sim.fs_in_scale          = [](double t) { return 1.0 + 300e-6 * std::min(t, 30.0) / 30.0; };
@@ -61,7 +63,7 @@ namespace {
         bool ever_locked         = false;
         sim.run(45.0, [&](const float*, std::size_t, double) {
             const auto st = asrc.status();
-            if (st.state == tap::samplerate::converter_state::locked) {
+            if (st.state == tap::sr::async::converter_state::locked) {
                 ever_locked = true;
             }
             else if (ever_locked) {
@@ -80,9 +82,9 @@ namespace {
         // At +500 ppm a forward slip happens every 2000 output samples. A clean
         // sine's second difference is bounded by A*omega^2; any window-shift
         // discontinuity would blow far past that bound.
-        tap::samplerate::async_sample_rate_converter asrc(mono_config());
-        srt_test::two_clock_sim                      sim{
-                                 .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        tap::sr::async::converter asrc(mono_config());
+        async_test::two_clock_sim sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double amp = 0.5;
         const double nu  = 1000.0 / k_fs;
         sim.gen          = [&](std::uint64_t i) {
@@ -110,10 +112,10 @@ namespace {
     TEST(AsrcLock, RecoversFromConsumerStall) {
         // Producer keeps pushing while the consumer stops pulling: occupancy blows
         // through the high watermark, the converter hard-resyncs, then relocks.
-        tap::samplerate::async_sample_rate_converter asrc(mono_config());
-        srt_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 100e-6), .fs_out = k_fs, .channels = 1};
+        tap::sr::async::converter asrc(mono_config());
+        async_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 100e-6), .fs_out = k_fs, .channels = 1};
         sim.run(10.0, [&](const float*, std::size_t, double) {});
-        ASSERT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
+        ASSERT_EQ(asrc.status().state, tap::sr::async::converter_state::locked);
 
         // Stall: push 3000 frames with no pulls (FIFO capacity is 1024 mono).
         std::vector<float> burst(3000, 0.0f);
@@ -124,10 +126,10 @@ namespace {
 
         // Resume pulling; the converter must resync and relock without underruns
         // turning permanent.
-        srt_test::two_clock_sim resume{.asrc = asrc, .fs_in = k_fs * (1.0 + 100e-6), .fs_out = k_fs, .channels = 1};
+        async_test::two_clock_sim resume{.asrc = asrc, .fs_in = k_fs * (1.0 + 100e-6), .fs_out = k_fs, .channels = 1};
         resume.run(10.0, [&](const float*, std::size_t, double) {});
         const auto st = asrc.status();
-        EXPECT_EQ(st.state, tap::samplerate::converter_state::locked);
+        EXPECT_EQ(st.state, tap::sr::async::converter_state::locked);
         EXPECT_GE(st.resyncs, 1u);
     }
 

@@ -1,14 +1,16 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Deterministic fixed workloads for the instruction-count ratchet
 // (docs/PERFORMANCE.md). One scenario per binary, selected at compile time
-// (SRT_SC_KIND / SRT_SC_TYPE) because bare-metal targets have no argv.
+// (TAP_SR_ASYNC_SC_KIND / TAP_SR_ASYNC_SC_TYPE) because bare-metal targets have no argv.
 // The qemu plugin counts the whole run including setup; workloads are sized
 // so the measured loop dominates. The checksum both defeats dead-code
 // elimination and pins down cross-run determinism.
 //
-// SRT_SC_KIND: 0 = kernel (interpolate in isolation), 1 = pipeline (duplex
+// TAP_SR_ASYNC_SC_KIND: 0 = kernel (interpolate in isolation), 1 = pipeline (duplex
 //              push/pull through the full converter)
-// SRT_SC_TYPE: 0 = float, 1 = Q15, 2 = Q31
-// SRT_SC_CH:   pipeline channel count (default 2; 12 = the 7.1.4 shape)
+// TAP_SR_ASYNC_SC_TYPE: 0 = float, 1 = Q15, 2 = Q31
+// TAP_SR_ASYNC_SC_CH:   pipeline channel count (default 2; 12 = the 7.1.4 shape)
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -17,7 +19,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "srt/asrc.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 
@@ -26,7 +28,7 @@ namespace {
         if constexpr (std::is_floating_point_v<S>)
             return static_cast<S>(v);
         else
-            return tap::samplerate::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return tap::sr::async::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
     }
 
     template <typename S>
@@ -40,45 +42,45 @@ namespace {
 
     template <typename S>
     double runKernel() {
-        const tap::samplerate::polyphase_filter_bank<S> bank(tap::samplerate::filter_spec::balanced(), 48000.0);
-        const auto                                      hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
-        double                                          sink = 0.0;
-        double                                          mu   = 0.0;
+        const tap::sr::async::polyphase_filter_bank<S> bank(tap::sr::async::filter_spec::balanced(), 48000.0);
+        const auto                                     hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
+        double                                         sink = 0.0;
+        double                                         mu   = 0.0;
         for (int i = 0; i < 200000; ++i) {
             mu += 0.6180339887498949;
             if (mu >= 1.0)
                 mu -= 1.0;
-            sink += static_cast<double>(tap::samplerate::interpolate(bank, hist.data(), mu));
+            sink += static_cast<double>(tap::sr::async::interpolate(bank, hist.data(), mu));
         }
         return sink;
     }
 
-#ifndef SRT_SC_CH
-#define SRT_SC_CH 2
+#ifndef TAP_SR_ASYNC_SC_CH
+#define TAP_SR_ASYNC_SC_CH 2
 #endif
 
 // Pipeline length in seconds of virtual audio. The ratchet always builds the
-// default; a second build at -DSRT_SC_SECONDS=4 separates steady-state cost
+// default; a second build at -DTAP_SR_ASYNC_SC_SECONDS=4 separates steady-state cost
 // from one-time construction (the difference of the two counts), the method
 // docs/COMPARISON.md uses. Only the gated default is ever baselined.
-#ifndef SRT_SC_SECONDS
-#define SRT_SC_SECONDS 2
+#ifndef TAP_SR_ASYNC_SC_SECONDS
+#define TAP_SR_ASYNC_SC_SECONDS 2
 #endif
 
     template <typename S>
     double runPipeline() {
-        constexpr std::size_t   kCh    = SRT_SC_CH;
-        constexpr std::size_t   kBlock = 32;
-        tap::samplerate::config cfg;
+        constexpr std::size_t  kCh    = TAP_SR_ASYNC_SC_CH;
+        constexpr std::size_t  kBlock = 32;
+        tap::sr::async::config cfg;
         cfg.channels = kCh;
-        tap::samplerate::basic_async_sample_rate_converter<S> asrc(cfg);
+        tap::sr::async::basic_converter<S> asrc(cfg);
 
         const auto     input = sineBlock<S>(12000 * kCh, 997.0, 0.5); // 0.25 s, cycled
         std::vector<S> out(kBlock * kCh);
 
         double            sink   = 0.0;
         std::size_t       off    = 0;
-        const std::size_t blocks = SRT_SC_SECONDS * 48000 / kBlock; // virtual audio
+        const std::size_t blocks = TAP_SR_ASYNC_SC_SECONDS * 48000 / kBlock; // virtual audio
         for (std::size_t b = 0; b < blocks; ++b) {
             asrc.push(input.data() + off, kBlock);
             asrc.pull(out.data(), kBlock);
@@ -94,7 +96,7 @@ namespace {
 
     template <typename S>
     double run() {
-#if SRT_SC_KIND == 0
+#if TAP_SR_ASYNC_SC_KIND == 0
         return runKernel<S>();
 #else
         return runPipeline<S>();
@@ -104,9 +106,9 @@ namespace {
 } // namespace
 
 int main() {
-#if SRT_SC_TYPE == 0
+#if TAP_SR_ASYNC_SC_TYPE == 0
     const double checksum = run<float>();
-#elif SRT_SC_TYPE == 1
+#elif TAP_SR_ASYNC_SC_TYPE == 1
     const double checksum = run<std::int16_t>();
 #else
     const double checksum = run<std::int32_t>();

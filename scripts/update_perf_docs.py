@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Timothy Place and the SampleRateTap contributors
 """Run the host benchmarks and refresh the README performance table.
 
-Usage: scripts/update_perf_docs.py path/to/srt_bench [async/README.md]
+Usage: scripts/update_perf_docs.py path/to/tap_sr_async_bench [async/README.md]
 
 Rewrites the block between <!-- PERF:BEGIN --> and <!-- PERF:END --> with a
 machine- and date-annotated table. See docs/PERFORMANCE.md.

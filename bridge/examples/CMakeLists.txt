@@ -1,5 +1,5 @@
 add_executable(bluetooth_bridge bluetooth_bridge.cpp)
 target_link_libraries(bluetooth_bridge PRIVATE
-    tap::ratio
-    srt_headers
-    tap_ratio_warnings)
+    tap::sr::bridge
+    tap_sr_async_headers
+    tap_sr_bridge_warnings)

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // M1 skeleton battery: pins the library's identity constants and proves the
 // DspTap substrate is wired end to end — everything the M2 table builder
@@ -17,7 +17,7 @@
 #include "tap/dsp/kaiser.h"
 #include "tap/dsp/quantize.h"
 #include "tap/dsp/sample_traits.h"
-#include "tap/ratio/ratio.h"
+#include "tap/sr/bridge/ratio.h"
 
 namespace {
 
@@ -25,10 +25,10 @@ namespace {
         // 44.1/48 = 147/160 in lowest terms; the two directions' phase counts
         // are coprime and fixed forever. If either constant changes, this is
         // not RatioTap anymore.
-        EXPECT_EQ(tap::ratio::k_phases_up, 160u);
-        EXPECT_EQ(tap::ratio::k_phases_down, 147u);
-        EXPECT_EQ(std::gcd(tap::ratio::k_phases_up, tap::ratio::k_phases_down), 1u);
-        EXPECT_EQ(TAP_RATIO_VERSION_MAJOR, 0);
+        EXPECT_EQ(tap::sr::bridge::k_phases_up, 160u);
+        EXPECT_EQ(tap::sr::bridge::k_phases_down, 147u);
+        EXPECT_EQ(std::gcd(tap::sr::bridge::k_phases_up, tap::sr::bridge::k_phases_down), 1u);
+        EXPECT_EQ(TAP_SR_VERSION_MAJOR, 0);
     }
 
     // The substrate chain the M2 table builder will use, end to end at this
@@ -37,7 +37,7 @@ namespace {
     // shared kernel. Catches submodule/link/include-path breakage with real
     // arithmetic rather than a version string.
     TEST(Skeleton, SubstrateIsWiredEndToEnd) {
-        constexpr std::size_t k_phases = tap::ratio::k_phases_down;
+        constexpr std::size_t k_phases = tap::sr::bridge::k_phases_down;
         constexpr std::size_t k_taps   = 24;
         std::vector<double>   proto(k_phases * k_taps);
         tap::dsp::design_prototype(proto, k_phases, (19000.0 + 22050.0) / 48000.0, tap::dsp::kaiser_beta(70.0));

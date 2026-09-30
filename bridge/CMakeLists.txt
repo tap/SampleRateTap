@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 3.24)
-project(RatioTap VERSION 0.3.0 LANGUAGES CXX)
+project(tap_sr_bridge LANGUAGES CXX)
+# The family version is TAP_SR_VERSION_* in include/tap/sr/bridge/ratio.h
+# and the root project() (D13); the engine subproject carries none.
+if(PROJECT_IS_TOP_LEVEL)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/retired_options.cmake)
+endif()
 
 # ==============================================================================
 # RatioTap — synchronous 44.1 <-> 48 kHz sample rate conversion, as fast as
-# possible. Header-only C++20 (include/tap/ratio/), built on the Tap family's
+# possible. Header-only C++20 (include/tap/sr/bridge/), built on the Tap family's
 # shared FIR substrate from DspTap (kaiser design, sample-format traits, dot
 # kernels, quantization, measurement instruments). See PLAN.md for the charter
 # and milestones; this is the M1 skeleton.
@@ -17,70 +22,70 @@ if(NOT TARGET tap::dsp)
                      ${CMAKE_CURRENT_BINARY_DIR}/submodules/dsptap)
 endif()
 
-add_library(tap_ratio INTERFACE)
-add_library(tap::ratio ALIAS tap_ratio)
-target_include_directories(tap_ratio INTERFACE
+add_library(tap_sr_bridge INTERFACE)
+add_library(tap::sr::bridge ALIAS tap_sr_bridge)
+target_include_directories(tap_sr_bridge INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
-target_compile_features(tap_ratio INTERFACE cxx_std_20)
-target_link_libraries(tap_ratio INTERFACE tap::dsp)
+target_compile_features(tap_sr_bridge INTERFACE cxx_std_20)
+target_link_libraries(tap_sr_bridge INTERFACE tap::dsp)
 
 if(PROJECT_IS_TOP_LEVEL)
-    option(TAP_RATIO_BUILD_TESTS "Build RatioTap tests" ON)
-    option(TAP_RATIO_BUILD_EXAMPLES "Build RatioTap examples" ON)
+    option(TAP_SR_BUILD_TESTS "Build RatioTap tests" ON)
+    option(TAP_SR_BUILD_EXAMPLES "Build RatioTap examples" ON)
 else()
-    option(TAP_RATIO_BUILD_TESTS "Build RatioTap tests" OFF)
-    option(TAP_RATIO_BUILD_EXAMPLES "Build RatioTap examples" OFF)
+    option(TAP_SR_BUILD_TESTS "Build RatioTap tests" OFF)
+    option(TAP_SR_BUILD_EXAMPLES "Build RatioTap examples" OFF)
 endif()
 
 # C ABI shared library for FFI consumers (the notebooks drive the shipping
 # C++ through it — see notebooks/ratio_demo.ipynb).
-option(TAP_RATIO_BUILD_CAPI "Build the C ABI shared library" OFF)
+option(TAP_SR_BUILD_CAPI "Build the C ABI shared library" OFF)
 
 # Fixed deterministic workloads for the QEMU instruction-count ratchet;
 # buildable for any target including bare metal. See PLAN.md section 7.
-option(TAP_RATIO_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF)
+option(TAP_SR_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF)
 
-# The sibling async engine, dev-only (never part of the shipped tap::ratio
+# The sibling async engine, dev-only (never part of the shipped tap::sr::bridge
 # target): the golden cross-validation test and the bluetooth_bridge example
 # compose against its near-unity ASRC. Consumed headers-only via include path,
-# so this engine's code never links async's target (MONOREPO_PLAN.md 4.2);
+# so this engine's code never links async's target (PLAN.md 4.2);
 # tap::dsp serves its "tap/dsp/..." includes.
-if(TAP_RATIO_BUILD_TESTS OR TAP_RATIO_BUILD_EXAMPLES)
-    add_library(srt_headers INTERFACE)
+if(TAP_SR_BUILD_TESTS OR TAP_SR_BUILD_EXAMPLES)
+    add_library(tap_sr_async_headers INTERFACE)
     # SYSTEM: dependency headers are exempt from this repo's warning gates
     # (MSVC /W4 otherwise fires benign C4324 on the ASRC ring's deliberate
     # cache-line alignment padding, and -Werror turns it fatal).
     cmake_path(SET _tap_async_include NORMALIZE "${CMAKE_CURRENT_SOURCE_DIR}/../async/include")
-    target_include_directories(srt_headers SYSTEM INTERFACE ${_tap_async_include})
+    target_include_directories(tap_sr_async_headers SYSTEM INTERFACE ${_tap_async_include})
 endif()
 
 # Warning flags for this project's own tests; never exported to consumers of
 # the INTERFACE library.
-option(TAP_RATIO_WERROR "Treat warnings as errors in RatioTap's own targets" OFF)
-add_library(tap_ratio_warnings INTERFACE)
-target_compile_options(tap_ratio_warnings INTERFACE
+option(TAP_SR_BRIDGE_WERROR "Treat warnings as errors in RatioTap's own targets" OFF)
+add_library(tap_sr_bridge_warnings INTERFACE)
+target_compile_options(tap_sr_bridge_warnings INTERFACE
     $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra -Wpedantic -Wconversion -Wshadow>
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->)
-if(TAP_RATIO_WERROR)
-    target_compile_options(tap_ratio_warnings INTERFACE
+if(TAP_SR_BRIDGE_WERROR)
+    target_compile_options(tap_sr_bridge_warnings INTERFACE
         $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Werror>
         $<$<CXX_COMPILER_ID:MSVC>:/WX>)
 endif()
 
-if(TAP_RATIO_BUILD_TESTS)
+if(TAP_SR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
 
-if(TAP_RATIO_BUILD_EXAMPLES)
+if(TAP_SR_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-if(TAP_RATIO_BUILD_CAPI)
-    add_subdirectory(tools/capi)
+if(TAP_SR_BUILD_CAPI)
+    add_subdirectory(capi)
 endif()
 
-if(TAP_RATIO_BUILD_ICOUNT_BENCH)
+if(TAP_SR_BUILD_ICOUNT_BENCH)
     add_subdirectory(bench/icount)
 endif()

@@ -29,11 +29,23 @@ jobs:
         with:
           submodules: recursive
 
+      # The Arm toolchain is ~600 MB of .debs; a throttled apt mirror turned
+      # the install into 40-minute jobs on 2026-09-30 (see ci.yml). Cached
+      # .debs make it an index refresh.
+      - name: Runner image (for the package cache key)
+        id: apt-image
+        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cache the Arm toolchain packages
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/apt-archives
+          key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
       - name: Install toolchains and QEMU
-        run: >
-          sudo apt-get update -q &&
-          sudo apt-get install -y -q gcc-arm-none-eabi qemu-system-arm
-          libglib2.0-dev ninja-build meson flex bison
+        run: |
+          mkdir -p ~/apt-archives
+          sudo apt-get update -q
+          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi qemu-system-arm libglib2.0-dev ninja-build meson flex bison
+          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
 
       - name: Build counting plugin
         run: |
@@ -55,9 +67,8 @@ jobs:
             fi
             cmake -B build-$tgt -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_TOOLCHAIN_FILE=$tc \
-              -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
-              -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
-              -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
+              -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
+              -DTAP_SR_BUILD_ICOUNT_BENCH=ON -DTAP_SR_ICOUNT_COMPARE=ON
             cmake --build build-$tgt -j 4
             # Each engine at 2 s and 4 s: the difference is steady state, the
             # remainder construction (async/bench/icount/cmp_main.cpp).
@@ -68,7 +79,7 @@ jobs:
                 -kernel build-$tgt/async/bench/icount/$bin 2>&1)
               echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
                 echo "$out"; echo "::error::$tgt $bin did not complete"; exit 1; }
-              n=$(echo "$out" | grep -o 'SRT_INSN_COUNT [0-9]*' | cut -d' ' -f2)
+              n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
               echo "CMP_COUNT $tgt $bin $n"
             done
           done
@@ -117,9 +128,8 @@ jobs:
           export PATH="$HOME/qemu-hexagon-plugins:$(dirname "$clangxx"):$PATH"
           cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=cmake/hexagon-linux-musl.cmake \
-            -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
-            -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
-            -DSRT_BUILD_ICOUNT_BENCH=ON -DSRT_ICOUNT_COMPARE=ON
+            -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
+            -DTAP_SR_BUILD_ICOUNT_BENCH=ON -DTAP_SR_ICOUNT_COMPARE=ON
           cmake --build build-hex -j 4
           for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8; do
                          echo cmp_icount_$e cmp_icount_${e}_4s; done); do
@@ -127,6 +137,6 @@ jobs:
               build-hex/async/bench/icount/$bin 2>&1)
             echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
               echo "$out"; echo "::error::hexagon $bin did not complete"; exit 1; }
-            n=$(echo "$out" | grep -o 'SRT_INSN_COUNT [0-9]*' | cut -d' ' -f2)
+            n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
             echo "CMP_COUNT hexagon $bin $n"
           done

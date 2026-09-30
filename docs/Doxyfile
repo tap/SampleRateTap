@@ -4,9 +4,9 @@ PROJECT_NAME           = SampleRateTap
 PROJECT_BRIEF          = "Near-unity asynchronous sample rate converter (C++20, header-only)"
 # Both engines' public headers; the async README stays the main page until
 # the family README lands (monorepo migration step 4).
-INPUT                  = async/include bridge/include async/README.md
+INPUT                  = async/include bridge/include README.md
 RECURSIVE              = YES
-USE_MDFILE_AS_MAINPAGE = async/README.md
+USE_MDFILE_AS_MAINPAGE = README.md
 OUTPUT_DIRECTORY       = docs
 GENERATE_LATEX         = NO
 EXTRACT_ALL            = YES

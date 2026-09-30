@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Contract battery for the fixed-point converters (milestone M4). The engine
 // is format-generic; what needs proving is the numeric contract of each
@@ -20,13 +20,13 @@
 
 #include "reference/reference_vectors.h"
 #include "tap/dsp/analysis/sine_analysis.h"
-#include "tap/ratio/converter.h"
+#include "tap/sr/bridge/converter.h"
 
 namespace {
 
-    using tap::ratio::basic_converter;
-    using tap::ratio::direction;
-    using tap::ratio::profile;
+    using tap::sr::bridge::basic_converter;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::profile;
 
     namespace an = tap::dsp::analysis;
 
@@ -80,8 +80,8 @@ namespace {
     template <typename S, direction D>
     double measure_sine_snr_db(const profile& p, double freq_hz, double amp) {
         basic_converter<S, D> c(1, p);
-        constexpr double      fs_in  = tap::ratio::ratio_traits<D>::k_input_rate_hz;
-        constexpr double      fs_out = tap::ratio::ratio_traits<D>::k_output_rate_hz;
+        constexpr double      fs_in  = tap::sr::bridge::ratio_traits<D>::k_input_rate_hz;
+        constexpr double      fs_out = tap::sr::bridge::ratio_traits<D>::k_output_rate_hz;
         const std::size_t     n_in   = 1 << 16;
         std::vector<S>        x(n_in);
         for (std::size_t i = 0; i < n_in; ++i) {
@@ -167,7 +167,7 @@ namespace {
     template <typename S, direction D>
     void check_dc_every_phase() {
         basic_converter<S, D> c(1);
-        constexpr std::size_t l    = tap::ratio::ratio_traits<D>::k_phases;
+        constexpr std::size_t l    = tap::sr::bridge::ratio_traits<D>::k_phases;
         const std::size_t     n_in = c.taps() + 2 * l + 8;
         std::vector<S>        x(n_in, std::numeric_limits<S>::max());
         std::vector<S>        y(c.outputs_for(n_in));

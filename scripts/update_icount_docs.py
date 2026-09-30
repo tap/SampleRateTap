@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Timothy Place and the SampleRateTap contributors
 """Regenerate an engine README's instruction-count table from its baselines.
 
 Usage: scripts/update_icount_docs.py [--engine async|bridge]

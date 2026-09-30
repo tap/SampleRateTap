@@ -1,9 +1,11 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 #include <cmath>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 
@@ -12,9 +14,9 @@ namespace {
     // observable: the first produced frame is strongly attenuated and the
     // output reaches the full DC value once the ramp has passed.
     TEST(Fade, OutputRampsAfterFill) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = 1;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
+        tap::sr::async::converter asrc(cfg);
 
         std::vector<float> in(32, 0.5f);
         std::vector<float> out(32);

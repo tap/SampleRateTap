@@ -23,12 +23,12 @@ embedded targets that cannot fake their way around a bad choice.
 
 ## 1. Header-only distribution
 
-The entire library is seven headers under `include/srt/`. The build system
+The entire library is seven headers under `include/tap/sr/async/`. The build system
 declares exactly one library target, and it has no compiled artifact:
 
 ```cmake
 add_library(SampleRateTap INTERFACE)
-add_library(SampleRateTap::SampleRateTap ALIAS SampleRateTap)
+add_library(tap::sr::async ALIAS SampleRateTap)
 target_compile_features(SampleRateTap INTERFACE cxx_std_20)
 ```
 
@@ -37,14 +37,14 @@ exclusively — the README's *Consuming the library* section says so in as
 many words: "there are no install/package rules yet." The tests, examples,
 benchmarks and the C ABI shim are all opt-in options that default off when
 the project is not top-level, and the warning flags live on a separate
-`srt_warnings` target so that the library's own `-Wall -Wextra -Wpedantic
+`tap_sr_async_warnings` target so that the library's own `-Wall -Wextra -Wpedantic
 -Wconversion` discipline is never propagated into a consumer's build
 (`CMakeLists.txt` carries the comment: "not propagated to consumers").
 
 What was rejected is the conventional pair: a compiled static/shared
 library, and a packaged install with exported config files. The costs of
 header-only are real and were accepted knowingly. Every translation unit
-that includes `srt/srt.h` re-parses and re-instantiates the templates —
+that includes `tap/sr/async/async.h` re-parses and re-instantiates the templates —
 compile time is paid repeatedly. There is no ABI boundary, so there is
 nothing to version at link time and no way to ship a fixed `.so` to a
 customer who cannot rebuild (the C ABI shim in section 15 exists precisely
@@ -74,11 +74,11 @@ by a concept:
 
 ```cpp
 template <sample_type S>
-class basic_async_sample_rate_converter { ... };
+class basic_converter { ... };
 
-using async_sample_rate_converter    = basic_async_sample_rate_converter<float>;
-using async_sample_rate_converter_q15 = basic_async_sample_rate_converter<std::int16_t>;
-using async_sample_rate_converter_q31 = basic_async_sample_rate_converter<std::int32_t>;
+using converter    = basic_converter<float>;
+using converter_q15 = basic_converter<std::int16_t>;
+using converter_q31 = basic_converter<std::int32_t>;
 ```
 
 The first rejected alternative is virtual dispatch: an abstract
@@ -120,7 +120,7 @@ the same trust-nothing reflex as the ring's lock-free asserts.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| templates constrained by the `sample_type` concept | virtual `ISampleOps`; CRTP wrappers | per-type associated types (`Accum`, `BlendFactor`) are impossible to express virtually; builtins can't inherit; hot loops must inline and vectorize | `include/srt/sample_traits.h` (concept + `static_assert`s); `include/srt/asrc.h` aliases; README platform notes (19× soft-double) |
+| templates constrained by the `sample_type` concept | virtual `ISampleOps`; CRTP wrappers | per-type associated types (`Accum`, `BlendFactor`) are impossible to express virtually; builtins can't inherit; hot loops must inline and vectorize | `include/tap/sr/async/sample_traits.h` (concept + `static_assert`s); `include/tap/sr/async/converter.h` aliases; README platform notes (19× soft-double) |
 
 ## 3. A traits struct as the customization point
 
@@ -146,7 +146,7 @@ it: Q0.15 × Q1.14 products summed exactly, one rounding in `finalize()`).
 Free functions cannot carry associated types; you would need separate type
 traits anyway, and the customization point would smear across two
 mechanisms. Second, ADL on builtin types like `int16_t` has no associated
-namespace to hook — the overloads would all pile into `srt` and be
+namespace to hook — the overloads would all pile into `tap::sr::async` and be
 distinguishable only by overload resolution, silently, which is exactly
 how a Q15/Q31 mixup would compile and produce garbage.
 
@@ -166,7 +166,7 @@ implement it.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `sample_traits<T>` struct, undefined primary template | ADL free functions; member policies on sample classes | customization is chiefly associated types; builtins have no ADL namespace and can't have members; missing specialization = clean compile error | `include/srt/sample_traits.h` |
+| `sample_traits<T>` struct, undefined primary template | ADL free functions; member policies on sample classes | customization is chiefly associated types; builtins have no ADL namespace and can't have members; missing specialization = clean compile error | `include/tap/sr/async/sample_traits.h` |
 
 ## 4. The real-time contract: exceptions at setup, `noexcept` forever after
 
@@ -212,7 +212,7 @@ toolchain quirk would have been a field failure.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| all allocation + throwing in the constructor; `noexcept`/lock-free/allocation-free hot path | `init()` + error codes; exceptions anywhere near audio | invalid objects unrepresentable; RT contract is the product; Hexagon's no-unwind toolchain proved the value of confining throws to setup | `include/srt/asrc.h` (class comment, `validated()`); README bullets; `docs/PERFORMANCE.md` Known debt; commit "Hexagon: exclude ConfigValidation" |
+| all allocation + throwing in the constructor; `noexcept`/lock-free/allocation-free hot path | `init()` + error codes; exceptions anywhere near audio | invalid objects unrepresentable; RT contract is the product; Hexagon's no-unwind toolchain proved the value of confining throws to setup | `include/tap/sr/async/converter.h` (class comment, `validated()`); README bullets; `docs/PERFORMANCE.md` Known debt; commit "Hexagon: exclude ConfigValidation" |
 
 ## 5. Runtime filter design, not `constexpr` tables
 
@@ -253,7 +253,7 @@ costs.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| filter designed at runtime in the constructor | `constexpr` coefficient tables | 12K–33K taps × transcendentals ≈ minutes of interpreted compile time per TU vs <10 ms once at runtime; needs pre-C++26 hand-rolled constexpr math; runtime `filter_spec` must work anyway | `include/srt/detail/kaiser.h` header comment |
+| filter designed at runtime in the constructor | `constexpr` coefficient tables | 12K–33K taps × transcendentals ≈ minutes of interpreted compile time per TU vs <10 ms once at runtime; needs pre-C++26 hand-rolled constexpr math; runtime `filter_spec` must work anyway | `include/tap/dsp/kaiser.h` header comment |
 
 ## 6. `<bit>` over hand-rolled bit tricks; masks over modulo
 
@@ -261,7 +261,7 @@ Everywhere the library needs power-of-two arithmetic it reaches for
 C++20's `<bit>`: `std::bit_ceil` rounds the ring capacity up
 (`spsc_ring`'s constructor), rounds the phase count up
 (`polyphase_filter_bank`), and sizes the FIFO (`ring_capacity_elems` in
-`asrc.h`); `std::countr_zero` recovers log₂(L) in the phase-indexed
+`converter.h`); `std::countr_zero` recovers log₂(L) in the phase-indexed
 kernels so the polyphase branch is the top bits of the Q0.64 phase word:
 
 ```cpp
@@ -292,7 +292,7 @@ capacities nobody asked for.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `std::bit_ceil` / `std::countr_zero`; power-of-two capacities indexed by mask | hand-rolled bit tricks; arbitrary sizes with `%` | specified edge cases, single instructions, intent named; masks keep divides and doubles off the per-sample path | `include/srt/spsc_ring.h` ctor + class comment; `include/srt/polyphase_filter.h` (`blend_row_phase`, `interpolate_phase`, `ring_capacity_elems`) |
+| `std::bit_ceil` / `std::countr_zero`; power-of-two capacities indexed by mask | hand-rolled bit tricks; arbitrary sizes with `%` | specified edge cases, single instructions, intent named; masks keep divides and doubles off the per-sample path | `include/tap/sr/async/spsc_ring.h` ctor + class comment; `include/tap/sr/async/polyphase_filter.h` (`blend_row_phase`, `interpolate_phase`, `ring_capacity_elems`) |
 
 ## 7. Memory orderings chosen to be exactly sufficient
 
@@ -303,7 +303,7 @@ library carries an explicit ordering argument, and each ordering is the
 publishes data, `acquire` on the load that consumes a foreign index,
 `relaxed` on a thread's loads of its own index — and `relaxed` on all
 telemetry, whose fields are documented as "individually coherent, not
-mutually" (`status()` in `asrc.h`).
+mutually" (`status()` in `converter.h`).
 
 The rejected alternative is `seq_cst`-by-default — writing
 `head_.store(x)` and letting the strongest ordering paper over the
@@ -323,7 +323,7 @@ merely changing a default.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| explicit, minimal orderings on every atomic | `seq_cst` defaults | weaker barriers on ARM where it matters; each annotation documents exactly why it exists; TSan-checked in CI | `include/srt/spsc_ring.h`; `include/srt/asrc.h` telemetry; the ring chapter's "What was rejected" |
+| explicit, minimal orderings on every atomic | `seq_cst` defaults | weaker barriers on ARM where it matters; each annotation documents exactly why it exists; TSan-checked in CI | `include/tap/sr/async/spsc_ring.h`; `include/tap/sr/async/converter.h` telemetry; the ring chapter's "What was rejected" |
 
 ## 8. `alignas(64)`, not `std::hardware_destructive_interference_size`
 
@@ -358,7 +358,7 @@ appendix's opening theme in miniature.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `alignas(k_cache_line)` with `k_cache_line = 64` | `std::hardware_destructive_interference_size` | the standard constant varies with tuning flags → ODR/ABI fragility in a header; GCC warns; 64 is right everywhere shipped | `include/srt/spsc_ring.h` member layout comment |
+| `alignas(k_cache_line)` with `k_cache_line = 64` | `std::hardware_destructive_interference_size` | the standard constant varies with tuning flags → ODR/ABI fragility in a header; GCC warns; 64 is right everywhere shipped | `include/tap/sr/async/spsc_ring.h` member layout comment |
 
 ## 9. 32-bit telemetry atomics
 
@@ -402,7 +402,7 @@ frame of fill — observability, not metrology.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `atomic<uint32_t>`/`atomic<float>` telemetry, wrap documented | 64-bit atomic counters/doubles | 64-bit atomics lock via libatomic on 32-bit targets, silently voiding the lock-free contract; 32-bit range/precision suffices and is asserted | `include/srt/asrc.h` telemetry members + `static_assert`; `converter_status` doc comment |
+| `atomic<uint32_t>`/`atomic<float>` telemetry, wrap documented | 64-bit atomic counters/doubles | 64-bit atomics lock via libatomic on 32-bit targets, silently voiding the lock-free contract; 32-bit range/precision suffices and is asserted | `include/tap/sr/async/converter.h` telemetry members + `static_assert`; `converter_status` doc comment |
 
 ## 10. Designated initializers as API
 
@@ -441,9 +441,9 @@ points in that space.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| aggregate configs + designated initializers | positional constructors; builder chains | named fields make adjacent-double swaps impossible; defaults stay declarative; declaration-order enforcement | `include/srt/polyphase_filter.h` (`filter_spec` presets); `include/srt/asrc.h` (`config`); `include/srt/pi_servo.h` (`servo_config`) |
+| aggregate configs + designated initializers | positional constructors; builder chains | named fields make adjacent-double swaps impossible; defaults stay declarative; declaration-order enforcement | `include/tap/sr/async/polyphase_filter.h` (`filter_spec` presets); `include/tap/sr/async/converter.h` (`config`); `include/tap/sr/async/pi_servo.h` (`servo_config`) |
 
-## 11. `SRT_RESTRICT`: a portable `__restrict__`, adopted on measurement
+## 11. `TAP_DSP_RESTRICT`: a portable `__restrict__`, adopted on measurement
 
 C++ has no standard `restrict`. The library defines a two-line macro over
 the compiler extensions and applies it to the kernel pointer parameters —
@@ -461,7 +461,7 @@ vectorization audit (PERFORMANCE.md, PR C2) did not assume aliasing was a
 problem; it asked the compiler. `-fopt-info-vec` showed `blend_row`
 vectorizing — but behind a runtime aliasing check, the loop compiled
 twice with a pointer-overlap branch choosing between versions.
-`SRT_RESTRICT` on the row/history pointers removes the check, and the
+`TAP_DSP_RESTRICT` on the row/history pointers removes the check, and the
 measured effect is recorded with the honesty this project's performance
 docs enforce: **M55 `pipeline_float` −1.35% instructions, every other
 embedded scenario exactly 0.00%, x86 same-state A/B −3.7% wall-clock.**
@@ -477,12 +477,12 @@ rather than a raw keyword.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `SRT_RESTRICT` macro on kernel pointers | nothing (alias-versioned loops); structural non-aliasing proofs | verified with `-fopt-info-vec`, measured: M55 float −1.35% insns, x86 −3.7% wall-clock; states a true invariant | `include/srt/polyphase_filter.h` macro + comment; `docs/PERFORMANCE.md` C2 |
+| `TAP_DSP_RESTRICT` macro on kernel pointers | nothing (alias-versioned loops); structural non-aliasing proofs | verified with `-fopt-info-vec`, measured: M55 float −1.35% insns, x86 −3.7% wall-clock; states a true invariant | `include/tap/sr/async/polyphase_filter.h` macro + comment; `docs/PERFORMANCE.md` C2 |
 
 ## 12. Compile-time feature gates — and the measured cost of a runtime one
 
 Target-specific code paths are selected by preprocessor and `constexpr`
-machinery, never by runtime flags. `SRT_Q15_SMLALD` turns on the dual-MAC
+machinery, never by runtime flags. `TAP_DSP_Q15_SMLALD` turns on the dual-MAC
 Q15 dot product exactly where it wins:
 
 ```cpp
@@ -493,14 +493,14 @@ Q15 dot product exactly where it wins:
 the M55 the compiler already auto-vectorizes the scalar loop with MVE and
 the intrinsic would replace vectors with dual-MACs (the gate's comment;
 PERFORMANCE.md C4 verified 0.00% change on every M55 scenario).
-`SRT_CHANNEL_PARALLEL` enables the frame-major channel axis on hosts only,
+`TAP_DSP_CHANNEL_PARALLEL` enables the frame-major channel axis on hosts only,
 and inside the class it becomes a `constexpr` member flag that
 `if constexpr` and plain constant folding erase from non-participating
 builds:
 
 ```cpp
 static constexpr bool k_channel_parallel =
-    SRT_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
+    TAP_DSP_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
 ```
 
 The reason this is dogma rather than taste is that the alternative was
@@ -518,7 +518,7 @@ again" into "provably byte-identical again."
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| preprocessor + `constexpr` flags + `if constexpr` gates | runtime mode flags | a runtime bool in the hot loop measured +6–8% on the M55 ratchet; compile-time gates keep non-participating targets' codegen byte-identical (0.00%) | `include/srt/polyphase_filter.h` (`SRT_Q15_SMLALD`, `SRT_CHANNEL_PARALLEL`, `k_channel_parallel`, `append_one` comment); `docs/PERFORMANCE.md` C4/C6 |
+| preprocessor + `constexpr` flags + `if constexpr` gates | runtime mode flags | a runtime bool in the hot loop measured +6–8% on the M55 ratchet; compile-time gates keep non-participating targets' codegen byte-identical (0.00%) | `include/tap/sr/async/polyphase_filter.h` (`TAP_DSP_Q15_SMLALD`, `TAP_DSP_CHANNEL_PARALLEL`, `k_channel_parallel`, `append_one` comment); `docs/PERFORMANCE.md` C4/C6 |
 
 ## 13. `std::function` in the simulator, templated callables in the library
 
@@ -556,7 +556,7 @@ exactly one production callable is nothing.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| templated `PopFn&&` in the library; `std::function` only in test config | `std::function` on the hot path; templates in test fixtures | hot path needs inlining, no allocation, honest `noexcept`; tests need runtime reassignment and don't care about a type-erased call | `include/srt/polyphase_filter.h` (`process`, `prime`); `include/srt/asrc.h` (`pop_fn` lambda); `tests/support/two_clock_sim.h` |
+| templated `PopFn&&` in the library; `std::function` only in test config | `std::function` on the hot path; templates in test fixtures | hot path needs inlining, no allocation, honest `noexcept`; tests need runtime reassignment and don't care about a type-erased call | `include/tap/sr/async/polyphase_filter.h` (`process`, `prime`); `include/tap/sr/async/converter.h` (`pop_fn` lambda); `tests/support/two_clock_sim.h` |
 
 ## 14. `std::vector` everywhere, custom allocators nowhere
 
@@ -587,21 +587,21 @@ behind `operator new`) is still a fine place to get memory from.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `std::vector` storage, default allocator | allocator/PMR parameters; fixed arrays; arenas | allocation is construction-only by contract, so allocators optimize a non-problem at the cost of infecting every signature; sizes are runtime config | `include/srt/spsc_ring.h`, `polyphase_filter.h`, `asrc.h` (members); RT contract in section 4 |
+| `std::vector` storage, default allocator | allocator/PMR parameters; fixed arrays; arenas | allocation is construction-only by contract, so allocators optimize a non-problem at the cost of infecting every signature; sizes are runtime config | `include/tap/sr/async/spsc_ring.h`, `polyphase_filter.h`, `converter.h` (members); RT contract in section 4 |
 
 ## 15. The C ABI: opaque handles, `reinterpret_cast`, and `impl()` outside `extern "C"`
 
 The FFI surface (`tools/capi/`) wraps the float converter behind an
-opaque `SrtHandle*`. The pattern is textbook, but two details record
+opaque `tap_sr_async_converter*`. The pattern is textbook, but two details record
 decisions. First, the handle is a declared-but-never-defined struct, and
 the conversion is a `reinterpret_cast` in a pair of helpers:
 
 ```cpp
-extern "C" { struct SrtHandle; } // opaque
+extern "C" { struct tap_sr_async_converter; } // opaque
 
 namespace {
-tap::samplerate::async_sample_rate_converter* impl(SrtHandle* h) noexcept { ... }
-const tap::samplerate::async_sample_rate_converter* impl(const SrtHandle* h) noexcept { ... }
+tap::sr::async::converter* impl(tap_sr_async_converter* h) noexcept { ... }
+const tap::sr::async::converter* impl(const tap_sr_async_converter* h) noexcept { ... }
 }
 ```
 
@@ -618,16 +618,16 @@ The rejected alternatives for the handle: exposing the class definition
 headers don't have, per section 1), or a lookup table of integer handles
 (indirection and lifetime bookkeeping to solve a problem the opaque
 pointer already solves). Around the handle, the shim converts the C++
-error model to C conventions at the boundary: `srt_create` catches
+error model to C conventions at the boundary: `tap_sr_async_create` catches
 everything and returns null; every entry point tolerates a null handle,
-because — the file's own comment — the documented "check srt_create for
+because — the file's own comment — the documented "check tap_sr_async_create for
 NULL" convention "otherwise invites a crash on exactly the path where the
 caller forgot to check." An unchecked failure degrades to silence, not a
 crash, which for an audio library is the correct failure sound.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| opaque `SrtHandle*` + `reinterpret_cast`; `impl()` overloads outside `extern "C"`; null-tolerant entry points | exposed class; handle tables; unguarded entries | ABI boundary with zero C++ leakage; C linkage forbids overloads; unchecked create must fail soft | `tools/capi/srt_capi.cpp`, `tools/capi/srt_capi.h` |
+| opaque `tap_sr_async_converter*` + `reinterpret_cast`; `impl()` overloads outside `extern "C"`; null-tolerant entry points | exposed class; handle tables; unguarded entries | ABI boundary with zero C++ leakage; C linkage forbids overloads; unchecked create must fail soft | `tools/capi/tap_sr_async_capi.cpp`, `tools/capi/tap_sr_async_capi.h` |
 
 ## 16. Deleted copy operations: these are identity types
 
@@ -638,7 +638,7 @@ spsc_ring(const spsc_ring&) = delete;
 spsc_ring& operator=(const spsc_ring&) = delete;
 ```
 
-and likewise `basic_async_sample_rate_converter`. The rejected alternative —
+and likewise `basic_converter`. The rejected alternative —
 letting the compiler generate copies, or writing "deep copy" semantics —
 fails the simplest question first: *what would a copy even mean?* A ring
 mid-stream has a producer thread and a consumer thread holding a
@@ -660,7 +660,7 @@ is using *right now*.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| deleted copy (and hence move) on ring and converter | default/deep copies | two live threads reference the object by identity; a copy duplicates state but not the clock relationship; atomics aren't copyable | `include/srt/spsc_ring.h`, `include/srt/asrc.h` |
+| deleted copy (and hence move) on ring and converter | default/deep copies | two live threads reference the object by identity; a copy duplicates state but not the clock relationship; atomics aren't copyable | `include/tap/sr/async/spsc_ring.h`, `include/tap/sr/async/converter.h` |
 
 ## 17. Rejected wholesale, with reasons
 
@@ -696,7 +696,7 @@ that cannot unwind at all.
 **`std::jthread` (or any thread) in the library.** The library owns *no*
 threads. It is a passive object with a two-agent contract — "one producer
 thread calls push() at the input clock; one consumer thread calls pull()
-at the output clock" (`asrc.h`) — and the threads belong to the caller,
+at the output clock" (`converter.h`) — and the threads belong to the caller,
 because they already exist: they are the audio device callbacks. Spawning
 threads would also be unbuildable on half the CI matrix; the bare-metal
 targets have no `std::thread` at all, which is why even the *tests*
@@ -717,11 +717,11 @@ the measured |diff| ≤ 41 adjacent-phase delta of section 18.
 | Rejected | Reason | Evidence |
 |---|---|---|
 | `std::simd` | not in C++20; per-target measured intrinsics (kept or deleted by number) beat portable abstraction | `docs/PERFORMANCE.md` C4/C5 |
-| coroutines | hard-RT synchronous callbacks; no async model fits | `include/srt/asrc.h` thread contract |
-| CRTP mixins | concept + traits already give static dispatch without inheritance shape | `include/srt/sample_traits.h` |
+| coroutines | hard-RT synchronous callbacks; no async model fits | `include/tap/sr/async/converter.h` thread contract |
+| CRTP mixins | concept + traits already give static dispatch without inheritance shape | `include/tap/sr/async/sample_traits.h` |
 | audio-path exceptions | RT contract; Hexagon cannot unwind | section 4 |
-| `std::jthread` in the library | passive two-agent object; caller owns the (callback) threads; bare metal has none | `include/srt/asrc.h`; `tests/CMakeLists.txt` Threads probe |
-| virtual pluggable filters | filter is a parameter space, not a plugin point; would cost kernel inlining and table invariants | `include/srt/polyphase_filter.h` (`filter_spec`) |
+| `std::jthread` in the library | passive two-agent object; caller owns the (callback) threads; bare metal has none | `include/tap/sr/async/converter.h`; `tests/CMakeLists.txt` Threads probe |
+| virtual pluggable filters | filter is a parameter space, not a plugin point; would cost kernel inlining and table invariants | `include/tap/sr/async/polyphase_filter.h` (`filter_spec`) |
 
 ## 18. The meta-decision: comments that show their arithmetic
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Dual-core deployment of the ASRC on the RP2350 (docs/HARDWARE_TESTING.md,
 // Setup 2, "Dual-core deployment"): the converter's two ends on the two
 // Cortex-M33 cores, one core per clock domain — the shape the README
@@ -10,7 +12,7 @@
 //
 // Cross-core safety, stated explicitly: the library's runtime contract is
 // one producer agent and one consumer agent around a lock-free SPSC ring
-// with acquire/release atomics (srt/spsc_ring.h; "one producer thread and
+// with acquire/release atomics (tap/sr/async/spsc_ring.h; "one producer thread and
 // one consumer thread" in the README's Limitations). The contract is about
 // agents and memory ordering, not about std::thread: the RP2350's cores
 // share coherent SRAM (no data caches in front of it), so two CORES satisfy
@@ -19,7 +21,7 @@
 // crosses cores is the explicit Shared block of 32-bit atomics below — kept
 // 32-bit for the same reason the library keeps its telemetry 32-bit: on the
 // M33, 64-bit std::atomic is not lock-free and would route through a
-// library lock (see the footnote in asrc.h).
+// library lock (see the footnote in converter.h).
 //
 // Both pacing schedules derive from the same 64-bit microsecond timebase
 // (the RP2350 timer is one shared block read by both cores), so the
@@ -43,11 +45,11 @@
 #include "hardware/clocks.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
-#include "srt/asrc.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 
-    using Asrc = tap::samplerate::async_sample_rate_converter_q15;
+    using Asrc = tap::sr::async::converter_q15;
 
     constexpr std::size_t kBlockFrames  = 32;
     constexpr std::size_t kMaxChannels  = 12;
@@ -301,18 +303,18 @@ namespace {
     // balanced() with band edges scaled to 16 kHz: identical L/T — same table
     // size and same per-frame cycle cost — with pass/stop at the same normalized
     // frequencies (README "Measured performance"; tests/test_asrc_quality_16k.cpp).
-    tap::samplerate::filter_spec balanced16k() {
-        tap::samplerate::filter_spec f = tap::samplerate::filter_spec::balanced();
-        f.passband_hz                  = 20000.0 * 16.0 / 48.0;
-        f.stopband_hz                  = 28000.0 * 16.0 / 48.0;
+    tap::sr::async::filter_spec balanced16k() {
+        tap::sr::async::filter_spec f = tap::sr::async::filter_spec::balanced();
+        f.passband_hz                 = 20000.0 * 16.0 / 48.0;
+        f.stopband_hz                 = 28000.0 * 16.0 / 48.0;
         return f;
     }
 
-    const char* stateName(tap::samplerate::converter_state s) {
+    const char* stateName(tap::sr::async::converter_state s) {
         switch (s) {
-        case tap::samplerate::converter_state::filling:
+        case tap::sr::async::converter_state::filling:
             return "Filling";
-        case tap::samplerate::converter_state::acquiring:
+        case tap::sr::async::converter_state::acquiring:
             return "Acquiring";
         default:
             return "Locked";
@@ -329,7 +331,7 @@ namespace {
         const double              w = 2.0 * std::numbers::pi * 997.0 / rateHz;
         for (std::size_t f = 0; f < kInputFrames; ++f) {
             const auto v =
-                tap::samplerate::detail::round_sat<std::int16_t>(0.5 * std::sin(w * static_cast<double>(f)) * 32767.0);
+                tap::sr::async::detail::round_sat<std::int16_t>(0.5 * std::sin(w * static_cast<double>(f)) * 32767.0);
             for (std::size_t c = 0; c < channels; ++c)
                 out[f * channels + c] = v;
         }
@@ -339,7 +341,7 @@ namespace {
     PhaseResult runPhase(const PhaseSpec& ph) {
         PhaseResult r;
 
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.sample_rate_hz        = ph.rateHz;
         cfg.channels              = ph.channels;
         cfg.target_latency_frames = kTargetLatencyFrames;
@@ -411,8 +413,8 @@ namespace {
             if (off + kBlockFrames * ph.channels > input.size())
                 off = 0;
 
-            const tap::samplerate::converter_status st = asrc->status();
-            if (!locked && st.state == tap::samplerate::converter_state::locked) {
+            const tap::sr::async::converter_status st = asrc->status();
+            if (!locked && st.state == tap::sr::async::converter_state::locked) {
                 locked    = true;
                 lockUs    = time_us_64() - tStart;
                 undAtLock = st.underruns;
@@ -451,9 +453,9 @@ namespace {
         g.stop.store(true, std::memory_order_release);
         while (!g.consumerDone.load(std::memory_order_acquire))
             tight_loop_contents();
-        const Snapshot                          fin = readSnapshot();
-        const tap::samplerate::converter_status st  = asrc->status();
-        ppmFinal                                    = st.ppm;
+        const Snapshot                         fin = readSnapshot();
+        const tap::sr::async::converter_status st  = asrc->status();
+        ppmFinal                                   = st.ppm;
         g.asrc.store(nullptr, std::memory_order_release);
 
         // PASS = the deployment-shape claims, made falsifiable:
@@ -534,7 +536,7 @@ int main() {
     std::printf("OVERALL: %s (A %s, B %s)\n", overall ? "PASS" : "FAIL",
                 res[0].ran ? (res[0].pass ? "PASS" : "FAIL") : "SKIP",
                 res[1].ran ? (res[1].pass ? "PASS" : "FAIL") : "SKIP");
-    std::printf("SRT_PICO2_DUALCORE_DONE\n");
+    std::printf("TAP_SR_PICO2_DUALCORE_DONE\n");
     while (true)
         sleep_ms(1000);
 }

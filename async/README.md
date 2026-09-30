@@ -1,10 +1,11 @@
-# SampleRateTap
+# `async` — the near-unity asynchronous converter
 
 [![CI](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 
-Header-only C++20 **asynchronous sample rate converter** (ASRC) for the
+The `tap::sr::async` engine of the [SampleRateTap family](../README.md): a
+header-only C++20 **asynchronous sample rate converter** (ASRC) for the
 *near-unity* case: two audio clock domains at nominally the same rate (e.g.
 48 kHz ↔ 48 kHz) sourced from independent oscillators, each within a few
 hundred ppm and drifting slowly. One thread pushes input samples at the input
@@ -28,16 +29,16 @@ slips that occur roughly once every `1/ppm` samples.
 
 ```cmake
 add_subdirectory(SampleRateTap)            # or FetchContent
-target_link_libraries(app PRIVATE SampleRateTap::SampleRateTap)
+target_link_libraries(app PRIVATE tap::sr::async)
 ```
 
 ```cpp
-#include <srt/srt.h>
+#include <tap/sr/async/async.h>
 
-tap::samplerate::config cfg;
+tap::sr::async::config cfg;
 cfg.sample_rate_hz = 48000.0;
 cfg.channels = 2;
-tap::samplerate::async_sample_rate_converter asrc(cfg);   // allocates + designs filter; may throw
+tap::sr::async::converter asrc(cfg);   // allocates + designs filter; may throw
 
 // Input-device thread (input clock):
 asrc.push(input_interleaved, frames);       // noexcept, lock-free
@@ -46,7 +47,7 @@ asrc.push(input_interleaved, frames);       // noexcept, lock-free
 asrc.pull(output_interleaved, frames);      // noexcept, lock-free; silence
                                            // until filled/locked
 
-tap::samplerate::converter_status st = asrc.status();            // any thread: state, ppm, fill,
+tap::sr::async::converter_status st = asrc.status();            // any thread: state, ppm, fill,
                                            // underruns/overruns/resyncs
 ```
 
@@ -55,7 +56,7 @@ the lock acquisition and rate estimate. For a visual tour — lock, measured
 transparency vs. a naive FIFO, spectrograms, latency, drift tracking,
 dropout recovery — see
 [notebooks/asrc_demo.ipynb](notebooks/asrc_demo.ipynb), which drives the
-library through its C ABI (`-DSRT_BUILD_CAPI=ON`, `tools/capi/`) via ctypes
+library through its C ABI (`-DTAP_SR_BUILD_CAPI=ON`, `tools/capi/`) via ctypes
 (the notebook environment is pinned, with hashes, in `requirements.lock`:
 `pip install --require-hashes -r requirements.lock`; the first cell
 rebuilds the shared library incrementally on every run). A second notebook,
@@ -77,8 +78,8 @@ instruction baselines), and `examples/pico2_dualcore/` (the
 one-clock-domain-per-core RP2350 deployment, self-validating).
 
 **Consuming the library**: `add_subdirectory` or `FetchContent` only —
-there are no install/package rules yet. Version 0.1.0 (`SRT_VERSION_*` in
-`srt/srt.h`, `srt_version()` over the C ABI); pre-1.0, the API may
+there are no install/package rules yet. Version 0.1.0 (`TAP_SR_VERSION_*` in
+`tap/sr/async/async.h`, `tap_sr_async_version()` over the C ABI); pre-1.0, the API may
 still change between versions.
 
 ## The book
@@ -233,7 +234,7 @@ reference-microphone processing — but `filter_spec` band edges and
 `servo_config` bandwidths are absolute Hz designed for ~48 kHz, and running
 another rate with unscaled defaults silently costs quality (measured:
 ~32 dB at 16 kHz). Start any non-48 kHz deployment from
-`tap::samplerate::config::for_sample_rate(rate_hz)`, which rescales both (plus the servo
+`tap::sr::async::config::for_sample_rate(rate_hz)`, which rescales both (plus the servo
 hold times); `filter_spec::scaled_to` / `servo_config::scaled_to` exist for
 custom presets. Measured through that factory
 (`tests/test_asrc_quality_16k.cpp`), 16 kHz matches the 48 kHz
@@ -316,10 +317,10 @@ two USB audio dongles, a Pi + Pico 2, two Pis over Ethernet), see
 
 Methodology, optimization roadmap and regression gating live in
 [docs/PERFORMANCE.md](docs/PERFORMANCE.md). Build the benchmarks with
-`-DSRT_BUILD_BENCHMARKS=ON` (host only). A measured computational
+`-DTAP_SR_BUILD_BENCHMARKS=ON` (host only). A measured computational
 head-to-head against libsamplerate, soxr and r8brain-free-src — host
 wall-clock and embedded instruction counts, steady state and construction
-(`-DSRT_BUILD_COMPARE_BENCH=ON`, `SRT_ICOUNT_COMPARE`) — lives in
+(`-DTAP_SR_BUILD_COMPARE_BENCH=ON`, `TAP_SR_ICOUNT_COMPARE`) — lives in
 [docs/COMPARISON.md](docs/COMPARISON.md).
 
 <!-- ICOUNT:BEGIN -->
@@ -360,14 +361,14 @@ Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 
 
 ## Sample types
 
-The datapath is templated on the sample type via `tap::samplerate::sample_traits`
-(`include/srt/sample_traits.h`). Three formats are provided:
+The datapath is templated on the sample type via `tap::sr::async::sample_traits`
+(`include/tap/sr/async/sample_traits.h`). Three formats are provided:
 
 | Type | Alias | Format | Measured SNR (997 Hz / 19.5 kHz, half scale, +200 ppm) |
 |---|---|---|---|
-| `float` | `async_sample_rate_converter` | float I/O, double accumulation | 135 dB / 105 dB |
-| `std::int32_t` | `async_sample_rate_converter_q31` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
-| `std::int16_t` | `async_sample_rate_converter_q15` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
+| `float` | `converter` | float I/O, double accumulation | 135 dB / 105 dB |
+| `std::int32_t` | `converter_q31` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
+| `std::int16_t` | `converter_q15` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
 
 The fixed-point datapaths have integer-only inner loops (the μ blend factor
 is converted once per output sample), making them the appropriate choice for
@@ -378,12 +379,12 @@ of operations per block).
 
 ## Position in the Tap family
 
-SampleRateTap is one of two rate converters in the **Tap** family, both
-built on the same shared substrate:
+`async` is one of the two engines of the `tap::sr` family, both built on
+the same shared substrate and living in one tree:
 
 ```
                     ┌────────────────────────────┐
-                    │           DspTap           │  shared substrate (submodule)
+                    │           DspTap           │  shared substrate (submodules/dsptap)
                     │  kaiser design · sample    │
                     │  traits (float/Q15/Q31) ·  │
                     │  FIR dot kernels · row-sum │
@@ -391,20 +392,20 @@ built on the same shared substrate:
                     └──────┬──────────────┬──────┘
                            │              │
               ┌────────────┴───┐   ┌──────┴─────────┐
-              │ SampleRateTap  │   │    RatioTap    │
+              │ tap::sr::async │   │ tap::sr::bridge│
               │ async, near-   │   │ sync, 44.1↔48, │
               │ unity, servo   │   │ speed-first    │
               └────────────┬───┘   └──────┬─────────┘
                            │              │
-                           └──── test-only│dependency:
-                                golden cross-validation
+                           └── test-only ─┘  bridge's golden cross-validation
+                               (bridge/tests/, bridge/examples/bluetooth_bridge)
 ```
 
 [DspTap](https://github.com/tap/DspTap) (vendored at `submodules/dsptap`)
 provides the Kaiser prototype design, the float/Q15/Q31 sample-format
 traits, the measured FIR dot-product kernels, the row-sum quantization,
 and the analysis instruments shared by the tests and notebooks.
-[RatioTap](https://github.com/tap/RatioTap) is the synchronous sibling:
+The [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge) engine (formerly RatioTap) is the synchronous sibling:
 exactly one rational ratio pair (160/147 up, 147/160 down — 44.1 ↔ 48 kHz),
 one clock, speed-first.
 
@@ -414,22 +415,22 @@ inferred from a float ratio:
 - Same nominal rate on both sides, independent oscillators (ppm drift) —
   this library.
 - 44.1 ↔ 48 kHz on one clock (file conversion, a single interface) —
-  RatioTap.
+  `bridge`.
 - 44.1 ↔ 48 kHz across *independent* oscillators (a Bluetooth chip on its
-  own crystal) — both, composed: RatioTap converts the *number*, this
-  library absorbs the *clock*. RatioTap's `bluetooth_bridge` example is
+  own crystal) — both, composed: `bridge` converts the *number*, this
+  engine absorbs the *clock*. `bridge`'s `bluetooth_bridge` example is
   the documented recipe (+200 ppm crystal, servo locked, 997 Hz recovered
   exactly, 2.0 ms total latency).
 
-The two converters check each other: RatioTap's suite cross-validates its
-output against this library's async engine at −98 dB (down) / −90 dB (up)
+The two engines check each other: `bridge`'s suite cross-validates its
+output against this engine at −98 dB (down) / −90 dB (up)
 on its default `economy` profile, over every polyphase phase.
 
 ## Limitations
 
 - Near-unity ratios only (±`max_deviation_ppm`, default 1000 ppm). No
   44.1 ↔ 48 kHz conversion — that job belongs to
-  [RatioTap](https://github.com/tap/RatioTap), and 44.1 ↔ 48 across
+  the [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge) engine, and 44.1 ↔ 48 across
   independent clocks to the composition of the two (see
   [Position in the Tap family](#position-in-the-tap-family)).
 - The rate estimate is derived from FIFO counts only. With block-quantized

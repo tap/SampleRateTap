@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright 2026 Timothy Place and the RatioTap contributors.
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // Contract battery for the streaming converter (milestone M3, float golden
 // model). Three independent legs, per PLAN.md section 6: structural
@@ -18,15 +18,15 @@
 
 #include "reference/reference_vectors.h"
 #include "tap/dsp/analysis/sine_analysis.h"
-#include "tap/ratio/converter.h"
+#include "tap/sr/bridge/converter.h"
 
 namespace {
 
-    using tap::ratio::basic_converter;
-    using tap::ratio::direction;
-    using tap::ratio::k_schedule;
-    using tap::ratio::profile;
-    using tap::ratio::ratio_traits;
+    using tap::sr::bridge::basic_converter;
+    using tap::sr::bridge::direction;
+    using tap::sr::bridge::k_schedule;
+    using tap::sr::bridge::profile;
+    using tap::sr::bridge::ratio_traits;
 
     template <direction D>
     using conv = basic_converter<float, D>;

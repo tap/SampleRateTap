@@ -1,5 +1,5 @@
 # r8brain-free-src (Aleksey Vaneev, MIT) for the resampler comparison only
-# (docs/COMPARISON.md): included by bench/compare, bench/icount (SRT_ICOUNT_COMPARE)
+# (docs/COMPARISON.md): included by bench/compare, bench/icount (TAP_SR_ICOUNT_COMPARE)
 # and tools/compare_shim so the host benchmark, the embedded counts and the
 # notebook all measure the same pinned engine. Never linked into the library
 # or its tests.
@@ -8,7 +8,7 @@
 # commit pin (commits are immutable; tags can move): master at r8bbase.h
 # R8B_VERSION "7.5". Stock configuration: Ooura FFT (no IPP/PFFFT), double
 # precision internally.
-if(NOT TARGET srt_r8brain)
+if(NOT TARGET tap_sr_async_r8brain)
     include(FetchContent)
     FetchContent_Declare(
         r8brain
@@ -18,13 +18,13 @@ if(NOT TARGET srt_r8brain)
         SOURCE_SUBDIR do-not-add)
     FetchContent_MakeAvailable(r8brain)
 
-    add_library(srt_r8brain INTERFACE)
+    add_library(tap_sr_async_r8brain INTERFACE)
     # SYSTEM: third-party headers stay out of our -Wconversion/-Wshadow gate.
-    target_include_directories(srt_r8brain SYSTEM INTERFACE ${r8brain_SOURCE_DIR})
+    target_include_directories(tap_sr_async_r8brain SYSTEM INTERFACE ${r8brain_SOURCE_DIR})
     # The filter cache's std::mutex. Bare-metal targets have no threads; the
     # icount workloads supply a single-threaded stand-in there instead.
-    if(NOT SRT_BARE_METAL)
+    if(NOT TAP_SR_BARE_METAL)
         find_package(Threads REQUIRED)
-        target_link_libraries(srt_r8brain INTERFACE Threads::Threads)
+        target_link_libraries(tap_sr_async_r8brain INTERFACE Threads::Threads)
     endif()
 endif()

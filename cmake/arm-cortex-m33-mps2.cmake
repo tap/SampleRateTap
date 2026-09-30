@@ -7,7 +7,7 @@
 #
 # Usage:
 #   cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake \
-#         -DSRT_BUILD_EXAMPLES=OFF ...
+#         -DTAP_SR_BUILD_EXAMPLES=OFF ...
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 
@@ -31,7 +31,4 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 # One-shot CTest mode (no argv on bare metal; see tests/CMakeLists.txt).
-set(SRT_BARE_METAL ON)
-# Both engines' test trees read their own variable until step 3.3 of the
-# monorepo migration unifies them as TAP_SR_BARE_METAL.
-set(TAP_RATIO_BARE_METAL ON)
+set(TAP_SR_BARE_METAL ON)

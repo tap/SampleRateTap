@@ -84,7 +84,7 @@ bit-for-bit" as a checked result, not a hope. This library treats
 bit-exactness as the boundary between an optimization (free to ship) and
 an algorithm change (needs its own quality evidence); you will see the
 same distinction drawn twice more in this chapter. Second, the
-`SRT_RESTRICT` qualifiers are C2's contribution: without them the
+`TAP_DSP_RESTRICT` qualifiers are C2's contribution: without them the
 compiler versioned these loops behind runtime aliasing checks (verified
 with `-fopt-info-vec`, not assumed).
 
@@ -117,7 +117,7 @@ The C3 redesign eliminates the per-sample double entirely by changing
 what the phase *is*:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:rs_class_doc}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:rs_class_doc}}
 ```
 
 The fractional position lives in `phase_`, an unsigned 64-bit integer
@@ -135,7 +135,7 @@ Per `process()` call — once per block, not per sample — the servo's
 double ε̂ is converted to fixed point:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:rs_slip}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:rs_slip}}
 ```
 
 Walk the slip logic carefully; it is the subtlest six lines in the
@@ -190,7 +190,7 @@ resets and re-primes before processing again.
 Downstream, the phase bits feed the kernel directly:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:rs_blend_row_phase}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:rs_blend_row_phase}}
 ```
 
 The top log₂ L bits *are* the phase-row index; the bits below, shifted
@@ -203,7 +203,7 @@ the floating-point phase math. The fused mono form is the same bit
 surgery around the same blend-and-mac loop:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:rs_interpolate_phase}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:rs_interpolate_phase}}
 ```
 
 **Is 2⁻⁶⁴ enough?** Part 0 derived the timing-jitter budget for 120 dB
@@ -238,7 +238,7 @@ records the trade explicitly. x86 same-minute A/B: float −5.4%, Q15
 With phase in hand, each output frame takes one of three routes:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:rs_dispatch}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:rs_dispatch}}
 ```
 
 Mono takes the fused `interpolate_phase` — no scratch-row traffic for a
@@ -262,7 +262,7 @@ oldest-first, per channel. Input arrives interleaved, in whatever chunks
 the FIFO happens to hold. Between those two facts sits `append_one`:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:rs_append}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:rs_append}}
 ```
 
 Three mechanisms, each with an RT-safety argument:
@@ -297,7 +297,7 @@ is allowed to throw precisely because it runs at setup time.
 **Two storage shapes.** The member block records the fork:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:rs_members}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:rs_members}}
 ```
 
 Planar — one delay line per channel — below the channel-parallel
@@ -342,7 +342,7 @@ edge measured rather than assumed:
   than planar — integer accumulation is exactly reassociable, so the
   planar Q15/Q31 dots already auto-vectorize over taps, and the tap axis
   beats the channel axis when both are available.
-- **Channels ≥ 4** (`SRT_CP_MIN_CHANNELS`, overridable for A/B runs):
+- **Channels ≥ 4** (`TAP_SR_ASYNC_CP_MIN_CHANNELS`, overridable for A/B runs):
   below that, lane utilization loses to the planar path's simplicity.
 - **Hosts only**: the embedded targets keep their proven codegen (Helium
   on M55, SMLALD on M33-class, Hexagon's measured scalar floor); the
@@ -362,7 +362,7 @@ its safety is a documented protocol that the converter — its only
 in-tree caller — upholds. The documentation is the code's own:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:rs_process_doc}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:rs_process_doc}}
 ```
 
 **Prime before process.** `prime()` fills the window with T real frames
@@ -387,7 +387,7 @@ servo keeping its ppm estimate and a fade-in masking the splice.
 Finally, the small read-side API that closes the control loop:
 
 ```cpp
-{{#include ../../../async/include/srt/polyphase_filter.h:rs_mu}}
+{{#include ../../../async/include/tap/sr/async/polyphase_filter.h:rs_mu}}
 ```
 
 `mu()` converts the phase to double **once per pull, not per sample** —
@@ -437,14 +437,14 @@ ctest --test-dir build -R 'MultiChannel' --output-on-failure
 # A/B the channel axis yourself: benchmark, then rebuild with the
 # threshold pushed out of reach and benchmark again (use -march=native
 # to see the AVX2 headline; SSE2 shows a few percent):
-cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DSRT_BUILD_BENCHMARKS=ON \
+cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BUILD_BENCHMARKS=ON \
       -DCMAKE_CXX_FLAGS="-march=native"
 cmake --build build-bench -j && \
-  ./build-bench/bench/srt_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
-cmake -B build-planar -DCMAKE_BUILD_TYPE=Release -DSRT_BUILD_BENCHMARKS=ON \
-      -DCMAKE_CXX_FLAGS="-march=native -DSRT_CP_MIN_CHANNELS=999"
+  ./build-bench/bench/tap_sr_async_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
+cmake -B build-planar -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BUILD_BENCHMARKS=ON \
+      -DCMAKE_CXX_FLAGS="-march=native -DTAP_SR_ASYNC_CP_MIN_CHANNELS=999"
 cmake --build build-planar -j && \
-  ./build-planar/bench/srt_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
+  ./build-planar/bench/tap_sr_async_bench --benchmark_filter='Pipeline_Float.*(8|12|16)ch'
 
 # Break it on purpose: change `advance = 2` to `advance = 1` in the
 # forward-wrap branch of process(), rebuild, and watch

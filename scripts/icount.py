@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
-"""Deterministic instruction-count ratchet (see docs/PERFORMANCE.md).
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Timothy Place and the SampleRateTap contributors
+"""Deterministic instruction-count ratchet for both engines.
 
-Runs every srt_icount_* binary in a build directory under QEMU with the
-instruction-counting plugin, then compares against async/bench/baselines.json.
+Runs every workload binary of one engine in a build directory under QEMU
+with the instruction-counting plugin (tools/qemu_insn_plugin), then
+compares against that engine's committed baselines
+(async/docs/PERFORMANCE.md, bridge/PLAN.md section 7).
 
   icount.py --target {hexagon,m55,m33} --build-dir DIR --plugin LIB
-            [--baselines async/bench/baselines.json] [--tolerance 0.03]
+            [--engine {async,bridge}] [--baselines FILE] [--tolerance 0.03]
             [--exact] [--update] [--json-out FILE] [--compare-json FILE]
+
+--engine (default async) selects the workload binaries, the guest's
+completion marker and the default baselines file (<engine>/bench/
+baselines.json). A build directory may hold both engines' workloads; each
+run measures only its engine's.
 
 The gate is two-sided: exit nonzero if any scenario regresses beyond
 tolerance, improves beyond tolerance (the baseline must be re-recorded so
@@ -32,9 +41,16 @@ import shutil
 import subprocess
 import sys
 
-BINARY_PREFIX = "srt_icount_"
-DONE_MARKER = "SRT_ICOUNT_DONE"
-COUNT_MARKER = "SRT_INSN_COUNT"
+# Per engine: the workload binary prefix and the completion marker the
+# guest prints. The guest markers are kept byte-identical to the two
+# repositories' originals on purpose: they are part of what the counted
+# binaries execute.
+ENGINES = {
+    "async": {"prefix": "tap_sr_async_icount_", "done": "SRT_ICOUNT_DONE"},
+    "bridge": {"prefix": "tap_sr_bridge_icount_", "done": "RATIO_ICOUNT_DONE"},
+}
+# Printed by the host-side plugin; never affects the guest's count.
+COUNT_MARKER = "TAP_SR_INSN_COUNT"
 
 # qemu-hexagon is a user-mode emulator: the guest's argv[0], its exec path
 # (AT_EXECFN) and the host environment are copied onto the guest stack, and
@@ -67,7 +83,7 @@ def qemu_cmd(target: str, plugin: str, binary: str) -> list[str]:
     raise SystemExit(f"unknown target {target}")
 
 
-def measure(target: str, plugin: str, binary: str) -> tuple[int, str]:
+def measure(target: str, plugin: str, binary: str, done_marker: str) -> tuple[int, str]:
     env = None
     if target == "hexagon":
         os.makedirs(HEXAGON_RUN_DIR, exist_ok=True)
@@ -81,7 +97,7 @@ def measure(target: str, plugin: str, binary: str) -> tuple[int, str]:
     except subprocess.TimeoutExpired:
         raise SystemExit(f"{binary}: timed out after 600 s under QEMU")
     out = proc.stdout + proc.stderr
-    done = re.search(DONE_MARKER + r" ok=1 checksum=(\S+)", out)
+    done = re.search(done_marker + r" ok=1 checksum=(\S+)", out)
     if not done:
         print(out, file=sys.stderr)
         raise SystemExit(f"{binary}: workload did not complete cleanly")
@@ -97,7 +113,8 @@ def main() -> int:
     ap.add_argument("--target", required=True, choices=["hexagon", "m55", "m33"])
     ap.add_argument("--build-dir", required=True)
     ap.add_argument("--plugin", required=True)
-    ap.add_argument("--baselines", default="async/bench/baselines.json")
+    ap.add_argument("--engine", choices=sorted(ENGINES), default="async")
+    ap.add_argument("--baselines", help="default: <engine>/bench/baselines.json")
     ap.add_argument("--tolerance", type=float, default=0.03)
     ap.add_argument("--exact", action="store_true",
                     help="require identical counts (tolerance 0)")
@@ -110,11 +127,15 @@ def main() -> int:
         raise SystemExit("--update and --compare-json are mutually exclusive")
     tolerance = 0.0 if (args.exact or args.compare_json) else args.tolerance
 
-    binaries = sorted(glob.glob(os.path.join(args.build_dir, "**", BINARY_PREFIX + "*"),
+    engine = ENGINES[args.engine]
+    prefix = engine["prefix"]
+    if args.baselines is None:
+        args.baselines = f"{args.engine}/bench/baselines.json"
+    binaries = sorted(glob.glob(os.path.join(args.build_dir, "**", prefix + "*"),
                                 recursive=True))
     binaries = [b for b in binaries if os.access(b, os.X_OK) and os.path.isfile(b)]
     if not binaries:
-        raise SystemExit(f"no {BINARY_PREFIX}* binaries under {args.build_dir}")
+        raise SystemExit(f"no {prefix}* binaries under {args.build_dir}")
 
     path = pathlib.Path(args.baselines)
     ref_checksums = {}
@@ -137,8 +158,8 @@ def main() -> int:
     measured = {}
     checksums = {}
     for binary in binaries:
-        scenario = os.path.basename(binary).removeprefix(BINARY_PREFIX)
-        count, checksum = measure(args.target, args.plugin, binary)
+        scenario = os.path.basename(binary).removeprefix(prefix)
+        count, checksum = measure(args.target, args.plugin, binary, engine["done"])
         measured[scenario] = count
         checksums[scenario] = checksum
         print(f"{scenario}: checksum={checksum}")

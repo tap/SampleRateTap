@@ -15,7 +15,7 @@
 - [The lock-free ring: spsc_ring.h](part1/spsc-ring.md)
 - [The clock servo: pi_servo.h](part1/pi-servo.md)
 - [The fractional resampler](part1/fractional-resampler.md)
-- [Composition: asrc.h](part1/asrc.md)
+- [Composition: converter.h](part1/asrc.md)
 
 # Part II — The proof system
 

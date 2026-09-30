@@ -1,11 +1,11 @@
-# Composition: `asrc.h`
+# Composition: `converter.h`
 
 > The whole is something beside the parts.
 >
 > — Aristotle, *Metaphysics*
 
 Every previous chapter built a component that is correct on its own terms.
-This chapter is about the file that has no terms of its own: `asrc.h`
+This chapter is about the file that has no terms of its own: `converter.h`
 contains almost no algorithm, no mathematics, and fewer than three hundred
 lines that mostly call other files' code. It is also where the only serious
 bug in the library's history lived. Both facts have the same cause.
@@ -16,7 +16,7 @@ any single file.
 The cast, assembled: a `polyphase_filter_bank` designed at construction, a
 `fractional_resampler` that owns the history and the phase, a `spsc_ring`
 carrying interleaved frames between the two clock domains, and a `pi_servo`
-turning ring occupancy into a rate estimate. `basic_async_sample_rate_converter`
+turning ring occupancy into a rate estimate. `basic_converter`
 wires them together and adds the four things none of them could own alone:
 a lifecycle state machine, an under/overrun policy, telemetry, and
 validation.
@@ -65,11 +65,11 @@ Acquiring or Locked — plus two exceptional transitions. Here is the filling
 and resync machinery as it ships:
 
 ```cpp
-{{#include ../../../async/include/srt/asrc.h:asrc_filling}}
+{{#include ../../../async/include/tap/sr/async/converter.h:asrc_filling}}
 ```
 
 ```cpp
-{{#include ../../../async/include/srt/asrc.h:asrc_resync}}
+{{#include ../../../async/include/tap/sr/async/converter.h:asrc_resync}}
 ```
 
 Filling exists because the resampler cannot produce its first output until
@@ -160,7 +160,7 @@ to demonstrate it.
 The fix is the first thing `pull()` now does:
 
 ```cpp
-{{#include ../../../async/include/srt/asrc.h:asrc_feasibility}}
+{{#include ../../../async/include/tap/sr/async/converter.h:asrc_feasibility}}
 ```
 
 The design choices inside those lines carry the interesting reasoning:
@@ -237,7 +237,7 @@ is written down.
 ## The underrun tail, end to end
 
 ```cpp
-{{#include ../../../async/include/srt/asrc.h:asrc_underrun}}
+{{#include ../../../async/include/tap/sr/async/converter.h:asrc_underrun}}
 ```
 
 Read this excerpt slowly and you can see the whole chapter in ten lines:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Trace dumper for the book's measured figures (scripts/book_figures.py).
 //
 // Runs the converter in deterministic virtual time — the same event-driven
@@ -8,8 +10,8 @@
 // in the composition chapter is measured on both sides of the fix, not
 // modeled. Only status fields that exist in both versions are printed.
 //
-// The two trees spell the API differently (045de5d: srt/*.hpp, namespace
-// srt, camelCase; today: srt/*.h, namespace tap::samplerate, snake_case),
+// The two trees spell the API differently (045de5d: tap/sr/async/*.hpp, namespace
+// srt, camelCase; today: tap/sr/async/*.h, namespace tap::sr::async, snake_case),
 // so the small adapter below selects the spelling by which header exists.
 //
 // Usage: trace pullBlock pushBlock ppm seconds [dropStart dropDur]
@@ -19,8 +21,8 @@
 #include <numbers>
 #include <vector>
 
-#if __has_include(<srt/asrc.hpp>)
-#include <srt/asrc.hpp>
+#if __has_include(<tap/sr/async/converter.hpp>)
+#include <tap/sr/async/converter.hpp>
 namespace trace_api {
     using config    = srt::Config;
     using converter = srt::AsyncSampleRateConverter;
@@ -33,10 +35,10 @@ namespace trace_api {
     }
 } // namespace trace_api
 #else
-#include <srt/asrc.h>
+#include <tap/sr/async/converter.h>
 namespace trace_api {
-    using config    = tap::samplerate::config;
-    using converter = tap::samplerate::async_sample_rate_converter;
+    using config    = tap::sr::async::config;
+    using converter = tap::sr::async::converter;
     inline double rate(const config& c) {
         return c.sample_rate_hz;
     }

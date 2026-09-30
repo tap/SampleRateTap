@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Single-threaded spsc_ring tests; the two-thread stress lives in
 // test_spsc_ring_threads.cpp so thread-less (bare-metal) builds can still
 // compile this file.
@@ -7,18 +9,18 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/spsc_ring.h"
+#include "tap/sr/async/spsc_ring.h"
 
 namespace {
 
     TEST(spsc_ring, CapacityRoundsUpToPowerOfTwo) {
-        tap::samplerate::spsc_ring<float> r(100);
+        tap::sr::async::spsc_ring<float> r(100);
         EXPECT_EQ(r.capacity(), 128u);
     }
 
     TEST(spsc_ring, FillDrainExactness) {
-        tap::samplerate::spsc_ring<int> r(8);
-        std::vector<int>                src(8);
+        tap::sr::async::spsc_ring<int> r(8);
+        std::vector<int>               src(8);
         std::iota(src.begin(), src.end(), 0);
         EXPECT_EQ(r.write(src.data(), 8), 8u);
         EXPECT_EQ(r.write(src.data(), 1), 0u); // full
@@ -30,9 +32,9 @@ namespace {
     }
 
     TEST(spsc_ring, WrapAroundPreservesData) {
-        tap::samplerate::spsc_ring<std::uint32_t> r(16);
-        std::uint32_t                             seq    = 0;
-        std::uint32_t                             expect = 0;
+        tap::sr::async::spsc_ring<std::uint32_t> r(16);
+        std::uint32_t                            seq    = 0;
+        std::uint32_t                            expect = 0;
         // Repeatedly write 5, read 5 so the indices wrap many times.
         for (int round = 0; round < 100; ++round) {
             std::uint32_t buf[5];
@@ -49,8 +51,8 @@ namespace {
     }
 
     TEST(spsc_ring, DiscardAdvancesConsumer) {
-        tap::samplerate::spsc_ring<int> r(16);
-        int                             buf[10];
+        tap::sr::async::spsc_ring<int> r(16);
+        int                            buf[10];
         std::iota(buf, buf + 10, 0);
         ASSERT_EQ(r.write(buf, 10), 10u);
         EXPECT_EQ(r.discard(4), 4u);
@@ -62,8 +64,8 @@ namespace {
     }
 
     TEST(spsc_ring, PartialWriteWhenNearlyFull) {
-        tap::samplerate::spsc_ring<int> r(8);
-        int                             buf[6] = {0, 1, 2, 3, 4, 5};
+        tap::sr::async::spsc_ring<int> r(8);
+        int                            buf[6] = {0, 1, 2, 3, 4, 5};
         ASSERT_EQ(r.write(buf, 6), 6u);
         EXPECT_EQ(r.write(buf, 6), 2u); // only 2 slots free
         EXPECT_EQ(r.read_available(), 8u);

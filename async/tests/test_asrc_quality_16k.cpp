@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // 16 kHz -> 16 kHz quality coverage (a real deployment rate, e.g.
 // reference-microphone processing). Same methodology as
 // test_asrc_quality.cpp, configured through Config::forSampleRate — the
@@ -24,9 +26,9 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.h"
 #include "support/sine_analysis.h"
 #include "support/two_clock_sim.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 
@@ -41,11 +43,11 @@ namespace {
     // from Config::forSampleRate (filter band edges, servo bandwidths and
     // hold times).
     double measure_snr_db16k(double freq_hz) {
-        tap::samplerate::config cfg = tap::samplerate::config::for_sample_rate(k_fs);
-        cfg.channels                = 1;
-        tap::samplerate::async_sample_rate_converter asrc(cfg);
-        srt_test::two_clock_sim                      sim{
-                                 .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        tap::sr::async::config cfg = tap::sr::async::config::for_sample_rate(k_fs);
+        cfg.channels               = 1;
+        tap::sr::async::converter asrc(cfg);
+        async_test::two_clock_sim sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
         const double nu_in = freq_hz / k_fs;
         sim.gen            = [&](std::uint64_t i) {
             return static_cast<float>(k_amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));
@@ -64,13 +66,13 @@ namespace {
             }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
+        EXPECT_EQ(asrc.status().state, tap::sr::async::converter_state::locked);
         const double nu_out_expected = nu_in * (1.0 + k_eps);
-        const auto   fit             = srt_test::fit_sine_tracked(tail, nu_out_expected);
+        const auto   fit             = async_test::fit_sine_tracked(tail, nu_out_expected);
         EXPECT_NEAR(fit.amplitude, k_amp, 0.01);
         // The tracked frequency must still match the true clock ratio closely.
         EXPECT_NEAR(fit.freq_norm / nu_out_expected, 1.0, 2e-6);
-        const double snr = srt_test::snr_db(fit);
+        const double snr = async_test::snr_db(fit);
         std::printf("[ measured ] %5.0f Hz: SNR %.1f dB\n", freq_hz, snr);
         return snr;
     }
@@ -85,9 +87,9 @@ namespace {
     // Fast deterministic check of the scaling rule itself (the sims below are
     // the behavioral validation).
     TEST(AsrcQuality16k, ForSampleRateScalesHzFieldsOnly) {
-        const tap::samplerate::config c = tap::samplerate::config::for_sample_rate(16000.0);
-        const tap::samplerate::config d; // 48 kHz defaults
-        const double                  r = 16000.0 / 48000.0;
+        const tap::sr::async::config c = tap::sr::async::config::for_sample_rate(16000.0);
+        const tap::sr::async::config d; // 48 kHz defaults
+        const double                 r = 16000.0 / 48000.0;
         EXPECT_DOUBLE_EQ(c.sample_rate_hz, 16000.0);
         EXPECT_DOUBLE_EQ(c.filter.passband_hz, d.filter.passband_hz * r);
         EXPECT_DOUBLE_EQ(c.filter.stopband_hz, d.filter.stopband_hz * r);

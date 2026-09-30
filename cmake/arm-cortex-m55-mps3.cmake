@@ -3,12 +3,12 @@
 #
 # Usage:
 #   cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
-#         -DSRT_BUILD_EXAMPLES=OFF ...
+#         -DTAP_SR_BUILD_EXAMPLES=OFF ...
 # with arm-none-eabi-g++ and qemu-system-arm on PATH.
 #
 # Notes:
 #  - Bare metal: no std::thread (the test build adapts; see
-#    tests/CMakeLists.txt and SRT_BARE_METAL below).
+#    tests/CMakeLists.txt and TAP_SR_BARE_METAL below).
 #  - The M55 FPU has no double precision, so the library's double-typed
 #    control path runs soft-float here: correctness coverage, not a
 #    performance measurement.
@@ -44,7 +44,4 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 # Switches the test harness to one-shot mode: a single registered CTest test
 # running the whole (emulation-sized) suite, judged by gtest's summary text
 # rather than the exit code, which semihosting does not reliably propagate.
-set(SRT_BARE_METAL ON)
-# Both engines' test trees read their own variable until step 3.3 of the
-# monorepo migration unifies them as TAP_SR_BARE_METAL.
-set(TAP_RATIO_BARE_METAL ON)
+set(TAP_SR_BARE_METAL ON)

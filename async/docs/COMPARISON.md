@@ -56,7 +56,7 @@ Reading guide:
 
 Same engines, same task: convert a float 997 Hz stereo stream at the fixed,
 known near-unity ratio 1 + 200 ppm, streaming in 128-frame blocks
-(`bench/compare/`, `-DSRT_BUILD_COMPARE_BENCH=ON`). SampleRateTap runs its
+(`bench/compare/`, `-DTAP_SR_BUILD_COMPARE_BENCH=ON`). SampleRateTap runs its
 datapath with a constant rate deviation (the servo is quiescent at a fixed
 ratio); the libraries take the ratio as an input. Quality tiers are paired
 by vendor-stated stopband: balanced ≈ `MEDIUM` ≈ `HQ` ≈ r8brain at
@@ -139,7 +139,7 @@ Reading guide:
 
 ### Embedded executed instructions per output frame (QEMU TCG plugin)
 
-Same comparison workload cross-compiled per target (`SRT_ICOUNT_COMPARE`,
+Same comparison workload cross-compiled per target (`TAP_SR_ICOUNT_COMPARE`,
 `.github/workflows/compare.yml`; deterministic counts, methodology as the
 ratchet in [PERFORMANCE.md](PERFORMANCE.md)). Stereo, float I/O (Q15 for
 the Q15 row), 32-frame blocks. libsamplerate 0.2.2, r8brain at the pinned
@@ -231,7 +231,7 @@ it is a real cost for devices that construct at boot.
   0.5 ms filter delay, and embedded-class compute. For genuine rate
   *conversion*, put a synchronous resampler in the chain —
   soxr/libsamplerate/r8brain, or for exactly 44.1↔48 the family's own
-  [RatioTap](https://github.com/tap/RatioTap), which cross-validates its
+  [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge) engine, which cross-validates its
   output against this library's engine.
 - **Coarse-block operation is a different regime** (cent-scale low-rate FM
   over a 54–62 dB floor — measured in

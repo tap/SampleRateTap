@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Timothy Place and the SampleRateTap contributors
 """Regenerates the book's figures (book/src/img/*.svg).
 
 Every figure is produced from the same sources the text cites:
 
 - the filter figures re-run the exact design math of
-  include/srt/detail/kaiser.h (formula-for-formula port below);
+  include/tap/dsp/kaiser.h (formula-for-formula port below);
 - the servo and feasibility figures are MEASURED: this script compiles
   scripts/book_figures_trace.cpp against the current include/ tree and runs
   it in deterministic virtual time. The feasibility "before" panel compiles

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Timothy Place and the SampleRateTap contributors
 // Multichannel independence: every channel of one converter instance gets a
 // distinct tone, and after conversion each channel must contain its own tone
 // at full quality and nothing measurable of any other channel's. This is the
@@ -19,9 +21,9 @@
 
 #include <gtest/gtest.h>
 
-#include "srt/asrc.h"
 #include "support/sine_analysis.h"
 #include "support/two_clock_sim.h"
+#include "tap/sr/async/converter.h"
 
 namespace {
 
@@ -41,7 +43,7 @@ namespace {
             return static_cast<S>(v);
         }
         else {
-            return tap::samplerate::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+            return tap::sr::async::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
         }
     }
 
@@ -69,15 +71,15 @@ namespace {
     template <typename S>
     std::vector<channel_report> measure_independence(std::size_t channels, double total_seconds, double window_seconds,
                                                      std::size_t chunk) {
-        tap::samplerate::config cfg;
+        tap::sr::async::config cfg;
         cfg.channels = channels;
-        tap::samplerate::basic_async_sample_rate_converter<S> asrc(cfg);
-        srt_test::two_clock_sim_t<S>                          sim{.asrc      = asrc,
-                                                                  .fs_in     = k_fs * (1.0 + k_eps),
-                                                                  .fs_out    = k_fs,
-                                                                  .channels  = channels,
-                                                                  .chunk_in  = chunk,
-                                                                  .chunk_out = chunk};
+        tap::sr::async::basic_converter<S> asrc(cfg);
+        async_test::two_clock_sim_t<S>     sim{.asrc      = asrc,
+                                               .fs_in     = k_fs * (1.0 + k_eps),
+                                               .fs_out    = k_fs,
+                                               .channels  = channels,
+                                               .chunk_in  = chunk,
+                                               .chunk_out = chunk};
         sim.gen_ch = [&](std::uint64_t i, std::size_t c) {
             const double w = 2.0 * std::numbers::pi * channel_freq_hz(c) / k_fs;
             // Per-channel phase offsets decorrelate the channel waveforms.
@@ -92,7 +94,7 @@ namespace {
             }
         });
         EXPECT_EQ(asrc.status().underruns, 0u);
-        EXPECT_EQ(asrc.status().state, tap::samplerate::converter_state::locked);
+        EXPECT_EQ(asrc.status().state, tap::sr::async::converter_state::locked);
 
         const std::size_t           frames = tail.size() / channels;
         std::vector<float>          x(frames);
@@ -104,9 +106,9 @@ namespace {
 
             // Own tone: tracked fit, then exact removal of the fitted component.
             const double nu_own  = channel_freq_hz(c) / k_fs * (1.0 + k_eps);
-            const auto   own     = srt_test::fit_sine_tracked(x, nu_own);
+            const auto   own     = async_test::fit_sine_tracked(x, nu_own);
             reports[c].amplitude = own.amplitude;
-            reports[c].snr_db    = srt_test::snr_db(own);
+            reports[c].snr_db    = async_test::snr_db(own);
             const double w_own   = 2.0 * std::numbers::pi * own.freq_norm;
             const double a       = own.amplitude * std::cos(own.phase);
             const double b       = own.amplitude * std::sin(own.phase);
@@ -120,7 +122,7 @@ namespace {
                     continue;
                 }
                 const double nu_k = channel_freq_hz(k) / k_fs * (1.0 + k_eps);
-                const auto   leak = srt_test::fit_sine(x, nu_k);
+                const auto   leak = async_test::fit_sine(x, nu_k);
                 const double db   = 20.0 * std::log10(leak.amplitude / own.amplitude);
                 if (db > reports[c].worst_crosstalk_db) {
                     reports[c].worst_crosstalk_db = db;

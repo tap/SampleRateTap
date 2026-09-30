@@ -1,5 +1,0 @@
-# Step-0 tips (MONOREPO_PLAN.md step 0). Every A/B gate builds these two
-# commits fresh in the same job; every later commit-count check uses the
-# counts recorded here. Measured on fresh, full (non-shallow) clones.
-S0 5e2057f192cee1eeb61286c466e5f50293580c09  tap/SampleRateTap main  140 commits
-R0 8f19e8b967b8d3e9eb22393e881396d418c0584f  tap/RatioTap main        33 commits

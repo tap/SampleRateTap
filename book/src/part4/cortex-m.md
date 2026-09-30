@@ -208,7 +208,7 @@ user will actually look. A linker script that works under QEMU while
 
 ## CTest without an operating system
 
-The toolchain files end with `set(SRT_BARE_METAL ON)`, and
+The toolchain files end with `set(TAP_SR_BARE_METAL ON)`, and
 `tests/CMakeLists.txt` branches on it. The problem it solves: CTest's
 contract with a test binary is "run it with arguments, read its exit
 code," and bare metal breaks both halves. There is no `argv` to pass a
@@ -223,7 +223,7 @@ filter in at compile time, and the *pass criterion is a printed string*:
 ```
 
 CTest registers a single test whose `PASS_REGULAR_EXPRESSION` is
-`SRT_TESTS_COMPLETE rc=0` and whose `FAIL_REGULAR_EXPRESSION` is gtest's
+`TAP_SR_TESTS_COMPLETE rc=0` and whose `FAIL_REGULAR_EXPRESSION` is gtest's
 `[  FAILED  ]` marker: the run passes only if the summary line is printed
 *and* no failure marker ever appears. The completion line is printed at
 the last possible moment, so a crash, fault, or park-loop after the tests
@@ -328,7 +328,7 @@ accelerates.
 by its 96,000 frames is *not* the per-frame cost: each workload also
 constructs its converter, and on the M33 the soft-double filter design
 alone is close to a billion instructions. Building the pipeline workloads a
-second time at 4 s of audio (`-DSRT_SC_SECONDS=4`) and taking the
+second time at 4 s of audio (`-DTAP_SR_ASYNC_SC_SECONDS=4`) and taking the
 difference isolates the steady state: **≈ 1,138 instructions per stereo
 frame** for `pipeline_q15` and ≈ 3,326 for the 12-channel shape, with
 ~0.91 G and ~1.18 G of one-time construction. (Earlier revisions quoted
@@ -378,18 +378,18 @@ the bridge from this chapter's emulated world to Part V's hardware:
 # Both bare-metal legs, end to end (arm-none-eabi-g++ and qemu-system-arm
 # on PATH — exactly what CI installs):
 cmake -B build-m55 -DCMAKE_BUILD_TYPE=MinSizeRel \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake -DSRT_BUILD_EXAMPLES=OFF
+      -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake -DTAP_SR_BUILD_EXAMPLES=OFF
 cmake --build build-m55 -j && ctest --test-dir build-m55 --output-on-failure
 
 cmake -B build-m33 -DCMAKE_BUILD_TYPE=MinSizeRel \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake -DSRT_BUILD_EXAMPLES=OFF
+      -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m33-mps2.cmake -DTAP_SR_BUILD_EXAMPLES=OFF
 cmake --build build-m33 -j && ctest --test-dir build-m33 --output-on-failure
 
 # The Helium discovery, on today's binaries: MVE loads/MACs present in the
 # M55 build, absent in the M33 build. (The recorded count at discovery was
 # 71 vs 0; the exact number moves with the compiler — the zero does not.)
-arm-none-eabi-objdump -d build-m55/tests/srt_tests | grep -cE 'vldr|vmlaldav'
-arm-none-eabi-objdump -d build-m33/tests/srt_tests | grep -cE 'vldr|vmlaldav'
+arm-none-eabi-objdump -d build-m55/tests/tap_sr_async_tests | grep -cE 'vldr|vmlaldav'
+arm-none-eabi-objdump -d build-m33/tests/tap_sr_async_tests | grep -cE 'vldr|vmlaldav'
 
 # The empty-run guard, demonstrated: break the filter in
 # tests/bare_metal_main.cpp (e.g. filter = "NoSuchTest*"), rebuild, and the
@@ -399,7 +399,7 @@ arm-none-eabi-objdump -d build-m33/tests/srt_tests | grep -cE 'vldr|vmlaldav'
 # same configure for m33 with the other toolchain file):
 cmake -B build-m55-ic -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
-      -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF -DSRT_BUILD_ICOUNT_BENCH=ON
+      -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF -DTAP_SR_BUILD_ICOUNT_BENCH=ON
 cmake --build build-m55-ic -j
 python3 scripts/icount.py --target m55 --build-dir build-m55-ic --plugin /tmp/libinsncount.so
 

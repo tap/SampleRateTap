@@ -1,6 +1,6 @@
-# RatioTap
+# bridge — synchronous 44.1 ↔ 48 kHz (formerly RatioTap)
 
-[![CI](https://github.com/tap/RatioTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/RatioTap/actions/workflows/ci.yml)
+[![CI](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 
@@ -23,7 +23,7 @@ quantization, measurement instruments).
 > against committed scipy reference vectors sample-for-sample), Q31
 > (tracks float within −147 dB), and Q15 (format-limited: pair it with
 > `economy`, which is both cheaper *and* quieter than `transparent` at 16
-> bits), plus the golden cross-validation against SampleRateTap's async
+> bits), plus the golden cross-validation against the family's `async`
 > engine (every phase, floor at the one deliberate design difference), the
 > `bluetooth_bridge` example, the C ABI, and the executed demo notebook.
 > v0.2 was the measured optimization campaign — superblock walk, committed
@@ -40,9 +40,9 @@ quantization, measurement instruments).
 ## Quick start
 
 ```cpp
-#include <tap/ratio/ratio.h>
+#include <tap/sr/bridge/ratio.h>
 
-tap::ratio::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
+tap::sr::bridge::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
 // profiles: economy() (default, 18 kHz passband) | balanced() (19 kHz,
 // the pre-v0.3 default) | transparent() (120 dB pristine tier) |
 // super_economy() (16 kHz voice/comms tier — audible top-octave shelf)
@@ -57,7 +57,7 @@ Direction is a compile-time type (`converter_to_48k` / `converter_to_44k1`,
 plus `_q15` / `_q31` fixed-point variants); `pull(out, n, pop_fn)` is the
 callback-driven shape, and `frames_needed(n)` is exact arithmetic. For
 44.1↔48 across *independent clocks* (a Bluetooth chip on its own crystal),
-compose with SampleRateTap — `examples/bluetooth_bridge.cpp` is the
+compose with the family's `async` engine — `examples/bluetooth_bridge.cpp` is the
 documented recipe: +200 ppm crystal, servo locked, 997 Hz recovered
 exactly, 1.9 ms total latency.
 
@@ -69,9 +69,8 @@ exactly, 1.9 ms total latency.
   decomposition) to hard-commit to phase counts of exactly 147 and 160.
 - **No asynchronous conversion.** If the two ends of your chain run on
   different crystals — *even at nominally 44.1-vs-48* — that is the
-  [SampleRateTap](https://github.com/tap/SampleRateTap) near-unity ASRC's
-  problem, reached by composition: RatioTap converts the *number*, the
-  ASRC absorbs the *clock*. Which engine applies is a property of the
+  family's [`async`](../async/README.md) engine's problem, reached by
+  composition: `bridge` converts the *number*, `async` absorbs the *clock*. Which engine applies is a property of the
   clock topology, never inferred from a float ratio. The
   `bluetooth_bridge` example (milestone M6) documents the composition.
 - **Speed-first.** Direction is a compile-time parameter; the default
@@ -83,7 +82,7 @@ exactly, 1.9 ms total latency.
 
 ```
                     ┌────────────────────────────┐
-                    │           DspTap           │  shared substrate (submodule)
+                    │           DspTap           │  shared substrate (submodules/dsptap)
                     │  kaiser design · sample    │
                     │  traits (float/Q15/Q31) ·  │
                     │  FIR dot kernels · row-sum │
@@ -91,13 +90,13 @@ exactly, 1.9 ms total latency.
                     └──────┬──────────────┬──────┘
                            │              │
               ┌────────────┴───┐   ┌──────┴─────────┐
-              │ SampleRateTap  │   │    RatioTap    │
+              │ tap::sr::async │   │ tap::sr::bridge│
               │ async, near-   │   │ sync, 44.1↔48, │
               │ unity, servo   │   │ speed-first    │
               └────────────┬───┘   └──────┬─────────┘
                            │              │
-                           └──── test-only│dependency:
-                                golden cross-validation
+                           └── test-only ─┘  bridge's golden cross-validation
+                               (bridge/tests/, bridge/examples/bluetooth_bridge)
 ```
 
 ## Build
@@ -106,13 +105,13 @@ exactly, 1.9 ms total latency.
 git clone --recurse-submodules https://github.com/tap/SampleRateTap
 cmake -S SampleRateTap -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-ctest --test-dir build --output-on-failure -L '^ratio$'
+ctest --test-dir build --output-on-failure -L '^bridge$'
 ```
 
 This engine lives in `bridge/` of the SampleRateTap family repository; the
 root build configures both engines, and the `ratio` label selects this one's
 tests. Consume with `add_subdirectory` (or FetchContent) and link
-`tap::ratio`; the DspTap submodule at the repository root rides along
+`tap::sr::bridge`; the DspTap submodule at the repository root rides along
 automatically.
 
 ### Embedded targets and the instruction-count ratchet
@@ -123,20 +122,21 @@ Pi Pico 2 class), **Cortex-M55** (mps3-an547) and **Hexagon**
 (qemu-hexagon, static musl), and gates ten fixed conversion workloads
 (direction × float/Q15/Q31 at the economy profile, plus four profile
 variants) against committed per-target instruction
-counts (`bench/baselines.json`, two-sided ±3% — see `scripts/icount.py`),
-run from the repository root:
+counts (`bench/baselines.json`, two-sided ±3%), measured by the family's
+shared harness (`scripts/icount.py --engine bridge`, `tools/qemu_insn_plugin/`)
+from the repository root:
 The counts are deterministic, so the M7 optimization campaign in
 [PLAN.md](PLAN.md) lands one measured lever at a time:
 
 ```sh
 cmake -B build-m55 -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
-      -DSRT_BUILD_TESTS=OFF -DSRT_BUILD_EXAMPLES=OFF \
-      -DTAP_RATIO_BUILD_TESTS=OFF -DTAP_RATIO_BUILD_EXAMPLES=OFF \
-      -DTAP_RATIO_BUILD_ICOUNT_BENCH=ON
+      -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
+      -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
+      -DTAP_SR_BUILD_ICOUNT_BENCH=ON
 cmake --build build-m55 -j
-python3 bridge/scripts/icount.py --target m55 --build-dir build-m55 \
-      --baselines bridge/bench/baselines.json --plugin libinsncount.so
+python3 scripts/icount.py --engine bridge --target m55 --build-dir build-m55 \
+      --plugin libinsncount.so
 ```
 
 <!-- ICOUNT:BEGIN -->
