@@ -1000,10 +1000,13 @@ G13 and G14, plus G9 from 3.7.
 
 ### Next — `rational` (separate plan)
 
-- The 2.2 follow-up comes first (`ratio_traits` k).
-- Then `rational`'s own reviewed plan: L-th-band design math and `chain<>`
-  (under D12) in DspTap, the engine, and the generated 14 × 14 matrix
-  under 2.1's rule.
+- ~~The 2.2 follow-up comes first (`ratio_traits` k).~~ Done (2.2).
+- ~~Then `rational`'s own reviewed plan~~: `rational/PLAN.md` v0.2, the
+  ten open questions decided. Its M0 — the L-th-band design math and
+  `chain<>` (under D12) in DspTap — landed as tap/DspTap#48 and this tree's
+  pin follows it (`rational/PLAN.md` v0.3). Next: M1, the engine's
+  skeleton, ratio types and design, then the generated 14 × 14 matrix
+  under 2.1's rule (M4).
 
 ---
 

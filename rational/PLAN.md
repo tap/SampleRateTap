@@ -12,6 +12,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 |---|---|---|
 | v0.1 | 2026-10-01 | draft, for review |
 | v0.2 | 2026-10-01 | section 9's ten questions decided by the maintainer (recorded in section 9 and in the decisions they touch) |
+| v0.3 | 2026-10-01 | M0 landed (DspTap `nyquist.h` and `chain.h`, tap/DspTap#48); 2.3's half- and third-band counts are measured by the shipped designer, the harris estimates kept beside them |
 
 **Status.** This draft is the reviewed-plan deliverable that the family
 plan's "Next — `rational` (separate plan)" entry asks for
@@ -21,10 +22,13 @@ plan sequences the 2.2 follow-up — `bridge`'s `ratio_traits` rate-scale `k`,
 so that 88.2 ↔ 96 and 176.4 ↔ 192 can be expressed (`../PLAN.md:124-152`,
 "sequenced before `rational`") — ahead of this engine's implementation.
 This draft does not change that order: every milestone below that composes
-with `bridge` at k > 0 is marked as waiting for it. Nothing here is
-implemented; every number marked *est.* is a Kaiser/harris length estimate
+with `bridge` at k > 0 is marked as waiting for it. M0 is
+implemented (v0.3: DspTap's `nyquist.h` and `chain.h`); the engine itself
+is not. Every number marked *est.* is a Kaiser/harris length estimate
 (`tap::dsp::estimate_taps`, `kaiser.h:77-85`) or a MAC count derived from
-one, to be measured and pinned by the milestones that name it. v0.2
+one, to be measured and pinned by the milestones that name it; 2.3's
+half- and third-band counts are now measured and sit beside their
+estimates. v0.2
 records the maintainer's decisions on v0.1's ten open questions (section
 9, each "as recommended") in the R-rows they touch; no question remains
 open.
@@ -189,19 +193,29 @@ Consequences that the tests pin:
 
 ### 2.3 Profiles (candidates — to be pinned by the M2 design spike)
 
-| Profile | A (dB) | p = f_pass / r_min | at r_min = 48 kHz | half-band N / nonzero, *est.* | third-band N / nonzero, *est.* |
+| Profile | A (dB) | p = f_pass / r_min | at r_min = 48 kHz | half-band N / nonzero (worst stop) | third-band N / nonzero (worst stop) |
 |---|---|---|---|---|---|
-| `super_economy` | 70 | 1/3 | 16 kHz | 27 / 15 | 41 / 29 |
-| `economy` (default) | 70 | 3/8 | 18 kHz | 35 / 19 | 53 / 37 |
-| `balanced` | 70 | 19/48 | 19 kHz | 43 / 23 | 65 / 45 |
-| `transparent` | 120 | 5/12 | 20 kHz | 95 / 49 | 143 / 97 |
+| `super_economy` | 70 | 1/3 | 16 kHz | 35 / 19 (−72.8 dB); *est.* 27 / 15 | 47 / 33 (−71.2 dB); *est.* 41 / 29 |
+| `economy` (default) | 70 | 3/8 | 18 kHz | 43 / 23 (−71.9 dB); *est.* 35 / 19 | 65 / 45 (−71.3 dB); *est.* 53 / 37 |
+| `balanced` | 70 | 19/48 | 19 kHz | 51 / 27 (−71.5 dB); *est.* 43 / 23 | 77 / 53 (−71.2 dB); *est.* 65 / 45 |
+| `transparent` | 120 | 5/12 | 20 kHz | 123 / 63 (−121.7 dB); *est.* 95 / 49 | 149 / 101 (−121.1 dB); *est.* 143 / 97 |
 
-The estimates are for the stage adjacent to r_min (the narrowest
-transition in a chain); stages further up a chain are shorter (2.1).
-`bridge`'s experience says the pinned count lands near the estimate but
-not on it, and not monotonically (`design.h:79-82`, the 38-vs-40 quirk in
-`../bridge/PLAN.md` §4), which is why M2 pins them per (ratio, profile)
-and nothing in this plan treats them as settled. Ripple candidates for
+The first number of each cell is **measured** (v0.3, 2026-10-01): the
+smallest m whose design meets the stopband with ≥ 1 dB margin on
+`nyquist_worst_stopband_db`'s grid, by `tap::dsp::search_nyquist_m` on
+the shipped designer (DspTap `nyquist.h`, tap/DspTap#48; three of the
+eight are pinned by its `test_nyquist.cpp`, the next-shorter length
+missing the spec). The harris estimates (*est.*) are kept beside them:
+the Kaiser fit needs 2–8 more taps per branch than the estimate, 1–7 at
+the third band, so every MAC figure in section 3 that was derived from an
+estimate is low by about that ratio until M2 regenerates the matrix from
+these counts. The counts are for the stage adjacent to r_min (the
+narrowest transition in a chain); stages further up a chain are shorter
+(2.1). `bridge`'s experience says a pinned count can also move
+non-monotonically with the spec (`design.h:79-82`, the 38-vs-40 quirk in
+`../bridge/PLAN.md` §4), which is why M2 still pins every (ratio,
+profile) from the designer, mixed ratios included, and nothing here is
+settled until it does. Ripple candidates for
 2.1(c): ±0.01 dB per 70 dB stage, ±0.0001 dB per transparent stage
 (`bridge` measures ±0.003 / ±0.00001, `../bridge/PLAN.md` §4); the chain's
 δ is the sum (2.1(c)), pinned per pair by the matrix test.
@@ -701,7 +715,7 @@ Plus:
 
 | M | Deliverable | Acceptance | Waits for 2.2? |
 |---|---|---|---|
-| M0 | **DspTap substrate PR**: `tap/dsp/nyquist.h` (R4's designer and m-search), `tap/dsp/chain.h` (`sync_stage` concept, `chain<>`, composed `outputs_for` / `frames_needed` / `flush` / latency), tests, README sections, per DspTap's "Adding a primitive" checklist | DspTap CI green on every host and QEMU leg; the L-th-band property test; `chain<>` of two `basic_decimator`s matches the two run in sequence bit for bit (the helper proven on an existing primitive); DspTap's existing icount ratchet unmoved | no |
+| M0 | **DspTap substrate PR**: `tap/dsp/nyquist.h` (R4's designer and m-search), `tap/dsp/chain.h` (`sync_stage` concept, `chain<>`, composed `outputs_for` / `frames_needed` / latency; `flush` deferred to M4, when a stage with a defined flush exists), tests, README sections, per DspTap's "Adding a primitive" checklist. **Done** (tap/DspTap#48, 2026-10-01; this tree's `submodules/dsptap` pin at its merge) | DspTap CI green on every host and QEMU leg ✓; the L-th-band property test ✓ (exact centre and zeros, per-branch unity, the shifted responses summing to 1); `chain<>` of two `basic_decimator`s matches the two run in sequence bit for bit in every sample format ✓; DspTap's existing icount ratchet unmoved ✓ (every key within +0.9 % of baseline) | no |
 | M1 | **Skeleton + ratio types + design**: `rational/` tree (section 4), `tap::sr::rational` target, the family tests extended to three engines, `ratio<L, M>` with its `static_assert`s, `profile`, `design_stage<R>` | Configure and build from the root and from `cmake -S rational`; the four 4.2 checks and `VersionMacrosAgree` pass for all three engines; `ratio<5, 1>`, `ratio<4, 2>`, `ratio<2, 2>` fail to compile with the charter's message; `BadProfilesThrow` | no |
 | M2 | **Design spike**: `notebooks/design_spike.ipynb`, executed, pins N per (single-stage ratio ∈ {2, 3, 6, 8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8} × profile; the 4th-band row is measured for the record only, decision 6) by the ≥ 1 dB margin criterion on a fine grid, with measured worst stopband and ripple; `test_design.cpp` enforces the pins | The table below filled; every pinned N of the form 2mL − 1 (or T · L for mixed); measured A ≥ spec + 1 dB; ripple ≤ 2.3's candidate | no |
 | M3 | **Single stages, float golden leg**: `basic_stage<S, R>` for ↑2 / ↓2 (half-band) and ↑3 / ↓3 (third-band) first, then the rest of the vocabulary; both call shapes; `flush`; scipy vectors committed | Scipy vectors sample-for-sample; exhaustive phase sweeps; `PullMatchesProcessBitExact`; chunking invariance; `decimate.h` second-golden agreement at ↓2 / ↓3 within the documented design difference; latency equals (N − 1)/2 at the higher rate by impulse | no |
@@ -709,12 +723,14 @@ Plus:
 | M5 | **Fixed-point profiles**: Q15 and Q31 datapaths through the traits; per-branch quantization; bit-pinned tables; cross-precision numbers | Q31 within the format floor of float on the reference noise (`bridge`: 5e−8, `../bridge/PLAN.md` §8); Q15 format-limited numbers stated per stage; exact-unity row sums; wrap safety; the Q15 half-band's zero taps absent from the dot (counted MACs equal the nonzero count) | no |
 | M6 | **C ABI, notebook, icount baselines**: `libtap_sr_rational_capi`, `tap_sr_rational_py.py`, `matrix.ipynb` executed through the C ABIs (bridge's for cross rows), `bench/icount/` with baselines on M33 / M55 / Hexagon, README icount table, `CApi.VersionIsBitPacked` | Notebook measures the shipping C++ and reproduces the pinned matrix numbers; ratchet green two-sided on three targets; `nm -D` symbol set recorded; **family version 0.5.0** (decision 10, R11: all three umbrella headers and the root `project()` bump together, D13) | notebook's k > 0 cells wait |
 
-**The M2 table to fill** (N per ratio × profile; *all to be measured*):
+**The M2 table to fill** (N per ratio × profile; the bold entries are
+measured by the shipped designer (2.3, v0.3); the rest are *est.*, to be
+measured):
 
 | Ratio | super_economy | economy | balanced | transparent |
 |---|---|---|---|---|
-| ↑2 / ↓2 | (27 *est.*) | (35 *est.*) | (43 *est.*) | (95 *est.*) |
-| ↑3 / ↓3 | (41) | (53) | (65) | (143) |
+| ↑2 / ↓2 | **35** (27 *est.*) | **43** (35 *est.*) | **51** (43 *est.*) | **123** (95 *est.*) |
+| ↑3 / ↓3 | **47** (41 *est.*) | **65** (53 *est.*) | **77** (65 *est.*) | **149** (143 *est.*) |
 | ↑4 / ↓4 (not shipped, decision 6; measured for the record) | (55) | (71) | (87) | (191) |
 | ↑6 / ↓6 | (83) | (107) | (131) | (287) |
 | ↑8 / ↓8 | (111) | (143) | (175) | (383) |
