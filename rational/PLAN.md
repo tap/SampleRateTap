@@ -13,6 +13,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.1 | 2026-10-01 | draft, for review |
 | v0.2 | 2026-10-01 | section 9's ten questions decided by the maintainer (recorded in section 9 and in the decisions they touch) |
 | v0.3 | 2026-10-01 | M0 landed (DspTap `nyquist.h` and `chain.h`, tap/DspTap#48); 2.3's half- and third-band counts are measured by the shipped designer, the harris estimates kept beside them |
+| v0.4 | 2026-10-01 | M1 landed: the `rational/` tree, `tap::sr::rational`, `ratio<L, M>` and `ratio_traits` (R1), `profile` and `design_stage<R>` (R5, R4), the family's dependency-rule tests over three engines, the compile-fail charter test; the M2 table's half- and third-band columns are re-measured through the engine's own design |
 
 **Status.** This draft is the reviewed-plan deliverable that the family
 plan's "Next — `rational` (separate plan)" entry asks for
@@ -23,8 +24,9 @@ so that 88.2 ↔ 96 and 176.4 ↔ 192 can be expressed (`../PLAN.md:124-152`,
 "sequenced before `rational`") — ahead of this engine's implementation.
 This draft does not change that order: every milestone below that composes
 with `bridge` at k > 0 is marked as waiting for it. M0 is
-implemented (v0.3: DspTap's `nyquist.h` and `chain.h`); the engine itself
-is not. Every number marked *est.* is a Kaiser/harris length estimate
+implemented (v0.3: DspTap's `nyquist.h` and `chain.h`) and so is M1 (v0.4:
+the tree, the ratio types, the profiles and the stage design); the stages,
+chains and converters are not. Every number marked *est.* is a Kaiser/harris length estimate
 (`tap::dsp::estimate_taps`, `kaiser.h:77-85`) or a MAC count derived from
 one, to be measured and pinned by the milestones that name it; 2.3's
 half- and third-band counts are now measured and sit beside their
@@ -716,7 +718,7 @@ Plus:
 | M | Deliverable | Acceptance | Waits for 2.2? |
 |---|---|---|---|
 | M0 | **DspTap substrate PR**: `tap/dsp/nyquist.h` (R4's designer and m-search), `tap/dsp/chain.h` (`sync_stage` concept, `chain<>`, composed `outputs_for` / `frames_needed` / latency; `flush` deferred to M4, when a stage with a defined flush exists), tests, README sections, per DspTap's "Adding a primitive" checklist. **Done** (tap/DspTap#48, 2026-10-01; this tree's `submodules/dsptap` pin at its merge) | DspTap CI green on every host and QEMU leg ✓; the L-th-band property test ✓ (exact centre and zeros, per-branch unity, the shifted responses summing to 1); `chain<>` of two `basic_decimator`s matches the two run in sequence bit for bit in every sample format ✓; DspTap's existing icount ratchet unmoved ✓ (every key within +0.9 % of baseline) | no |
-| M1 | **Skeleton + ratio types + design**: `rational/` tree (section 4), `tap::sr::rational` target, the family tests extended to three engines, `ratio<L, M>` with its `static_assert`s, `profile`, `design_stage<R>` | Configure and build from the root and from `cmake -S rational`; the four 4.2 checks and `VersionMacrosAgree` pass for all three engines; `ratio<5, 1>`, `ratio<4, 2>`, `ratio<2, 2>` fail to compile with the charter's message; `BadProfilesThrow` | no |
+| M1 | **Skeleton + ratio types + design**: `rational/` tree (section 4), `tap::sr::rational` target, the family tests extended to three engines, `ratio<L, M>` with its `static_assert`s, `profile`, `design_stage<R>`. **Done** (2026-10-01; three of the six public headers — `rational.h`, `ratio.h`, `design.h` — the header count pinned at 3 until M3/M4 add the rest) | Configure and build from the root and from `cmake -S rational` ✓; the four 4.2 checks and `VersionMacrosAgree` pass for all three engines ✓ (`check_includes.cmake` now takes both siblings); `ratio<5, 1>`, `ratio<4, 2>`, `ratio<2, 2>` fail to compile with the charter's message ✓ (`tests/compile_fail/`, a `try_compile` project run as `rational.Ratio.ChartersFailToCompileWithTheMessage`, on the cross legs with their toolchain file); `BadProfilesThrow` ✓; the M33 leg runs the battery in 134 s with the transparent search excluded | no |
 | M2 | **Design spike**: `notebooks/design_spike.ipynb`, executed, pins N per (single-stage ratio ∈ {2, 3, 6, 8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8} × profile; the 4th-band row is measured for the record only, decision 6) by the ≥ 1 dB margin criterion on a fine grid, with measured worst stopband and ripple; `test_design.cpp` enforces the pins | The table below filled; every pinned N of the form 2mL − 1 (or T · L for mixed); measured A ≥ spec + 1 dB; ripple ≤ 2.3's candidate | no |
 | M3 | **Single stages, float golden leg**: `basic_stage<S, R>` for ↑2 / ↓2 (half-band) and ↑3 / ↓3 (third-band) first, then the rest of the vocabulary; both call shapes; `flush`; scipy vectors committed | Scipy vectors sample-for-sample; exhaustive phase sweeps; `PullMatchesProcessBitExact`; chunking invariance; `decimate.h` second-golden agreement at ↓2 / ↓3 within the documented design difference; latency equals (N − 1)/2 at the higher rate by impulse | no |
 | M4 | **Chains and the coverage matrix**: `chain.h`'s named chains, `tools/coverage/matrix.py` committed, `test_matrix.cpp` pinning (f_pass, A, δ, MACs/out, latency) for all 182 rows | Every within-family row and every k = 0 cross row measured and pinned; k > 0 rows skipped by name only; chain vectors against sequenced upfirdn; `frames_needed` / `outputs_for` exact from every position of every chain | **k > 0 rows (12 of them: every row of 3.5/3.6 whose chain names k1 or k2) wait; the other 170 do not** |
@@ -743,7 +745,7 @@ unlike `bridge`, whose two directions are asymmetric
 M2 verifies that claim before relying on it.
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
-(`../CLAUDE.md`, "Substrate discipline"); M1–M3 and M5 are independent of
+(`../CLAUDE.md`, "Substrate discipline"); M1 is done; M2–M3 and M5 are independent of
 the 2.2 follow-up; M4's 12 k > 0 rows and M6's corresponding notebook
 cells wait for it and are the only items that do. Every milestone's PR
 carries its measurements, as `bridge`'s M7 entries do.

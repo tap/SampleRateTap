@@ -1,21 +1,23 @@
 # The family's dependency rule and its enforcement (PLAN.md
-# 4.2): async and bridge each depend on tap::dsp only, and a sibling appears
-# only under an engine's tests/ and examples/. Four checks per engine, each
-# registered under the engine's label so every job that runs that engine's
-# tests runs them, plus D13's version-macro check under both labels. Nothing
-# here links an engine to its sibling. The compile checks are built BY their
+# 4.2): async, bridge and rational each depend on tap::dsp only, and a
+# sibling appears only under an engine's tests/ and examples/. Four checks
+# per engine, each registered under the engine's label so every job that
+# runs that engine's tests runs them, plus D13's version-macro check under
+# every label. Nothing here links an engine to a sibling. The compile checks are built BY their
 # test (cmake --build of an EXCLUDE_FROM_ALL target), so a leaked include is
 # a failing test, not a broken build.
 set(_family ${CMAKE_CURRENT_SOURCE_DIR}/family)
 set(_header_count_async 6)
 set(_header_count_bridge 5)
+# rational grows to six by its plan's layout (rational/PLAN.md section 4);
+# re-pinned by the milestone that adds a header (M1: rational.h, ratio.h,
+# design.h).
+set(_header_count_rational 3)
 
-foreach(_engine IN ITEMS async bridge)
-    if(_engine STREQUAL async)
-        set(_other bridge)
-    else()
-        set(_other async)
-    endif()
+set(_engines async bridge rational)
+foreach(_engine IN LISTS _engines)
+    set(_other ${_engines})
+    list(REMOVE_ITEM _other ${_engine})
     set(_include ${CMAKE_SOURCE_DIR}/${_engine}/include)
 
     # 1. Link interface: exactly tap::dsp. Read at configure time, asserted
@@ -44,9 +46,9 @@ foreach(_engine IN ITEMS async bridge)
                      --target tap_sr_${_engine}_header_isolation)
 
     # 3. Include grep: the public headers name no srt/, no sibling
-    #    tap/sr/<other>/, no ../ and no sibling __has_include.
+    #    tap/sr/<other>/ (either sibling), no ../ and no sibling __has_include.
     add_test(NAME ${_engine}.Family.IncludesStayInEngine
-             COMMAND ${CMAKE_COMMAND} -DENGINE=${_engine} -DINCLUDE=${_include} -DOTHER=${_other}
+             COMMAND ${CMAKE_COMMAND} -DENGINE=${_engine} -DINCLUDE=${_include} "-DOTHER=${_other}"
                      -P ${_family}/check_includes.cmake)
 
     # 4. Header count, pinned: a header cannot appear or vanish unnoticed.
@@ -61,15 +63,16 @@ foreach(_engine IN ITEMS async bridge)
                          PROPERTIES LABELS ${_engine})
 endforeach()
 
-# D13: TAP_SR_VERSION_* is defined in each umbrella header (no shared header,
-# so check 1 holds) and must agree. Compile-only, built by its test, so it
+# D13: TAP_SR_VERSION_* is defined in each of the three umbrella headers (no
+# shared header, so check 1 holds) and must agree. Compile-only, built by its test, so it
 # runs on every leg including bare metal.
 add_library(tap_sr_family_version STATIC EXCLUDE_FROM_ALL ${_family}/version_macros.cpp)
 target_include_directories(tap_sr_family_version PRIVATE
-    ${CMAKE_SOURCE_DIR}/async/include ${CMAKE_SOURCE_DIR}/bridge/include)
+    ${CMAKE_SOURCE_DIR}/async/include ${CMAKE_SOURCE_DIR}/bridge/include
+    ${CMAKE_SOURCE_DIR}/rational/include)
 target_link_libraries(tap_sr_family_version PRIVATE tap::dsp)
 target_compile_features(tap_sr_family_version PRIVATE cxx_std_20)
 add_test(NAME family.VersionMacrosAgree
          COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG>
                  --target tap_sr_family_version)
-set_tests_properties(family.VersionMacrosAgree PROPERTIES LABELS "async;bridge")
+set_tests_properties(family.VersionMacrosAgree PROPERTIES LABELS "async;bridge;rational")

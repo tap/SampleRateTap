@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 
-One tree, two engines, one substrate. Header-only C++20, namespace `tap::sr`,
+One tree, three engines, one substrate. Header-only C++20, namespace `tap::sr`,
 built on the Tap family's shared FIR substrate [DspTap](submodules/dsptap)
 (`tap::dsp`: Kaiser design, sample-format traits, FIR dot kernels, row-sum
 quantization, measurement instruments).
@@ -13,42 +13,46 @@ quantization, measurement instruments).
 |---|---|---|---|
 | **`async`** | `tap::sr::async` | Asynchronous, near-unity (±`max_deviation_ppm`, default 1000 ppm): two clock domains at nominally the same rate, one thread pushing at the input clock and one pulling at the output clock. **Absorbs the clock.** | [`async/`](async/README.md) |
 | **`bridge`** | `tap::sr::bridge` | Synchronous 44.1 ↔ 48 kHz (160/147 up, 147/160 down) and the pair at 2× and 4× (88.2 ↔ 96, 176.4 ↔ 192), direction and rate scale fixed at compile time, speed-first with Q15/Q31 profiles for M33/M55-class targets. **Converts the number.** | [`bridge/`](bridge/README.md) |
+| **`rational`** | `tap::sr::rational` | Synchronous small-factor L/M *within* a rate family (L, M ∈ {2^a·3^b}: ↑2, ↓3, 2/3, …), as chains of Nyquist (L-th-band) stages, the ratio a compile-time type. **Converts the number.** M1 (ratio types and stage design) landed; the stages and chains follow its plan. | [`rational/`](rational/README.md) |
 
 The engines never route by rate. The caller declares the clock topology by
 choosing a type: `async` when the clocks are independent, `bridge` when the
-ratio is the fixed 44.1/48 pair, and their composition — `bridge` converts
-the number, `async` absorbs the clock — for 44.1 ↔ 48 across independent
+ratio is the fixed 44.1/48 pair, `rational` when it is a small-factor L/M
+inside one family, and their composition — `bridge` converts the number,
+`async` absorbs the clock — for 44.1 ↔ 48 across independent
 clocks ([`bridge/examples/bluetooth_bridge.cpp`](bridge/examples/bluetooth_bridge.cpp)).
 `async` is never chained behind a lookup, and no rate is ever served by an
 engine whose charter does not name it (`PLAN.md`, D12 and section 2). The
-engines planned next — `rational` (small-factor L/M within a rate family),
-`pdm`, `varispeed` — get their own charters and directories the same way.
+engines planned next — `pdm`, `varispeed` — get their own charters and
+directories the same way.
 
 ## Quick start
 
 ```cmake
 add_subdirectory(SampleRateTap)               # or FetchContent; submodules: recursive
 target_link_libraries(app PRIVATE tap::sr::async)    # one engine
-target_link_libraries(app PRIVATE tap::sr::bridge)   # the other
-target_link_libraries(app PRIVATE tap::sr)           # both (the umbrella)
+target_link_libraries(app PRIVATE tap::sr::bridge)   # another
+target_link_libraries(app PRIVATE tap::sr::rational) # the third
+target_link_libraries(app PRIVATE tap::sr)           # all of them (the umbrella)
 ```
 
 ```cpp
 #include <tap/sr/async/async.h>   // tap::sr::async::converter, converter_q15, converter_q31
 #include <tap/sr/bridge/ratio.h>  // tap::sr::bridge::converter_to_48k, converter_to_44k1, ...
+#include <tap/sr/rational/rational.h> // tap::sr::rational::ratio<L, M>, profile, design_stage (M1)
 ```
 
-Every configure builds both engines. CI selects an engine only when it runs
+Every configure builds every engine. CI selects an engine only when it runs
 tests, by ctest label. The family options are `TAP_SR_*`:
 
 | Option | Default | Builds |
 |---|---|---|
-| `TAP_SR_BUILD_TESTS` | ON | both engines' tests and the family's own (`tests/`) |
-| `TAP_SR_BUILD_EXAMPLES` | ON | both engines' examples |
-| `TAP_SR_BUILD_CAPI` | OFF | both engines' C ABI shared libraries (`libtap_sr_async_capi`, `libtap_sr_bridge_capi`) |
-| `TAP_SR_BUILD_ICOUNT_BENCH` | OFF | both engines' instruction-count ratchet workloads |
+| `TAP_SR_BUILD_TESTS` | ON | the engines' tests and the family's own (`tests/`) |
+| `TAP_SR_BUILD_EXAMPLES` | ON | the engines' examples |
+| `TAP_SR_BUILD_CAPI` | OFF | the engines' C ABI shared libraries (`libtap_sr_async_capi`, `libtap_sr_bridge_capi`; `rational`'s at its M6) |
+| `TAP_SR_BUILD_ICOUNT_BENCH` | OFF | the engines' instruction-count ratchet workloads (`rational`'s at its M6) |
 | `TAP_SR_BUILD_BENCHMARKS`, `TAP_SR_BUILD_COMPARE_BENCH`, `TAP_SR_BUILD_COMPARE_SHIM` | OFF | the async engine's host-only benchmarks and comparison tooling |
-| `TAP_SR_ASYNC_WERROR`, `TAP_SR_BRIDGE_WERROR` | OFF | warnings as errors, per engine |
+| `TAP_SR_ASYNC_WERROR`, `TAP_SR_BRIDGE_WERROR`, `TAP_SR_RATIONAL_WERROR` | OFF | warnings as errors, per engine |
 
 A retired pre-family option (`SRT_*`, `TAP_RATIO_*`) fails the configure
 loudly (`cmake/retired_options.cmake`) rather than dropping a gate silently.

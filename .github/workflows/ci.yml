@@ -24,12 +24,10 @@ concurrency:
 env:
   CTEST_COMMON: --no-tests=error --output-on-failure
 
-# Monorepo migration step 1c: one tree, two engines (async/, bridge/). Every
-# job configures the ROOT once and builds both engines; a job that tests
-# only one engine selects it at ctest time by label (async / ratio — the
-# bridge engine keeps RatioTap's `ratio` label until step 3.4 renames it,
-# PLAN.md D16). Per-engine options keep each engine's own
-# warning policy.
+# One tree, three engines (async/, bridge/, rational/). Every job configures
+# the ROOT once and builds every engine; a job that tests only one engine
+# selects it at ctest time by label (async / bridge / rational, PLAN.md D16).
+# Per-engine options keep each engine's own warning policy.
 jobs:
   build-and-test:
     name: ${{ matrix.name }}
@@ -45,6 +43,7 @@ jobs:
             cxx: g++
             async_werror: ON
             bridge_werror: ON
+            rational_werror: ON
             capi: ON
           # The bridge engine's first Clang coverage on Linux.
           - name: Linux Clang
@@ -53,11 +52,13 @@ jobs:
             cxx: clang++
             async_werror: ON
             bridge_werror: ON
+            rational_werror: ON
             capi: ON
           - name: macOS AppleClang
             os: macos-latest
             async_werror: ON
             bridge_werror: ON
+            rational_werror: ON
             capi: ON
           # async's warnings stay non-fatal on MSVC until its /W4 output has
           # been triaged (async/docs/PERFORMANCE.md "Known debt"); bridge keeps
@@ -68,6 +69,7 @@ jobs:
             os: windows-latest
             async_werror: OFF
             bridge_werror: ON
+            rational_werror: ON
             capi: OFF
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -83,6 +85,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DTAP_SR_ASYNC_WERROR=${{ matrix.async_werror }}
           -DTAP_SR_BRIDGE_WERROR=${{ matrix.bridge_werror }}
+          -DTAP_SR_RATIONAL_WERROR=${{ matrix.rational_werror }}
           -DTAP_SR_BUILD_CAPI=${{ matrix.capi }}
 
       - name: Build
@@ -113,7 +116,8 @@ jobs:
           submodules: recursive
 
       # Each engine keeps its old sanitizer configuration: async without
-      # WERROR and without examples, bridge with WERROR and its examples.
+      # WERROR and without examples, bridge with WERROR and its examples;
+      # rational, new, with WERROR.
       - name: Configure
         env:
           CC: clang
@@ -123,6 +127,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DTAP_SR_BUILD_EXAMPLES=OFF
           -DTAP_SR_BRIDGE_WERROR=ON
+          -DTAP_SR_RATIONAL_WERROR=ON
           -DCMAKE_CXX_FLAGS="${{ matrix.flags }}"
 
       - name: Build
@@ -135,7 +140,7 @@ jobs:
         run: ctest --test-dir build ${{ env.CTEST_COMMON }} ${{ matrix.labels }}
 
   # Cross-compiled correctness under emulation, one job per (target, engine):
-  # both engines are built in one tree and each job runs one engine's label
+  # every engine is built in one tree and each job runs one engine's label
   # with that engine's own exclusions and parallelism, as each repository ran
   # them before (async serial, bridge -j 4 on Hexagon). The -V --output-log
   # file keeps every test's own output ([ RUN ] lines, [ measured ] numbers)
@@ -175,6 +180,36 @@ jobs:
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
             exclude: BadProfilesThrow|LatencyAndValidation
+          # rational (M1: the ratio types and the stage design; 134 s on
+          # M33 measured 2026-10-01): the EXPECT_THROW test is excluded on
+          # Hexagon for the unwind reason above, nothing on the Arm legs.
+          - target: hexagon
+            title: Hexagon cross
+            engine: rational
+            label: rational
+            timeout: 20
+            jobs: 4
+            build_type: Release
+            toolchain: cmake/hexagon-linux-musl.cmake
+            exclude: BadProfilesThrow
+          - target: m55
+            title: Cortex-M55 cross
+            engine: rational
+            label: rational
+            timeout: 20
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m55-mps3.cmake
+            exclude: ""
+          - target: m33
+            title: Cortex-M33 cross
+            engine: rational
+            label: rational
+            timeout: 20
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m33-mps2.cmake
+            exclude: ""
           - target: m55
             title: Cortex-M55 cross
             engine: async
@@ -286,7 +321,7 @@ jobs:
             dpkg-query -W gcc-arm-none-eabi qemu-system-arm
           fi
 
-      - name: Configure (both engines, one tree)
+      - name: Configure (every engine, one tree)
         run: >
           cmake -B build
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}

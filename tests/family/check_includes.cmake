@@ -1,6 +1,6 @@
 # 4.2 check 3: an engine's public headers name no srt/, no sibling
 # tap/sr/<other>/, no ../ and no sibling __has_include.
-#   cmake -DENGINE=<engine> -DINCLUDE=<dir> -DOTHER=<sibling> -P this
+#   cmake -DENGINE=<engine> -DINCLUDE=<dir> "-DOTHER=<sibling>[;<sibling>]" -P this
 if(NOT DEFINED INCLUDE OR NOT DEFINED OTHER OR NOT DEFINED ENGINE)
     message(FATAL_ERROR "ENGINE, INCLUDE and OTHER are required")
 endif()
@@ -14,7 +14,13 @@ foreach(_f IN LISTS _files)
     file(STRINGS ${_f} _lines REGEX "#[ \t]*include|__has_include")
     foreach(_l IN LISTS _lines)
         math(EXPR _lines_checked "${_lines_checked} + 1")
-        if(_l MATCHES "[\"<]srt/" OR _l MATCHES "tap/sr/${OTHER}/" OR _l MATCHES "\\.\\./"
+        set(_names_sibling FALSE)
+        foreach(_o IN LISTS OTHER)
+            if(_l MATCHES "tap/sr/${_o}/")
+                set(_names_sibling TRUE)
+            endif()
+        endforeach()
+        if(_l MATCHES "[\"<]srt/" OR _names_sibling OR _l MATCHES "\\.\\./"
            OR (_l MATCHES "__has_include" AND _l MATCHES "tap/sr/"))
             file(RELATIVE_PATH _rel ${INCLUDE} ${_f})
             list(APPEND _bad "${_rel}: ${_l}")
