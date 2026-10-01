@@ -115,6 +115,15 @@ int main() {
     const double checksum = run<std::int32_t>();
 #endif
     const bool ok = checksum == checksum; // NaN check
-    std::printf("RATIO_ICOUNT_DONE ok=%d checksum=%.17g\n", ok ? 1 : 0, checksum);
+    // The marker line is part of the count. Under static musl (Hexagon) printf
+    // copies the format string's literal runs with memcpy, whose path depends
+    // on the string's word alignment, and the linker places the string: an
+    // unrelated literal elsewhere in the image moved every Hexagon count by
+    // 47-87 instructions (the family PLAN.md, section 7). Pinning the format
+    // string's alignment makes the line cost the same wherever the rest of the
+    // image lands; the Arm legs (newlib, semihosting) count identically either
+    // way.
+    alignas(64) static constexpr char k_done_fmt[] = "RATIO_ICOUNT_DONE ok=%d checksum=%.17g\n";
+    std::printf(k_done_fmt, ok ? 1 : 0, checksum);
     return ok ? 0 : 1;
 }

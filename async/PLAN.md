@@ -84,11 +84,12 @@ In expected order; each item lands as its own PR with its measurements.
    there); candidate fix `-unwindlib=libunwind` in
    `cmake/hexagon-linux-musl.cmake`.
 6. **Housekeeping from the migration.** Bring `bench/icount/` under the
-   clang-tidy gate (excluded by path in `style.yml`); re-record the Hexagon
+   clang-tidy gate (excluded by path in `style.yml`). *Done:* the Hexagon
    baselines, which the family migration left 47–87 instructions high per
    pipeline workload (the renamed literals moved the marker's format
-   string; `../PLAN.md` section 7), and make the marker print's cost
-   layout-independent while doing so.
+   string; `../PLAN.md` section 7), are re-recorded, and the marker
+   print's cost is layout-independent: the format string is 64-byte
+   aligned (`docs/PERFORMANCE.md`, "Hexagon marker alignment").
 
 ## 5. Non-goals
 

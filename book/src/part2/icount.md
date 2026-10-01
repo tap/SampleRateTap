@@ -110,8 +110,20 @@ accumulates a checksum, and ends with:
 
 ```cpp
     const bool ok = checksum == checksum; // NaN check
-    std::printf("SRT_ICOUNT_DONE ok=%d checksum=%.17g\n", ok ? 1 : 0, checksum);
+    alignas(64) static constexpr char k_done_fmt[] = "SRT_ICOUNT_DONE ok=%d checksum=%.17g\n";
+    std::printf(k_done_fmt, ok ? 1 : 0, checksum);
 ```
+
+The `alignas` is there because the marker line is part of the count. Under
+static musl (the Hexagon target) `printf` copies the format string's literal
+runs into `stdout`'s buffer with `memcpy`, whose path depends on the string's
+word alignment, and the linker places the string: during the family migration
+a renamed exception message elsewhere in the image moved every Hexagon count
+by 47–87 instructions without a single shipped function changing, and a sweep
+of one-byte `.rodata` shifts reproduces the dependence with period 4. Pinning
+the format string's alignment makes the line cost the same wherever the rest
+of the image lands; the Arm legs, which print through newlib and semihosting,
+count identically either way.
 
 A total is the whole binary's cost, construction included, so a pipeline
 baseline divided by its 96 000 frames is *not* the per-frame cost: on the
