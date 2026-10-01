@@ -3,7 +3,7 @@ name: Tap House Style
 # Enforces the shared Tap House Rules. clang-format is checked in ci.yml (and
 # locally by the pre-commit hook); this adds (1) a drift check against the
 # canonical TapHouse configs and (2) clang-tidy naming + mandatory-braces
-# enforcement over both engines' own translation units (scripts/tidy.sh is
+# enforcement over the engines' own translation units (scripts/tidy.sh is
 # the local mirror). Same dedup scheme as ci.yml: PR branches run on
 # pull_request events only, main runs on push.
 on:
@@ -34,7 +34,7 @@ jobs:
           submodules: recursive
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y clang-tidy-18 cmake python3
-      # Both engines with their tests and examples, plus the bridge engine's
+      # Every engine with its tests and examples, plus the bridge engine's
       # icount workloads: the coverage each repository's gate had. The async
       # workloads (async/bench/icount) were never under this gate and do not
       # pass it yet; bringing them in is follow-up work, not a migration step.

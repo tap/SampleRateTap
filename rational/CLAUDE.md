@@ -1,0 +1,65 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this
+engine. The family's rules — the dependency rule, never routing by rate, the substrate
+discipline, style, build and test — are in the root [`CLAUDE.md`](../CLAUDE.md); this file is
+the engine's charter, which is what makes it different from its siblings.
+
+## What this is
+
+**`rational`** (`tap::sr::rational`) — synchronous small-factor L/M sample rate conversion
+*within* a rate family, as fast as possible: ratios L/M with L, M ∈ {2^a · 3^b}, gcd(L, M) = 1,
+realised as chains of Nyquist (L-th-band) stages. Header-only C++20 under
+`include/tap/sr/rational/`, built on the shared substrate from DspTap (`tap::dsp`: the L-th-band
+designer `nyquist.h` and the stage composition `chain.h` landed there first, with the
+sample-format traits, dot kernels and row-sum quantization). **`PLAN.md` is the authoritative
+roadmap** — charter, the settled decisions R1–R16, the generated 14 × 14 coverage matrix,
+layout, test strategy, milestones M0–M6 and acceptance criteria. Read it before implementing
+anything; do not re-derive what it settles (the compile-time ratio, one Nyquist filter per stage,
+stage factoring by MACs then by stage count, `bridge` at the lowest k, the profile vocabulary,
+latency as an exact rational).
+
+Current state: **M1** — the tree, `ratio<L, M>` with its charter `static_assert`s and
+`ratio_traits`, `profile` and `design_stage<R>` over `tap::dsp::nyquist.h`. M2 (the design spike
+that pins N per ratio × profile), M3 (the stages), M4 (chains and the matrix), M5 (fixed point)
+and M6 (C ABI, notebook, icount baselines; family version 0.5.0) follow in PLAN.md section 6.
+
+## The charter constraints (load-bearing)
+
+- **Within a family only.** The 48 kHz family (8 … 384 kHz) and the 44.1 kHz family
+  (11.025 … 176.4 kHz). Crossing them is `bridge` (147/160), reached by a chain the caller
+  writes; absorbing a clock is `async`, by composition. The charter is a `static_assert` on
+  `ratio<L, M>`: L and M of the form 2^a · 3^b, lowest terms, L ≠ M. Nothing else compiles.
+- **Never routed to by rate (D12).** `ratio<L, M>` names the number, a chain names the stages;
+  there is no `(in_hz, out_hz)` lookup here or in the C ABI (whose enumerators name chains). The
+  coverage matrix in PLAN.md documents chains; it dispatches nothing.
+- **Speed-first, like `bridge`.** The ratio is a compile-time type, so every trip count and
+  schedule is a compile-time fact; the stage factoring is chosen by MACs (R3: ↑4 is two
+  half-bands, never one 4th-band stage); every inaudible quality-vs-speed trade goes to speed in
+  the default `economy` profile.
+- **One Nyquist filter per stage (R2, R4).** Length N = 2mL − 1, centre tap exactly 1, every
+  L-th tap from it exactly 0, every polyphase branch at DC gain 1 — `tap::dsp::nyquist.h`'s
+  contract, pinned by `test_design.cpp` through this engine's build. The up and down designs of
+  one band are the same prototype; a mixed ratio's band is its larger factor.
+- **Correctness before optimization.** Scipy golden vectors, exhaustive phase sweeps,
+  `decimate.h` as a second golden at ↓2 / ↓3 / ↓6, and the 182-row coverage matrix test gate
+  every optimization that follows (PLAN.md section 5).
+
+## Profiles
+
+`bridge`'s four names — `super_economy`, `economy` (default), `balanced`, `transparent` — as
+(stopband A, passband edge as a fraction of the chain's lowest rate): 70 dB at 1/3, 3/8, 19/48
+and 120 dB at 5/12, which are `bridge`'s 16 / 18 / 19 / 20 kHz at 48 kHz. Tests are typed over
+`float` / `int16_t` / `int32_t` from M3 with `double` as the oracle; measured numbers are stated
+in comments with their provenance.
+
+```sh
+# from the repository root (this engine lives in rational/; the root builds every engine)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_RATIONAL_WERROR=ON
+cmake --build build
+ctest --test-dir build --output-on-failure -L '^rational$'
+```
+
+`rational.Ratio.ChartersFailToCompileWithTheMessage` configures `tests/compile_fail/`, a
+`try_compile` project, with this build's compiler or toolchain file: the three rejected ratios
+must fail to compile *with* the charter's message.

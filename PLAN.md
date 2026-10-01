@@ -1004,9 +1004,12 @@ G13 and G14, plus G9 from 3.7.
 - ~~Then `rational`'s own reviewed plan~~: `rational/PLAN.md` v0.2, the
   ten open questions decided. Its M0 — the L-th-band design math and
   `chain<>` (under D12) in DspTap — landed as tap/DspTap#48 and this tree's
-  pin follows it (`rational/PLAN.md` v0.3). Next: M1, the engine's
-  skeleton, ratio types and design, then the generated 14 × 14 matrix
-  under 2.1's rule (M4).
+  pin follows it (`rational/PLAN.md` v0.3). M1 — the `rational/` tree,
+  `tap::sr::rational`, `ratio<L, M>` with its charter `static_assert`s,
+  `profile` and `design_stage<R>`, the family tests over three engines —
+  landed (`rational/PLAN.md` v0.4). Next: M2, the design spike that pins
+  N per (ratio, profile), then the stages (M3) and the generated 14 × 14
+  matrix under 2.1's rule (M4).
 
 ---
 
