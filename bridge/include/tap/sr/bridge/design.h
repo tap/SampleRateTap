@@ -23,36 +23,54 @@ namespace tap::sr::bridge {
         down_to_44k1 ///< 48 kHz -> 44.1 kHz, L/M = 147/160
     };
 
-    /// Compile-time facts of one direction. L is the interpolation factor
-    /// (and phase count and superblock period); M the decimation factor. The
-    /// phase sequence phase(n) = (n * M) mod L visits every phase exactly
-    /// once per superblock of L outputs, consuming exactly M input frames.
-    template <direction D>
+    /// Compile-time facts of one direction at one rate scale. L is the
+    /// interpolation factor (and phase count and superblock period); M the
+    /// decimation factor. The phase sequence phase(n) = (n * M) mod L visits
+    /// every phase exactly once per superblock of L outputs, consuming
+    /// exactly M input frames.
+    ///
+    /// K scales the pair by 2^K: K = 0 is 44.1 <-> 48 kHz, K = 1 is
+    /// 88.2 <-> 96, K = 2 is 176.4 <-> 192 (the family plan's follow-up 2.2;
+    /// nothing above K = 2 until a consumer asks). L and M do not depend on
+    /// K, and every Hz value is the base pair's times 2^K — exact in double,
+    /// so the design at every K is bit-identical to the base pair's
+    /// (test_design.cpp, RateScaleIsBitIdentical): the same table, the same
+    /// schedule, the same codegen, only the Hz the numbers mean change.
+    template <direction D, unsigned K = 0>
     struct ratio_traits;
 
-    template <>
-    struct ratio_traits<direction::up_to_48k> {
-        static constexpr std::size_t k_phases         = 160; ///< L
-        static constexpr std::size_t k_decimation     = 147; ///< M
-        static constexpr double      k_input_rate_hz  = 44100.0;
-        static constexpr double      k_output_rate_hz = 48000.0;
+    template <unsigned K>
+    struct ratio_traits<direction::up_to_48k, K> {
+        static_assert(K <= 2,
+                      "tap::sr::bridge: the rate scale K is 0 (44.1 <-> 48), 1 (88.2 <-> 96) or 2 (176.4 <-> 192)");
+        static constexpr unsigned    k_rate_scale     = K;                            ///< the exponent
+        static constexpr double      k_rate_factor    = static_cast<double>(1u << K); ///< 2^K, exact
+        static constexpr std::size_t k_phases         = 160;                          ///< L
+        static constexpr std::size_t k_decimation     = 147;                          ///< M
+        static constexpr double      k_input_rate_hz  = 44100.0 * k_rate_factor;
+        static constexpr double      k_output_rate_hz = 48000.0 * k_rate_factor;
         /// Anti-image stopband edge: the output Nyquist. Images of baseband
         /// content land at 44100 - f >= 22.05 kHz — ultrasonic by arithmetic;
-        /// the region above 24 kHz is what the filter must remove.
-        static constexpr double k_stopband_edge_hz = 24000.0;
+        /// the region above 24 kHz is what the filter must remove. (At K the
+        /// same sentence holds with every Hz times 2^K.)
+        static constexpr double k_stopband_edge_hz = 24000.0 * k_rate_factor;
     };
 
-    template <>
-    struct ratio_traits<direction::down_to_44k1> {
+    template <unsigned K>
+    struct ratio_traits<direction::down_to_44k1, K> {
+        static_assert(K <= 2,
+                      "tap::sr::bridge: the rate scale K is 0 (44.1 <-> 48), 1 (88.2 <-> 96) or 2 (176.4 <-> 192)");
+        static constexpr unsigned    k_rate_scale     = K;
+        static constexpr double      k_rate_factor    = static_cast<double>(1u << K);
         static constexpr std::size_t k_phases         = 147; ///< L
         static constexpr std::size_t k_decimation     = 160; ///< M
-        static constexpr double      k_input_rate_hz  = 48000.0;
-        static constexpr double      k_output_rate_hz = 44100.0;
+        static constexpr double      k_input_rate_hz  = 48000.0 * k_rate_factor;
+        static constexpr double      k_output_rate_hz = 44100.0 * k_rate_factor;
         /// Anti-alias stopband edge: the output Nyquist. A 48 kHz source
         /// holds nothing above 24 kHz and aliasing maps f -> 44100 - f, so
         /// the entire possible alias landing zone is 20.1-22.05 kHz — nothing
-        /// can fold below 20.1 kHz, arithmetically.
-        static constexpr double k_stopband_edge_hz = 22050.0;
+        /// can fold below 20.1 kHz, arithmetically. (At K, times 2^K.)
+        static constexpr double k_stopband_edge_hz = 22050.0 * k_rate_factor;
     };
     // ANCHOR_END: rt_direction
 
@@ -63,12 +81,19 @@ namespace tap::sr::bridge {
     /// test_design.cpp): the minimal even counts whose Kaiser designs meet
     /// the stopband spec with >= 1 dB margin on a fine (12.5 Hz) sweep grid.
     ///
-    /// | profile       | stopband | passband | taps down | taps up | measured worst stop |
-    /// |---------------|----------|----------|-----------|---------|---------------------|
-    /// | super_economy |  70 dB   | 16 kHz   |  40       |  28     | -71.7 / -71.7 dB    |
-    /// | economy       |  70 dB   | 18 kHz   |  58       |  38     | -71.5 / -71.7 dB    |
-    /// | balanced      |  70 dB   | 19 kHz   |  78       |  44     | -72.1 / -72.8 dB    |
-    /// | transparent   | 120 dB   | 20 kHz   | 184       |  96     | -121.7 / -121.7 dB  |
+    /// | profile       | stopband | passband | of 44.1 kHz | taps down | taps up | measured worst stop |
+    /// |---------------|----------|----------|-------------|-----------|---------|---------------------|
+    /// | super_economy |  70 dB   | 16 kHz   | 0.3628      |  40       |  28     | -71.7 / -71.7 dB    |
+    /// | economy       |  70 dB   | 18 kHz   | 0.4082      |  58       |  38     | -71.5 / -71.7 dB    |
+    /// | balanced      |  70 dB   | 19 kHz   | 0.4308      |  78       |  44     | -72.1 / -72.8 dB    |
+    /// | transparent   | 120 dB   | 20 kHz   | 0.4535      | 184       |  96     | -121.7 / -121.7 dB  |
+    ///
+    /// The passband edge is a fraction of the pair's lower rate, 44.1 kHz,
+    /// and the stopband edge is the output Nyquist (ratio_traits): both are
+    /// rate-relative, so one profile serves the pair at every rate scale K.
+    /// passband_hz is stated in Hz at K = 0 and scales with the pair — at
+    /// K = 1 (88.2 <-> 96) economy's edge is 36 kHz, at K = 2 it is 72 kHz —
+    /// and the design is the same table at every K (design_prototype).
     ///
     /// economy is the default, per the speed-first charter: going down, every
     /// alias product is confined above 20.1 kHz by arithmetic (see
@@ -84,7 +109,7 @@ namespace tap::sr::bridge {
     /// different promise from economy's inaudible trade — it is never the
     /// default, chosen only by name.
     struct profile {
-        double      passband_hz       = 18000.0; ///< edge of the flat passband
+        double      passband_hz       = 18000.0; ///< edge of the flat passband, in Hz at K = 0 (times 2^K at K)
         double      stopband_atten_db = 70.0;    ///< prototype stopband target
         std::size_t taps_up_to_48k    = 38;      ///< taps per phase, 44.1 -> 48
         std::size_t taps_down_to_44k1 = 58;      ///< taps per phase, 48 -> 44.1
@@ -127,15 +152,29 @@ namespace tap::sr::bridge {
     /// between the passband edge and the direction's stopband edge, exactly
     /// as the shared tap::dsp designer expects. Construction-time code per
     /// the family philosophy (runtime double, off the audio path); allocates.
-    template <direction D>
+    ///
+    /// At rate scale K the profile's passband edge and the traits' Hz values
+    /// are all the base pair's times 2^K, so the normalized cutoff — and
+    /// with it every coefficient — is bit-identical to K = 0: scaling by a
+    /// power of two is exact in IEEE double, and kaiser_beta depends only on
+    /// the dB. Pinned by test_design.cpp, RateScaleIsBitIdentical.
+    template <direction D, unsigned K = 0>
     std::vector<double> design_prototype(const profile& p) {
-        using traits = ratio_traits<D>;
-        if (!(std::isfinite(p.passband_hz) && std::isfinite(p.stopband_atten_db)) || p.passband_hz <= 0.0
-            || p.passband_hz >= traits::k_stopband_edge_hz || p.stopband_atten_db <= 0.0 || p.taps<D>() < 4) {
+        using traits = ratio_traits<D, K>;
+        // The edge scaled to K, read at each use rather than held in a local:
+        // holding it across the allocation below re-allocates registers in
+        // the normalization loop and moves the K = 0 construction count by
+        // one instruction per phase on Hexagon (measured). Reading it this
+        // way keeps the base path's codegen, and the ratchet, exact.
+        if (!(std::isfinite(p.passband_hz * traits::k_rate_factor) && std::isfinite(p.stopband_atten_db))
+            || p.passband_hz * traits::k_rate_factor <= 0.0
+            || p.passband_hz * traits::k_rate_factor >= traits::k_stopband_edge_hz || p.stopband_atten_db <= 0.0
+            || p.taps<D>() < 4) {
             throw std::invalid_argument("tap::sr::bridge::design_prototype: bad profile");
         }
         std::vector<double> h(traits::k_phases * p.taps<D>());
-        const double        cutoff_norm = (p.passband_hz + traits::k_stopband_edge_hz) / traits::k_input_rate_hz;
+        const double        cutoff_norm =
+            (p.passband_hz * traits::k_rate_factor + traits::k_stopband_edge_hz) / traits::k_input_rate_hz;
         tap::dsp::design_prototype(h, traits::k_phases, cutoff_norm, tap::dsp::kaiser_beta(p.stopband_atten_db));
 
         // Per-branch DC normalization: scale every polyphase branch so its

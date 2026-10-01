@@ -1,5 +1,5 @@
 /// @file converter.h
-/// @brief The synchronous 44.1 <-> 48 kHz converter: one direction, streamed.
+/// @brief The synchronous 44.1 <-> 48 kHz converter (and the pair at 2x, 4x): one direction, streamed.
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 #pragma once
@@ -35,7 +35,13 @@
 namespace tap::sr::bridge {
 
     // ANCHOR: rt_converter_doc
-    /// Streaming fixed-ratio converter for one direction (compile-time D).
+    /// Streaming fixed-ratio converter for one direction (compile-time D) at
+    /// one rate scale (compile-time K: 0 is 44.1 <-> 48 kHz, 1 is
+    /// 88.2 <-> 96, 2 is 176.4 <-> 192; ratio_traits). The machine is the
+    /// same at every K — the ratio, the schedule and the table are
+    /// K-independent, bit for bit — so K is a statement of which rates the
+    /// frames carry, kept in the type per the family's rule that the caller
+    /// declares the topology and nothing is inferred from a rate.
     ///
     /// The machine is the whole point of this library: one phase-major table
     /// row dot per output frame, driven by the compile-time (phase, advance)
@@ -55,13 +61,14 @@ namespace tap::sr::bridge {
     /// every channel of an instance shares the coefficient row per frame, so
     /// inter-channel phase coherence is exact by construction.
     // ANCHOR_END: rt_converter_doc
-    template <tap::dsp::sample_type S, direction D>
+    template <tap::dsp::sample_type S, direction D, unsigned K = 0>
     class basic_converter {
       public:
         using coeff = typename tap::dsp::sample_traits<S>::coeff;
 
-        static constexpr std::size_t k_phases     = ratio_traits<D>::k_phases;     ///< L
-        static constexpr std::size_t k_decimation = ratio_traits<D>::k_decimation; ///< M
+        static constexpr std::size_t k_phases     = ratio_traits<D, K>::k_phases;     ///< L
+        static constexpr std::size_t k_decimation = ratio_traits<D, K>::k_decimation; ///< M
+        static constexpr unsigned    k_rate_scale = K;                                ///< the pair times 2^K
 
         /// The canonical trip counts (taps per phase = MACs per output) the
         /// hot path hard-commits to at compile time; any other profile runs
@@ -233,7 +240,7 @@ namespace tap::sr::bridge {
         std::size_t taps() const noexcept { return m_table.taps(); } ///< MACs per output sample
         std::size_t position() const noexcept { return m_pos; }      ///< superblock position in [0, L)
 
-        const basic_phase_table<S, D>& table() const noexcept { return m_table; }
+        const basic_phase_table<S, D, K>& table() const noexcept { return m_table; }
 
       private:
         static constexpr std::size_t k_hist_slack = 64; ///< appends between compactions
@@ -414,7 +421,7 @@ namespace tap::sr::bridge {
             return keep;
         }
 
-        basic_phase_table<S, D>     m_table;
+        basic_phase_table<S, D, K>  m_table;
         std::size_t                 m_channels;
         std::size_t                 m_hist_cap;
         std::vector<std::vector<S>> m_hist;    // planar delay line per channel
@@ -439,5 +446,24 @@ namespace tap::sr::bridge {
     /// datapath at the format-negligible level (parity pinned by test).
     using converter_to_48k_q31  = basic_converter<std::int32_t, direction::up_to_48k>;
     using converter_to_44k1_q31 = basic_converter<std::int32_t, direction::down_to_44k1>;
+
+    /// The pair at 2x (K = 1): 88.2 <-> 96 kHz. The same machine as the base
+    /// pair, bit for bit (ratio_traits); the name states which rates the
+    /// frames carry. Images and aliases scale with the pair: going up, images
+    /// land at >= 44.1 kHz; going down, aliases fold above 40.2 kHz.
+    using converter_to_96k      = basic_converter<float, direction::up_to_48k, 1>;
+    using converter_to_88k2     = basic_converter<float, direction::down_to_44k1, 1>;
+    using converter_to_96k_q15  = basic_converter<std::int16_t, direction::up_to_48k, 1>;
+    using converter_to_88k2_q15 = basic_converter<std::int16_t, direction::down_to_44k1, 1>;
+    using converter_to_96k_q31  = basic_converter<std::int32_t, direction::up_to_48k, 1>;
+    using converter_to_88k2_q31 = basic_converter<std::int32_t, direction::down_to_44k1, 1>;
+
+    /// The pair at 4x (K = 2): 176.4 <-> 192 kHz.
+    using converter_to_192k      = basic_converter<float, direction::up_to_48k, 2>;
+    using converter_to_176k4     = basic_converter<float, direction::down_to_44k1, 2>;
+    using converter_to_192k_q15  = basic_converter<std::int16_t, direction::up_to_48k, 2>;
+    using converter_to_176k4_q15 = basic_converter<std::int16_t, direction::down_to_44k1, 2>;
+    using converter_to_192k_q31  = basic_converter<std::int32_t, direction::up_to_48k, 2>;
+    using converter_to_176k4_q31 = basic_converter<std::int32_t, direction::down_to_44k1, 2>;
 
 } // namespace tap::sr::bridge

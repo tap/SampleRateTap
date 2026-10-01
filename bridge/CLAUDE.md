@@ -20,7 +20,9 @@ cross-validation design).
 
 - **44.1 ↔ 48 only.** No other ratios on the public surface, ever; internal scaffolding may be
   general where it costs nothing, but optimization work is allowed to hard-commit to
-  L ∈ {147, 160}. The 2× and 4× rate pairs are the family plan's follow-up 2.2, not a widening.
+  L ∈ {147, 160}. The pair is also served at 2× and 4× (88.2 ↔ 96, 176.4 ↔ 192: the rate scale
+  `K ≤ 2` of `ratio_traits<D, K>`, the family plan's follow-up 2.2) — the same machine with every
+  Hz times 2^K, bit-identical by test, not a widening.
 - **Synchronous only.** Async-at-44.1↔48 is the `async` engine's problem, reached by composition
   (`examples/bluetooth_bridge.cpp`). Never route by rate; the caller declares clock topology by
   choosing a type.

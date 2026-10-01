@@ -125,6 +125,83 @@ namespace {
         profile q           = profile::economy();
         q.stopband_atten_db = -1.0;
         EXPECT_THROW((design_prototype<direction::up_to_48k>(q)), std::invalid_argument);
+        // The edge scales with the pair, so the same profile is bad at every
+        // rate scale (23 kHz at K = 0 is 46 kHz at K = 1, still above 44.1).
+        EXPECT_THROW((design_prototype<direction::down_to_44k1, 1>(p)), std::invalid_argument);
+        EXPECT_THROW((design_prototype<direction::down_to_44k1, 2>(p)), std::invalid_argument);
+    }
+
+    // ------------------------------------------------------------------
+    // The pair at 2x and 4x rates (family plan 2.2). Every Hz value of the
+    // traits is the base pair's times 2^K, exactly, and the design at K is
+    // the base design bit for bit: scaling by a power of two is exact in
+    // double and kaiser_beta depends only on the dB.
+    TEST(Design, RateScaledTraitsAreThePairTimesTwoToTheK) {
+        using up0   = ratio_traits<direction::up_to_48k, 0>;
+        using up1   = ratio_traits<direction::up_to_48k, 1>;
+        using up2   = ratio_traits<direction::up_to_48k, 2>;
+        using down1 = ratio_traits<direction::down_to_44k1, 1>;
+        using down2 = ratio_traits<direction::down_to_44k1, 2>;
+        static_assert(up0::k_rate_scale == 0 && up0::k_rate_factor == 1.0);
+        static_assert(up1::k_input_rate_hz == 88200.0 && up1::k_output_rate_hz == 96000.0);
+        static_assert(up1::k_stopband_edge_hz == 48000.0);
+        static_assert(up2::k_input_rate_hz == 176400.0 && up2::k_output_rate_hz == 192000.0);
+        static_assert(up2::k_stopband_edge_hz == 96000.0);
+        static_assert(down1::k_input_rate_hz == 96000.0 && down1::k_output_rate_hz == 88200.0);
+        static_assert(down1::k_stopband_edge_hz == 44100.0);
+        static_assert(down2::k_input_rate_hz == 192000.0 && down2::k_output_rate_hz == 176400.0);
+        static_assert(down2::k_stopband_edge_hz == 88200.0);
+        // L and M are the pair's at every K: the schedule does not change.
+        static_assert(up1::k_phases == 160 && up1::k_decimation == 147);
+        static_assert(down2::k_phases == 147 && down2::k_decimation == 160);
+        SUCCEED();
+    }
+
+    template <direction D>
+    void check_rate_scale_bit_identical(const profile& p, const char* name) {
+        const std::vector<double> h0 = design_prototype<D, 0>(p);
+        const std::vector<double> h1 = design_prototype<D, 1>(p);
+        const std::vector<double> h2 = design_prototype<D, 2>(p);
+        ASSERT_EQ(h0.size(), h1.size()) << name;
+        ASSERT_EQ(h0.size(), h2.size()) << name;
+        for (std::size_t i = 0; i < h0.size(); ++i) {
+            ASSERT_EQ(h0[i], h1[i]) << name << ": K=1 differs at " << i; // exact double ==
+            ASSERT_EQ(h0[i], h2[i]) << name << ": K=2 differs at " << i;
+        }
+    }
+
+    TEST(Design, RateScaleIsBitIdentical) {
+        check_rate_scale_bit_identical<direction::down_to_44k1>(profile::super_economy(), "down super_economy");
+        check_rate_scale_bit_identical<direction::down_to_44k1>(profile::economy(), "down economy");
+        check_rate_scale_bit_identical<direction::down_to_44k1>(profile::balanced(), "down balanced");
+        check_rate_scale_bit_identical<direction::down_to_44k1>(profile::transparent(), "down transparent");
+        check_rate_scale_bit_identical<direction::up_to_48k>(profile::super_economy(), "up super_economy");
+        check_rate_scale_bit_identical<direction::up_to_48k>(profile::economy(), "up economy");
+        check_rate_scale_bit_identical<direction::up_to_48k>(profile::balanced(), "up balanced");
+        check_rate_scale_bit_identical<direction::up_to_48k>(profile::transparent(), "up transparent");
+    }
+
+    // The scaled pair's spec, measured at its own rates: the same battery as
+    // the base pair's, with every Hz times 2^K (K = 2 is the widest stretch).
+    template <direction D>
+    void check_meets_spec_scaled(const profile& p, const char* name) {
+        using traits                          = ratio_traits<D, 2>;
+        const std::vector<double> h           = design_prototype<D, 2>(p);
+        const double              passband_hz = p.passband_hz * traits::k_rate_factor;
+        for (double f = 0.0; f <= passband_hz; f += 1000.0) {
+            EXPECT_NEAR(response_db(h, traits::k_phases, traits::k_input_rate_hz, f), 0.0, 0.01)
+                << name << ": passband deviation at " << f << " Hz";
+        }
+        double worst = -1e9;
+        for (double f = traits::k_stopband_edge_hz; f <= 4.0 * traits::k_input_rate_hz; f += 400.0) {
+            worst = std::max(worst, response_db(h, traits::k_phases, traits::k_input_rate_hz, f));
+        }
+        EXPECT_LT(worst, -(p.stopband_atten_db + 1.0)) << name;
+    }
+
+    TEST(Design, RateScaledEconomyMeetsSpecAtItsOwnRates) {
+        check_meets_spec_scaled<direction::down_to_44k1>(profile::economy(), "down economy K=2 (192 -> 176.4)");
+        check_meets_spec_scaled<direction::up_to_48k>(profile::economy(), "up economy K=2 (176.4 -> 192)");
     }
 
 } // namespace

@@ -8,9 +8,12 @@
 // clock, and the entire optimization budget spent on exactly that.
 //
 // The boundaries are identity, not policy:
-//   - No other ratios. The public surface is 44.1 <-> 48 only, so the
-//     optimization work (superblock codegen, baked tables, multistage) may
-//     hard-commit to L in {147, 160}.
+//   - No other ratios. The public surface is the 44.1 <-> 48 pair — at its
+//     base rates and, since the family plan's follow-up 2.2, at 2x and 4x
+//     (88.2 <-> 96, 176.4 <-> 192: the rate scale K of ratio_traits, the
+//     same 160/147 machine with every Hz times 2^K) — so the optimization
+//     work (superblock codegen, baked tables, multistage) may hard-commit to
+//     L in {147, 160}.
 //   - No asynchronous conversion. If the two ends of a signal chain run on
 //     different crystals — even at nominally 44.1-vs-48 — that is
 //     SampleRateTap's near-unity ASRC problem, reached by composition (the
