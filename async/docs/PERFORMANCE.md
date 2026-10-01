@@ -159,6 +159,30 @@ table is already enforced by test thresholds.
   baselines re-recorded to the isolated values with this entry as the
   justification, so exact (`--exact`) comparisons start from the new
   harness.
+- [x] **Hexagon marker alignment (post-migration re-record)** — harness
+  change, not a code change. The family migration's renames changed the
+  length of exception-message literals, `.rodata` shifted, and the
+  `SRT_ICOUNT_DONE` format string landed at an alignment where static
+  musl's `memcpy` (which `printf` uses for the format's literal runs)
+  takes a shorter path: every Hexagon pipeline count fell by 57–87
+  instructions with every shipped function counting identically (the
+  migration's per-function proof, family `PLAN.md` section 7). A sweep
+  of one-byte `.rodata` shifts (0–13 bytes injected ahead of the
+  workload's literals) reproduced the dependence with period 4 on the
+  unaligned string and showed a 64-byte-aligned format string invariant
+  at every shift, so the workloads now print through an `alignas(64)`
+  format string. Measured on the local toolchains that match the
+  committed baselines to the instruction: Hexagon −95 instructions on each of the four pipeline workloads, +7 on `kernel_q15` and `kernel_q31`, +38 on `kernel_float` (the aligned string's `memcpy` path costs a few more than the kernels' old accidental alignment and fewer than the pipelines'); M33
+  and M55 exact (+0) on every workload of both engines. Hexagon
+  baselines re-recorded with this entry as the justification. A finding
+  from the same measurement, deferred: adding two statics and a
+  `setvbuf` call to `main` (a rejected variant) flipped GCC's inlining
+  of `run<float>()` on the Arm legs and moved `bridge`'s float counts
+  by ±0.3–0.6 % with no change to the measured code, so a harness edit
+  that changes `main`'s size can move the Arm baselines through the
+  workload function's inlining alone; pinning `run<S>()` out of line
+  would re-record every baseline and is left for a deliberate
+  re-record.
 
 ## Known debt
 

@@ -337,6 +337,21 @@ executed (it measures the shipping C++, not a Python re-implementation).
     instruction. Hexagon baselines re-recorded so exact (`--exact`)
     comparisons start from the isolated harness.
 
+  - **Hexagon marker alignment (post-migration re-record, not a lever).**
+    The family migration's renames shifted `.rodata`, and the workload's
+    `RATIO_ICOUNT_DONE` format string landed where static musl's `memcpy`
+    (used by `printf` for the format's literal runs) takes a shorter
+    path: every workload counted 47 (Q15/Q31) or 78 (float) instructions
+    fewer with every shipped function identical (family `PLAN.md`
+    section 7). A sweep of one-byte `.rodata` shifts reproduced the
+    dependence with period 4 and showed a 64-byte-aligned format string
+    invariant at every shift, so the workloads now print through an
+    `alignas(64)` format string. Measured locally on toolchains that
+    match the committed baselines to the instruction: Hexagon
+    −211 instructions on every Q15/Q31 workload and −242 on every float one; M33 and M55 exact (+0) on every workload. Hexagon
+    baselines re-recorded (`async/docs/PERFORMANCE.md` has the inlining
+    finding from the same measurement).
+
 v0.1 ships at M6. Nothing in M7+ blocks it. **v0.3 (2026-08-07): the
 profile-ladder re-pin.** economy moved to the 18 kHz/58/38 design (the
 "economy18" spec-relaxation experiment, measured through every leg: scipy

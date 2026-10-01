@@ -1006,7 +1006,12 @@ G13 and G14, plus G9 from 3.7.
     committed Hexagon baselines are therefore high by those amounts after
     the migration, inside the daily ±3 % gate; a post-migration re-record
     (and a marker print whose cost is layout-independent) is a follow-up,
-    outside this plan's non-goals.
+    outside this plan's non-goals. **Done after the migration:** the
+    marker's format string is now 64-byte aligned in every workload (a
+    sweep of one-byte `.rodata` shifts reproduced the dependence with
+    period 4 and showed the aligned string invariant), the Hexagon
+    baselines are re-recorded, and the Arm legs count identically
+    (`async/PLAN.md` section 4, `bridge/PLAN.md` section 7).
 - **No new engine, profile or API function**, apart from D13's version
   function and its test.
 - **DspTap code is untouched.** Its docs change through a DspTap PR, and
