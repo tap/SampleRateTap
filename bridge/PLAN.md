@@ -24,9 +24,15 @@ policy:
 
 - **No other ratios.** Not 2:1, not 96→44.1, not arbitrary L/M. Generalized
   rational machinery may exist as *internal scaffolding* where it costs
-  nothing, but the public surface is 44.1↔48 and the optimization work
-  (superblock codegen, baked tables, multistage) is allowed to hard-commit
-  to L ∈ {147, 160}.
+  nothing, but the public surface is the 44.1↔48 pair and the optimization
+  work (superblock codegen, baked tables, multistage) is allowed to
+  hard-commit to L ∈ {147, 160}. The pair is served at its base rates and,
+  since the family plan's follow-up 2.2, at 2× and 4× (88.2↔96, 176.4↔192):
+  the rate scale `K` of `ratio_traits<D, K>`, `K ≤ 2`, the same 160/147
+  machine with every Hz times 2^K — bit-identical tables, pinned
+  (`test_design.cpp`, `RateScaleIsBitIdentical`). A profile's edges are
+  rate-relative (the passband a fraction of the pair's lower rate, the
+  stopband edge the output Nyquist), so one profile serves every `K`.
 - **No asynchronous conversion.** If the two ends of your signal chain run
   on different crystals — even at nominally 44.1-vs-48 — that is the
   family's `async` engine's near-unity ASRC problem, reached by
@@ -432,9 +438,13 @@ still holds on the new default, re-measured in the same test batteries.*
   `converter_to_44k1` and their `_q15` / `_q31` variants.
 - ~~SampleRateTap include-path rename~~: superseded by the family migration
   (`tap/sr/async/`, `tap/sr/bridge/`; `../PLAN.md` D5 and step 3.1).
-- **2× and 4× rates** (88.2 ↔ 96, 176.4 ↔ 192): the family plan's follow-up
-  2.2 — the profile Hz values become rate-relative; not part of the
-  migration.
+- ~~**2× and 4× rates** (88.2 ↔ 96, 176.4 ↔ 192)~~: the family plan's
+  follow-up 2.2, done after the migration — `ratio_traits<D, K>` and
+  `basic_converter<S, D, K>` with `K ≤ 2`, the `converter_to_96k` /
+  `converter_to_88k2` / `converter_to_192k` / `converter_to_176k4` aliases
+  (and `_q15` / `_q31`), the profile edges documented as fractions of the
+  rate, and the bit-identity of every design and converter at every `K`
+  pinned by test. The C ABI stays at `K = 0` until a consumer asks.
 - **Book/white-paper chapter** ("the degenerate case"): explicitly deferred
   past v0.1. Code is written anchor-friendly (`ANCHOR:` comments on the
   load-bearing excerpts) from day one so the chapter can be added without

@@ -57,7 +57,7 @@ How to read it:
 | Engine | Namespace | Origin | Charter |
 |---|---|---|---|
 | `async` | `tap::sr::async` | SampleRateTap v0.1.0 | Asynchronous, near-unity (±`max_deviation_ppm`, default 1000 ppm): absorbs the clock |
-| `bridge` | `tap::sr::bridge` | RatioTap v0.3.0 | Synchronous 160/147 pair, 44.1 ↔ 48 kHz: converts the number. **After the 2.2 follow-up:** 44.1·2^k ↔ 48·2^k, k ≤ 2 |
+| `bridge` | `tap::sr::bridge` | RatioTap v0.3.0 | Synchronous 160/147 pair, 44.1·2^k ↔ 48·2^k, k ≤ 2 (the 2.2 follow-up, done): converts the number |
 | `rational` | `tap::sr::rational` | new, separate plan | Synchronous rational L/M with L, M ∈ {2^a·3^b}. Nyquist (L-th band) stages. Does not absorb DspTap's `decimate.h` |
 | `pdm` | `tap::sr::pdm` | new, when a consumer asks | 1-bit sigma-delta → PCM: CIC → compensation FIR → `rational` stages |
 | `varispeed` | `tap::sr::varispeed` | new, when a consumer asks | Time-varying ratio (Smith, CCRMA bandlimited interpolation) |
@@ -150,6 +150,21 @@ and `kaiser_beta` depends only on dB (R2-COH-9).
 
 `bridge/PLAN.md` keeps "no other ratios" until then. The follow-up is
 sequenced before `rational`.
+
+**Done (after the migration):** `ratio_traits<D, K>` and
+`basic_converter<S, D, K>` with `K ≤ 2` (every Hz value the base pair's
+times 2^K, L and M unchanged), the `converter_to_96k` / `converter_to_88k2`
+/ `converter_to_192k` / `converter_to_176k4` aliases with their `_q15` /
+`_q31` forms, the profile edges documented as fractions of the pair's
+lower rate and of the output Nyquist, and the claim pinned:
+`design_prototype<D, 1>` and `<D, 2>` equal `<D, 0>` to the bit for every
+direction × profile, and the scaled converters reproduce the base
+converter's output, accounting and latency bit for bit in every sample
+format (`bridge/tests/test_design.cpp`, `test_converter.cpp`). The K = 2
+designs also meet their spec measured at their own rates. Codegen and
+instruction counts of the shipped `K = 0` path are unchanged (the ratchet
+exact on Hexagon and M55). The C ABI stays at `K = 0` until a consumer
+asks.
 
 ---
 

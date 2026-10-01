@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstdint>
 #include <numbers>
+#include <type_traits>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -396,6 +397,57 @@ namespace {
         for (std::size_t n = 0; n < y1.size(); ++n) {
             ASSERT_EQ(y1[n], y2[n]) << "n=" << n;
         }
+    }
+
+    // The pair at 2x and 4x (family plan 2.2): the scaled converter is the
+    // base converter bit for bit on the same frames — the same accounting,
+    // the same latency in frames, the same output — because the table and
+    // the schedule are K-independent (test_design.cpp pins the table).
+    template <typename S, direction D, unsigned K>
+    void check_rate_scaled_converter_is_the_base_machine() {
+        using base_t   = basic_converter<S, D, 0>;
+        using scaled_t = basic_converter<S, D, K>;
+        static_assert(base_t::k_rate_scale == 0 && scaled_t::k_rate_scale == K);
+        base_t   base(2, profile::balanced());
+        scaled_t scaled(2, profile::balanced());
+        ASSERT_EQ(base.taps(), scaled.taps());
+        ASSERT_EQ(base.latency_input_frames(), scaled.latency_input_frames());
+        constexpr std::size_t n_in = 2000;
+        for (std::size_t i = 0; i < 25; ++i) {
+            ASSERT_EQ(base.outputs_for(i * 7), scaled.outputs_for(i * 7));
+            ASSERT_EQ(base.frames_needed(i * 7), scaled.frames_needed(i * 7));
+        }
+        const double   full = std::is_floating_point_v<S> ? 1.0 : 16000.0;
+        std::vector<S> x(n_in * 2);
+        for (std::size_t i = 0; i < n_in; ++i) {
+            const double t = static_cast<double>(i);
+            x[i * 2]       = static_cast<S>(0.5 * std::sin(0.013 * t) * full);
+            x[i * 2 + 1]   = static_cast<S>(0.25 * std::cos(0.07 * t) * full);
+        }
+        std::vector<S> yb(base.outputs_for(n_in) * 2);
+        std::vector<S> ys(scaled.outputs_for(n_in) * 2);
+        ASSERT_EQ(yb.size(), ys.size());
+        ASSERT_EQ(base.process(x.data(), n_in, yb.data()), yb.size() / 2);
+        ASSERT_EQ(scaled.process(x.data(), n_in, ys.data()), ys.size() / 2);
+        ASSERT_TRUE(yb == ys); // bit-exact, both channels, transient included
+    }
+
+    TEST(Converter, RateScaledConvertersAreTheBaseMachine) {
+        namespace br = tap::sr::bridge;
+        static_assert(std::is_same_v<br::converter_to_96k, basic_converter<float, direction::up_to_48k, 1>>);
+        static_assert(std::is_same_v<br::converter_to_88k2, basic_converter<float, direction::down_to_44k1, 1>>);
+        static_assert(
+            std::is_same_v<br::converter_to_192k_q15, basic_converter<std::int16_t, direction::up_to_48k, 2>>);
+        static_assert(
+            std::is_same_v<br::converter_to_176k4_q31, basic_converter<std::int32_t, direction::down_to_44k1, 2>>);
+        check_rate_scaled_converter_is_the_base_machine<float, direction::up_to_48k, 1>();
+        check_rate_scaled_converter_is_the_base_machine<float, direction::down_to_44k1, 1>();
+        check_rate_scaled_converter_is_the_base_machine<float, direction::up_to_48k, 2>();
+        check_rate_scaled_converter_is_the_base_machine<float, direction::down_to_44k1, 2>();
+        check_rate_scaled_converter_is_the_base_machine<std::int16_t, direction::up_to_48k, 1>();
+        check_rate_scaled_converter_is_the_base_machine<std::int16_t, direction::down_to_44k1, 2>();
+        check_rate_scaled_converter_is_the_base_machine<std::int32_t, direction::up_to_48k, 2>();
+        check_rate_scaled_converter_is_the_base_machine<std::int32_t, direction::down_to_44k1, 1>();
     }
 
     TEST(Converter, LatencyAndValidation) {

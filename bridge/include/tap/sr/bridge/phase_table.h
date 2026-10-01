@@ -33,13 +33,14 @@ namespace tap::sr::bridge {
     /// mirrored row IS its partner's reversal by construction — reversal
     /// preserves the coefficient multiset, so every branch's DC gain (and
     /// the fixed-point exact-unity row sum) carries over unchanged.
-    template <tap::dsp::sample_type S, direction D>
+    template <tap::dsp::sample_type S, direction D, unsigned K = 0>
     class basic_phase_table {
       public:
         using coeff = typename tap::dsp::sample_traits<S>::coeff;
 
-        static constexpr std::size_t k_phases = ratio_traits<D>::k_phases;
-        static constexpr std::size_t k_stored = (k_phases + 1) / 2; ///< rows actually held
+        static constexpr std::size_t k_phases  = ratio_traits<D, K>::k_phases;
+        static constexpr unsigned k_rate_scale = K; ///< the pair times 2^K (design.h); the table is the same at every K
+        static constexpr std::size_t k_stored  = (k_phases + 1) / 2; ///< rows actually held
 
         /// True when phase ph reads its partner's stored row tap-reversed.
         static constexpr bool is_mirrored(std::size_t ph) noexcept { return ph >= k_stored; }
@@ -55,7 +56,7 @@ namespace tap::sr::bridge {
         explicit basic_phase_table(const profile& p = profile::economy())
             : m_taps(p.taps<D>())
             , m_table(k_stored * m_taps) {
-            const std::vector<double> proto = design_prototype<D>(p);
+            const std::vector<double> proto = design_prototype<D, K>(p);
             std::vector<double>       row_d(m_taps);
             for (std::size_t ph = 0; ph < k_stored; ++ph) {
                 for (std::size_t t = 0; t < m_taps; ++t) {

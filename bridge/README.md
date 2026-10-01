@@ -54,7 +54,11 @@ down.flush(tail.data());
 ```
 
 Direction is a compile-time type (`converter_to_48k` / `converter_to_44k1`,
-plus `_q15` / `_q31` fixed-point variants); `pull(out, n, pop_fn)` is the
+plus `_q15` / `_q31` fixed-point variants), and so is the rate scale: the
+pair at 2× and 4× is `converter_to_96k` / `converter_to_88k2` and
+`converter_to_192k` / `converter_to_176k4` (with the same fixed-point
+variants), the same machine with every Hz times 2^K and the same profiles,
+whose edges are fractions of the rate. `pull(out, n, pop_fn)` is the
 callback-driven shape, and `frames_needed(n)` is exact arithmetic. For
 44.1↔48 across *independent clocks* (a Bluetooth chip on its own crystal),
 compose with the family's `async` engine — `examples/bluetooth_bridge.cpp` is the
@@ -64,9 +68,13 @@ exactly, 1.9 ms total latency.
 ## The boundaries are identity, not policy
 
 - **No other ratios.** Not 2:1, not 96→44.1, not arbitrary L/M. The public
-  surface is 44.1↔48 only, which is what licenses the optimization work
-  (straight-line superblock codegen, baked tables, multistage
-  decomposition) to hard-commit to phase counts of exactly 147 and 160.
+  surface is the 44.1↔48 pair — at its base rates and at 2× and 4×
+  (`converter_to_96k` / `converter_to_88k2`, `converter_to_192k` /
+  `converter_to_176k4`: the rate scale `K` of `ratio_traits`, the same
+  machine with every Hz times 2^K, bit-identical by test) — which is what
+  licenses the optimization work (straight-line superblock codegen, baked
+  tables, multistage decomposition) to hard-commit to phase counts of
+  exactly 147 and 160.
 - **No asynchronous conversion.** If the two ends of your chain run on
   different crystals — *even at nominally 44.1-vs-48* — that is the
   family's [`async`](../async/README.md) engine's problem, reached by
