@@ -117,7 +117,7 @@ rows:
 | 96 ↔ 88.2, 192 ↔ 176.4 | `bridge` at k = 1, 2 (after 2.2) |
 | 96 → 44.1 | `rational` ↓2 → `bridge` |
 | 176.4 → 48 | `rational` ↓4 → `bridge` |
-| 48 → 88.2 | `rational` ↑2 → `bridge` k = 1 |
+| 48 → 88.2 | `bridge` k = 0 → `rational` ↑2 (corrected: `rational`'s plan places `bridge` at the lowest k, 62 % of the MACs of ↑2 → `bridge` k = 1 at the same (f_pass, A)) |
 | 44.1 → 16 | `bridge` → `rational` ↓3 |
 | 48 → 32 | `rational` 2/3 (one stage) |
 
