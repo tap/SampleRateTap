@@ -559,11 +559,23 @@ jobs:
         with:
           submodules: recursive
 
+      # Same cached Arm toolchain as the QEMU and Pico jobs (and the same
+      # key): the uncached 463 MB newlib .deb hit the 20-minute timeout on
+      # 2026-10-01 from the throttled mirror.
+      - name: Runner image (for the package cache key)
+        id: apt-image
+        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cache the Arm toolchain packages
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/apt-archives
+          key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
       - name: Install dependencies
-        run: >
-          sudo apt-get update -q &&
-          sudo apt-get install -y -q libsamplerate0-dev libsoxr-dev
-          gcc-arm-none-eabi
+        run: |
+          mkdir -p ~/apt-archives
+          sudo apt-get update -q
+          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" libsamplerate0-dev libsoxr-dev gcc-arm-none-eabi
+          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
 
       - name: Build host comparison bench
         run: >
