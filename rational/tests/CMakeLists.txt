@@ -28,10 +28,16 @@ FetchContent_MakeAvailable(googletest)
 add_executable(tap_sr_rational_tests
     test_chain.cpp
     test_design.cpp
-    test_matrix.cpp
     test_output_hash.cpp
     test_ratio.cpp
     test_stage.cpp)
+# The coverage-matrix suite is a host measurement (182 chains in double
+# through a tone battery, bridge composed in); on bare metal it is excluded
+# by name anyway (bare_metal_main.cpp) and its 182 instantiations alone
+# overflow the M55 image's CODE region, so it is compiled out there.
+if(NOT TAP_SR_BARE_METAL)
+    target_sources(tap_sr_rational_tests PRIVATE test_matrix.cpp)
+endif()
 # The tests' own headers (the committed reference vectors, the generated
 # matrix rows, the bridge adapter) resolve relative to this directory.
 target_include_directories(tap_sr_rational_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
