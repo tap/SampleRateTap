@@ -180,10 +180,10 @@ jobs:
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
             exclude: BadProfilesThrow|LatencyAndValidation
-          # rational (M2: the ratio types and the pinned stage design): the
-          # EXPECT_THROW tests are excluded on Hexagon for the unwind reason
-          # above; on the Arm legs bare_metal_main.cpp bakes in its own
-          # filter (the fine-grid sweeps of the long designs).
+          # rational: every EXPECT_THROW test (named *Throw*) is excluded on
+          # Hexagon for the unwind reason above; on the Arm legs
+          # bare_metal_main.cpp bakes in its own filter (the fine-grid
+          # sweeps of the long designs).
           - target: hexagon
             title: Hexagon cross
             engine: rational
@@ -192,7 +192,7 @@ jobs:
             jobs: 4
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: BadProfilesThrow|UnmeetableSpecThrows
+            exclude: Throw
           - target: m55
             title: Cortex-M55 cross
             engine: rational

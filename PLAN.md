@@ -1011,7 +1011,10 @@ G13 and G14, plus G9 from 3.7.
   N per (band, profile) on a 16384-point grid, the notebook executed, the
   pins in `profile` and enforced by `test_design.cpp` — landed
   (`rational/PLAN.md` v0.5; the grid finding went to DspTap first,
-  tap/DspTap#50). Next: the stages (M3), then the generated 14 × 14
+  tap/DspTap#50). M3 — the single stages for the whole vocabulary,
+  pinned against scipy, with DspTap's `accumulate_row` (tap/DspTap#51)
+  under the decimators' zero-skipping branch sum — landed
+  (`rational/PLAN.md` v0.6). Next: the chains and the generated 14 × 14
   matrix under 2.1's rule (M4).
 
 ---
