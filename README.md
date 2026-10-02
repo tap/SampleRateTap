@@ -13,7 +13,7 @@ quantization, measurement instruments).
 |---|---|---|---|
 | **`async`** | `tap::sr::async` | Asynchronous, near-unity (±`max_deviation_ppm`, default 1000 ppm): two clock domains at nominally the same rate, one thread pushing at the input clock and one pulling at the output clock. **Absorbs the clock.** | [`async/`](async/README.md) |
 | **`bridge`** | `tap::sr::bridge` | Synchronous 44.1 ↔ 48 kHz (160/147 up, 147/160 down) and the pair at 2× and 4× (88.2 ↔ 96, 176.4 ↔ 192), direction and rate scale fixed at compile time, speed-first with Q15/Q31 profiles for M33/M55-class targets. **Converts the number.** | [`bridge/`](bridge/README.md) |
-| **`rational`** | `tap::sr::rational` | Synchronous small-factor L/M *within* a rate family (L, M ∈ {2^a·3^b}: ↑2, ↓3, 2/3, …), as chains of Nyquist (L-th-band) stages, the ratio a compile-time type. **Converts the number.** M1 (ratio types) and M2 (the pinned stage designs) landed; the stages and chains follow its plan. | [`rational/`](rational/README.md) |
+| **`rational`** | `tap::sr::rational` | Synchronous small-factor L/M *within* a rate family (L, M ∈ {2^a·3^b}: ↑2, ↓3, 2/3, …), as chains of Nyquist (L-th-band) stages, the ratio a compile-time type. **Converts the number.** M1–M3 landed (ratio types, pinned designs, the single stages for every ratio of the vocabulary); the chains and the coverage matrix follow its plan. | [`rational/`](rational/README.md) |
 
 The engines never route by rate. The caller declares the clock topology by
 choosing a type: `async` when the clocks are independent, `bridge` when the
@@ -39,7 +39,7 @@ target_link_libraries(app PRIVATE tap::sr)           # all of them (the umbrella
 ```cpp
 #include <tap/sr/async/async.h>   // tap::sr::async::converter, converter_q15, converter_q31
 #include <tap/sr/bridge/ratio.h>  // tap::sr::bridge::converter_to_48k, converter_to_44k1, ...
-#include <tap/sr/rational/rational.h> // tap::sr::rational::ratio<L, M>, profile, design_stage (M1)
+#include <tap/sr/rational/rational.h> // tap::sr::rational::converter<ratio<L, M>>, converter_q15, ...
 ```
 
 Every configure builds every engine. CI selects an engine only when it runs

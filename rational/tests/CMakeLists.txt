@@ -27,7 +27,12 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(tap_sr_rational_tests
     test_design.cpp
-    test_ratio.cpp)
+    test_output_hash.cpp
+    test_ratio.cpp
+    test_stage.cpp)
+# The tests' own headers (the committed reference vectors) resolve relative
+# to this directory.
+target_include_directories(tap_sr_rational_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(tap_sr_rational_tests PRIVATE
     tap::sr::rational
     tap_sr_rational_warnings)

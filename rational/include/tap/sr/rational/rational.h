@@ -24,12 +24,15 @@
 // sample-format traits, the dot kernels and the row-sum quantization the
 // family's other engines use.
 //
-// Status: M1 — the skeleton, ratio types and stage design. The stages,
-// chains and converters follow (PLAN.md section 6).
+// Status: M3 — the ratio types, the pinned stage designs (M2) and the
+// single stages with the family's call shapes (stage.h, converter.h). The
+// chains and the coverage matrix follow (PLAN.md section 6, M4).
 #pragma once
 
-#include "tap/sr/rational/design.h" // IWYU pragma: export
-#include "tap/sr/rational/ratio.h"  // IWYU pragma: export
+#include "tap/sr/rational/converter.h" // IWYU pragma: export
+#include "tap/sr/rational/design.h"    // IWYU pragma: export
+#include "tap/sr/rational/ratio.h"     // IWYU pragma: export
+#include "tap/sr/rational/stage.h"     // IWYU pragma: export
 
 #define TAP_SR_VERSION_MAJOR 0
 #define TAP_SR_VERSION_MINOR 4
