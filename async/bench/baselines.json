@@ -21,9 +21,9 @@
     "kernel_float": 109298076,
     "kernel_q15": 192431957,
     "kernel_q31": 221164795,
-    "pipeline12_q15": 398227192,
+    "pipeline12_q15": 231525615,
     "pipeline_float": 102590477,
-    "pipeline_q15": 137792386,
+    "pipeline_q15": 109235651,
     "pipeline_q31": 173088119
   }
 }

@@ -28,17 +28,17 @@
     "up3_q15_eco": 92695694
   },
   "m55": {
-    "construct_q15_eco": 33682,
-    "down2_down2_q15_eco": 54506280,
+    "construct_q15_eco": 33098,
+    "down2_down2_q15_eco": 28178778,
     "down2_float_eco": 24577869,
     "down2_float_tr": 47997517,
-    "down2_q15_eco": 25070113,
+    "down2_q15_eco": 19806582,
     "down3_float_eco": 31908454,
-    "down3_q15_eco": 28017447,
+    "down3_q15_eco": 21227446,
     "up2_float_eco": 43442565,
     "up2_float_tr": 89901988,
-    "up2_q15_eco": 47493112,
+    "up2_q15_eco": 34150590,
     "up3_float_eco": 75330937,
-    "up3_q15_eco": 74874023
+    "up3_q15_eco": 51156121
   }
 }
