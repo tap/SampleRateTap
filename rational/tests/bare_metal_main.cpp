@@ -4,8 +4,9 @@
 // qemu-system-arm): there is no argv on the target, so the
 // emulation-appropriate filter is baked in. Excluded are the tests that
 // sweep the 16384-point design grid over long designs or search it (the
-// transparent rows up to N = 399 and the transparent relaxation table up to
-// N = 735, the coarse-grid comparison, the unpinned search) and the
+// transparent rows up to N = 399 and the relaxation tables, whose searches
+// run every candidate length through the grid, up to N = 735, the
+// coarse-grid comparison, the unpinned search) and the
 // coverage-matrix suite (182 chains in double through a tone battery, a
 // host measurement): target-independent design math and measurement
 // already covered on every host.
@@ -20,6 +21,7 @@ int main() {
                                     "Design.TheCoarseGridWouldUnderPinTwoRows:"
                                     "Design.UnpinnedProfileIsSearchedOnTheDesignGrid:"
                                     "Design.UnmeetableSpecThrows:"
+                                    "Design.RelaxationTablesAreTheSearchAt70dB:"
                                     "Design.RelaxationTablesAreTheSearchAtTransparent:"
                                     "Matrix.*";
     ::testing::InitGoogleTest();

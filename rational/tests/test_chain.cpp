@@ -216,25 +216,29 @@ namespace {
     // Accounting from every position of the chain's superblock (k_up k_down
     // inputs): outputs_for(n) is exactly what process(n) writes, and
     // frames_needed(k) the smallest n with outputs_for(n) >= k.
+    // One superblock of positions (period inputs), probes up to a
+    // superblock and two more: every phase of every stage is visited, at a
+    // cost the M33 leg can carry (period is 48 for the by-48 chains).
     template <typename Chain>
     void check_accounting_from_every_position() {
         constexpr std::size_t period = Chain::k_up * Chain::k_down;
+        constexpr std::size_t probe  = period + 2;
         Chain                 c(1);
-        std::vector<float>    x((2 * period + 2) * Chain::k_down + 8, 0.25f);
+        std::vector<float>    x((probe + 2) * Chain::k_down + 8, 0.25f);
         std::vector<float>    y(c.outputs_for(x.size()) + 8);
-        for (std::size_t pos = 0; pos < 2 * period; ++pos) {
-            for (std::size_t n = 0; n <= 2 * period; ++n) {
-                Chain probe = c;
-                EXPECT_EQ(probe.process(x.data(), n, y.data()), c.outputs_for(n)) << "pos " << pos << " n " << n;
+        for (std::size_t pos = 0; pos < period; ++pos) {
+            for (std::size_t n = 0; n <= probe; ++n) {
+                Chain probe_chain = c;
+                EXPECT_EQ(probe_chain.process(x.data(), n, y.data()), c.outputs_for(n)) << "pos " << pos << " n " << n;
             }
             EXPECT_EQ(c.frames_needed(0), 0u);
-            for (std::size_t k = 1; k <= 2 * period; ++k) {
+            for (std::size_t k = 1; k <= probe; ++k) {
                 const std::size_t n = c.frames_needed(k);
                 EXPECT_GE(c.outputs_for(n), k) << "pos " << pos << " k " << k;
                 EXPECT_LT(c.outputs_for(n - 1), k) << "pos " << pos << " k " << k;
-                Chain probe = c;
+                Chain probe_chain = c;
                 ASSERT_LE(n, x.size());
-                EXPECT_GE(probe.process(x.data(), n, y.data()), k) << "pos " << pos << " k " << k;
+                EXPECT_GE(probe_chain.process(x.data(), n, y.data()), k) << "pos " << pos << " k " << k;
             }
             c.process(x.data(), 1, y.data());
         }
