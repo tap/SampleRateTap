@@ -28,6 +28,7 @@ FetchContent_MakeAvailable(googletest)
 add_executable(tap_sr_rational_tests
     test_chain.cpp
     test_design.cpp
+    test_fixed_point.cpp
     test_output_hash.cpp
     test_ratio.cpp
     test_stage.cpp)
