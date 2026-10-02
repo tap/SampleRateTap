@@ -8,8 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 over one substrate. `async/` (`tap::sr::async`) is the asynchronous near-unity converter that
 *absorbs the clock*; `bridge/` (`tap::sr::bridge`) is the synchronous 44.1 ↔ 48 kHz converter that
 *converts the number*; `rational/` (`tap::sr::rational`) is the synchronous small-factor L/M
-converter within a rate family (L, M ∈ {2^a·3^b}), chains of Nyquist stages, at M1 of its plan
-(ratio types and stage design; the stages follow). All build on DspTap (`submodules/dsptap`,
+converter within a rate family (L, M ∈ {2^a·3^b}), chains of Nyquist stages, at M2 of its plan
+(ratio types and the pinned stage designs; the stages follow). All build on DspTap (`submodules/dsptap`,
 `tap::dsp`), pinned once at the root. Each engine has its own `README.md`, `PLAN.md` and `CLAUDE.md`;
 read the engine's before touching its code.
 

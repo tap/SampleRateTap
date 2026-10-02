@@ -1007,8 +1007,11 @@ G13 and G14, plus G9 from 3.7.
   pin follows it (`rational/PLAN.md` v0.3). M1 — the `rational/` tree,
   `tap::sr::rational`, `ratio<L, M>` with its charter `static_assert`s,
   `profile` and `design_stage<R>`, the family tests over three engines —
-  landed (`rational/PLAN.md` v0.4). Next: M2, the design spike that pins
-  N per (ratio, profile), then the stages (M3) and the generated 14 × 14
+  landed (`rational/PLAN.md` v0.4), and M2 — the design spike that pins
+  N per (band, profile) on a 16384-point grid, the notebook executed, the
+  pins in `profile` and enforced by `test_design.cpp` — landed
+  (`rational/PLAN.md` v0.5; the grid finding went to DspTap first,
+  tap/DspTap#50). Next: the stages (M3), then the generated 14 × 14
   matrix under 2.1's rule (M4).
 
 ---
