@@ -19,10 +19,12 @@ anything; do not re-derive what it settles (the compile-time ratio, one Nyquist 
 stage factoring by MACs then by stage count, `bridge` at the lowest k, the profile vocabulary,
 latency as an exact rational).
 
-Current state: **M1** — the tree, `ratio<L, M>` with its charter `static_assert`s and
-`ratio_traits`, `profile` and `design_stage<R>` over `tap::dsp::nyquist.h`. M2 (the design spike
-that pins N per ratio × profile), M3 (the stages), M4 (chains and the matrix), M5 (fixed point)
-and M6 (C ABI, notebook, icount baselines; family version 0.5.0) follow in PLAN.md section 6.
+Current state: **M2** — the tree, `ratio<L, M>` with its charter `static_assert`s and
+`ratio_traits`, `profile` carrying the pinned taps per branch for every band of the vocabulary
+(the M2 design spike, `notebooks/design_spike.ipynb`, executed; the pins found on a
+16384-point grid and enforced by `tests/test_design.cpp`), and `design_stage<R>` over
+`tap::dsp::nyquist.h`. M3 (the stages), M4 (chains and the matrix), M5 (fixed point) and M6
+(C ABI, notebook, icount baselines; family version 0.5.0) follow in PLAN.md section 6.
 
 ## The charter constraints (load-bearing)
 
@@ -49,7 +51,10 @@ and M6 (C ABI, notebook, icount baselines; family version 0.5.0) follow in PLAN.
 
 `bridge`'s four names — `super_economy`, `economy` (default), `balanced`, `transparent` — as
 (stopband A, passband edge as a fraction of the chain's lowest rate): 70 dB at 1/3, 3/8, 19/48
-and 120 dB at 5/12, which are `bridge`'s 16 / 18 / 19 / 20 kHz at 48 kHz. Tests are typed over
+and 120 dB at 5/12, which are `bridge`'s 16 / 18 / 19 / 20 kHz at 48 kHz. Each carries the
+pinned taps per branch m for the bands 2, 3, 4, 6, 8 (N = 2mB − 1; `design.h`'s table): a pin
+is the smallest m meeting the stopband with ≥ 1 dB margin on the 16384-point design grid, and
+the grid is part of the pin — the designer's 1024-point default under-pins two rows. Tests are typed over
 `float` / `int16_t` / `int32_t` from M3 with `double` as the oracle; measured numbers are stated
 in comments with their provenance.
 

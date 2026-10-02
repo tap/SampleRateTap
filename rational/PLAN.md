@@ -14,6 +14,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.2 | 2026-10-01 | section 9's ten questions decided by the maintainer (recorded in section 9 and in the decisions they touch) |
 | v0.3 | 2026-10-01 | M0 landed (DspTap `nyquist.h` and `chain.h`, tap/DspTap#48); 2.3's half- and third-band counts are measured by the shipped designer, the harris estimates kept beside them |
 | v0.4 | 2026-10-01 | M1 landed: the `rational/` tree, `tap::sr::rational`, `ratio<L, M>` and `ratio_traits` (R1), `profile` and `design_stage<R>` (R5, R4), the family's dependency-rule tests over three engines, the compile-fail charter test; the M2 table's half- and third-band columns are re-measured through the engine's own design |
+| v0.5 | 2026-10-02 | M2 landed: the design spike (`notebooks/design_spike.ipynb`, executed) pins N for every band ∈ {2, 3, 4, 6, 8} × profile on a 16384-point grid, the mixed ratios' taps per phase, measured worst stopband and ripple; `profile` carries the pins and `test_design.cpp` enforces them; the M2 table below is filled from measurements. Finding: the designer's 1024-point default grid under-pins two rows (tap/DspTap#50 made the search grid a parameter) |
 
 **Status.** This draft is the reviewed-plan deliverable that the family
 plan's "Next — `rational` (separate plan)" entry asks for
@@ -24,9 +25,10 @@ so that 88.2 ↔ 96 and 176.4 ↔ 192 can be expressed (`../PLAN.md:124-152`,
 "sequenced before `rational`") — ahead of this engine's implementation.
 This draft does not change that order: every milestone below that composes
 with `bridge` at k > 0 is marked as waiting for it. M0 is
-implemented (v0.3: DspTap's `nyquist.h` and `chain.h`) and so is M1 (v0.4:
-the tree, the ratio types, the profiles and the stage design); the stages,
-chains and converters are not. Every number marked *est.* is a Kaiser/harris length estimate
+implemented (v0.3: DspTap's `nyquist.h` and `chain.h`), M1 (v0.4: the
+tree, the ratio types, the profiles and the stage design) and M2 (v0.5:
+the pinned lengths per band and profile, measured); the stages, chains and
+converters are not. Every number marked *est.* is a Kaiser/harris length estimate
 (`tap::dsp::estimate_taps`, `kaiser.h:77-85`) or a MAC count derived from
 one, to be measured and pinned by the milestones that name it; 2.3's
 half- and third-band counts are now measured and sit beside their
@@ -91,7 +93,7 @@ The boundaries are identity, not policy, as `bridge`'s are
 | R2 | **A stage is one Nyquist filter.** `stage<ratio<L, M>>`: an L-th-band interpolator (M = 1), an M-th-band decimator (L = 1), or, for a mixed ratio (L, M > 1), one polyphase stage at the composite rate L · f_in with the cutoff at the lower rate's Nyquist (an L-th band when L > M, an M-th band when M > L) driven by `bridge`'s `(phase, advance)` schedule (`schedule.h:22-45`) | One filter per stage keeps the exhaustive-phase discipline per stage (every stage has L phases, each visited once per L outputs) and the alignment contract one sentence long (2.5) |
 | R3 | **Stage factoring by MACs, then by stage count**: an integer factor K factors into a chain of stages from {2, 3, 6, 8}, with the by-2 stage at the low-rate end and the larger factors at the high-rate end; a mixed ratio with both L, M > 1 is one stage (R2); the chain per rate pair is the MAC-minimal factorization under the harris estimate (section 3, generated) **unless a factorization with strictly fewer stages is within 10 % of it (*est.*) — 10 % of the rational stages' MACs per output: the `bridge` stage is identical in both candidates (same k, same direction) and excluded from the comparison — in which case the chain with the fewest stages within 10 % is chosen** (decision 2). **↑4 / ↓4 is two half-bands** and no single 4th-band stage (`stage<ratio<4, 1>>`, `<1, 4>`) is shipped until a latency-first consumer asks for it (decision 6); 4/3 and 3/4 stay, as mixed stages. Pinned by the matrix test | 2.1 shows the arithmetic: ↓4 as ↓2 · ↓2 costs 37 MACs per output against 55 for one 4th-band stage (−33 %, *est.*), while 48 → 32 as one 2/3 stage costs 26 against 52 for ↑2 · ↓3. Fewer stages mean less latency, less state and fewer test rows, and a few per cent is below the harris estimate's own error until M2 pins: 3/1 is one ↑3 stage (12.0) rather than 3/2 · ↑2 (11.0), and 16 → 44.1 is ↑3 · `bridge`↓ (71.1) rather than 3/2 · ↑2 · `bridge`↓ (70.0) |
 | R4 | **Nyquist (L-th-band) Kaiser-windowed-sinc design**: cutoff at π/L of the stage's higher rate, odd length N = 2mL − 1, so h[c ± kL] = 0 exactly for k ≥ 1 (c the centre), the zeros written as exact zeros by the designer (2.2) | The zeros are structural: the half-band ↑2/↓2 stage computes about half the MACs of a generic FIR of the same length, and branch 0 of every ↑L stage is a pure copy (zero MACs). The symmetric transition this forces is exactly the coverage rule's bound (2.1(a)) with equality, so the structure costs no design freedom |
-| R5 | **Profiles reuse `bridge`'s vocabulary** — `super_economy`, `economy` (default), `balanced`, `transparent` — as (stopband A in dB, passband edge p as a fraction of the chain's lowest rate r_min): the same four edges `bridge` has at 48 kHz (16, 18, 19, 20 kHz, `design.h:86-89`), stated as fractions from day one, as the 2.2 follow-up makes `bridge`'s (`../PLAN.md:138-139`). Candidate numbers in 2.3, **to be pinned by the M2 design spike** | One vocabulary across the sync engines means a chain that composes `bridge` and `rational` at the same profile name has one (f_pass, A) throughout — the matrix test's pin is then the chain's, not a per-engine translation |
+| R5 | **Profiles reuse `bridge`'s vocabulary** — `super_economy`, `economy` (default), `balanced`, `transparent` — as (stopband A in dB, passband edge p as a fraction of the chain's lowest rate r_min): the same four edges `bridge` has at 48 kHz (16, 18, 19, 20 kHz, `design.h:86-89`), stated as fractions from day one, as the 2.2 follow-up makes `bridge`'s (`../PLAN.md:138-139`). Numbers pinned by the M2 design spike (2.3, section 6) | One vocabulary across the sync engines means a chain that composes `bridge` and `rational` at the same profile name has one (f_pass, A) throughout — the matrix test's pin is then the chain's, not a per-engine translation |
 | R6 | **The design math and the composition helper land in DspTap first**: `tap/dsp/nyquist.h` (the L-th-band designer, its `m`-search and its property test) and `tap/dsp/chain.h` (`tap::dsp::chain<Stages...>` over a `sync_stage` concept: `process`, `outputs_for`, `frames_needed`, `flush`, `reset`, `latency`). The engine holds only its ratio types, stages, schedule and converter | Substrate discipline (`../CLAUDE.md`, "Shared code lands in DspTap first"). `chain<>` must live *below* both engines: a chain that composes a `bridge` converter with `rational` stages — every cross-family row of section 3 — can then be written by the caller without either engine naming the other (4.2). The family plan already places `chain<>` there (`../PLAN.md:47,1004`); **confirmed** (decision 4): M0 proves the helper on DspTap's own `decimate.h` first |
 | R7 | **Alignment and latency contract** (2.5): zero-primed, causal, scipy `upfirdn`'s streaming prefix per stage (as `bridge`, `converter.h:51-56`, and `decimate.h:17-20`); group delay an integer number of samples at the stage's *higher* rate, (N − 1)/2; a chain's latency is the sum of its stages' delays converted to the chain's output rate, **reported as the exact rational** (`latency_output_frames()` returns numerator and denominator) plus `latency_seconds()` (decision 8); `outputs_for` and `frames_needed` compose stage by stage, exactly | Latency as a number, not a claim, per family convention (`../bridge/PLAN.md` §8, `decimate.h:181-182`). `bridge` keeps its `double` (`converter.h:237`) and may adopt the same form later without breaking |
 | R8 | **Sample formats** double / float / Q15 / Q31 through `tap::dsp::sample_traits` (`sample_traits.h:107-266`), coefficient rows quantized with `quantize_row_preserving_sum` (`quantize.h:56-99`) after per-branch DC normalization, so every branch's DC gain is exactly 1 in every format; the zero taps are zero in every format and are never multiplied. Aliases `converter<ratio>` (float), `converter_q15`, `converter_q31`, and `double` as the golden model | DspTap's four-profile ladder (`submodules/dsptap/CLAUDE.md`, "Double is the golden model"); `bridge`'s per-branch normalization (`design.h:180-199`) and its reasons |
@@ -193,7 +195,7 @@ Consequences that the tests pin:
   the family plan warns about belong to a wider stage that v2's rules
   allowed and 2.1(a) does not.
 
-### 2.3 Profiles (candidates — to be pinned by the M2 design spike)
+### 2.3 Profiles (pinned by the M2 design spike)
 
 | Profile | A (dB) | p = f_pass / r_min | at r_min = 48 kHz | half-band N / nonzero (worst stop) | third-band N / nonzero (worst stop) |
 |---|---|---|---|---|---|
@@ -202,25 +204,35 @@ Consequences that the tests pin:
 | `balanced` | 70 | 19/48 | 19 kHz | 51 / 27 (−71.5 dB); *est.* 43 / 23 | 77 / 53 (−71.2 dB); *est.* 65 / 45 |
 | `transparent` | 120 | 5/12 | 20 kHz | 123 / 63 (−121.7 dB); *est.* 95 / 49 | 149 / 101 (−121.1 dB); *est.* 143 / 97 |
 
-The first number of each cell is **measured** (v0.3, 2026-10-01): the
-smallest m whose design meets the stopband with ≥ 1 dB margin on
-`nyquist_worst_stopband_db`'s grid, by `tap::dsp::search_nyquist_m` on
-the shipped designer (DspTap `nyquist.h`, tap/DspTap#48; three of the
-eight are pinned by its `test_nyquist.cpp`, the next-shorter length
-missing the spec). The harris estimates (*est.*) are kept beside them:
-the Kaiser fit needs 2–8 more taps per branch than the estimate, 1–7 at
-the third band, so every MAC figure in section 3 that was derived from an
-estimate is low by about that ratio until M2 regenerates the matrix from
-these counts. The counts are for the stage adjacent to r_min (the
+The first number of each cell is **measured and pinned** (v0.3 found
+them, v0.5's M2 spike confirmed them and filled the other bands, section
+6): the smallest m whose design meets the stopband with ≥ 1 dB margin on
+a **16384-point grid** from the stopband edge to F_hi / 2, by
+`tap::dsp::search_nyquist_m` on the shipped designer (DspTap `nyquist.h`),
+the next-shorter length missing the spec; `design.h`'s `profile` carries
+the pins per band and `test_design.cpp` enforces every row. The grid is
+stated because it matters: `nyquist.h`'s 1024-point default steps over a
+sidelobe of the long designs — the 8th-band `transparent` candidate reads
+−121.7 dB on 1024 points and −119.3 dB on 8192 — and under-pins two rows
+of the full table (band 4 `balanced` 103 → 111, band 8 `transparent`
+383 → 399); 16384 points agree with 65536 within 0.003 dB for every design
+up to N = 399, and tap/DspTap#50 made the search's grid a parameter. The
+harris estimates (*est.*) are kept beside the measured counts: the Kaiser
+fit needs 2–8 more taps per branch than the estimate at the half band, 1–7
+at the third, so every MAC figure in section 3 that was derived from an
+estimate is low by about that ratio until M4 regenerates the matrix from
+the pinned counts. The counts are for the stage adjacent to r_min (the
 narrowest transition in a chain); stages further up a chain are shorter
 (2.1). `bridge`'s experience says a pinned count can also move
 non-monotonically with the spec (`design.h:79-82`, the 38-vs-40 quirk in
-`../bridge/PLAN.md` §4), which is why M2 still pins every (ratio,
-profile) from the designer, mixed ratios included, and nothing here is
-settled until it does. Ripple candidates for
-2.1(c): ±0.01 dB per 70 dB stage, ±0.0001 dB per transparent stage
-(`bridge` measures ±0.003 / ±0.00001, `../bridge/PLAN.md` §4); the chain's
-δ is the sum (2.1(c)), pinned per pair by the matrix test.
+`../bridge/PLAN.md` §4), which is why every (band, profile) was pinned
+from the designer rather than extrapolated. Ripple, measured per stage on
+a 2000-point passband grid: ≤ 0.0025 dB at the 70 dB tiers and
+≤ 0.00001 dB at `transparent`, inside the candidates for 2.1(c) — ±0.01 dB
+per 70 dB stage, ±0.0001 dB per transparent stage (`bridge` measures
+±0.003 / ±0.00001, `../bridge/PLAN.md` §4) — which `test_design.cpp` now
+holds as bounds; the chain's δ is the sum (2.1(c)), pinned per pair by the
+matrix test.
 
 ### 2.4 Where the code lives (R6)
 
@@ -719,33 +731,41 @@ Plus:
 |---|---|---|---|
 | M0 | **DspTap substrate PR**: `tap/dsp/nyquist.h` (R4's designer and m-search), `tap/dsp/chain.h` (`sync_stage` concept, `chain<>`, composed `outputs_for` / `frames_needed` / latency; `flush` deferred to M4, when a stage with a defined flush exists), tests, README sections, per DspTap's "Adding a primitive" checklist. **Done** (tap/DspTap#48, 2026-10-01; this tree's `submodules/dsptap` pin at its merge) | DspTap CI green on every host and QEMU leg ✓; the L-th-band property test ✓ (exact centre and zeros, per-branch unity, the shifted responses summing to 1); `chain<>` of two `basic_decimator`s matches the two run in sequence bit for bit in every sample format ✓; DspTap's existing icount ratchet unmoved ✓ (every key within +0.9 % of baseline) | no |
 | M1 | **Skeleton + ratio types + design**: `rational/` tree (section 4), `tap::sr::rational` target, the family tests extended to three engines, `ratio<L, M>` with its `static_assert`s, `profile`, `design_stage<R>`. **Done** (2026-10-01; three of the six public headers — `rational.h`, `ratio.h`, `design.h` — the header count pinned at 3 until M3/M4 add the rest) | Configure and build from the root and from `cmake -S rational` ✓; the four 4.2 checks and `VersionMacrosAgree` pass for all three engines ✓ (`check_includes.cmake` now takes both siblings); `ratio<5, 1>`, `ratio<4, 2>`, `ratio<2, 2>` fail to compile with the charter's message ✓ (`tests/compile_fail/`, a `try_compile` project run as `rational.Ratio.ChartersFailToCompileWithTheMessage`, on the cross legs with their toolchain file); `BadProfilesThrow` ✓; the M33 leg runs the battery in 134 s with the transparent search excluded | no |
-| M2 | **Design spike**: `notebooks/design_spike.ipynb`, executed, pins N per (single-stage ratio ∈ {2, 3, 6, 8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8} × profile; the 4th-band row is measured for the record only, decision 6) by the ≥ 1 dB margin criterion on a fine grid, with measured worst stopband and ripple; `test_design.cpp` enforces the pins | The table below filled; every pinned N of the form 2mL − 1 (or T · L for mixed); measured A ≥ spec + 1 dB; ripple ≤ 2.3's candidate | no |
+| M2 | **Design spike**: `notebooks/design_spike.ipynb`, executed, pins N per (single-stage ratio ∈ {2, 3, 6, 8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8} × profile; the 4th-band row is measured for the record only, decision 6, and serves 4/3 and 3/4) by the ≥ 1 dB margin criterion on a fine grid, with measured worst stopband and ripple; `test_design.cpp` enforces the pins. **Done** (2026-10-02, v0.5: the notebook is the independent numpy leg from the same published math, `profile::taps_per_branch` carries the pins per band, `design_stage<R>` reads them, a custom profile without pins is searched on the same grid) | The table below filled ✓; every pinned N of the form 2mL − 1 ✓ (mixed: T = ⌈N / L⌉ per phase); measured A ≥ spec + 1 dB on 16384 points ✓ (−71.1 … −72.8 dB at 70 dB, −121.1 … −121.7 dB at 120 dB) with m − 1 missing it ✓; ripple ≤ 2.3's candidate ✓ (≤ 0.0025 / 0.00001 dB); the scipy `upfirdn` end-to-end check of the economy half-band decimator: a tone just past the stopband edge aliases at −72.1 dB, passband tones within 0.001 dB ✓ | no |
 | M3 | **Single stages, float golden leg**: `basic_stage<S, R>` for ↑2 / ↓2 (half-band) and ↑3 / ↓3 (third-band) first, then the rest of the vocabulary; both call shapes; `flush`; scipy vectors committed | Scipy vectors sample-for-sample; exhaustive phase sweeps; `PullMatchesProcessBitExact`; chunking invariance; `decimate.h` second-golden agreement at ↓2 / ↓3 within the documented design difference; latency equals (N − 1)/2 at the higher rate by impulse | no |
 | M4 | **Chains and the coverage matrix**: `chain.h`'s named chains, `tools/coverage/matrix.py` committed, `test_matrix.cpp` pinning (f_pass, A, δ, MACs/out, latency) for all 182 rows | Every within-family row and every k = 0 cross row measured and pinned; k > 0 rows skipped by name only; chain vectors against sequenced upfirdn; `frames_needed` / `outputs_for` exact from every position of every chain | **k > 0 rows (12 of them: every row of 3.5/3.6 whose chain names k1 or k2) wait; the other 170 do not** |
 | M5 | **Fixed-point profiles**: Q15 and Q31 datapaths through the traits; per-branch quantization; bit-pinned tables; cross-precision numbers | Q31 within the format floor of float on the reference noise (`bridge`: 5e−8, `../bridge/PLAN.md` §8); Q15 format-limited numbers stated per stage; exact-unity row sums; wrap safety; the Q15 half-band's zero taps absent from the dot (counted MACs equal the nonzero count) | no |
 | M6 | **C ABI, notebook, icount baselines**: `libtap_sr_rational_capi`, `tap_sr_rational_py.py`, `matrix.ipynb` executed through the C ABIs (bridge's for cross rows), `bench/icount/` with baselines on M33 / M55 / Hexagon, README icount table, `CApi.VersionIsBitPacked` | Notebook measures the shipping C++ and reproduces the pinned matrix numbers; ratchet green two-sided on three targets; `nm -D` symbol set recorded; **family version 0.5.0** (decision 10, R11: all three umbrella headers and the root `project()` bump together, D13) | notebook's k > 0 cells wait |
 
-**The M2 table to fill** (N per ratio × profile; the bold entries are
-measured by the shipped designer (2.3, v0.3); the rest are *est.*, to be
-measured):
+**The M2 table, measured** (N = 2mB − 1 per band × profile, the worst
+stopband on the 16384-point grid in parentheses; the harris estimates the
+v0.2 plan carried are struck through beside the first two rows and were
+2–8 taps per branch low; `design.h`'s `profile` docstring repeats the
+table as m):
 
-| Ratio | super_economy | economy | balanced | transparent |
+| Ratio (band B) | super_economy | economy | balanced | transparent |
 |---|---|---|---|---|
-| ↑2 / ↓2 | **35** (27 *est.*) | **43** (35 *est.*) | **51** (43 *est.*) | **123** (95 *est.*) |
-| ↑3 / ↓3 | **47** (41 *est.*) | **65** (53 *est.*) | **77** (65 *est.*) | **149** (143 *est.*) |
-| ↑4 / ↓4 (not shipped, decision 6; measured for the record) | (55) | (71) | (87) | (191) |
-| ↑6 / ↓6 | (83) | (107) | (131) | (287) |
-| ↑8 / ↓8 | (111) | (143) | (175) | (383) |
-| 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 (T per phase) | (14 / 20 / 14 / 18 / 14 / 36) | (18 / 26 / 18 / 24 / 18 / 48) | (22 / 32 / 22 / 28 / 22 / 56) | (48 / 72 / 48 / 64 / 48 / 126) |
+| ↑2 / ↓2 (2) | **35** / 19 nonzero (−72.8 dB); ~~27~~ | **43** / 23 (−71.9 dB); ~~35~~ | **51** / 27 (−71.5 dB); ~~43~~ | **123** / 63 (−121.7 dB); ~~95~~ |
+| ↑3 / ↓3 (3) | **47** / 33 (−71.2 dB); ~~41~~ | **65** / 45 (−71.3 dB); ~~53~~ | **77** / 53 (−71.2 dB); ~~65~~ | **149** / 101 (−121.1 dB); ~~143~~ |
+| ↑4 / ↓4 (4; not shipped as one stage, decision 6 — the design serves 4/3 and 3/4) | **63** / 49 (−71.4 dB) | **87** / 67 (−71.1 dB) | **111** / 85 (−72.3 dB) | **199** / 151 (−121.4 dB) |
+| ↑6 / ↓6 (6) | **95** / 81 (−71.5 dB) | **143** / 121 (−72.1 dB) | **167** / 141 (−72.2 dB) | **299** / 251 (−121.3 dB) |
+| ↑8 / ↓8 (8) | **127** / 113 (−71.5 dB) | **191** / 169 (−72.1 dB) | **223** / 197 (−72.1 dB) | **399** / 351 (−121.2 dB) |
+| 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 (T = ⌈N / L⌉ per phase over the band's design) | **16 / 24 / 16 / 21 / 16 / 43** | **22 / 33 / 22 / 29 / 24 / 64** | **26 / 39 / 28 / 37 / 28 / 75** | **50 / 75 / 50 / 67 / 50 / 133** |
 
 The ↑ and ↓ designs of one ratio are the same prototype (a Nyquist filter
 is its own transpose up to the gain convention), so one pin serves both —
 unlike `bridge`, whose two directions are asymmetric
 (`../bridge/tests/test_design.cpp:112-119`, `DirectionsAreAsymmetric`).
-M2 verifies that claim before relying on it.
+M2 verified that claim (`Design.UpAndDownOfOneBandAreTheSamePrototype`:
+the vectors are bit-identical) before relying on it, and a mixed ratio's
+design is its larger factor's band (2/3 and 3/2 share the third-band
+design; `test_design.cpp` pins it). The mixed stages' MACs per output are
+their T; a 2/3 stage at `economy` costs 33, not the 26 the v0.2 arithmetic
+in 2.1 estimated, and the matrix's MAC figures are regenerated from these
+counts at M4 (risk S1).
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
-(`../CLAUDE.md`, "Substrate discipline"); M1 is done; M2–M3 and M5 are independent of
+(`../CLAUDE.md`, "Substrate discipline"); M1 and M2 are done; M3 and M5 are independent of
 the 2.2 follow-up; M4's 12 k > 0 rows and M6's corresponding notebook
 cells wait for it and are the only items that do. Every milestone's PR
 carries its measurements, as `bridge`'s M7 entries do.
