@@ -41,7 +41,11 @@ stated design divisor, exactly sixteen exported symbols; `CApi.*` pins it bit fo
 `basic_chain`), the ctypes binding and `notebooks/matrix.ipynb` executed through the C ABIs, and
 the icount ratchet (`bench/icount/`, `bench/baselines.json`, marker `RATIONAL_ICOUNT_DONE`; a
 change that moves a count beyond ±3 % re-records the baselines in the same PR). The codegen
-levers PLAN.md defers after M6 wait for a consumer.
+levers after M6 are measured and recorded in PLAN.md section 6: the Helium Q15 dot and the Q15
+decimators' per-branch quantization shipped (a Q15 decimator's table is its band's interpolator
+table, the 1 / M in `tap::dsp::finalize_divided`; `basic_stage::k_table_gain` and
+`finalize_output()` state it), the sparse rows and the symmetry-halved table were declined on
+their numbers.
 
 ## The charter constraints (load-bearing)
 

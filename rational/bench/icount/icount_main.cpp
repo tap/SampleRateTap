@@ -11,7 +11,7 @@
 // TAP_SR_RATIONAL_SC: 0 up2_float_eco, 1 down2_float_eco, 2 up3_float_eco,
 // 3 down3_float_eco, 4 up2_q15_eco, 5 down2_q15_eco, 6 up3_q15_eco,
 // 7 down3_q15_eco, 8 down2_down2_q15_eco, 9 up2_float_tr, 10 down2_float_tr,
-// 11 construct_q15_eco.
+// 11 construct_q15_eco, 12 ratio23_float_eco, 13 ratio23_q15_eco.
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -115,6 +115,10 @@ namespace {
         return stage_workload<float, rat::up_2>(tr);
 #elif TAP_SR_RATIONAL_SC == 10
         return stage_workload<float, rat::down_2>(tr);
+#elif TAP_SR_RATIONAL_SC == 12
+        return stage_workload<float, rat::ratio_2_3>(eco);
+#elif TAP_SR_RATIONAL_SC == 13
+        return stage_workload<std::int16_t, rat::ratio_2_3>(eco);
 #else
         // Construction alone: the Q15 by-4 chain's two designs (pinned
         // lengths, no search) and quantized tables, then one output frame.

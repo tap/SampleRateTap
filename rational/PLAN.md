@@ -19,6 +19,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.7 | 2026-10-02 | M4 landed: `chain.h` (`basic_chain<S, R...>` over DspTap's `chain<>`, each stage designed at its **design divisor** — its lower rate over the chain's lowest, 3.1 — and the 20 named multi-stage chains), `tools/coverage/matrix.py` committed and re-run on the pinned lengths with the per-stage relaxation pins (`design.h`'s relaxation tables, verified by `test_design.cpp`), section 3 regenerated from measured counts (35 of 182 rows changed chain, the ledger in section 8 S1), `test_matrix.cpp` over all 182 rows (every row measured, none skipped: 2.2 had landed), DspTap's `chain<>::flush` (tap/DspTap#52) |
 | v0.5 | 2026-10-02 | M2 landed: the design spike (`notebooks/design_spike.ipynb`, executed) pins N for every band ∈ {2, 3, 4, 6, 8} × profile on a 16384-point grid, the mixed ratios' taps per phase, measured worst stopband and ripple; `profile` carries the pins and `test_design.cpp` enforces them; the M2 table below is filled from measurements. Finding: the designer's 1024-point default grid under-pins two rows (tap/DspTap#50 made the search grid a parameter) |
 | v0.9 | 2026-10-02 | M6 landed: the C ABI (`capi/`, `libtap_sr_rational_capi`: the 28 named within-family chains as stable `TAP_SR_RATIONAL_*` constants, one stage of the vocabulary at a stated design divisor for chains through `bridge`, exact accounting, latency and MACs as rationals; exactly sixteen exported symbols), the ctypes binding and `matrix.ipynb` executed through the C ABIs (all 728 row × profile pins reproduced), the icount ratchet (twelve workloads, `RATIONAL_ICOUNT_DONE`, baselines on M33 / M55 / Hexagon, gated two-sided at ±3 % in CI), family version 0.5.0 |
+| v0.10 | 2026-10-02 | The codegen levers after M6, each measured (section 6): the Helium Q15 dot (tap/DspTap#53, shipped: the M55 Q15 workloads −21 … −48 %); the Q15 decimators quantized per branch with the 1 / M in the single rounding (tap/DspTap#54's `finalize_divided`, shipped: ↓6 / ↓8 attain −71.5 / −71.7 dB at `economy`, the Q15 decimator's table is its band's interpolator table); the sparse rows for the mixed ratios going down (built, measured, declined: Q15 +22 … +60 %); the symmetry-halved table (declined: memory only, 1.6 KB at most). The 2/3 workloads join the ratchet |
 
 **Status.** This draft is the reviewed-plan deliverable that the family
 plan's "Next — `rational` (separate plan)" entry asks for
@@ -666,7 +667,7 @@ rational/
 │   ├── ratio.h             ratio<L, M>, ratio_traits, the 2^a·3^b / gcd static_asserts (R1)
 │   ├── design.h            profile (R5), design_stage<R>(profile) over tap::dsp::nyquist.h
 │   ├── stage.h             basic_stage<S, R>: table (per phase or per decimating branch, trimmed to the nonzero span;
-│   │                       symmetry halving deferred to the codegen levers after M6, as bridge's M7 lever 3), the
+│   │                       symmetry halving measured out after M6: section 6, the levers), the
 │   │                       schedule, process/pull/flush/reset, the exact-rational latency
 │   ├── chain.h             basic_chain<S, R...>: tap::dsp::chain over basic_stage, each stage at its design
 │   │                       divisor (3.1); the 20 named multi-stage chains of 3.3 / 3.4 (up_2_up_2 … down_3_down_8_down_2)
@@ -858,13 +859,13 @@ MACs per superblock):
 | Stage | Q15 stopband eco (dB) | Q15 RMS vs double eco (dBFS) | Q15 / float MACs eco | Q15 stopband tr (dB) | Q15 RMS tr (dBFS) | Q15 / float MACs tr |
 |---|---|---|---|---|---|---|
 | ↑2 | -72.3 | -95.8 | 23 / 23 | -77.3 | -93.4 | 55 / 63 |
-| ↓2 | -71.6 | -92.8 | 23 / 23 | -69.2 | -89.3 | 53 / 63 |
+| ↓2 | -72.3 | -97.5 | 23 / 23 | -77.3 | -95.7 | 55 / 63 |
 | ↑3 | -70.2 | -93.5 | 45 / 45 | -76.1 | -91.2 | 89 / 101 |
-| ↓3 | -72.4 | -90.8 | 45 / 45 | -63.8 | -86.4 | 82 / 101 |
+| ↓3 | -70.2 | -96.8 | 45 / 45 | -76.1 | -95.7 | 89 / 101 |
 | ↑6 | -71.5 | -92.4 | 121 / 121 | -78.5 | -90.7 | 219 / 251 |
-| ↓6 | -64.7 | -86.5 | 119 / 121 | -62.9 | -85.6 | 193 / 251 |
+| ↓6 | -71.5 | -98.6 | 121 / 121 | -78.5 | -98.3 | 219 / 251 |
 | ↑8 | -71.7 | -92.3 | 169 / 169 | -78.2 | -90.2 | 303 / 351 |
-| ↓8 | -62.9 | -86.8 | 165 / 169 | -61.1 | -85.6 | 259 / 351 |
+| ↓8 | -71.7 | -97.9 | 169 / 169 | -78.2 | -99.5 | 303 / 351 |
 | 3/2 | -70.2 | -93.4 | 45 / 45 | -76.1 | -91.1 | 89 / 101 |
 | 2/3 | -69.7 | -91.0 | 65 / 65 | -73.9 | -90.6 | 125 / 149 |
 | 4/3 | -71.7 | -93.6 | 67 / 67 | -77.2 | -90.6 | 131 / 151 |
@@ -874,44 +875,63 @@ MACs per superblock):
 
 Two limits, stated rather than papered over (both pinned by the battery):
 
-- **A Q15 decimator's stopband is format-limited.** Its table is h / M,
-  the whole filter quantized as one row summing to 2^14 so that DC stays
-  exact, so each coefficient is M times smaller than an interpolator's on
-  the same Q1.14 LSB: the quantization noise floor of the response rises by
-  about 20 log10 M. ↓2 and ↓3 hold 70 dB at `economy`; ↓6 reaches −64.7 dB
-  and ↓8 −62.9 dB. Interpolators and mixed ratios hold within about a dB of
-  70 at the 70 dB tiers. `transparent` buys nothing in Q15 (−61 … −78 dB,
-  and the outer taps of its long designs round to zero and are trimmed:
-  Q15 MACs below float's), so at Q15 `economy` is the pairing, as `bridge`
-  found (`../bridge/tests/test_converter_fixed_point.cpp`). The 70 / 120 dB
-  promises of 2.3 and section 3 are float's and Q31's. A lever exists for
-  the decimators — quantize each branch at unity and fold the 1 / M into a
-  power-of-two finalize where M is one (↓2, ↓8), or a Q1.14 multiply-back
-  where it is not — and is deferred with the codegen levers after M6: it
-  changes the bit-pinned tables and the rounding point, and no consumer has
-  asked.
+- **A Q15 decimator's stopband was format-limited; the lever after M6
+  lifted it.** At M5 its table was h / M, the whole filter quantized as one
+  row summing to 2^14 so that DC stayed exact, so each coefficient was M
+  times smaller than an interpolator's on the same Q1.14 LSB and the
+  quantization noise floor of the response rose by about 20 log10 M: ↓6
+  reached −64.7 dB and ↓8 −62.9 dB at `economy`, ↓8 −61.1 dB at
+  `transparent`. Since the lever (tap/DspTap#54's
+  `tap::dsp::finalize_divided`) each of the M branches of the unscaled
+  design (each sums to 1) is quantized at its own unity, which makes the
+  Q15 decimator's table bit for bit the Q15 interpolator's of the same band
+  (`FixedPoint.Q15DecimatorTableIsTheInterpolatorsTable`), and the 1 / M
+  rides the single rounding: a 15- or 17-bit shift for ↓2 and ↓8, an
+  exact-at-DC multiply-back for ↓3 and ↓6. The table above is measured
+  after it: every decimator attains its band's interpolator stopband (↓6
+  −71.5 dB, ↓8 −71.7 dB at `economy`; −76 … −79 dB at `transparent`), the
+  Q15 RMS deviation from double fell by 5–12 dB, full-scale DC is still
+  exact, and ↓3 at `economy` moved from −72.4 to −70.2 dB (still the 70 dB
+  tier). Q31 and float are unchanged. What remains format-limited in Q15
+  is `transparent` (−76 … −79 dB, not 120; the outer taps of its long
+  designs round to zero and are trimmed: Q15 MACs below float's) and the
+  mixed ratios going down (−68.2 … −69.7 dB at the 70 dB tiers: their
+  L-phase rows are normalized at the branch-spread level, the same
+  coefficient-shrinking at a smaller factor), so at Q15 `economy` is the
+  pairing, as `bridge` found (`../bridge/tests/test_converter_fixed_point.cpp`).
+  The 70 / 120 dB promises of 2.3 and section 3 are float's and Q31's.
 - **A mixed ratio going down multiplies its band's structural zeros.** 2/3,
   3/4 and 3/8 run the L-phase machine over a band-M design: the zeros stride
   by M, the rows by L, so every row crosses every M-th zero and the trimmed
-  dot still holds them — 20 of 65 MACs per superblock for 2/3 at `economy`,
-  20 of 87 for 3/4, 22 of 191 for 3/8. Interpolators, decimators and the
-  mixed ratios going up (band L, every zero in the centre phase) multiply
-  none. Sparse rows are a codegen lever after M6, as the symmetry-halved
-  table is; the matrix's MAC figures count what runs today.
+  dot holds them — 20 of 65 MACs per superblock for 2/3 at `economy`, 20 of
+  87 for 3/4, 22 of 191 for 3/8. Interpolators, decimators and the mixed
+  ratios going up (band L, every zero in the centre phase) multiply none.
+  The sparse-row lever was built and measured after M6, and declined: input
+  i on sub-line i mod M makes each row's M residue classes of lag
+  contiguous, so the zeros' class drops out (MACs per output fall to the
+  design's nonzero count, 2/3 at `economy` 32.5 → 22.5; no chain of the
+  matrix changes), with float, Q15 and Q31 outputs bit-identical. But the
+  per-output bookkeeping — M delay lines, a short sub-dot per class — costs
+  more than the third of the MACs it saves wherever the dot is cheap: the
+  2/3 workload at `economy` ran −22 % (M33) and −25 % (Hexagon) in float
+  but +13 % on the M55, and +22 % / +60 % / +24 % in Q15 on M33 / M55 /
+  Hexagon, the flagship embedded profile. The matrix's MAC figures count
+  what runs: the dense rows.
 
 **The icount baselines, measured** (M6, `bench/icount/`: 2 s of stereo at
 48 kHz streamed in 32-frame blocks, counted under QEMU by the family's
-plugin, `bench/baselines.json`; the README carries the full table):
+plugin, `bench/baselines.json`, as re-recorded after the levers; the
+README carries the full table, the 2/3 workloads included):
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `down2_float_eco` | 366,459,700 | 24,577,869 | 72,734,422 |
-| `down2_q15_eco` | 47,494,712 | 19,806,582 | 18,554,089 |
+| `down2_float_eco` | 366,459,676 | 24,433,741 | 72,735,414 |
+| `down2_q15_eco` | 47,494,140 | 19,807,000 | 18,558,545 |
 | `up2_float_eco` | 732,658,864 | 43,442,565 | 137,930,738 |
 | `up2_q15_eco` | 67,354,778 | 34,150,590 | 28,133,275 |
 | `up3_float_eco` | 1,407,620,075 | 75,330,937 | 254,903,952 |
 | `up3_q15_eco` | 92,695,694 | 51,156,121 | 39,793,932 |
-| `construct_q15_eco` | 774,741 | 33,098 | 183,854 |
+| `construct_q15_eco` | 777,433 | 34,522 | 193,048 |
 
 One finding, recorded for the codegen levers, and the first lever it
 pulled: at M6, Q15 on the M55 was no faster than float (↓2 25.07 M against
@@ -925,9 +945,20 @@ above to the counts shown — ↓2 −21 %, ↑2 −28 %, ↑3 −32 %, the by-4
 Hexagon count unchanged (bridge's Q15 workloads fell 55–62 % and async's
 Q15 pipelines 21–42 % on the same pin). Q15 is now 19 % (↓2) to 32 % (↑3)
 under float on the M55; what remains per output is the stage's own
-bookkeeping around the dot. The sparse rows, the symmetry-halved table and
-the Q15 decimators' per-branch quantization are the levers still open, each
-measured against these baselines.
+bookkeeping around the dot.
+
+**The codegen levers after M6** (one lever per change, measured, as
+`bridge`'s M7 campaign): the Helium Q15 dot above (shipped); the Q15
+decimators' per-branch quantization (shipped, a quality lever: the limit
+above, lifted); the sparse rows for the mixed ratios going down (built,
+measured, declined: the second limit above); and the symmetry-halved table
+(declined unbuilt). Halving stores each mirrored phase once and dots it
+backward (`tap::dsp::dot_row_reversed`, bit-identical), so it saves table
+memory only — and this engine's tables are small (the largest stage, 3/8 at
+`transparent`, holds 399 coefficients: 1.6 KB in float, 0.8 KB in Q15),
+against `bridge`'s 147 / 160 phases, while on the M55 the reversed Q15 dot
+reads its row through a gather, slower than the contiguous load. A
+memory-bound consumer can reopen it with these numbers.
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2

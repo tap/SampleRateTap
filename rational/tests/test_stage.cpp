@@ -84,8 +84,8 @@ namespace {
                     if (!(d > 0 && n == 0)) {
                         const std::size_t s = d == 0 ? n : n - 1;
                         if (s < t_len) {
-                            expected =
-                                tr::finalize(tr::mac(typename tr::accum{}, x[d], c.coefficient(j, t_len - 1 - s)));
+                            expected = basic_stage<S, R>::finalize_output(
+                                tr::mac(typename tr::accum{}, x[d], c.coefficient(j, t_len - 1 - s)));
                         }
                     }
                 }
@@ -168,7 +168,19 @@ namespace {
                     whole += down.coefficient(j, t);
                 }
             }
-            EXPECT_EQ(whole, unity) << "decimator, all branches";
+            // A Q15 decimator holds each branch at unity (its finalize
+            // divides by M); the other formats hold the whole filter at it.
+            EXPECT_EQ(whole, unity * static_cast<std::int64_t>(basic_stage<sample, down_3>::k_table_gain))
+                << "decimator, all branches";
+            if constexpr (basic_stage<sample, down_3>::k_branch_quantized) {
+                for (std::size_t j = 0; j < 3; ++j) {
+                    std::int64_t branch = 0;
+                    for (std::size_t t = 0; t < down.row_length(); ++t) {
+                        branch += down.coefficient(j, t);
+                    }
+                    EXPECT_EQ(branch, unity) << "Q15 decimator branch " << j;
+                }
+            }
         }
     }
 

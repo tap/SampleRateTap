@@ -498,6 +498,8 @@ def diff():
         m = re.match(r"\| (\d+)/(\d+) \| (.+?) \| (.+?) \|", line)
         if m:
             for pair in m.group(3).split(","):
+                if "→" not in pair:  # another table keyed by ratio (section 6's)
+                    continue
                 a, b = pair.strip().split("→")
                 table[(int(float(a) * 1000), int(float(b) * 1000))] = m.group(4).strip()
     n = 0
