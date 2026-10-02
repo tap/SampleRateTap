@@ -39,8 +39,16 @@
 // (the single phase sums to 1), for a mixed ratio each L-phase normalized at
 // the branch-spread level, bridge's design.h argument — and the structural
 // zeros stay exactly 0 in every format. Fixed-point rows are quantized with
-// quantize.h's row-sum preservation per phase (per whole filter for a
-// decimator), so unity DC survives the format exactly.
+// quantize.h's row-sum preservation per phase (per whole filter for a Q31
+// decimator), so unity DC survives the format exactly. A Q15 decimator is the
+// exception: Q1.14 cannot hold h / M at the precision h needs (each
+// coefficient M times smaller on the same LSB costs about 20 log10 M dB of
+// stopband), so its table is the unscaled design, each of its M branches
+// quantized at its own unity sum — bit for bit the Q15 interpolator's table
+// of the same band — and the 1 / M is applied in the single rounding
+// (tap::dsp::finalize_divided: a shift for M = 2, 8, an exact-at-DC
+// multiply-back for M = 3, 6). k_table_gain states what the rows sum to;
+// finalize_output() is the stage's rounding point.
 //
 // Contract, as numbers (PLAN.md 2.5, R7, R9, R10):
 //   - zero-primed and causal; outputs_for(n) and frames_needed(k) are exact
@@ -63,10 +71,10 @@
 //     every row sums to exact unity in the format, so full-scale DC of
 //     either sign comes out at exactly full scale; full-scale drive
 //     saturates in the trait's finalize and never wraps; Q31 tracks double
-//     within 3.4e-9 of full scale; Q15 is format-limited — RMS -85.6 to
-//     -95.8 dBFS from double, and a decimator's quantized table (h / M)
-//     attains about 20 log10 M dB less stopband than an interpolator's
-//     (by 8 at economy: -62.9 dB), stated per stage in PLAN.md;
+//     within 3.4e-9 of full scale; Q15 is format-limited — RMS -87.1 to
+//     -99.8 dBFS from double, attained stopband -68.2 to -78.5 dB, a
+//     decimator's equal to the interpolator's of its band (by 8 at economy
+//     -71.7 dB), stated per stage in PLAN.md;
 //   - MACs: no structural zero enters the dot of an interpolator, a
 //     decimator or a mixed ratio going up; a mixed ratio going down (band
 //     M, rows of stride L) multiplies the band's zeros its rows cross.
@@ -76,6 +84,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <span>
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
@@ -140,6 +149,26 @@ namespace tap::sr::rational {
         static constexpr std::size_t k_down         = traits::k_down; ///< M
         static constexpr std::size_t k_band         = traits::k_band; ///< B = max(L, M)
         static constexpr bool        k_is_decimator = traits::k_is_decimator;
+        /// A Q15 decimator quantizes each of its M branches at the branch's
+        /// own unity sum and divides the summed branches by M in the single
+        /// rounding (tap::dsp::finalize_divided): Q1.14 cannot hold h / M at
+        /// the precision h needs (see the file header).
+        static constexpr bool k_branch_quantized = k_is_decimator && std::is_same_v<S, std::int16_t>;
+        /// What the table's rows sum to, in units of the format's unity: 1,
+        /// or M for a Q15 decimator (M branches each at unity), which the
+        /// single rounding divides back out.
+        static constexpr std::size_t k_table_gain = k_branch_quantized ? k_down : 1;
+
+        /// The stage's single rounding point, accumulator -> sample: the
+        /// trait's finalize, or finalize_divided by M for a Q15 decimator.
+        static S finalize_output(typename tap::dsp::sample_traits<S>::accum acc) noexcept {
+            if constexpr (k_branch_quantized) {
+                return tap::dsp::finalize_divided<S, static_cast<std::uint32_t>(k_down)>(acc);
+            }
+            else {
+                return tap::dsp::sample_traits<S>::finalize(acc);
+            }
+        }
         /// Rows of the table: L phases, or the M branches of a decimator.
         static constexpr std::size_t k_rows = k_is_decimator ? k_down : k_up;
 
@@ -366,13 +395,33 @@ namespace tap::sr::rational {
                 // The whole filter at sum 1, quantized as ONE row so the
                 // fixed-point sum lands on unity exactly, then scattered to
                 // the M branches (branch j: taps j + s M, s ascending =
-                // older, so the row is stored reversed: oldest first).
-                std::vector<double> scaled(n);
-                for (std::size_t i = 0; i < n; ++i) {
-                    scaled[i] = h[i] / static_cast<double>(k_down);
-                }
+                // older, so the row is stored reversed: oldest first). In
+                // Q15 each branch of the unscaled design (every branch of a
+                // Nyquist filter sums to 1) is quantized on its own at unity
+                // instead, and the 1 / M is applied in the finalize.
                 std::vector<coeff> q(n);
-                tap::dsp::quantize_row_preserving_sum<S>(scaled, q);
+                if constexpr (k_branch_quantized) {
+                    std::vector<double> branch((n + k_down - 1) / k_down);
+                    std::vector<coeff>  qb(branch.size());
+                    for (std::size_t j = 0; j < k_down; ++j) {
+                        const std::size_t len = (n - j + k_down - 1) / k_down; // taps j, j + M, ...
+                        for (std::size_t s = 0; s < len; ++s) {
+                            branch[s] = h[j + s * k_down];
+                        }
+                        tap::dsp::quantize_row_preserving_sum<S>(std::span<const double>(branch.data(), len),
+                                                                 std::span<coeff>(qb.data(), len));
+                        for (std::size_t s = 0; s < len; ++s) {
+                            q[j + s * k_down] = qb[s];
+                        }
+                    }
+                }
+                else {
+                    std::vector<double> scaled(n);
+                    for (std::size_t i = 0; i < n; ++i) {
+                        scaled[i] = h[i] / static_cast<double>(k_down);
+                    }
+                    tap::dsp::quantize_row_preserving_sum<S>(scaled, q);
+                }
                 m_row_len = (n + k_down - 1) / k_down; // 2 m
                 m_rows.assign(k_rows * m_row_len, static_cast<coeff>(0));
                 for (std::size_t j = 0; j < k_rows; ++j) {
@@ -501,7 +550,7 @@ namespace tap::sr::rational {
                         acc = tap::dsp::accumulate_row<S>(acc, m_rows.data() + j * m_row_len + m_first[j], window,
                                                           m_count[j]);
                     }
-                    out[c] = tr::finalize(acc);
+                    out[c] = finalize_output(acc);
                 }
             }
             else {

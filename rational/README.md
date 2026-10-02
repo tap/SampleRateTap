@@ -33,8 +33,10 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > PLAN.md section 6): exact-unity rows and full-scale DC in Q15 and Q31,
 > bit-pinned tables, saturation without wrap, Q31 within 3.4e−9 of double;
 > Q15 is format-limited, and its numbers are stated per stage — at Q15 use
-> `economy`, and note that a Q15 decimator by 6 or 8 attains −65 / −63 dB
-> of stopband, not 70. The C ABI, the executed coverage-matrix notebook and
+> `economy`, where every interpolator and decimator attains 70 dB of
+> stopband (a Q15 decimator quantizes each branch at unity and divides by M
+> in its one rounding, so ↓6 and ↓8 attain −71.5 / −71.7 dB, as ↑6 and ↑8
+> do) and the mixed ratios going down −69.1 … −69.7 dB. The C ABI, the executed coverage-matrix notebook and
 > the instruction-count ratchet landed at M6 (below). The
 > plan is authoritative: charter, the decisions R1–R16, the generated
 > matrix, layout, test strategy, non-goals and risks.
@@ -172,13 +174,15 @@ Executed instructions per fixed workload (`rational/bench/icount/`), measured un
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `construct_q15_eco` | 774,741 | 33,098 | 183,854 |
-| `down2_down2_q15_eco` | 62,508,360 | 28,178,778 | 22,251,668 |
-| `down2_float_eco` | 366,459,700 | 24,577,869 | 72,734,422 |
-| `down2_float_tr` | 955,278,690 | 47,997,517 | 174,664,319 |
-| `down2_q15_eco` | 47,494,712 | 19,806,582 | 18,554,089 |
-| `down3_float_eco` | 476,573,580 | 31,908,454 | 90,345,997 |
-| `down3_q15_eco` | 51,977,458 | 21,227,446 | 19,350,211 |
+| `construct_q15_eco` | 777,433 | 34,522 | 193,048 |
+| `down2_down2_q15_eco` | 62,510,665 | 28,180,208 | 22,260,862 |
+| `down2_float_eco` | 366,459,676 | 24,433,741 | 72,735,414 |
+| `down2_float_tr` | 955,278,962 | 47,853,525 | 174,664,455 |
+| `down2_q15_eco` | 47,494,140 | 19,807,000 | 18,558,545 |
+| `down3_float_eco` | 476,578,253 | 31,908,695 | 90,345,995 |
+| `down3_q15_eco` | 51,980,891 | 21,247,090 | 19,802,880 |
+| `ratio23_float_eco` | 611,615,915 | 33,245,849 | 127,126,322 |
+| `ratio23_q15_eco` | 52,779,137 | 18,442,245 | 20,006,956 |
 | `up2_float_eco` | 732,658,864 | 43,442,565 | 137,930,738 |
 | `up2_float_tr` | 1,961,674,119 | 89,901,988 | 340,655,706 |
 | `up2_q15_eco` | 67,354,778 | 34,150,590 | 28,133,275 |

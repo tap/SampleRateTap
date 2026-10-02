@@ -7,9 +7,11 @@
 // the vocabulary at every named profile:
 //
 //   - every row of every table sums to exact unity in the format (a phase
-//     row of an interpolator or mixed ratio to 2^14 / 2^30; a decimator's
-//     whole filter, quantized as one row, to the same), so DC gain is exactly
-//     1 and full-scale DC comes out at exactly full scale from every phase;
+//     row of an interpolator or mixed ratio to 2^14 / 2^30; a Q15
+//     decimator's every branch to 2^14, its finalize dividing by M; a Q31
+//     decimator's whole filter, quantized as one row, to 2^30), so DC gain is
+//     exactly 1 and full-scale DC comes out at exactly full scale from every
+//     phase;
 //   - the tables are bit-pinned (FNV-1a-64 per ratio, profile and format);
 //   - the structural zeros never enter the dot of an interpolator, a
 //     decimator or a mixed ratio going up: every stored row is trimmed to its
@@ -21,10 +23,12 @@
 //   - Q31 tracks the double golden model within a tenth of float's floor;
 //   - Q15 is format-limited, and its limits are stated per stage: the RMS
 //     deviation from double on the reference noise, and the stopband the
-//     quantized Q1.14 table attains (a decimator's table holds h / M, M times
-//     smaller than an interpolator's coefficients on the same LSB, so its
-//     attained stopband loses about 20 log10 M dB: by 8 at economy reaches
-//     -62.9 dB, not 70; the 70 dB / 120 dB promises are float's and Q31's);
+//     quantized Q1.14 table attains (a decimator's table is its band's
+//     interpolator table, each branch at unity with the 1 / M in the
+//     finalize, so it attains what the interpolator does — by 8 at economy
+//     -71.7 dB; quantized as h / M in one row, as before the lever, it lost
+//     about 20 log10 M dB: -62.9 dB; the 70 dB / 120 dB promises are float's
+//     and Q31's);
 //   - full-scale drive saturates, never wraps, in both formats.
 //
 // Numbers measured 2026-10-02 (clang 18, x86-64; the formats are exact
@@ -143,34 +147,34 @@ namespace {
         ROW(up_2, economy, 23, 23, 0x62302898b65a370dULL, 0xe57108ee5dcd11a5ULL, -72.3, -95.8) \
         ROW(up_2, balanced, 27, 27, 0x597a9bff98e1d2fdULL, 0x35690983e0275251ULL, -71.1, -92.8) \
         ROW(up_2, transparent, 63, 55, 0xcd3f2561c2e2d955ULL, 0x805ecb7ea3994265ULL, -77.3, -93.4) \
-        ROW(down_2, super_economy, 19, 19, 0x62d9f46424b7acbdULL, 0x23868914d48461fdULL, -69.3, -91.9) \
-        ROW(down_2, economy, 23, 23, 0xcd4d8ac606e35409ULL, 0x8e72f5156b104145ULL, -71.6, -92.8) \
-        ROW(down_2, balanced, 27, 27, 0x29bdc8713b154ca5ULL, 0xecc3467d30d76709ULL, -70.6, -91.0) \
-        ROW(down_2, transparent, 63, 53, 0xb5e7101a73dc98d9ULL, 0x6ed3d49c1c32ca15ULL, -69.2, -89.3) \
+        ROW(down_2, super_economy, 19, 19, 0x3cba7ba5bf0200f1ULL, 0x23868914d48461fdULL, -71.1, -96.7) \
+        ROW(down_2, economy, 23, 23, 0x62302898b65a370dULL, 0x8e72f5156b104145ULL, -72.3, -97.5) \
+        ROW(down_2, balanced, 27, 27, 0x597a9bff98e1d2fdULL, 0xecc3467d30d76709ULL, -71.1, -94.9) \
+        ROW(down_2, transparent, 63, 55, 0xcd3f2561c2e2d955ULL, 0x6ed3d49c1c32ca15ULL, -77.3, -95.7) \
         ROW(up_3, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0xdb52b0963a9827a9ULL, -71.7, -94.3) \
         ROW(up_3, economy, 45, 45, 0xf843d9f1da25e251ULL, 0xffcac366d1724905ULL, -70.2, -93.5) \
         ROW(up_3, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xe9b4f733f5f69a49ULL, -71.5, -94.0) \
         ROW(up_3, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x658e039e0cf17da1ULL, -76.1, -91.2) \
-        ROW(down_3, super_economy, 33, 33, 0xdf9e89c5c14bc226ULL, 0x0e531ee9e040c832ULL, -67.8, -91.5) \
-        ROW(down_3, economy, 45, 45, 0xf3703d79f19957aeULL, 0x81e16a033f326f76ULL, -72.4, -90.8) \
-        ROW(down_3, balanced, 53, 53, 0x9208a806f6896410ULL, 0xc11d78c7a4530ef8ULL, -71.5, -88.0) \
-        ROW(down_3, transparent, 101, 82, 0x1db996525c50297eULL, 0x6506baa7c5d51262ULL, -63.8, -86.4) \
+        ROW(down_3, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0x0e531ee9e040c832ULL, -71.7, -97.2) \
+        ROW(down_3, economy, 45, 45, 0xf843d9f1da25e251ULL, 0x81e16a033f326f76ULL, -70.2, -96.8) \
+        ROW(down_3, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xc11d78c7a4530ef8ULL, -71.5, -97.7) \
+        ROW(down_3, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x6506baa7c5d51262ULL, -76.1, -95.7) \
         ROW(up_6, super_economy, 81, 81, 0x7376502a75faf5f5ULL, 0x9d6e292d48601b85ULL, -73.2, -93.1) \
         ROW(up_6, economy, 121, 121, 0x36e3c046fa633d21ULL, 0x39d801984353d381ULL, -71.5, -92.4) \
         ROW(up_6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0x7c7d5cef3507c531ULL, -72.2, -92.3) \
         ROW(up_6, transparent, 251, 219, 0xe46f033362196a39ULL, 0xb9fec6bbf1288489ULL, -78.5, -90.7) \
-        ROW(down_6, super_economy, 81, 79, 0xc420c84b1741805dULL, 0x782ec334d8cf342bULL, -68.1, -87.1) \
-        ROW(down_6, economy, 121, 119, 0x15b9f56b5749781dULL, 0x92a24b5cea1909cfULL, -64.7, -86.5) \
-        ROW(down_6, balanced, 141, 139, 0xb585c907d418ea53ULL, 0x82885ec398c57779ULL, -65.6, -87.3) \
-        ROW(down_6, transparent, 251, 193, 0xbb86f404f08bbf0dULL, 0x6a3f54f3e1587481ULL, -62.9, -85.6) \
+        ROW(down_6, super_economy, 81, 81, 0x7376502a75faf5f5ULL, 0x782ec334d8cf342bULL, -73.2, -99.8) \
+        ROW(down_6, economy, 121, 121, 0x36e3c046fa633d21ULL, 0x92a24b5cea1909cfULL, -71.5, -98.6) \
+        ROW(down_6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0x82885ec398c57779ULL, -72.2, -99.6) \
+        ROW(down_6, transparent, 251, 219, 0xe46f033362196a39ULL, 0x6a3f54f3e1587481ULL, -78.5, -98.3) \
         ROW(up_8, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -92.9) \
         ROW(up_8, economy, 169, 169, 0xdc280c16130175d1ULL, 0x192bcfb9abf918edULL, -71.7, -92.3) \
         ROW(up_8, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xbcda6fae5723088dULL, -72.6, -91.4) \
         ROW(up_8, transparent, 351, 303, 0x4b96078b2928931dULL, 0x11b5febcf65e1475ULL, -78.2, -90.2) \
-        ROW(down_8, super_economy, 113, 111, 0x21171296dcd98df1ULL, 0xc6ed1a337eadf041ULL, -66.1, -87.4) \
-        ROW(down_8, economy, 169, 165, 0xe15527b8a17a4c19ULL, 0x43d2f7ee82afa8c5ULL, -62.9, -86.8) \
-        ROW(down_8, balanced, 197, 187, 0x97a54407216efc95ULL, 0xdc5baf7a000445a9ULL, -62.0, -86.9) \
-        ROW(down_8, transparent, 351, 259, 0x4287b3116ed71645ULL, 0x5a6e47c4d822ebb1ULL, -61.1, -85.6) \
+        ROW(down_8, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0xc6ed1a337eadf041ULL, -72.0, -99.5) \
+        ROW(down_8, economy, 169, 169, 0xdc280c16130175d1ULL, 0x43d2f7ee82afa8c5ULL, -71.7, -97.9) \
+        ROW(down_8, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xdc5baf7a000445a9ULL, -72.6, -96.9) \
+        ROW(down_8, transparent, 351, 303, 0x4b96078b2928931dULL, 0x5a6e47c4d822ebb1ULL, -78.2, -99.5) \
         ROW(ratio_3_2, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0xdb52b0963a9827a9ULL, -71.7, -94.4) \
         ROW(ratio_3_2, economy, 45, 45, 0xf843d9f1da25e251ULL, 0xffcac366d1724905ULL, -70.2, -93.4) \
         ROW(ratio_3_2, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xe9b4f733f5f69a49ULL, -71.5, -94.0) \
@@ -218,8 +222,9 @@ namespace {
     }
 
     // ------------------------------------------------------------------
-    // Exact unity: every phase row (interpolators, mixed ratios) and every
-    // decimator's whole filter sums to the format's 1.0.
+    // Exact unity: every phase row (interpolators, mixed ratios) sums to the
+    // format's 1.0, and so does every Q15 decimator branch and every Q31
+    // decimator's whole filter.
     template <typename S, rational_ratio R>
     void expect_rows_sum_to_unity(const pin_row& row, const profile& p) {
         using tr                = tap::dsp::sample_traits<S>;
@@ -237,7 +242,20 @@ namespace {
             }
         }
         if constexpr (R::k_up == 1) {
-            EXPECT_EQ(whole, unity) << row.ratio << " " << row.profile << " q" << sizeof(S) * 8 << " whole filter";
+            // A Q15 decimator holds each of its M branches at unity (its
+            // finalize divides by M); Q31 holds the whole filter at unity.
+            constexpr auto gain = static_cast<std::int64_t>(basic_stage<S, R>::k_table_gain);
+            EXPECT_EQ(whole, unity * gain)
+                << row.ratio << " " << row.profile << " q" << sizeof(S) * 8 << " whole filter";
+            if constexpr (basic_stage<S, R>::k_branch_quantized) {
+                for (std::size_t r = 0; r < k_rows<R>; ++r) {
+                    std::int64_t sum = 0;
+                    for (std::size_t t = 0; t < c.row_length(); ++t) {
+                        sum += c.coefficient(r, t);
+                    }
+                    EXPECT_EQ(sum, unity) << row.ratio << " " << row.profile << " q16 branch " << r;
+                }
+            }
         }
     }
 
@@ -266,6 +284,30 @@ namespace {
 
     TEST(FixedPoint, TablesAreBitPinned) {
         for_each_row<bit_pins>();
+    }
+
+    // A Q15 decimator's table IS its band's Q15 interpolator table: each of
+    // its M branches is the unscaled design's branch quantized at unity, as
+    // each interpolator phase is (the 1 / M rides the finalize), so the two
+    // hash alike — and attain the same stopband — at every profile.
+    template <rational_ratio Up, rational_ratio Down>
+    void expect_shared_q15_table() {
+        for (const profile& p :
+             {profile::super_economy(), profile::economy(), profile::balanced(), profile::transparent()}) {
+            EXPECT_EQ(table_fnv1a64(basic_stage<std::int16_t, Down>(1, p)),
+                      table_fnv1a64(basic_stage<std::int16_t, Up>(1, p)))
+                << ratio_traits<Down>::k_band << " " << p.stopband_atten_db;
+        }
+    }
+
+    TEST(FixedPoint, Q15DecimatorTableIsTheInterpolatorsTable) {
+        expect_shared_q15_table<up_2, down_2>();
+        expect_shared_q15_table<up_3, down_3>();
+        expect_shared_q15_table<up_6, down_6>();
+        expect_shared_q15_table<up_8, down_8>();
+        static_assert(basic_stage<std::int16_t, down_6>::k_table_gain == 6);
+        static_assert(basic_stage<std::int32_t, down_6>::k_table_gain == 1);
+        static_assert(basic_stage<std::int16_t, up_6>::k_table_gain == 1);
     }
 
     // ------------------------------------------------------------------
