@@ -29,6 +29,7 @@
 // chains and the coverage matrix follow (PLAN.md section 6, M4).
 #pragma once
 
+#include "tap/sr/rational/chain.h"     // IWYU pragma: export
 #include "tap/sr/rational/converter.h" // IWYU pragma: export
 #include "tap/sr/rational/design.h"    // IWYU pragma: export
 #include "tap/sr/rational/ratio.h"     // IWYU pragma: export
@@ -37,27 +38,3 @@
 #define TAP_SR_VERSION_MAJOR 0
 #define TAP_SR_VERSION_MINOR 4
 #define TAP_SR_VERSION_PATCH 0
-
-namespace tap::sr::rational {
-
-    /// The single-stage vocabulary of the 48 kHz family (PLAN.md section 1):
-    /// the integer factors and the mixed ratios one stage serves, as named
-    /// ratios. by_4 is a ratio the chain by 4 is named by, not a stage (R3,
-    /// decision 6: two half-bands).
-    using up_2   = ratio<2, 1>;
-    using down_2 = ratio<1, 2>;
-    using up_3   = ratio<3, 1>;
-    using down_3 = ratio<1, 3>;
-    using up_6   = ratio<6, 1>;
-    using down_6 = ratio<1, 6>;
-    using up_8   = ratio<8, 1>;
-    using down_8 = ratio<1, 8>;
-    /// The mixed ratios, named by L/M.
-    using ratio_3_2 = ratio<3, 2>;
-    using ratio_2_3 = ratio<2, 3>;
-    using ratio_4_3 = ratio<4, 3>;
-    using ratio_3_4 = ratio<3, 4>;
-    using ratio_8_3 = ratio<8, 3>;
-    using ratio_3_8 = ratio<3, 8>;
-
-} // namespace tap::sr::rational

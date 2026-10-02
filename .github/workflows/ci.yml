@@ -181,9 +181,12 @@ jobs:
             toolchain: cmake/hexagon-linux-musl.cmake
             exclude: BadProfilesThrow|LatencyAndValidation
           # rational: every EXPECT_THROW test (named *Throw*) is excluded on
-          # Hexagon for the unwind reason above; on the Arm legs
-          # bare_metal_main.cpp bakes in its own filter (the fine-grid
-          # sweeps of the long designs).
+          # Hexagon for the unwind reason above, with the host measurements
+          # (the coverage matrix's tone batteries, 182 chains in double per
+          # profile, and the transparent relaxation table's search up to
+          # N = 735); on the Arm legs bare_metal_main.cpp bakes in its own
+          # filter (the fine-grid sweeps of the long designs and the
+          # matrix suite).
           - target: hexagon
             title: Hexagon cross
             engine: rational
@@ -192,7 +195,7 @@ jobs:
             jobs: 4
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: Throw
+            exclude: Throw|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearchAtTransparent
           - target: m55
             title: Cortex-M55 cross
             engine: rational

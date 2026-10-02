@@ -274,6 +274,42 @@ namespace {
     // A spec no length within the search bound meets (no pin: searched to
     // k_design_max_taps_per_branch on the design grid; seconds on a host,
     // excluded from the emulated legs by bare_metal_main.cpp and ci.yml).
+    // The relaxation tables (M4, design.h; tools/coverage/matrix.py `pins`):
+    // every entry of every named profile is what the shipping search finds
+    // for the band at the relaxed passband, on the design grid with the
+    // margin — the same criterion as the M2 pins. The 1/1 row is the M2
+    // table; 147/160 tightens (the stage at bridge's rate under a 48-family
+    // r_min); the others relax. The 70 dB tables run on every leg, the
+    // transparent one (designs up to N = 735) on the hosts.
+    void expect_relaxations_are_the_search(const profile& p) {
+        for (const auto& row : p.relaxations) {
+            const profile r = p.relaxed(row.divisor);
+            EXPECT_EQ(r.taps_per_branch, row.taps_per_branch);
+            if (row.divisor == tap::dsp::exact_ratio{1, 1}) {
+                EXPECT_EQ(row.taps_per_branch, p.taps_per_branch);
+            }
+            const std::size_t bands[] = {2, 3, 4, 6, 8};
+            for (std::size_t b = 0; b < 5; ++b) {
+                const std::size_t found =
+                    tap::dsp::search_nyquist_m(bands[b], r.passband_frac, r.stopband_atten_db, k_design_margin_db,
+                                               k_design_max_taps_per_branch, k_design_grid_points);
+                EXPECT_EQ(found, row.taps_per_branch[b])
+                    << "divisor " << row.divisor.num << "/" << row.divisor.den << " band " << bands[b];
+            }
+        }
+    }
+
+    TEST(Design, RelaxationTablesAreTheSearchAt70dB) {
+        expect_relaxations_are_the_search(profile::super_economy());
+        expect_relaxations_are_the_search(profile::economy());
+        expect_relaxations_are_the_search(profile::balanced());
+        EXPECT_EQ(profile::economy().relaxations.size(), 10u);
+    }
+
+    TEST(Design, RelaxationTablesAreTheSearchAtTransparent) {
+        expect_relaxations_are_the_search(profile::transparent());
+    }
+
     TEST(Design, UnmeetableSpecThrows) {
         const profile r = {.passband_frac = 0.4999, .stopband_atten_db = 160.0, .taps_per_branch = {0, 0, 0, 0, 0}};
         EXPECT_THROW((design_stage<up_2>(r)), std::runtime_error);

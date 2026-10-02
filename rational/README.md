@@ -14,7 +14,7 @@ substrate ([DspTap](https://github.com/tap/DspTap): the L-th-band designer
 and the stage composition landed there first, with the float/Q15/Q31
 sample-format traits, the dot kernels and the row-sum quantization).
 
-> **Status: M3 of [PLAN.md](PLAN.md) section 6.** The single stages ship
+> **Status: M4 of [PLAN.md](PLAN.md) section 6.** The single stages ship
 > for every ratio of the vocabulary — ↑2, ↓2, ↑3, ↓3, ↑6, ↓6, ↑8, ↓8 and the
 > mixed 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 — as `converter<ratio<L, M>>` (float,
 > the golden model pinned sample-for-sample against committed scipy
@@ -25,8 +25,16 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > ([`notebooks/design_spike.ipynb`](notebooks/design_spike.ipynb)); its
 > structural zeros are never multiplied, so the half-band decimator costs
 > 23 MACs per output of its 43 taps and an interpolator's centre phase is a
-> copy. Chains and the 14 × 14 coverage matrix (M4), the fixed-point floors
-> (M5), the C ABI and the ratchet baselines (M6) follow. The plan is
+> copy. The chains ship too (`chain.h`): `basic_chain<S, R...>` runs stages
+> in sequence with each stage designed at its own rate — the plan's design
+> divisor, with pinned lengths per divisor — and the 20 named multi-stage
+> chains of the coverage matrix (`up_2_up_2`, `down_3_down_8_down_2`, …),
+> and the 14 × 14 matrix of PLAN.md section 3 — one chain for every ordered
+> pair of the family's fourteen rates, the cross-family rows through
+> `bridge` — is generated from the pinned lengths and pinned row by row by
+> `tests/test_matrix.cpp` (MACs per output and latency exactly, the
+> passband and the stopband promise by a tone battery). The fixed-point
+> floors (M5), the C ABI and the ratchet baselines (M6) follow. The plan is
 > authoritative: charter, the decisions R1–R16, the generated matrix,
 > layout, test strategy, non-goals and risks.
 
@@ -45,8 +53,13 @@ std::size_t made = down.process(in, n_in, out.data());   // noexcept, alloc-free
 std::vector<float> tail(down.flush_output_frames() * 2);
 down.flush(tail.data());                                 // end of stream
 
-converter<ratio_2_3> to_32k(1);            // 48 -> 32 kHz: one mixed stage, 33 MACs per output
+converter<ratio_2_3> to_32k(1);            // 48 -> 32 kHz: one mixed stage, 32.5 MACs per output
 auto lat = to_32k.latency_output_frames(); // exact: {32, 3} output frames = 32 / 3
+
+down_3_down_8_down_2<float> to_8k(1);      // 384 -> 8 kHz: the matrix's 1/48 chain, 373 MACs per output
+// each stage designed at its own rate: divisors 16, 2, 1 of the chain's lowest rate (PLAN.md 3.1)
+static_assert(to_8k.k_divisors[0] == tap::dsp::exact_ratio{16, 1});
+chain<up_2, ratio_4_3> to_32k_from_12k(2); // 12 -> 32 kHz: 8/3 as the matrix factors it, stereo
 ```
 
 The ratio is a compile-time type (`ratio<L, M>`, L and M of the form
@@ -72,8 +85,15 @@ message). `pull(out, n, pop_fn)` is the callback-driven shape and
   format.
 - `converter.h` — `basic_converter<S, R>` and the `converter<R>`,
   `converter_q15<R>`, `converter_q31<R>` aliases.
-- `rational.h` — the umbrella, `TAP_SR_VERSION_*` (0.4.0; 0.5.0 at M6) and
-  the named ratios of the vocabulary (`up_2` … `ratio_3_8`).
+- `chain.h` — `basic_chain<S, R...>`: DspTap's `chain<>` over
+  `basic_stage`, constructing each stage at the profile relaxed by the
+  stage's design divisor (its lower rate over the chain's lowest, the
+  largest 2^a · 3^b at or below it; `profile::relaxed`, the pinned
+  relaxation tables of `design.h`); `chain<R...>` / `chain_q15` /
+  `chain_q31`; `macs_per_output()` exact; and the 20 named multi-stage
+  chains of the coverage matrix (`up_2_up_2<S>` … `down_3_down_8_down_2<S>`).
+- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.4.0; 0.5.0 at M6);
+  the named ratios of the vocabulary (`up_2` … `ratio_3_8`) are `ratio.h`'s.
 
 ## The boundaries are identity, not policy
 

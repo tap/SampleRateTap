@@ -11,8 +11,7 @@ endif()
 # (L, M in {2^a * 3^b}), as fast as possible. Header-only C++20
 # (include/tap/sr/rational/), built on the Tap family's shared substrate from
 # DspTap (the L-th-band designer, the stage composition, sample-format traits,
-# dot kernels, quantization). See PLAN.md for the charter and milestones; this
-# is the M1 skeleton: the ratio types and the stage design.
+# dot kernels, quantization). See PLAN.md for the charter and milestones.
 # ==============================================================================
 
 # Shared Tap-family substrate (tap::dsp), pinned once at the repository root
@@ -48,6 +47,19 @@ if(TAP_SR_RATIONAL_WERROR)
     target_compile_options(tap_sr_rational_warnings INTERFACE
         $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Werror>
         $<$<CXX_COMPILER_ID:MSVC>:/WX>)
+endif()
+
+# The sibling bridge engine, dev-only (never part of the shipped
+# tap::sr::rational target): the coverage matrix's cross-family rows compose
+# bridge's converter with this engine's stages (PLAN.md 3.5 / 3.6), through a
+# test-side adapter. Consumed headers-only via include path, so this engine's
+# code never links bridge's target (PLAN.md 4.2); tap::dsp serves its
+# "tap/dsp/..." includes.
+if(TAP_SR_BUILD_TESTS)
+    add_library(tap_sr_bridge_headers INTERFACE)
+    # SYSTEM: dependency headers are exempt from this engine's warning gates.
+    cmake_path(SET _tap_bridge_include NORMALIZE "${CMAKE_CURRENT_SOURCE_DIR}/../bridge/include")
+    target_include_directories(tap_sr_bridge_headers SYSTEM INTERFACE ${_tap_bridge_include})
 endif()
 
 if(TAP_SR_BUILD_TESTS)
