@@ -1014,8 +1014,14 @@ G13 and G14, plus G9 from 3.7.
   tap/DspTap#50). M3 — the single stages for the whole vocabulary,
   pinned against scipy, with DspTap's `accumulate_row` (tap/DspTap#51)
   under the decimators' zero-skipping branch sum — landed
-  (`rational/PLAN.md` v0.6). Next: the chains and the generated 14 × 14
-  matrix under 2.1's rule (M4).
+  (`rational/PLAN.md` v0.6). M4 — the chains (`basic_chain<S, R...>`,
+  each stage designed at its design divisor; DspTap's `chain<>::flush`,
+  tap/DspTap#52) and the generated 14 × 14 matrix under 2.1's rule, every
+  one of the 182 rows measured and pinned, the cross rows through
+  `bridge` at every k — landed (`rational/PLAN.md` v0.7; the matrix was
+  regenerated from the measured lengths, 35 rows changed chain, the
+  ledger in its section 8). Next: the fixed-point profiles (M5), then the
+  C ABI, notebook and icount baselines with the family version 0.5.0 (M6).
 
 ---
 

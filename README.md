@@ -13,7 +13,7 @@ quantization, measurement instruments).
 |---|---|---|---|
 | **`async`** | `tap::sr::async` | Asynchronous, near-unity (±`max_deviation_ppm`, default 1000 ppm): two clock domains at nominally the same rate, one thread pushing at the input clock and one pulling at the output clock. **Absorbs the clock.** | [`async/`](async/README.md) |
 | **`bridge`** | `tap::sr::bridge` | Synchronous 44.1 ↔ 48 kHz (160/147 up, 147/160 down) and the pair at 2× and 4× (88.2 ↔ 96, 176.4 ↔ 192), direction and rate scale fixed at compile time, speed-first with Q15/Q31 profiles for M33/M55-class targets. **Converts the number.** | [`bridge/`](bridge/README.md) |
-| **`rational`** | `tap::sr::rational` | Synchronous small-factor L/M *within* a rate family (L, M ∈ {2^a·3^b}: ↑2, ↓3, 2/3, …), as chains of Nyquist (L-th-band) stages, the ratio a compile-time type. **Converts the number.** M1–M3 landed (ratio types, pinned designs, the single stages for every ratio of the vocabulary); the chains and the coverage matrix follow its plan. | [`rational/`](rational/README.md) |
+| **`rational`** | `tap::sr::rational` | Synchronous small-factor L/M *within* a rate family (L, M ∈ {2^a·3^b}: ↑2, ↓3, 2/3, …), as chains of Nyquist (L-th-band) stages, the ratio a compile-time type. **Converts the number.** M1–M4 landed (ratio types, pinned designs, the single stages for every ratio of the vocabulary, the named chains and the 182-row coverage matrix generated from the measured lengths); fixed point and the C ABI follow its plan. | [`rational/`](rational/README.md) |
 
 The engines never route by rate. The caller declares the clock topology by
 choosing a type: `async` when the clocks are independent, `bridge` when the

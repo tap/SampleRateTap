@@ -4,8 +4,11 @@
 // qemu-system-arm): there is no argv on the target, so the
 // emulation-appropriate filter is baked in. Excluded are the tests that
 // sweep the 16384-point design grid over long designs or search it (the
-// transparent rows up to N = 399, the coarse-grid comparison, the unpinned
-// search): target-independent design math already covered on every host.
+// transparent rows up to N = 399 and the transparent relaxation table up to
+// N = 735, the coarse-grid comparison, the unpinned search) and the
+// coverage-matrix suite (182 chains in double through a tone battery, a
+// host measurement): target-independent design math and measurement
+// already covered on every host.
 // The 70 dB rows' pins, minimality and structure run on target.
 #include <cstdio>
 
@@ -16,7 +19,9 @@ int main() {
                                     "Design.PinsAreMinimalAndMeasuredAtTransparent:"
                                     "Design.TheCoarseGridWouldUnderPinTwoRows:"
                                     "Design.UnpinnedProfileIsSearchedOnTheDesignGrid:"
-                                    "Design.UnmeetableSpecThrows";
+                                    "Design.UnmeetableSpecThrows:"
+                                    "Design.RelaxationTablesAreTheSearchAtTransparent:"
+                                    "Matrix.*";
     ::testing::InitGoogleTest();
     const int rc = RUN_ALL_TESTS();
     // A filter typo selects zero tests and RUN_ALL_TESTS() returns 0 — an

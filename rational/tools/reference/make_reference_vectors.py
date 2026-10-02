@@ -15,6 +15,13 @@ at DC gain 1) with the stage's gain rule (stage.h): going up the table is
 the design; a decimator's is h / M; a mixed ratio going down has each of its
 L phases normalized to sum 1. Cast to float32.
 
+The chain vectors (M4) apply the stages' upfirdn in sequence, each stage at
+the economy profile relaxed by its design divisor (chain.h, PLAN.md 3.1;
+the pins of design.h's economy relaxation table), each stage's output cut
+to its streaming prefix before the next — exactly what the C++ chain feeds
+forward — so the chain leg is independent of chain<>'s bookkeeping. The up
+chains run on the first 96 input frames (their outputs are L times longer).
+
 The streaming stage is zero-primed and causal, so its output equals
 upfirdn's from sample 0 — transient included — within float32 rounding: the
 C++ stores float32 coefficients and accumulates in double, this reference
@@ -86,6 +93,24 @@ def xorshift_f32(count, seed):
 # The pinned taps per branch (design.h's table): economy and transparent.
 PINS = {"economy": {2: 11, 3: 11, 4: 11, 6: 12, 8: 12}, "transparent": {2: 31, 3: 25, 4: 25, 6: 25, 8: 25}}
 ATTEN = {"economy": 70.0, "transparent": 120.0}
+# economy's relaxation rows (design.h k_economy_relaxations): the pins of a
+# stage whose lower rate is `divisor` times the chain's lowest (M4).
+RELAXED_ECONOMY = {1: {2: 11, 3: 11, 4: 11, 6: 12, 8: 12}, 2: {2: 7, 3: 5, 4: 5, 6: 5, 8: 5},
+                   3: {2: 7, 3: 5, 4: 5, 6: 5, 8: 5}, 16: {2: 3, 3: 3, 4: 3, 6: 4, 8: 4}}
+
+# The chain vectors (M4): the stages' upfirdn applied in sequence, each
+# stage at the chain's economy profile relaxed by its design divisor
+# (chain.h), each stage's output cut to its streaming prefix before the
+# next, which is exactly what the C++ chain feeds forward.
+CHAINS = [  # tag, input frames (the prefix of k_input), [(L, M, divisor), ...]
+    ("chain_up_2_up_2", 96, [(2, 1, 1), (2, 1, 2)]),
+    ("chain_down_3_down_2", 480, [(1, 3, 2), (1, 2, 1)]),
+    ("chain_ratio_3_4_down_2", 480, [(3, 4, 2), (1, 2, 1)]),
+    ("chain_up_2_ratio_4_3", 96, [(2, 1, 1), (4, 3, 2)]),
+    ("chain_up_2_up_8_up_3", 96, [(2, 1, 1), (8, 1, 2), (3, 1, 16)]),
+    ("chain_down_3_down_8_down_2", 480, [(1, 3, 16), (1, 8, 2), (1, 2, 1)]),
+    ("chain_ratio_3_8_down_3", 480, [(3, 8, 3), (1, 3, 1)]),
+]
 
 CASES = [  # tag, L, M, profile
     ("up_2", 2, 1, "economy"), ("down_2", 1, 2, "economy"),
@@ -138,6 +163,25 @@ for tag, L, M, prof in CASES:
     y = y[:n_stream].astype(np.float32)
     name = tag if prof == "economy" and not tag.endswith("transparent") else tag
     out.append(f"inline constexpr std::array<float, {len(y)}> k_{name} = {{")
+    out.append(fmt(y))
+    out.append("};")
+    out.append("")
+
+
+def streaming_prefix(y, n_in, L, M):
+    n_stream = 0
+    while (n_stream * M) // L < n_in:
+        n_stream += 1
+    return y[:n_stream]
+
+
+for tag, n_in, stages in CHAINS:
+    y = x[:n_in].astype(np.float64)
+    for L, M, d in stages:
+        h = stage_table(L, M, RELAXED_ECONOMY[d][max(L, M)], kaiser_beta(ATTEN["economy"]))
+        y = streaming_prefix(signal.upfirdn(h, y, up=L, down=M), len(y), L, M)
+    y = y.astype(np.float32)
+    out.append(f"inline constexpr std::array<float, {len(y)}> k_{tag} = {{")
     out.append(fmt(y))
     out.append("};")
     out.append("")

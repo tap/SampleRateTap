@@ -15,6 +15,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.3 | 2026-10-01 | M0 landed (DspTap `nyquist.h` and `chain.h`, tap/DspTap#48); 2.3's half- and third-band counts are measured by the shipped designer, the harris estimates kept beside them |
 | v0.4 | 2026-10-01 | M1 landed: the `rational/` tree, `tap::sr::rational`, `ratio<L, M>` and `ratio_traits` (R1), `profile` and `design_stage<R>` (R5, R4), the family's dependency-rule tests over three engines, the compile-fail charter test; the M2 table's half- and third-band columns are re-measured through the engine's own design |
 | v0.6 | 2026-10-02 | M3 landed: `stage.h` (`basic_stage<S, R>`: the L-phase schedule machine for interpolators and mixed ratios with trimmed phase rows, the M-branch commutator for decimators summing its nonzero branches under one finalize, bridge's call shapes, the exact-rational latency), `converter.h` (the aliases), the committed scipy vectors for every ratio of the vocabulary, the M3 battery; the symmetry-halved table of section 4's layout is deferred to the codegen levers after M6's baselines, as bridge did (M7 lever 3) |
+| v0.7 | 2026-10-02 | M4 landed: `chain.h` (`basic_chain<S, R...>` over DspTap's `chain<>`, each stage designed at its **design divisor** — its lower rate over the chain's lowest, 3.1 — and the 20 named multi-stage chains), `tools/coverage/matrix.py` committed and re-run on the pinned lengths with the per-stage relaxation pins (`design.h`'s relaxation tables, verified by `test_design.cpp`), section 3 regenerated from measured counts (35 of 182 rows changed chain, the ledger in section 8 S1), `test_matrix.cpp` over all 182 rows (every row measured, none skipped: 2.2 had landed), DspTap's `chain<>::flush` (tap/DspTap#52) |
 | v0.5 | 2026-10-02 | M2 landed: the design spike (`notebooks/design_spike.ipynb`, executed) pins N for every band ∈ {2, 3, 4, 6, 8} × profile on a 16384-point grid, the mixed ratios' taps per phase, measured worst stopband and ripple; `profile` carries the pins and `test_design.cpp` enforces them; the M2 table below is filled from measurements. Finding: the designer's 1024-point default grid under-pins two rows (tap/DspTap#50 made the search grid a parameter) |
 
 **Status.** This draft is the reviewed-plan deliverable that the family
@@ -28,13 +29,14 @@ This draft does not change that order: every milestone below that composes
 with `bridge` at k > 0 is marked as waiting for it. M0 is
 implemented (v0.3: DspTap's `nyquist.h` and `chain.h`), M1 (v0.4: the
 tree, the ratio types, the profiles and the stage design), M2 (v0.5: the
-pinned lengths per band and profile, measured) and M3 (v0.6: the single
-stages, every ratio of the vocabulary, pinned against scipy); the chains
-and the matrix are not. Every number marked *est.* is a Kaiser/harris length estimate
-(`tap::dsp::estimate_taps`, `kaiser.h:77-85`) or a MAC count derived from
-one, to be measured and pinned by the milestones that name it; 2.3's
-half- and third-band counts are now measured and sit beside their
-estimates. v0.2
+pinned lengths per band and profile, measured), M3 (v0.6: the single
+stages, every ratio of the vocabulary, pinned against scipy) and M4 (v0.7:
+the chains and the matrix, every row of section 3 regenerated from the
+pinned lengths and pinned by `test_matrix.cpp`). The numbers still marked
+*est.* — 2.1's arithmetic and 3.2's worked cases — are Kaiser/harris
+length estimates (`tap::dsp::estimate_taps`, `kaiser.h:77-85`) kept as the
+derivation of the rules; the measured chains and counts are 3.3–3.6, and
+where a worked case chose differently on the pinned lengths, 3.2 says so. v0.2
 records the maintainer's decisions on v0.1's ten open questions (section
 9, each "as recommended") in the R-rows they touch; no question remains
 open.
@@ -106,7 +108,7 @@ The boundaries are identity, not policy, as `bridge`'s are
 | R13 | **`bridge` at the lowest k** (decision 1): a cross-family chain contains exactly one `bridge` stage, at the lowest k ∈ {0, 1, 2} whose lower rate satisfies 2.1(a) for the chain's f_pass (3.1). `transparent` needs no exception: its 20 kHz passband clears both stopband edges at k = 0 (44.1 − 20 = 24.1 ≥ 24 up, ≥ 22.05 down) | `bridge` costs 58 (down) or 38 (up) MACs per output at `economy` whatever k is, so its cost scales with the rate it runs at, while the ↑2 / ↓2 stages that move a chain between k levels cost 9–19; 48 → 88.2 at k = 0 is 62 % of the MACs of k = 1 at the same (f_pass, A). The family plan's illustrative row (`../PLAN.md:120`) was corrected to match |
 | R14 | **Dipping rows are flagged** (decision 3): every row of 3.5/3.6 whose `bridge` stage runs — its output rate — at ≥ 2× the chain's output rate carries ⚑ in a trailing column, "covered, not recommended". Documentation only: the flag dispatches nothing and D12 is untouched | In such a row `bridge` alone costs ≥ 116 MACs per output at `economy` (≥ 368 at `transparent`), 2–4× a within-family chain's total; a consumer who reads the matrix sees the price before choosing. 38 rows carry it |
 | R15 | **384 kHz stays** (decision 5): the family plan's 14 rates are settled (`../PLAN.md:100-101`) | Its cost is 16 generated rows, the ↑8 / ↓8 stages already in the vocabulary and the 64 / 128 kHz intermediates; no new stage kind |
-| R16 | **The C ABI exposes the 34 named within-family chains** of 3.3/3.4 as its `chain` enumerators (decision 9) — chains, not rates, and not the single-stage ratios alone | D12 at the C boundary: an enumerator names what the caller composes, as `bridge`'s `int direction` does; the binding and the notebook then need no chain arithmetic of their own (4.4) |
+| R16 | **The C ABI exposes the named within-family chains** of 3.3/3.4 as its `chain` enumerators (decision 9; 28 of them on the pinned lengths, v0.7 — the union of the two tables' chain columns) — chains, not rates, and not the single-stage ratios alone | D12 at the C boundary: an enumerator names what the caller composes, as `bridge`'s `int direction` does; the binding and the notebook then need no chain arithmetic of their own (4.4) |
 
 ### 2.1 Stage factoring: the arithmetic behind R3
 
@@ -152,6 +154,17 @@ ratio. Where the search and a chain with fewer stages differ by less than
 10 % (3/1 as 3/2 · ↑2 at 11.0 against one ↑3 at 12.0), the chain with
 fewer stages is chosen (R3, decision 2) and the matrix test pins it; the
 search's pick is recorded next to it where it differs (3.2, 3.3).
+
+**On the pinned lengths (M4, v0.7)** the rules stand but eleven of the 26
+within-48 ratios factor differently from this arithmetic, because a
+relaxed stage saturates: a half-band at a passband below 3/16 of its
+lower rate stays at m = 7 (N = 27, 7.5 MACs per output) however wide the
+transition — the Kaiser fit's floor for the 70 dB tier — while a
+third-band stage there is m = 5 (N = 29, 7 per output) and serves three
+times the rate, so the "by-2 at the low-rate end" chains lose to
+third-band and mixed stages (8/1 is ↑2 · 4/3 · ↑3, 12/1 is ↑2 · ↑6, 1/8 is
+↓3 · 3/4 · ↓2). Section 3 holds the measured result; the ledger is in
+section 8, S1.
 
 ### 2.2 The Nyquist (L-th-band) design: the math behind R4
 
@@ -221,11 +234,10 @@ of the full table (band 4 `balanced` 103 → 111, band 8 `transparent`
 up to N = 399, and tap/DspTap#50 made the search's grid a parameter. The
 harris estimates (*est.*) are kept beside the measured counts: the Kaiser
 fit needs 2–8 more taps per branch than the estimate at the half band, 1–7
-at the third, so every MAC figure in section 3 that was derived from an
-estimate is low by about that ratio until M4 regenerates the matrix from
-the pinned counts. The counts are for the stage adjacent to r_min (the
-narrowest transition in a chain); stages further up a chain are shorter
-(2.1). `bridge`'s experience says a pinned count can also move
+at the third; M4 regenerated section 3 from the pinned counts (v0.7). The
+counts are for the stage adjacent to r_min (the narrowest transition in a
+chain); stages further up a chain are shorter, designed at their design
+divisor (3.1) with the pins of `design.h`'s relaxation tables. `bridge`'s experience says a pinned count can also move
 non-monotonically with the spec (`design.h:79-82`, the 38-vs-40 quirk in
 `../bridge/PLAN.md` §4), which is why every (band, profile) was pinned
 from the designer rather than extrapolated. Ripple, measured per stage on
@@ -269,7 +281,10 @@ Mirrors `decimate.h:17-24` and `converter.h:51-56`, per stage:
   Σ_i (N_i − 1)/2 · (f_out / f_hi,i), an exact rational at the output
   rate, reported as `latency_output_frames()` (numerator, denominator) and
   `latency_seconds()`; the matrix test pins it per pair. `flush()` drains
-  every stage's tail in order, writing `flush_output_frames()` frames.
+  every stage's tail in order (each stage fed its `window_frames()` of
+  zeros through the stages after it, DspTap `chain.h`), writing
+  `flush_output_frames()` frames, bit-identical to zero-padding the input.
+  Each stage of a chain is designed at its design divisor (3.1).
 
 ## 3. The coverage matrix
 
@@ -281,6 +296,23 @@ r is designed with stopband edge r − f_pass (2.1(a) with equality, which is
 the Nyquist structure, 2.2) at attenuation A (2.1(b)); the chain's ripple
 is the sum of its stages' (2.1(c)); the matrix test pins (f_pass, A, δ),
 MACs per output and latency per pair (2.1(d)).
+
+**Each stage at its own rate: the design divisor (M4).** A stage whose
+lower rate is r is designed with its passband at f_pass, i.e. at the
+fraction p · r_min / r of its own lower rate. `chain.h` computes that
+quotient per stage at compile time and takes its **design divisor** d: the
+largest 2^a · 3^b at or below r / r_min — exact within a family, where the
+quotient is such a number, and conservative across (a passband at or above
+f_pass, so 2.1(a) still holds) — or the quotient itself when it is below 1,
+the one stage that runs *below* a 48-family r_min, at `bridge`'s rate
+(44.1 · 2^k over 48 · 2^k = 147/160: 48 → 88.2's ↑2 from 44.1 must pass
+18 kHz, a tightening). `profile::relaxed(d)` is the stage's profile: the
+passband over d and the pinned m per band from the profile's relaxation
+table (`design.h`, one row per divisor the matrix uses — 147/160, 1, 2, 3,
+4, 6, 8, 9, 12, 16 — found by the same search as the M2 pins and verified
+against the shipping designer by `test_design.cpp`; a divisor without a
+row, or a custom profile, is searched at construction). The generator
+costs every stage this way, so the matrix's counts are the chains'.
 
 **Placing `bridge` (R13, decision 1).** A chain between the families
 contains exactly one `bridge` stage, at the lowest k ∈ {0, 1, 2} whose
@@ -308,19 +340,22 @@ up, ≥ 22.05 down).
 MAC-minimal chain, then the MAC-minimal chain for every smaller stage
 count around the same `bridge` stage (same k, same direction) where there
 is one; the chain chosen is the one with the fewest stages whose
-**rational stages'** MACs per output are within 10 % (*est.*) of the
-minimum's. `bridge`'s stage is identical in both candidates and is
+**rational stages'** MACs per output are within 10 % of the minimum's. `bridge`'s stage is identical in both candidates and is
 excluded from the comparison: the rule compares factorizations of the
 rational part, and a `bridge`-dominated total must not absorb a worse
 factorization (with the total in the comparison, 8 → 11.025 would have
 collapsed ↑2 · ↑3 into one ↑6 at 297 → 326 MACs per output). Less
 latency, less state and fewer test rows are worth a few per cent that
-the harris estimate cannot resolve anyway until M2 pins. The rule bites
-on 17 of the 182 pairs at `economy`: the three 3/1 pairs, the two 24/1
-and the 48/1 pair, 1/16 and 1/24 in both families (5), 16 → 22.05 / 44.1
-/ 88.2 / 176.4, 384 → 22.05 (↓6 · 3/4 for ↓2 · ↓2 · ↓2) and 22.05 → 384
-(4/3 · ↑6 for ↑2 · ↑2 · ↑2); the search's pick is recorded next to the
-chosen chain in 3.2 and 3.3. Within-family chains have no `bridge`, so
+the measurement resolves to a few taps. On the pinned lengths (v0.7) the
+rule bites on 24 of the 182 pairs at `economy`: the three 3/1 pairs
+(↑3 for ↑2 · 3/2, +2.3 %), the three 12/1 (↑2 · ↑6 for ↑2 · ↑3 · ↑2,
++5.0 %), the two 24/1 (+3.0 %) and the 48/1 pair (↑2 · ↑8 · ↑3 for five
+stages, +0.5 %), their mirrors 1/12 (↓6 · ↓2, +5.0 %), 1/24 (+3.0 %) and
+1/48 (+0.5 %), 16 → 11.025 / 22.05 / 44.1 / 88.2 / 176.4 (↑3 for
+↑2 · 3/2 ahead of `bridge`, +0.6–2.3 % on the rational part), and in the
+44.1 family 8/1 (↑3 · 8/3 for ↑2 · ↑2 · ↑2, +2.7 %) and 1/8 (3/8 · ↓3 for
+three half-bands, +9.7 %); `tools/coverage/matrix.py rule` prints the
+list. Within-family chains have no `bridge`, so
 the rule there is simply 10 % of the chain. The `transparent` columns
 cost the same chains at `transparent`, not a second search.
 
@@ -352,7 +387,12 @@ synchronous ratios that no engine's charter names (`../PLAN.md:103-109`).
 ### 3.2 Worked cases
 
 Lengths are harris estimates (*est.*) at `economy` unless marked `tr`
-(`transparent`); the arithmetic is the one-line form of 2.1.
+(`transparent`); the arithmetic is the one-line form of 2.1, kept as the
+derivation. The measured chains and numbers are 3.3–3.6 (v0.7); four of
+the six cases below are the measured chain too, and two chose differently
+on the pinned lengths — 384 → 44.1 is ↓3 · 3/4 · ↓2 · `bridge`↓ k = 0
+(172.3 MACs per output) and 8 → 192 is ↑2 · ↑6 · ↑2 (8.7) — for the reason
+2.1 ends with.
 
 - **176.4 → 48** (`../PLAN.md:93-95`): r_min = 48, f_pass = 18 kHz
   (`tr`: 20 kHz). Chain ↓2 · ↓2 · `bridge`↑ k = 0.
@@ -417,182 +457,199 @@ Lengths are harris estimates (*est.*) at `economy` unless marked `tr`
 
 Chains at `economy` (the `transparent` columns use the same chains);
 MAC/out = MACs per output frame at the chain's output rate; latency in
-output frames. All *est.*; the matrix test pins the measured values.
+output frames. **Measured** (v0.7): every number is the shipping chain's,
+generated by `tools/coverage/matrix.py` from the pinned lengths and pinned
+exactly — as a rational — per row by `tests/test_matrix.cpp`.
 
 | Ratio L/M | Pairs (from → to, kHz) | Chain | MAC/out eco | Latency eco (out) | MAC/out tr | Latency tr (out) |
 |---|---|---|---|---|---|---|
-| 4/3 | 12→16, 24→32 | 4/3 | 13.5 | 11.8 | 36 | 31.8 |
-| 3/2 | 8→12, 16→24, 32→48 | 3/2 | 12 | 13.2 | 32 | 35.8 |
-| 2/1 | 8→16, 12→24, 16→32, 24→48, 48→96, 96→192, 192→384 | ↑2 | 9 | 17 | 24 | 47 |
-| 8/3 | 12→32 | ↑2 · 4/3 | 12.8 | 27.8 | 28.5 | 71.8 |
-| 3/1 | 8→24, 16→48, 32→96 | ↑3 | 12 | 26 | 32 | 71 |
-| 4/1 | 8→32, 12→48, 24→96, 48→192, 96→384 | ↑2 · ↑2 | 8.5 | 41 | 19 | 107 |
-| 6/1 | 8→48, 16→96, 32→192 | ↑2 · ↑3 | 8.3 | 62 | 17.3 | 161 |
-| 8/1 | 12→96, 24→192, 48→384 | ↑2 · ↑2 · ↑2 | 7.2 | 87 | 15.5 | 225 |
-| 12/1 | 8→96, 16→192, 32→384 | ↑2 · ↑2 · ↑3 | 6.8 | 131 | 14.3 | 338 |
-| 16/1 | 12→192, 24→384 | ↑2 · ↑2 · ↑2 · ↑2 | 6.6 | 179 | 12.8 | 459 |
-| 24/1 | 8→192, 16→384 | ↑3 · ↑8 | 6.8 | 231 | 14.5 | 615 |
-| 32/1 | 12→384 | ↑2 · ↑2 · ↑8 | 6.3 | 351 | 11.1 | 895 |
-| 48/1 | 8→384 | ↑2 · ↑3 · ↑8 | 6.3 | 519 | 10.9 | 1327 |
-| 3/4 | 16→12, 32→24 | 3/4 | 24 | 8.9 | 64 | 23.9 |
-| 2/3 | 12→8, 24→16, 48→32 | 2/3 | 26 | 8.5 | 72 | 23.8 |
-| 1/2 | 16→8, 24→12, 32→16, 48→24, 96→48, 192→96, 384→192 | ↓2 | 19 | 8.5 | 49 | 23.5 |
-| 3/8 | 32→12 | 3/4 · ↓2 | 39 | 10.3 | 85 | 26.8 |
-| 1/3 | 24→8, 48→16, 96→32 | ↓3 | 37 | 8.7 | 97 | 23.7 |
-| 1/4 | 32→8, 48→12, 96→24, 192→48, 384→96 | ↓2 · ↓2 | 37 | 10.2 | 79 | 26.8 |
-| 1/6 | 48→8, 96→16, 192→32 | ↓3 · ↓2 | 53 | 10.3 | 107 | 26.8 |
-| 1/8 | 96→12, 192→24, 384→48 | ↓2 · ↓2 · ↓2 | 65 | 10.9 | 131 | 28.1 |
-| 1/12 | 96→8, 192→16, 384→32 | ↓3 · ↓2 · ↓2 | 89 | 10.9 | 179 | 28.2 |
-| 1/16 | 192→12, 384→24 | ↓8 · ↓2 | 133 | 10.4 | 247 | 26.9 |
-| 1/24 | 192→8, 384→16 | ↓8 · ↓3 | 166 | 9.6 | 352 | 25.6 |
-| 1/32 | 384→12 | ↓8 · ↓2 · ↓2 | 209 | 11 | 363 | 28 |
-| 1/48 | 384→8 | ↓8 · ↓3 · ↓2 | 311 | 10.8 | 533 | 27.6 |
+| 4/3 | 12→16, 24→32 | 4/3 | 16.8 | 14.3 | 37.8 | 33.0 |
+| 3/2 | 8→12, 16→24, 32→48 | 3/2 | 15.0 | 16.0 | 33.7 | 37.0 |
+| 2/1 | 8→16, 12→24, 16→32, 24→48, 48→96, 96→192, 192→384 | ↑2 | 11.5 | 21.0 | 31.5 | 61.0 |
+| 8/3 | 12→32 | ↑2 · 4/3 | 16.4 | 34.3 | 43.4 | 98.3 |
+| 3/1 | 8→24, 16→48, 32→96 | ↑3 | 15.0 | 32.0 | 33.7 | 74.0 |
+| 4/1 | 8→32, 12→48, 24→96, 48→192, 96→384 | ↑2 · ↑2 | 13.2 | 55.0 | 26.2 | 141.0 |
+| 6/1 | 8→48, 16→96, 32→192 | ↑2 · ↑3 | 10.8 | 77.0 | 21.5 | 206.0 |
+| 8/1 | 12→96, 24→192, 48→384 | ↑2 · 4/3 · ↑3 | 12.5 | 117.0 | 25.5 | 318.0 |
+| 12/1 | 8→96, 16→192, 32→384 | ↑2 · ↑6 | 10.4 | 155.0 | 27.1 | 443.0 |
+| 16/1 | 12→192, 24→384 | ↑2 · ↑8 | 10.3 | 207.0 | 26.8 | 591.0 |
+| 24/1 | 8→192, 16→384 | ↑2 · ↑6 · ↑2 | 8.7 | 315.0 | 22.0 | 901.0 |
+| 32/1 | 12→384 | ↑2 · ↑8 · ↑2 | 8.7 | 419.0 | 20.9 | 1195.0 |
+| 48/1 | 8→384 | ↑2 · ↑8 · ↑3 | 7.8 | 629.0 | 18.6 | 1793.0 |
+| 3/4 | 16→12, 32→24 | 3/4 | 29.0 | 10.8 | 66.3 | 24.8 |
+| 2/3 | 12→8, 24→16, 48→32 | 2/3 | 32.5 | 10.7 | 74.5 | 24.7 |
+| 1/2 | 16→8, 24→12, 32→16, 48→24, 96→48, 192→96, 384→192 | ↓2 | 23.0 | 10.5 | 63.0 | 30.5 |
+| 3/8 | 32→12 | 3/4 · ↓2 | 49.0 | 12.9 | 131.7 | 36.9 |
+| 1/3 | 24→8, 48→16, 96→32 | ↓3 | 45.0 | 10.7 | 101.0 | 24.7 |
+| 1/4 | 32→8, 48→12, 96→24, 192→48, 384→96 | ↓2 · ↓2 | 53.0 | 13.8 | 105.0 | 35.2 |
+| 1/6 | 48→8, 96→16, 192→32 | ↓3 · ↓2 | 65.0 | 12.8 | 129.0 | 34.3 |
+| 1/8 | 96→12, 192→24, 384→48 | ↓3 · 3/4 · ↓2 | 105.0 | 14.6 | 219.7 | 39.8 |
+| 1/12 | 96→8, 192→16, 384→32 | ↓6 · ↓2 | 125.0 | 12.9 | 325.0 | 36.9 |
+| 1/16 | 192→12, 384→24 | ↓8 · ↓2 | 165.0 | 12.9 | 429.0 | 36.9 |
+| 1/24 | 192→8, 384→16 | ↓2 · ↓6 · ↓2 | 209.0 | 13.1 | 529.0 | 37.5 |
+| 1/32 | 384→12 | ↓2 · ↓8 · ↓2 | 277.0 | 13.1 | 669.0 | 37.3 |
+| 1/48 | 384→8 | ↓3 · ↓8 · ↓2 | 373.0 | 13.1 | 893.0 | 37.4 |
 
-The ↓8 stages at the top of the long decimation chains are the
-"larger factor at the high-rate end" of R3: in 384 → 12 (f_pass = 4.5 kHz)
-the first ↓8 (384 → 48; lower rate 48, stopband edge 43.5, transition
-39 kHz wide at 384 kHz) is a 47-tap 8th-band filter with 43 nonzero taps,
-172 MACs per final output, and the three-stage chain ↓8 · ↓2 · ↓2 costs
-209 (*est.*) against 233 for five half-bands (7 · 16 + 7 · 8 + 7 · 4 +
-9 · 2 + 19): at 16× the output rate even a 7-MAC half-band is expensive,
-so one wide stage at the top wins. Decision 6 keeps the single 4th-band
-stage out of the vocabulary, so 1/16 is ↓8 · ↓2 (133, against 121 for
-four half-bands — within 10 %, fewer stages, R3) and 1/24 is ↓8 · ↓3 (166
-against 161 for ↓6 · ↓2 · ↓2); v0.1's ↓4 · ↓2 · ↓2 at 113 would be
-cheaper, and a latency-first consumer who asks for the 4th-band stage
-reopens exactly these rows. Likewise 3/1 is one ↑3 (12.0; the search's
-3/2 · ↑2 is 11.0), 24/1 is ↑3 · ↑8 (6.8; ↑2 · ↑2 · ↑6 is 6.4) and 48/1
-is ↑2 · ↑3 · ↑8 (6.3; the four-stage minimum is 6.2). The `transparent`
+What the pinned lengths changed (the v0.2 arithmetic is in 2.1 and its
+ledger in section 8, S1): a relaxed half-band saturates at m = 7 (7.5 MACs
+per output, 15 per output as a decimator), so the chains that used to end
+in a run of half-bands now put a third-band, 4th-band or mixed stage where
+the transition is wide — 8/1 is ↑2 · 4/3 · ↑3 (12.5 against 14.1 for three
+half-bands), 1/8 is ↓3 · 3/4 · ↓2 (105 against 113), 12/1 is ↑2 · ↑6 and
+1/12 is ↓6 · ↓2 (the fewer-stages rule, +5 % over ↑2 · ↑3 · ↑2 / ↓2 · ↓3 ·
+↓2), and the ↑8 / ↓8 stage moves from the high-rate end to the middle
+(24/1 is ↑2 · ↑6 · ↑2, 32/1 is ↑2 · ↑8 · ↑2, 1/32 is ↓2 · ↓8 · ↓2, 1/48 is
+↓3 · ↓8 · ↓2): at a divisor of 16 the 8th-band stage is m = 4 (N = 63, 57
+nonzero) and a half-band above it m = 3 (N = 11, 3.5 per output), cheaper
+than ↓8 at the top. Decision 6 still keeps the single 4th-band stage out
+(1/16 is ↓8 · ↓2 at 165; 16/1 is ↑2 · ↑8 at 10.3). The `transparent`
 columns cost the same chains (3.1).
 
 ### 3.4 Within the 44.1 kHz family (20 ordered pairs, 8 ratios)
 
+Six of the eight chains are the 48 family's; 8/1 and 1/8 differ because
+the intermediate lattices differ relative to r_min — 11.025 · 3 = 33.075
+kHz is a 2^a · 3^b multiple of the family's base where 12 · 8/3 = 32 kHz
+is one of the 48 family's (neither is a supported rate; both are stage
+boundaries) — so the 44.1 family's 8/1 is ↑3 · 8/3 and its 1/8 is 3/8 · ↓3,
+two more named chains.
+
 | Ratio L/M | Pairs (from → to, kHz) | Chain | MAC/out eco | Latency eco (out) | MAC/out tr | Latency tr (out) |
 |---|---|---|---|---|---|---|
-| 2/1 | 11.025→22.05, 22.05→44.1, 44.1→88.2, 88.2→176.4 | ↑2 | 9 | 17 | 24 | 47 |
-| 4/1 | 11.025→44.1, 22.05→88.2, 44.1→176.4 | ↑2 · ↑2 | 8.5 | 41 | 19 | 107 |
-| 8/1 | 11.025→88.2, 22.05→176.4 | ↑2 · ↑2 · ↑2 | 7.2 | 87 | 15.5 | 225 |
-| 16/1 | 11.025→176.4 | ↑2 · ↑2 · ↑2 · ↑2 | 6.6 | 179 | 12.8 | 459 |
-| 1/2 | 22.05→11.025, 44.1→22.05, 88.2→44.1, 176.4→88.2 | ↓2 | 19 | 8.5 | 49 | 23.5 |
-| 1/4 | 44.1→11.025, 88.2→22.05, 176.4→44.1 | ↓2 · ↓2 | 37 | 10.2 | 79 | 26.8 |
-| 1/8 | 88.2→11.025, 176.4→22.05 | ↓2 · ↓2 · ↓2 | 65 | 10.9 | 131 | 28.1 |
-| 1/16 | 176.4→11.025 | ↓8 · ↓2 | 133 | 10.4 | 247 | 26.9 |
+| 2/1 | 11.025→22.05, 22.05→44.1, 44.1→88.2, 88.2→176.4 | ↑2 | 11.5 | 21.0 | 31.5 | 61.0 |
+| 4/1 | 11.025→44.1, 22.05→88.2, 44.1→176.4 | ↑2 · ↑2 | 13.2 | 55.0 | 26.2 | 141.0 |
+| 8/1 | 11.025→88.2, 22.05→176.4 | ↑3 · 8/3 | 14.5 | 98.3 | 33.8 | 229.0 |
+| 16/1 | 11.025→176.4 | ↑2 · ↑8 | 10.3 | 207.0 | 26.8 | 591.0 |
+| 1/2 | 22.05→11.025, 44.1→22.05, 88.2→44.1, 176.4→88.2 | ↓2 | 23.0 | 10.5 | 63.0 | 30.5 |
+| 1/4 | 44.1→11.025, 88.2→22.05, 176.4→44.1 | ↓2 · ↓2 | 53.0 | 13.8 | 105.0 | 35.2 |
+| 1/8 | 88.2→11.025, 176.4→22.05 | 3/8 · ↓3 | 124.0 | 12.3 | 292.0 | 28.6 |
+| 1/16 | 176.4→11.025 | ↓8 · ↓2 | 165.0 | 12.9 | 429.0 | 36.9 |
 
 ### 3.5 48 kHz family → 44.1 kHz family (45 ordered pairs)
 
 `bridge`↓ at k is the 147/160 converter running from 48 · 2^k to
 44.1 · 2^k; its MACs and latency are `bridge`'s pinned `economy` /
-`transparent` numbers (58 / 184 taps per phase, `design.h:86-89`). Rows
-with k > 0 wait for the 2.2 follow-up (section 6). ⚑ (R14): the `bridge`
-stage's output rate is ≥ 2× the chain's output rate — covered, not
-recommended as a default.
+`transparent` numbers (58 / 184 taps per phase, `design.h:86-89`). Every
+row is measured, the k > 0 rows included (2.2 landed before M4). ⚑ (R14):
+the `bridge` stage's output rate is ≥ 2× the chain's output rate —
+covered, not recommended as a default. The rational stages of a cross row
+are designed at their design divisors (3.1): the lattice floor of the
+quotient, or 147/160 for the stage at `bridge`'s rate below a 48-family
+r_min (48 → 88.2's ↑2, 96 → 44.1's ↓2 and their k > 0 twins).
 
 | From → To | Chain | f_pass eco (kHz) | MAC/out eco | Latency eco (ms) | MAC/out tr | Latency tr (ms) | ⚑ |
 |---|---|---|---|---|---|---|---|
-| 8 → 11.025 | ↑2 · ↑3 · bridge↓k0 · ↓2 · ↓2 | 3.000 | 297.3 | 2.46 | 860.5 | 6.47 | ⚑ |
-| 8 → 22.05 | ↑2 · ↑3 · bridge↓k0 · ↓2 | 3.000 | 143.1 | 2.05 | 418.7 | 5.52 | ⚑ |
-| 8 → 44.1 | ↑2 · ↑3 · bridge↓k0 | 3.000 | 67.1 | 1.90 | 202.9 | 5.27 |  |
-| 8 → 88.2 | ↑2 · ↑3 · bridge↓k0 · ↑2 | 3.000 | 36.5 | 1.95 | 106.4 | 5.37 |  |
-| 8 → 176.4 | ↑2 · ↑3 · bridge↓k0 · ↑2 · ↑2 | 3.000 | 21.3 | 1.98 | 58.2 | 5.42 |  |
-| 12 → 11.025 | ↑2 · ↑2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 303.8 | 2.30 | 882.5 | 5.99 | ⚑ |
-| 12 → 22.05 | ↑2 · ↑2 · bridge↓k0 · ↓2 | 4.500 | 143.5 | 1.62 | 426.4 | 4.49 | ⚑ |
-| 12 → 44.1 | ↑2 · ↑2 · bridge↓k0 | 4.500 | 67.3 | 1.46 | 204.7 | 4.15 |  |
-| 12 → 88.2 | ↑2 · ↑2 · bridge↓k0 · ↑2 | 4.500 | 36.6 | 1.52 | 108.3 | 4.27 |  |
-| 12 → 176.4 | ↑2 · ↑2 · bridge↓k0 · ↑2 · ↑2 | 4.500 | 21.3 | 1.54 | 59.2 | 4.32 |  |
-| 16 → 11.025 | ↑3 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 298.0 | 1.83 | 873.0 | 4.95 | ⚑ |
-| 16 → 22.05 | ↑3 · bridge↓k0 · ↓2 | 6.000 | 153.1 | 1.35 | 460.7 | 3.87 | ⚑ |
-| 16 → 44.1 | ↑3 · bridge↓k0 | 6.000 | 71.1 | 1.15 | 218.8 | 3.40 |  |
-| 16 → 88.2 | ↑3 · bridge↓k0 · ↑2 | 6.000 | 39.5 | 1.23 | 115.4 | 3.52 |  |
-| 16 → 176.4 | ↑3 · bridge↓k0 · ↑2 · ↑2 | 6.000 | 22.8 | 1.25 | 62.7 | 3.57 |  |
-| 24 → 11.025 | ↑2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 286.4 | 1.68 | 845.5 | 4.61 | ⚑ |
-| 24 → 22.05 | ↑2 · bridge↓k0 · ↓2 | 8.269 | 152.4 | 1.30 | 454.0 | 3.67 | ⚑ |
-| 24 → 44.1 | ↑2 · bridge↓k0 | 9.000 | 67.8 | 0.96 | 210.1 | 2.90 |  |
-| 24 → 88.2 | ↑2 · bridge↓k0 · ↑2 | 9.000 | 37.9 | 1.04 | 113.1 | 3.07 |  |
-| 24 → 176.4 | ↑2 · bridge↓k0 · ↑2 · ↑2 | 9.000 | 21.9 | 1.07 | 62.5 | 3.13 |  |
-| 32 → 11.025 | 3/2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 286.4 | 1.62 | 849.8 | 4.53 | ⚑ |
-| 32 → 22.05 | 3/2 · bridge↓k0 · ↓2 | 8.269 | 149.5 | 1.14 | 446.0 | 3.29 | ⚑ |
-| 32 → 44.1 | 3/2 · bridge↓k0 | 12.000 | 71.1 | 0.88 | 218.8 | 2.66 |  |
-| 32 → 88.2 | 3/2 · bridge↓k0 · ↑2 | 12.000 | 40.5 | 0.98 | 120.4 | 2.90 |  |
-| 32 → 176.4 | 3/2 · bridge↓k0 · ↑2 · ↑2 | 12.000 | 24.3 | 1.02 | 66.2 | 2.96 |  |
-| 48 → 11.025 | bridge↓k0 · ↓2 · ↓2 | 4.134 | 269.0 | 1.53 | 815.0 | 4.34 | ⚑ |
-| 48 → 22.05 | bridge↓k0 · ↓2 | 8.269 | 135.0 | 0.99 | 417.0 | 2.98 | ⚑ |
+| 8 → 11.025 | ↑2 · ↑3 · bridge↓k0 · ↓2 · ↓2 | 3.000 | 332.2 | 3.46 | 934.6 | 9.41 | ⚑ |
+| 8 → 22.05 | ↑2 · ↑3 · bridge↓k0 · ↓2 | 3.000 | 154.6 | 2.50 | 435.8 | 6.64 | ⚑ |
+| 8 → 44.1 | ↑2 · ↑3 · bridge↓k0 | 3.000 | 69.8 | 2.21 | 207.4 | 6.21 |  |
+| 8 → 88.2 | ↑2 · ↑3 · bridge↓k0 · ↑2 | 3.000 | 42.4 | 2.36 | 113.2 | 6.40 |  |
+| 8 → 176.4 | ↑2 · ↑3 · bridge↓k0 · ↑2 · ↑2 | 3.000 | 25.7 | 2.40 | 65.1 | 6.49 |  |
+| 12 → 11.025 | ↑2 · ↑2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 342.7 | 3.00 | 955.3 | 8.05 | ⚑ |
+| 12 → 22.05 | ↑2 · ↑2 · bridge↓k0 · ↓2 | 4.500 | 167.8 | 2.23 | 488.1 | 6.24 | ⚑ |
+| 12 → 44.1 | ↑2 · ↑2 · bridge↓k0 | 4.500 | 72.4 | 1.75 | 212.6 | 4.85 |  |
+| 12 → 88.2 | ↑2 · ↑2 · bridge↓k0 · ↑2 | 4.500 | 43.7 | 1.90 | 115.8 | 5.05 |  |
+| 12 → 176.4 | ↑2 · ↑2 · bridge↓k0 · ↑2 · ↑2 | 4.500 | 26.4 | 1.94 | 67.4 | 5.14 |  |
+| 16 → 11.025 | ↑3 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 350.3 | 2.52 | 987.6 | 6.66 | ⚑ |
+| 16 → 22.05 | ↑3 · bridge↓k0 · ↓2 | 6.000 | 171.7 | 1.75 | 504.3 | 4.84 | ⚑ |
+| 16 → 44.1 | ↑3 · bridge↓k0 | 6.000 | 74.3 | 1.27 | 220.6 | 3.46 |  |
+| 16 → 88.2 | ↑3 · bridge↓k0 · ↑2 | 6.000 | 44.7 | 1.42 | 120.8 | 3.67 |  |
+| 16 → 176.4 | ↑3 · bridge↓k0 · ↑2 · ↑2 | 6.000 | 29.8 | 1.49 | 69.9 | 3.77 |  |
+| 24 → 11.025 | ↑2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 317.7 | 2.12 | 886.7 | 5.51 | ⚑ |
+| 24 → 22.05 | ↑2 · bridge↓k0 · ↓2 | 8.269 | 164.0 | 1.52 | 499.6 | 4.57 | ⚑ |
+| 24 → 44.1 | ↑2 · bridge↓k0 | 9.000 | 70.5 | 1.04 | 218.3 | 3.19 |  |
+| 24 → 88.2 | ↑2 · bridge↓k0 · ↑2 | 9.000 | 46.8 | 1.28 | 140.6 | 3.88 |  |
+| 24 → 176.4 | ↑2 · bridge↓k0 · ↑2 · ↑2 | 9.000 | 30.9 | 1.35 | 79.8 | 3.98 |  |
+| 32 → 11.025 | 3/2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 315.5 | 2.00 | 888.9 | 5.35 | ⚑ |
+| 32 → 22.05 | 3/2 · bridge↓k0 · ↓2 | 8.269 | 171.7 | 1.41 | 504.3 | 4.07 | ⚑ |
+| 32 → 44.1 | 3/2 · bridge↓k0 | 12.000 | 74.3 | 0.94 | 220.6 | 2.69 |  |
+| 32 → 88.2 | 3/2 · bridge↓k0 · ↑2 | 12.000 | 48.7 | 1.18 | 141.8 | 3.38 |  |
+| 32 → 176.4 | 3/2 · bridge↓k0 · ↑2 · ↑2 | 12.000 | 31.8 | 1.25 | 81.4 | 3.49 |  |
+| 48 → 11.025 | bridge↓k0 · ↓2 · ↓2 | 4.134 | 285.0 | 1.85 | 841.0 | 5.11 | ⚑ |
+| 48 → 22.05 | bridge↓k0 · ↓2 | 8.269 | 139.0 | 1.08 | 431.0 | 3.30 | ⚑ |
 | 48 → 44.1 | bridge↓k0 | 16.538 | 58.0 | 0.60 | 184.0 | 1.92 |  |
-| 48 → 88.2 | bridge↓k0 · ↑2 | 18.000 | 42.0 | 0.89 | 135.0 | 2.88 |  |
-| 48 → 176.4 | bridge↓k0 · ↑2 · ↑2 | 18.000 | 25.0 | 0.93 | 75.5 | 2.97 |  |
-| 96 → 11.025 | ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 299.5 | 1.59 | 871.6 | 4.46 | ⚑ |
-| 96 → 22.05 | ↓2 · bridge↓k0 · ↓2 | 8.269 | 154.6 | 1.06 | 449.7 | 3.12 | ⚑ |
-| 96 → 44.1 | ↓2 · bridge↓k0 | 16.538 | 76.5 | 0.76 | 222.1 | 2.26 |  |
+| 48 → 88.2 | bridge↓k0 · ↑2 | 18.000 | 44.5 | 0.93 | 137.5 | 2.93 |  |
+| 48 → 176.4 | bridge↓k0 · ↑2 · ↑2 | 18.000 | 33.8 | 1.05 | 100.2 | 3.27 |  |
+| 96 → 11.025 | ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 350.3 | 1.99 | 923.7 | 5.29 | ⚑ |
+| 96 → 22.05 | ↓2 · bridge↓k0 · ↓2 | 8.269 | 171.7 | 1.22 | 476.7 | 3.50 | ⚑ |
+| 96 → 44.1 | ↓2 · bridge↓k0 | 16.538 | 83.0 | 0.82 | 252.6 | 2.55 |  |
 | 96 → 88.2 | bridge↓k1 | 33.075 | 58.0 | 0.30 | 184.0 | 0.96 |  |
-| 96 → 176.4 | bridge↓k1 · ↑2 | 36.000 | 42.0 | 0.44 | 135.0 | 1.44 |  |
-| 192 → 11.025 | ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 360.4 | 1.61 | 967.4 | 4.50 | ⚑ |
-| 192 → 22.05 | ↓2 · ↓2 · bridge↓k0 · ↓2 | 8.269 | 185.1 | 1.09 | 506.3 | 3.18 | ⚑ |
-| 192 → 44.1 | ↓2 · ↓2 · bridge↓k0 | 16.538 | 96.1 | 0.80 | 254.7 | 2.33 |  |
-| 192 → 88.2 | ↓2 · bridge↓k1 | 33.075 | 76.5 | 0.38 | 222.1 | 1.13 |  |
+| 96 → 176.4 | bridge↓k1 · ↑2 | 36.000 | 44.5 | 0.47 | 137.5 | 1.46 |  |
+| 192 → 11.025 | ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 428.7 | 2.02 | 1089.2 | 5.38 | ⚑ |
+| 192 → 22.05 | ↓3 · 3/4 · bridge↓k0 · ↓2 | 8.269 | 228.3 | 1.25 | 601.5 | 3.69 | ⚑ |
+| 192 → 44.1 | ↓2 · ↓2 · bridge↓k0 | 16.538 | 115.7 | 0.89 | 298.3 | 2.65 |  |
+| 192 → 88.2 | ↓2 · bridge↓k1 | 33.075 | 83.0 | 0.41 | 252.6 | 1.28 |  |
 | 192 → 176.4 | bridge↓k2 | 66.150 | 58.0 | 0.15 | 184.0 | 0.48 |  |
-| 384 → 11.025 | ↓8 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 456.2 | 1.59 | 1124.1 | 4.44 | ⚑ |
-| 384 → 22.05 | ↓6 · 3/4 · bridge↓k0 · ↓2 | 8.269 | 246.7 | 1.11 | 633.2 | 3.21 | ⚑ |
-| 384 → 44.1 | ↓2 · ↓2 · ↓2 · bridge↓k0 | 16.538 | 126.6 | 0.81 | 311.3 | 2.36 |  |
-| 384 → 88.2 | ↓2 · ↓2 · bridge↓k1 | 33.075 | 96.1 | 0.40 | 254.7 | 1.16 |  |
-| 384 → 176.4 | ↓2 · bridge↓k2 | 66.150 | 76.5 | 0.19 | 222.1 | 0.57 |  |
+| 384 → 11.025 | ↓2 · ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 550.6 | 2.04 | 1350.4 | 5.41 | ⚑ |
+| 384 → 22.05 | ↓8 · bridge↓k0 · ↓2 | 8.269 | 293.6 | 1.18 | 829.4 | 3.57 | ⚑ |
+| 384 → 44.1 | ↓3 · 3/4 · ↓2 · bridge↓k0 | 16.538 | 172.3 | 0.91 | 423.1 | 2.74 |  |
+| 384 → 88.2 | ↓2 · ↓2 · bridge↓k1 | 33.075 | 115.7 | 0.45 | 298.3 | 1.33 |  |
+| 384 → 176.4 | ↓2 · bridge↓k2 | 66.150 | 83.0 | 0.21 | 252.6 | 0.64 |  |
 
 ### 3.6 44.1 kHz family → 48 kHz family (45 ordered pairs)
 
 | From → To | Chain | f_pass eco (kHz) | MAC/out eco | Latency eco (ms) | MAC/out tr | Latency tr (ms) | ⚑ |
 |---|---|---|---|---|---|---|---|
-| 11.025 → 8 | ↑2 · ↑2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 316.8 | 2.29 | 746.4 | 5.64 | ⚑ |
-| 11.025 → 12 | ↑2 · ↑2 · bridge↑k0 · ↓2 · ↓2 | 4.134 | 218.2 | 2.13 | 518.8 | 5.16 | ⚑ |
-| 11.025 → 16 | ↑2 · ↑2 · bridge↑k0 · ↓3 | 4.134 | 158.4 | 1.65 | 381.4 | 4.12 | ⚑ |
-| 11.025 → 24 | ↑2 · ↑2 · bridge↑k0 · ↓2 | 4.134 | 100.6 | 1.51 | 241.9 | 3.79 | ⚑ |
-| 11.025 → 32 | ↑2 · ↑2 · bridge↑k0 · 2/3 | 4.134 | 78.7 | 1.46 | 188.2 | 3.70 |  |
-| 11.025 → 48 | ↑2 · ↑2 · bridge↑k0 | 4.134 | 45.8 | 1.36 | 113.5 | 3.51 |  |
-| 11.025 → 96 | ↑2 · ↑2 · bridge↑k0 · ↑2 | 4.134 | 25.9 | 1.41 | 62.7 | 3.63 |  |
-| 11.025 → 192 | ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 | 4.134 | 16.0 | 1.44 | 36.4 | 3.68 |  |
-| 11.025 → 384 | ↑2 · ↑2 · bridge↑k0 · ↑8 | 4.134 | 11.0 | 1.42 | 22.9 | 3.62 |  |
-| 22.05 → 8 | ↑2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 303.1 | 1.88 | 716.1 | 4.69 | ⚑ |
-| 22.05 → 12 | ↑2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 203.7 | 1.44 | 492.4 | 3.66 | ⚑ |
-| 22.05 → 16 | ↑2 · bridge↑k0 · ↓3 | 6.000 | 164.8 | 1.18 | 415.3 | 3.04 | ⚑ |
-| 22.05 → 24 | ↑2 · bridge↑k0 · ↓2 | 8.269 | 109.5 | 1.13 | 271.1 | 2.84 | ⚑ |
-| 22.05 → 32 | ↑2 · bridge↑k0 · 2/3 | 8.269 | 83.4 | 0.96 | 205.1 | 2.44 |  |
-| 22.05 → 48 | ↑2 · bridge↑k0 | 8.269 | 46.3 | 0.82 | 118.0 | 2.15 |  |
-| 22.05 → 96 | ↑2 · bridge↑k0 · ↑2 | 8.269 | 27.1 | 0.89 | 66.0 | 2.29 |  |
-| 22.05 → 192 | ↑2 · bridge↑k0 · ↑2 · ↑2 | 8.269 | 16.6 | 0.92 | 39.0 | 2.35 |  |
-| 22.05 → 384 | ↑2 · bridge↑k0 · 4/3 · ↑6 | 8.269 | 11.8 | 0.94 | 26.5 | 2.39 |  |
-| 44.1 → 8 | bridge↑k0 · ↓3 · ↓2 | 3.000 | 281.0 | 1.72 | 683.0 | 4.44 | ⚑ |
-| 44.1 → 12 | bridge↑k0 · ↓2 · ↓2 | 4.500 | 189.0 | 1.29 | 463.0 | 3.32 | ⚑ |
-| 44.1 → 16 | bridge↑k0 · ↓3 | 6.000 | 151.0 | 0.97 | 385.0 | 2.57 | ⚑ |
-| 44.1 → 24 | bridge↑k0 · ↓2 | 9.000 | 95.0 | 0.79 | 241.0 | 2.07 | ⚑ |
-| 44.1 → 32 | bridge↑k0 · 2/3 | 12.000 | 83.0 | 0.70 | 216.0 | 1.83 |  |
+| 11.025 → 8 | ↑2 · ↑2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 366.0 | 3.28 | 849.7 | 8.58 | ⚑ |
+| 11.025 → 12 | ↑2 · ↑2 · bridge↑k0 · ↓2 · ↓2 | 4.134 | 253.7 | 2.82 | 585.5 | 7.22 | ⚑ |
+| 11.025 → 16 | ↑2 · ↑2 · bridge↑k0 · ↓3 | 4.134 | 195.5 | 2.34 | 461.4 | 5.83 | ⚑ |
+| 11.025 → 24 | ↑2 · ↑2 · bridge↑k0 · ↓2 | 4.134 | 115.3 | 1.95 | 261.2 | 4.68 | ⚑ |
+| 11.025 → 32 | ↑2 · ↑2 · bridge↑k0 · 2/3 | 4.134 | 89.8 | 1.82 | 203.7 | 4.53 |  |
+| 11.025 → 48 | ↑2 · ↑2 · bridge↑k0 | 4.134 | 50.2 | 1.68 | 120.1 | 4.29 |  |
+| 11.025 → 96 | ↑2 · ↑2 · bridge↑k0 · ↑2 | 4.134 | 32.6 | 1.81 | 69.6 | 4.46 |  |
+| 11.025 → 192 | ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 | 4.134 | 20.8 | 1.85 | 44.3 | 4.55 |  |
+| 11.025 → 384 | ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 · ↑2 | 4.134 | 13.9 | 1.86 | 29.6 | 4.59 |  |
+| 22.05 → 8 | ↑2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 334.3 | 2.33 | 762.9 | 5.81 | ⚑ |
+| 22.05 → 12 | ↑2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 247.3 | 2.05 | 604.8 | 5.41 | ⚑ |
+| 22.05 → 16 | ↑2 · bridge↑k0 · ↓3 | 6.000 | 190.7 | 1.57 | 475.8 | 4.01 | ⚑ |
+| 22.05 → 24 | ↑2 · bridge↑k0 · ↓2 | 8.269 | 120.1 | 1.34 | 312.9 | 3.74 | ⚑ |
+| 22.05 → 32 | ↑2 · bridge↑k0 · 2/3 | 8.269 | 105.3 | 1.24 | 261.9 | 3.24 |  |
+| 22.05 → 48 | ↑2 · bridge↑k0 | 8.269 | 48.6 | 0.91 | 124.9 | 2.47 |  |
+| 22.05 → 96 | ↑2 · bridge↑k0 · ↑2 | 8.269 | 31.8 | 1.04 | 73.0 | 2.67 |  |
+| 22.05 → 192 | ↑2 · bridge↑k0 · 4/3 · ↑3 | 8.269 | 21.7 | 1.08 | 48.8 | 2.86 |  |
+| 22.05 → 384 | ↑2 · bridge↑k0 · ↑8 | 8.269 | 14.9 | 1.01 | 38.5 | 2.74 |  |
+| 44.1 → 8 | bridge↑k0 · ↓3 · ↓2 | 3.000 | 293.0 | 2.03 | 705.0 | 5.38 | ⚑ |
+| 44.1 → 12 | bridge↑k0 · ↓2 · ↓2 | 4.500 | 205.0 | 1.58 | 489.0 | 4.03 | ⚑ |
+| 44.1 → 16 | bridge↑k0 · ↓3 | 6.000 | 159.0 | 1.10 | 389.0 | 2.63 | ⚑ |
+| 44.1 → 24 | bridge↑k0 · ↓2 | 9.000 | 99.0 | 0.87 | 255.0 | 2.36 | ⚑ |
+| 44.1 → 32 | bridge↑k0 · 2/3 | 12.000 | 89.5 | 0.76 | 218.5 | 1.86 |  |
 | 44.1 → 48 | bridge↑k0 | 16.538 | 38.0 | 0.43 | 96.0 | 1.09 |  |
-| 44.1 → 96 | bridge↑k0 · ↑2 | 16.538 | 27.0 | 0.59 | 65.0 | 1.43 |  |
-| 44.1 → 192 | bridge↑k0 · ↑2 · ↑2 | 16.538 | 17.5 | 0.62 | 39.5 | 1.50 |  |
-| 44.1 → 384 | bridge↑k0 · ↑2 · ↑2 · ↑2 | 16.538 | 11.8 | 0.64 | 25.8 | 1.53 |  |
-| 88.2 → 8 | ↓2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 319.6 | 1.78 | 743.6 | 4.54 | ⚑ |
-| 88.2 → 12 | ↓2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 214.7 | 1.34 | 510.8 | 3.44 | ⚑ |
-| 88.2 → 16 | ↓2 · bridge↑k0 · ↓3 | 6.000 | 175.8 | 1.05 | 420.8 | 2.69 | ⚑ |
-| 88.2 → 24 | ↓2 · bridge↑k0 · ↓2 | 9.000 | 111.5 | 0.86 | 272.2 | 2.24 | ⚑ |
-| 88.2 → 32 | ↓2 · bridge↑k0 · 2/3 | 12.000 | 98.2 | 0.80 | 247.7 | 2.07 |  |
-| 88.2 → 48 | ↓2 · bridge↑k0 | 18.000 | 62.8 | 0.71 | 175.9 | 2.05 |  |
+| 44.1 → 96 | bridge↑k0 · ↑2 | 16.538 | 30.5 | 0.65 | 79.5 | 1.72 |  |
+| 44.1 → 192 | bridge↑k0 · ↑2 · ↑2 | 16.538 | 22.8 | 0.72 | 50.2 | 1.82 |  |
+| 44.1 → 384 | bridge↑k0 · ↑2 · 4/3 · ↑3 | 16.538 | 17.2 | 0.74 | 37.5 | 1.92 |  |
+| 88.2 → 8 | ↓2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 375.7 | 2.18 | 809.7 | 5.57 | ⚑ |
+| 88.2 → 12 | ↓2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 260.1 | 1.72 | 558.8 | 4.22 | ⚑ |
+| 88.2 → 16 | ↓2 · bridge↑k0 · ↓3 | 6.000 | 200.3 | 1.24 | 446.9 | 2.85 | ⚑ |
+| 88.2 → 24 | ↓2 · bridge↑k0 · ↓2 | 9.000 | 141.3 | 1.11 | 370.8 | 3.05 | ⚑ |
+| 88.2 → 32 | ↓2 · bridge↑k0 · 2/3 | 12.000 | 121.2 | 1.00 | 305.3 | 2.55 |  |
+| 88.2 → 48 | ↓2 · bridge↑k0 | 18.000 | 66.5 | 0.76 | 179.6 | 2.10 |  |
 | 88.2 → 96 | bridge↑k1 | 33.075 | 38.0 | 0.22 | 96.0 | 0.54 |  |
-| 88.2 → 192 | bridge↑k1 · ↑2 | 33.075 | 27.0 | 0.29 | 65.0 | 0.72 |  |
-| 88.2 → 384 | bridge↑k1 · ↑2 · ↑2 | 33.075 | 17.5 | 0.31 | 39.5 | 0.75 |  |
-| 176.4 → 8 | ↓2 · ↓2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 396.8 | 1.81 | 864.9 | 4.60 | ⚑ |
-| 176.4 → 12 | ↓2 · ↓2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 266.2 | 1.37 | 591.6 | 3.49 | ⚑ |
-| 176.4 → 16 | ↓2 · ↓2 · bridge↑k0 · ↓3 | 6.000 | 214.4 | 1.08 | 481.5 | 2.74 | ⚑ |
-| 176.4 → 24 | ↓2 · ↓2 · bridge↑k0 · ↓2 | 9.000 | 137.3 | 0.89 | 320.0 | 2.30 | ⚑ |
-| 176.4 → 32 | ↓2 · ↓2 · bridge↑k0 · 2/3 | 12.000 | 123.0 | 0.84 | 283.5 | 2.13 |  |
-| 176.4 → 48 | ↓2 · ↓2 · bridge↑k0 | 18.000 | 79.3 | 0.75 | 207.2 | 2.14 |  |
-| 176.4 → 96 | ↓2 · bridge↑k1 | 36.000 | 62.8 | 0.36 | 175.9 | 1.03 |  |
+| 88.2 → 192 | bridge↑k1 · ↑2 | 33.075 | 30.5 | 0.32 | 79.5 | 0.86 |  |
+| 88.2 → 384 | bridge↑k1 · ↑2 · ↑2 | 33.075 | 22.8 | 0.36 | 50.2 | 0.91 |  |
+| 176.4 → 8 | ↓2 · ↓2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 474.9 | 2.22 | 997.2 | 5.66 | ⚑ |
+| 176.4 → 12 | ↓2 · ↓2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 326.3 | 1.76 | 698.5 | 4.31 | ⚑ |
+| 176.4 → 16 | ↓2 · ↓2 · bridge↑k0 · ↓3 | 6.000 | 283.0 | 1.32 | 551.6 | 2.94 | ⚑ |
+| 176.4 → 24 | ↓2 · ↓2 · bridge↑k0 · ↓2 | 9.000 | 196.4 | 1.18 | 440.6 | 3.15 | ⚑ |
+| 176.4 → 32 | ↓2 · ↓2 · bridge↑k0 · 2/3 | 12.000 | 162.5 | 1.08 | 363.2 | 2.66 |  |
+| 176.4 → 48 | ↓2 · ↓2 · bridge↑k0 | 18.000 | 108.7 | 0.88 | 295.4 | 2.44 |  |
+| 176.4 → 96 | ↓2 · bridge↑k1 | 36.000 | 66.5 | 0.38 | 179.6 | 1.05 |  |
 | 176.4 → 192 | bridge↑k2 | 66.150 | 38.0 | 0.11 | 96.0 | 0.27 |  |
-| 176.4 → 384 | bridge↑k2 · ↑2 | 66.150 | 27.0 | 0.15 | 65.0 | 0.36 |  |
+| 176.4 → 384 | bridge↑k2 · ↑2 | 66.150 | 30.5 | 0.16 | 79.5 | 0.43 |  |
 
-Count: 72 + 20 + 45 + 45 = 182 = 14 × 13 ordered pairs, every one covered;
-38 carry ⚑. The generator (a scratch script, to be committed as
-`rational/tools/coverage/matrix.py` at M4 and re-run by the matrix test's
-reference step) is deterministic: the same lattice (without a single
-4th-band stage, decision 6), the same harris estimate, the same selection
-(the MAC minimum, then the fewest stages whose rational part is within
-10 % of its rational part around the same `bridge` stage, then latency),
-the same flag rule.
+Count: 72 + 20 + 45 + 45 = 182 = 14 × 13 ordered pairs, every one covered
+and measured; 38 carry ⚑. The generator, `rational/tools/coverage/matrix.py`
+(committed at M4), is deterministic: the lattice of 2^a · 3^b multiples of
+each family's base as intermediates (b ≤ 3; without a single 4th-band
+stage, decision 6), the stage lengths from the numpy search on the
+16384-point grid at each stage's design divisor (the same criterion as the
+M2 pins; its `pins` mode prints `design.h`'s relaxation tables), the MACs
+per output as `stage.h` trims its rows, the same selection (the MAC
+minimum, then the fewest stages whose rational part is within 10 % of its
+rational part around the same `bridge` stage, then latency), the same
+flag rule. `matrix.py md` prints 3.3–3.6, `rows` writes
+`tests/coverage/matrix_rows.h` (the 182 rows as an X-macro with every
+stage's divisor and the exact MACs and latency per profile, which
+`test_matrix.cpp` pins), `diff` lists the rows that differ from this
+file's tables, `rule` the rows where the fewest-stages rule bit.
 
 ## 4. Layout
 
@@ -608,12 +665,17 @@ rational/
 │   ├── stage.h             basic_stage<S, R>: table (per phase or per decimating branch, trimmed to the nonzero span;
 │   │                       symmetry halving deferred to the codegen levers after M6, as bridge's M7 lever 3), the
 │   │                       schedule, process/pull/flush/reset, the exact-rational latency
-│   ├── chain.h             the engine's named chains: converter<S, Stages...> = tap::dsp::chain<basic_stage...>, aliases
+│   ├── chain.h             basic_chain<S, R...>: tap::dsp::chain over basic_stage, each stage at its design
+│   │                       divisor (3.1); the 20 named multi-stage chains of 3.3 / 3.4 (up_2_up_2 … down_3_down_8_down_2)
 │   └── converter.h         basic_converter<S, R> = basic_stage<S, R> under the family's converter name, with the
 │                           float / Q15 / Q31 aliases (converter<R>, converter_q15<R>, converter_q31<R>)
 ├── tests/                  test_ratio, test_design, test_stage, test_chain, test_matrix, test_fixed_point,
 │   │                       test_cross_validation, test_output_hash, test_capi, bare_metal_main.cpp
-│   └── reference/          committed scipy vectors (make_reference_vectors.py in tools/reference/)
+│   ├── reference/          committed scipy vectors (make_reference_vectors.py in tools/reference/), the
+│   │                       single stages and the sequenced-upfirdn chain vectors
+│   ├── coverage/           matrix_rows.h, generated by tools/coverage/matrix.py: the 182 rows with
+│   │                       divisors and exact pins per profile
+│   └── support/            bridge_stage.h, bridge's converter as a sync_stage for the cross rows (4.2)
 ├── tools/reference/        make_reference_vectors.py; tools/coverage/matrix.py (section 3's generator)
 ├── bench/                  baselines.json (m33 / m55 / hexagon), icount/{CMakeLists.txt, icount_main.cpp}
 ├── capi/                   tap_sr_rational_capi.{h,cpp} -> libtap_sr_rational_capi
@@ -648,12 +710,14 @@ Six public headers (`tests/CMakeLists.txt:10-11` gains
   nothing.
 
 **C ABI (4.4).** `tap_sr_rational_create(int chain, int profile, unsigned
-channels)`, where `chain` is an enumerator naming one of **the 34
-within-family chains** of 3.3/3.4 — the 26 of the 48 family and the 8 of
-the 44.1 family, one enumerator per distinct chain (`TAP_SR_RATIONAL_UP_2`,
-`TAP_SR_RATIONAL_UP_2_UP_2`, `TAP_SR_RATIONAL_RATIO_2_3`,
-`TAP_SR_RATIONAL_DOWN_8_DOWN_2`, …; the ↑2 chain serves both families, so
-the set is the union of the two tables' chain columns, 34 names) — a
+channels)`, where `chain` is an enumerator naming one of **the 28
+within-family chains** of 3.3/3.4 — the 26 of the 48 family and the two
+the 44.1 family adds (its 8/1 and 1/8), one enumerator per distinct chain
+(`TAP_SR_RATIONAL_UP_2`, `TAP_SR_RATIONAL_UP_2_UP_2`,
+`TAP_SR_RATIONAL_RATIO_2_3`, `TAP_SR_RATIONAL_DOWN_8_DOWN_2`, …; the set is
+the union of the two tables' chain columns: 8 one-stage, 20 multi-stage,
+the 20 `chain.h` names as types; v0.2 counted 34 before the union was
+taken) — a
 chain, never a rate pair and never a bare rate, so D12 holds at the C
 boundary as `bridge`'s `int direction` does
 (`../bridge/capi/tap_sr_bridge_capi.h:29`); the single-stage ratios are
@@ -691,16 +755,28 @@ As `bridge` (`../bridge/PLAN.md` §6), typed over `float` / `int16_t` /
    is scipy (1) plus `decimate.h`'s battery as a second golden at ↓2 / ↓3 /
    ↓6 (same substrate, different design: a disagreement above the two
    designs' documented difference is a finding).
-3. **The coverage-matrix test.** For every one of the 182 pairs: build the
-   chain of 3.3–3.6 in `double`, measure f_pass (last −δ point), A (worst
-   stopband product over a swept-tone battery, aliases and images
-   separately as `test_converter.cpp:296-316` does), δ (passband ripple
-   over a fine grid), MACs per output (counted by instrumented kernels, not
-   estimated) and latency (impulse position against `latency_output_frames()`),
-   and pin them in a committed table that the test reads back. Cross-family
-   rows build `bridge` from `tests/` (allowed by 4.2); rows at k > 0 are
-   skipped with a named reason until the 2.2 follow-up lands, and the test
-   fails if a row is skipped for any other reason.
+3. **The coverage-matrix test** (`test_matrix.cpp`, M4). For every one
+   of the 182 pairs: build the chain of 3.3–3.6 in `double` from the
+   generated row table (`tests/coverage/matrix_rows.h`); pin MACs per
+   output (the stages' trimmed-row counts scaled to the output rate — what
+   the kernels execute, not an estimate) and latency exactly, as
+   rationals, at all four profiles; check a within-family row is the named
+   chain (its compile-time divisors are the table's); measure the promise
+   (2.1) with a tone battery at each profile — seven passband tones and up
+   to five stopband tones per row, each an exact bin of an analysis window
+   whose length makes every rate of the chain a bin too, so a rectangular
+   window measures every image and alias candidate (|k R_j ± f| folded,
+   over every rate R_j of the chain) leakage-free beside the 0 dB tone:
+   every candidate that lands at or below f_pass must be at or below −A,
+   the passband gain within the stages' summed ripple candidates; check
+   accounting from three positions, the impulse within half a frame of the
+   latency, and flush. Cross-family rows build `bridge` from `tests/`
+   (`support/bridge_stage.h`, allowed by 4.2); every row is measured, none
+   skipped (2.2 had landed). Measured at M4: worst candidate −71.3 dB at
+   `economy`, −71.8 at `super_economy`, −71.5 at `balanced`, −121.6 at
+   `transparent`; worst passband deviation 0.0087 / 0.0081 / 0.0070 /
+   0.00002 dB (about 1700 tones per profile, 24 s on a host; a host suite,
+   excluded on the QEMU legs).
 
 Plus:
 
@@ -738,7 +814,7 @@ Plus:
 | M1 | **Skeleton + ratio types + design**: `rational/` tree (section 4), `tap::sr::rational` target, the family tests extended to three engines, `ratio<L, M>` with its `static_assert`s, `profile`, `design_stage<R>`. **Done** (2026-10-01; three of the six public headers — `rational.h`, `ratio.h`, `design.h` — the header count pinned at 3 until M3/M4 add the rest) | Configure and build from the root and from `cmake -S rational` ✓; the four 4.2 checks and `VersionMacrosAgree` pass for all three engines ✓ (`check_includes.cmake` now takes both siblings); `ratio<5, 1>`, `ratio<4, 2>`, `ratio<2, 2>` fail to compile with the charter's message ✓ (`tests/compile_fail/`, a `try_compile` project run as `rational.Ratio.ChartersFailToCompileWithTheMessage`, on the cross legs with their toolchain file); `BadProfilesThrow` ✓; the M33 leg runs the battery in 134 s with the transparent search excluded | no |
 | M2 | **Design spike**: `notebooks/design_spike.ipynb`, executed, pins N per (single-stage ratio ∈ {2, 3, 6, 8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8} × profile; the 4th-band row is measured for the record only, decision 6, and serves 4/3 and 3/4) by the ≥ 1 dB margin criterion on a fine grid, with measured worst stopband and ripple; `test_design.cpp` enforces the pins. **Done** (2026-10-02, v0.5: the notebook is the independent numpy leg from the same published math, `profile::taps_per_branch` carries the pins per band, `design_stage<R>` reads them, a custom profile without pins is searched on the same grid) | The table below filled ✓; every pinned N of the form 2mL − 1 ✓ (mixed: T = ⌈N / L⌉ per phase); measured A ≥ spec + 1 dB on 16384 points ✓ (−71.1 … −72.8 dB at 70 dB, −121.1 … −121.7 dB at 120 dB) with m − 1 missing it ✓; ripple ≤ 2.3's candidate ✓ (≤ 0.0025 / 0.00001 dB); the scipy `upfirdn` end-to-end check of the economy half-band decimator: a tone just past the stopband edge aliases at −72.1 dB, passband tones within 0.001 dB ✓ | no |
 | M3 | **Single stages, float golden leg**: `basic_stage<S, R>` for ↑2 / ↓2 (half-band) and ↑3 / ↓3 (third-band) first, then the rest of the vocabulary; both call shapes; `flush`; scipy vectors committed. **Done** (2026-10-02, v0.6: the whole vocabulary at once, since the two machines are generic — the L-phase schedule machine with trimmed phase rows for interpolators and mixed ratios, the M-branch commutator for decimators, its nonzero branches summed under one finalize through DspTap's `accumulate_row` (tap/DspTap#51, the substrate addition M3 needed); MACs per output are the design's nonzero counts for every interpolator and decimator, the half-band decimator 23 of its 43 taps) | Scipy vectors sample-for-sample ✓ (16 vectors, every ratio at `economy` and the by-2 pair at `transparent`; float within 6e-8 of the float64 reference, the 3e-5 tolerance is bridge's); exhaustive phase sweeps ✓ (the impulse reproduces the table bit for bit from every input phase, every format; accounting exact from every position of every superblock); `PullMatchesProcessBitExact` ✓; chunking invariance ✓ (every format); `decimate.h` second-golden agreement at ↓2 / ↓3 / ↓6 within the documented design difference ✓; latency equals (N − 1)/2 at the higher rate by impulse ✓ (every ratio, the exact rational (N − 1)/(2M) at the output rate); DC gain exactly 1 in every format ✓; flush equals zero padding bit for bit ✓ | no |
-| M4 | **Chains and the coverage matrix**: `chain.h`'s named chains, `tools/coverage/matrix.py` committed, `test_matrix.cpp` pinning (f_pass, A, δ, MACs/out, latency) for all 182 rows | Every within-family row and every k = 0 cross row measured and pinned; k > 0 rows skipped by name only; chain vectors against sequenced upfirdn; `frames_needed` / `outputs_for` exact from every position of every chain | **k > 0 rows (12 of them: every row of 3.5/3.6 whose chain names k1 or k2) wait; the other 170 do not** |
+| M4 | **Chains and the coverage matrix**: `chain.h`'s named chains, `tools/coverage/matrix.py` committed, `test_matrix.cpp` pinning (f_pass, A, δ, MACs/out, latency) for all 182 rows. **Done** (2026-10-02, v0.7: `basic_chain<S, R...>` constructs each stage at its design divisor (3.1) over DspTap's `chain<>`, whose `flush` landed for it (tap/DspTap#52); the relaxation tables in `design.h`; the generator re-run on the pinned lengths, section 3 regenerated — 35 rows changed chain, the ledger in S1 — and the 20 named multi-stage chains follow it) | Every row measured and pinned, the k > 0 rows included (2.2 had landed, so nothing was skipped) ✓; chain vectors against sequenced upfirdn ✓ (seven chains, float within 3e-5 and double within 1e-7 of the float64 reference); a chain equals its stages run in sequence bit for bit in every format ✓; `frames_needed` / `outputs_for` exact from every position of every named chain ✓; flush equals zero padding bit for bit ✓; the tone battery's numbers in section 5 | no |
 | M5 | **Fixed-point profiles**: Q15 and Q31 datapaths through the traits; per-branch quantization; bit-pinned tables; cross-precision numbers | Q31 within the format floor of float on the reference noise (`bridge`: 5e−8, `../bridge/PLAN.md` §8); Q15 format-limited numbers stated per stage; exact-unity row sums; wrap safety; the Q15 half-band's zero taps absent from the dot (counted MACs equal the nonzero count) | no |
 | M6 | **C ABI, notebook, icount baselines**: `libtap_sr_rational_capi`, `tap_sr_rational_py.py`, `matrix.ipynb` executed through the C ABIs (bridge's for cross rows), `bench/icount/` with baselines on M33 / M55 / Hexagon, README icount table, `CApi.VersionIsBitPacked` | Notebook measures the shipping C++ and reproduces the pinned matrix numbers; ratchet green two-sided on three targets; `nm -D` symbol set recorded; **family version 0.5.0** (decision 10, R11: all three umbrella headers and the root `project()` bump together, D13) | notebook's k > 0 cells wait |
 
@@ -765,14 +841,13 @@ M2 verified that claim (`Design.UpAndDownOfOneBandAreTheSamePrototype`:
 the vectors are bit-identical) before relying on it, and a mixed ratio's
 design is its larger factor's band (2/3 and 3/2 share the third-band
 design; `test_design.cpp` pins it). The mixed stages' MACs per output are
-their T; a 2/3 stage at `economy` costs 33, not the 26 the v0.2 arithmetic
-in 2.1 estimated, and the matrix's MAC figures are regenerated from these
-counts at M4 (risk S1).
+their trimmed rows' lengths over L — a 2/3 stage at `economy` costs 32.5,
+not the 26 the v0.2 arithmetic in 2.1 estimated — and the matrix's figures
+were regenerated from these counts at M4 (v0.7, section 3; risk S1).
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
-(`../CLAUDE.md`, "Substrate discipline"); M1–M3 are done; M5 is independent of
-the 2.2 follow-up; M4's 12 k > 0 rows and M6's corresponding notebook
-cells wait for it and are the only items that do. Every milestone's PR
+(`../CLAUDE.md`, "Substrate discipline"); M1–M4 are done; the 2.2
+follow-up landed before M4, so nothing waits for it. Every milestone's PR
 carries its measurements, as `bridge`'s M7 entries do.
 
 ## 7. Non-goals
@@ -808,7 +883,7 @@ carries its measurements, as `bridge`'s M7 entries do.
 
 | # | Risk | Mitigation |
 |---|---|---|
-| S1 | The harris estimates mislead the factoring policy (R3): a pinned N lands on the other side of a stage-count decision | M2 pins before M4 chooses; `matrix.py` is re-run on the pinned Ns and the matrix table is regenerated from measured lengths, not estimates; a flip is recorded in this plan's ledger |
+| S1 | The harris estimates mislead the factoring policy (R3): a pinned N lands on the other side of a stage-count decision | M2 pins before M4 chooses; `matrix.py` is re-run on the pinned Ns and the matrix table is regenerated from measured lengths, not estimates; a flip is recorded in this plan's ledger. **Ledger (M4, v0.7): 35 of the 182 rows changed chain** (`matrix.py diff` against the v0.6 tables). Within the 48 family, eleven ratios: 8/1 ↑2 · ↑2 · ↑2 → ↑2 · 4/3 · ↑3; 12/1 ↑2 · ↑2 · ↑3 → ↑2 · ↑6; 16/1 ↑2 · ↑2 · ↑2 · ↑2 → ↑2 · ↑8; 24/1 ↑3 · ↑8 → ↑2 · ↑6 · ↑2; 32/1 ↑2 · ↑2 · ↑8 → ↑2 · ↑8 · ↑2; 48/1 ↑2 · ↑3 · ↑8 → ↑2 · ↑8 · ↑3; 1/8 ↓2 · ↓2 · ↓2 → ↓3 · 3/4 · ↓2; 1/12 ↓3 · ↓2 · ↓2 → ↓6 · ↓2; 1/16 unchanged; 1/24 ↓8 · ↓3 → ↓2 · ↓6 · ↓2; 1/32 ↓8 · ↓2 · ↓2 → ↓2 · ↓8 · ↓2; 1/48 ↓8 · ↓3 · ↓2 → ↓3 · ↓8 · ↓2 (22 rows). Within the 44.1 family, 8/1 ↑2 · ↑2 · ↑2 → ↑3 · 8/3, 16/1 ↑2 · ↑2 · ↑2 · ↑2 → ↑2 · ↑8 and 1/8 ↓2 · ↓2 · ↓2 → 3/8 · ↓3 (5 rows). Cross-family, eight rows: 192 → 22.05 (↓2 · ↓2 → ↓3 · 3/4 ahead of `bridge`), 384 → 11.025 (↓8 → ↓2 · ↓2 · ↓2), 384 → 22.05 (↓6 · 3/4 → ↓8), 384 → 44.1 (↓2 · ↓2 · ↓2 → ↓3 · 3/4 · ↓2), 11.025 → 384 (↑8 → ↑2 · ↑2 · ↑2 after `bridge`), 22.05 → 192 (↑2 · ↑2 → 4/3 · ↑3), 22.05 → 384 (4/3 · ↑6 → ↑8), 44.1 → 384 (↑2 · ↑2 · ↑2 → ↑2 · 4/3 · ↑3). The cause is 2.1's: a relaxed half-band saturates at m = 7 while a relaxed third-band stage is m = 5. The rules were not changed; a maintainer who prefers integer-factor chains at a few per cent adds a tie-break to `best_chain` and regenerates |
 | S2 | The exact-zero contract breaks under an accelerated kernel or a future compensated design (`design_prototype_compensated` convolves with a rect, `kaiser.h:200-216`, which fills the zeros) | The property test is in DspTap and runs on every leg; the compensated variant is explicitly outside R4 (an L-th-band design with k·fs zeros is a different filter and would be its own documented decision) |
 | S3 | Chain latency at low rates (1–2.5 ms at 8–11 kHz, 3.3) surprises a consumer expecting `bridge`'s 0.4–0.8 ms | Latency is a pinned number per pair (R7) and printed by the notebook; the minimum-phase lever stays deferred as `bridge`'s is, pulled by a latency need |
 | S4 | The dipping cross rows (3.1) are used as if they were cheap | Mitigated (decision 3, R14): the matrix carries MACs per output for every row and flags ⚑ the 38 rows whose `bridge` stage runs at ≥ 2× the output rate, "covered, not recommended"; the README and the notebook carry the same flag |

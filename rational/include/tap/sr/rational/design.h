@@ -7,14 +7,82 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <span>
 #include <stdexcept>
 #include <vector>
 
+#include "tap/dsp/chain.h"
 #include "tap/dsp/kaiser.h"
 #include "tap/dsp/nyquist.h"
 #include "tap/sr/rational/ratio.h"
 
 namespace tap::sr::rational {
+
+    /// The pinned taps per branch of a named profile at one design divisor
+    /// (profile::relaxed): m for the bands 2, 3, 4, 6, 8 of a stage whose
+    /// passband is the profile's over `divisor` times its own lower rate.
+    struct relaxed_pins {
+        tap::dsp::exact_ratio      divisor;
+        std::array<std::size_t, 5> taps_per_branch;
+    };
+
+    // ANCHOR: rational_relaxations
+    /// The relaxation tables (tools/coverage/matrix.py `pins`, 2026-10-02;
+    /// verified against the shipping designer by test_design.cpp): for each
+    /// named profile, the pinned m per band at every design divisor a chain
+    /// of the coverage matrix uses (PLAN.md 3.1). The 1/1 row is the M2
+    /// table; a divisor above 1 relaxes the passband (a stage further up a
+    /// chain, exact 2^a 3^b within a family); 147/160 is the one stage that
+    /// runs below a 48-family r_min, at bridge's rate, tightened.
+    inline constexpr std::array<relaxed_pins, 10> k_super_economy_relaxations = {{
+        {{147, 160}, {11, 10, 10, 10, 10}},
+        {{1, 1}, {9, 8, 8, 8, 8}},
+        {{2, 1}, {7, 5, 5, 5, 5}},
+        {{3, 1}, {7, 5, 5, 5, 5}},
+        {{4, 1}, {7, 5, 5, 5, 5}},
+        {{6, 1}, {4, 4, 4, 4, 4}},
+        {{8, 1}, {4, 4, 4, 4, 4}},
+        {{9, 1}, {3, 4, 4, 4, 4}},
+        {{12, 1}, {3, 3, 3, 4, 4}},
+        {{16, 1}, {3, 3, 3, 4, 4}},
+    }};
+    inline constexpr std::array<relaxed_pins, 10> k_economy_relaxations       = {{
+        {{147, 160}, {15, 14, 14, 14, 14}},
+        {{1, 1}, {11, 11, 11, 12, 12}},
+        {{2, 1}, {7, 5, 5, 5, 5}},
+        {{3, 1}, {7, 5, 5, 5, 5}},
+        {{4, 1}, {7, 5, 5, 5, 5}},
+        {{6, 1}, {4, 5, 4, 4, 4}},
+        {{8, 1}, {4, 4, 4, 4, 4}},
+        {{9, 1}, {4, 4, 4, 4, 4}},
+        {{12, 1}, {3, 3, 3, 4, 4}},
+        {{16, 1}, {3, 3, 3, 4, 4}},
+    }};
+    inline constexpr std::array<relaxed_pins, 10> k_balanced_relaxations      = {{
+        {{147, 160}, {19, 19, 19, 20, 20}},
+        {{1, 1}, {13, 13, 14, 14, 14}},
+        {{2, 1}, {7, 5, 5, 5, 5}},
+        {{3, 1}, {7, 5, 5, 5, 5}},
+        {{4, 1}, {7, 5, 5, 5, 5}},
+        {{6, 1}, {6, 5, 4, 4, 4}},
+        {{8, 1}, {4, 4, 4, 4, 4}},
+        {{9, 1}, {4, 4, 4, 4, 4}},
+        {{12, 1}, {3, 3, 4, 4, 4}},
+        {{16, 1}, {3, 3, 3, 4, 4}},
+    }};
+    inline constexpr std::array<relaxed_pins, 10> k_transparent_relaxations   = {{
+        {{147, 160}, {45, 46, 46, 46, 46}},
+        {{1, 1}, {31, 25, 25, 25, 25}},
+        {{2, 1}, {10, 8, 13, 13, 13}},
+        {{3, 1}, {9, 8, 11, 11, 12}},
+        {{4, 1}, {9, 8, 8, 7, 10}},
+        {{6, 1}, {9, 8, 7, 7, 10}},
+        {{8, 1}, {9, 7, 7, 7, 10}},
+        {{9, 1}, {8, 7, 7, 7, 10}},
+        {{12, 1}, {8, 7, 7, 7, 10}},
+        {{16, 1}, {7, 7, 7, 7, 7}},
+    }};
+    // ANCHOR_END: rational_relaxations
 
     // ANCHOR: rational_profile
     /// Quality profile: bridge's four names (R5), as (stopband attenuation A
@@ -54,25 +122,66 @@ namespace tap::sr::rational {
     /// -121.1 .. -121.7 dB at transparent, passband ripple <= 0.0025 dB and
     /// <= 0.00001 dB (PLAN.md 2.3's candidates are 0.01 / 0.0001). A custom
     /// profile leaves its pins at 0 and design_stage searches instead.
+    ///
+    /// In a chain the profile is the CHAIN's: f_pass = p * r_min with r_min
+    /// the chain's lowest rate, so a stage whose lower rate is r is designed
+    /// at the fraction p * r_min / r of its own rate (PLAN.md 3.1, the
+    /// stages further up a chain are shorter). relaxed(d) is that stage's
+    /// profile: the passband over d, with the named profiles' pins at the
+    /// divisors the coverage matrix uses (the relaxation tables above; a
+    /// divisor without a row, or a custom profile, is searched).
     struct profile {
         double passband_frac     = 3.0 / 8.0; ///< f_pass / r_min, in (0, 1/2)
         double stopband_atten_db = 70.0;      ///< stopband target, dB
         /// Pinned taps per branch for the bands 2, 3, 4, 6, 8 (0: search).
         std::array<std::size_t, 5> taps_per_branch = {11, 11, 11, 12, 12};
+        /// The pins at the other design divisors (relaxed()); empty for a
+        /// custom profile.
+        std::span<const relaxed_pins> relaxations = k_economy_relaxations;
 
         /// The speed-first default: 70 dB, 3/8 of the lowest rate (18 kHz at 48).
         static constexpr profile economy() noexcept { return {}; }
         /// Voice/comms tier: 70 dB, 1/3 (16 kHz at 48). Never a default.
         static constexpr profile super_economy() noexcept {
-            return {.passband_frac = 1.0 / 3.0, .stopband_atten_db = 70.0, .taps_per_branch = {9, 8, 8, 8, 8}};
+            return {.passband_frac     = 1.0 / 3.0,
+                    .stopband_atten_db = 70.0,
+                    .taps_per_branch   = {9, 8, 8, 8, 8},
+                    .relaxations       = k_super_economy_relaxations};
         }
         /// 70 dB, flat to 19/48 (19 kHz at 48).
         static constexpr profile balanced() noexcept {
-            return {.passband_frac = 19.0 / 48.0, .stopband_atten_db = 70.0, .taps_per_branch = {13, 13, 14, 14, 14}};
+            return {.passband_frac     = 19.0 / 48.0,
+                    .stopband_atten_db = 70.0,
+                    .taps_per_branch   = {13, 13, 14, 14, 14},
+                    .relaxations       = k_balanced_relaxations};
         }
         /// Pristine tier: 120 dB, 5/12 (20 kHz at 48).
         static constexpr profile transparent() noexcept {
-            return {.passband_frac = 5.0 / 12.0, .stopband_atten_db = 120.0, .taps_per_branch = {31, 25, 25, 25, 25}};
+            return {.passband_frac     = 5.0 / 12.0,
+                    .stopband_atten_db = 120.0,
+                    .taps_per_branch   = {31, 25, 25, 25, 25},
+                    .relaxations       = k_transparent_relaxations};
+        }
+
+        /// This profile for a stage whose lower rate is `divisor` times the
+        /// chain's lowest rate: the passband fraction over the divisor, the
+        /// pins from the relaxation table's row for it (all 0, a search, when
+        /// there is none), no further relaxations. relaxed(1) is this profile.
+        constexpr profile relaxed(tap::dsp::exact_ratio divisor) const noexcept {
+            if (divisor == tap::dsp::exact_ratio{1, 1}) {
+                return *this;
+            }
+            profile r;
+            r.passband_frac     = passband_frac * static_cast<double>(divisor.den) / static_cast<double>(divisor.num);
+            r.stopband_atten_db = stopband_atten_db;
+            r.taps_per_branch   = {0, 0, 0, 0, 0};
+            r.relaxations       = {};
+            for (const auto& row : relaxations) {
+                if (row.divisor == divisor) {
+                    r.taps_per_branch = row.taps_per_branch;
+                }
+            }
+            return r;
         }
 
         /// The passband edge in Hz for a chain whose lowest rate is r_min.
