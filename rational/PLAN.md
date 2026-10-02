@@ -906,19 +906,27 @@ plugin, `bench/baselines.json`; the README carries the full table):
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
 | `down2_float_eco` | 366,459,700 | 24,577,869 | 72,734,422 |
-| `down2_q15_eco` | 47,494,712 | 25,070,113 | 18,554,089 |
+| `down2_q15_eco` | 47,494,712 | 19,806,582 | 18,554,089 |
 | `up2_float_eco` | 732,658,864 | 43,442,565 | 137,930,738 |
-| `up2_q15_eco` | 67,354,778 | 47,493,112 | 28,133,275 |
+| `up2_q15_eco` | 67,354,778 | 34,150,590 | 28,133,275 |
 | `up3_float_eco` | 1,407,620,075 | 75,330,937 | 254,903,952 |
-| `up3_q15_eco` | 92,695,694 | 74,874,023 | 39,793,932 |
-| `construct_q15_eco` | 774,741 | 33,682 | 183,854 |
+| `up3_q15_eco` | 92,695,694 | 51,156,121 | 39,793,932 |
+| `construct_q15_eco` | 774,741 | 33,098 | 183,854 |
 
-One finding, recorded for the codegen levers: on the M55, Q15 is not yet
-faster than float (↓2 25.07 M against 24.58 M, ↑2 47.49 M against
-43.44 M), where on the M33 it executes 7.7–15× fewer instructions and on Hexagon
-3.9–6.4× fewer (the ↓2, ↑2 and ↑3 pairs).
-The Q15 dot is the generic scalar kernel; an MVE dual-MAC Q15 kernel is a
-lever after M6, with the sparse rows and the symmetry-halved table, each
+One finding, recorded for the codegen levers, and the first lever it
+pulled: at M6, Q15 on the M55 was no faster than float (↓2 25.07 M against
+24.58 M, ↑2 47.49 M against 43.44 M), where on the M33 it executes 7.7–15×
+fewer instructions and on Hexagon 3.9–6.4× fewer (the ↓2, ↑2 and ↑3
+pairs). The cause was the substrate's Q15 dot: arm-none-eabi-gcc 13 left it
+one scalar SMLALBB per tap on Helium. DspTap's Helium Q15 kernel
+(tap/DspTap#53: eight lanes per VMLALDAVA, bit-exact) took the M55 Q15 rows
+above to the counts shown — ↓2 −21 %, ↑2 −28 %, ↑3 −32 %, the by-4 chain
+−48 % — with every output bit, every float and Q31 count and every M33 and
+Hexagon count unchanged (bridge's Q15 workloads fell 55–62 % and async's
+Q15 pipelines 21–42 % on the same pin). Q15 is now 19 % (↓2) to 32 % (↑3)
+under float on the M55; what remains per output is the stage's own
+bookkeeping around the dot. The sparse rows, the symmetry-halved table and
+the Q15 decimators' per-branch quantization are the levers still open, each
 measured against these baselines.
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin

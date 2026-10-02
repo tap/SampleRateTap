@@ -26,13 +26,13 @@
   "m55": {
     "down_float_eco": 73794800,
     "down_float_tr": 214977684,
-    "down_q15_eco": 57208782,
-    "down_q15_se": 46983269,
+    "down_q15_eco": 22404812,
+    "down_q15_se": 17749381,
     "down_q31_eco": 96697327,
     "up_float_eco": 55451902,
     "up_float_tr": 126303581,
-    "up_q15_eco": 44556679,
-    "up_q15_se": 39050794,
+    "up_q15_eco": 19095905,
+    "up_q15_se": 17493186,
     "up_q31_eco": 72647042
   }
 }
