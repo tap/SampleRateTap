@@ -159,8 +159,9 @@ of sentence you only think to write after watching Part IV's 32-bit ports
 in action.
 
 **`tap_sr_async_version()` is a probe.** It returns the family version
-bit-packed, `(major << 16) | (minor << 8) | patch` — `0x000400` (1024) for
-0.4.0, the value `tap_sr_bridge_version()` returns as well. A version
+bit-packed, `(major << 16) | (minor << 8) | patch` — `0x000500` (1280) for
+0.5.0, the value `tap_sr_bridge_version()` and `tap_sr_rational_version()`
+return as well. A version
 *macro* would vanish into the caller's compile; a version *function*
 reports what the loaded shared library actually is, which is the question
 an FFI user is really asking when their symbols don't match their
@@ -302,7 +303,7 @@ cmake --build build --target tap_sr_async_capi -j
 # from this file (the impl() helpers are invisible, as promised):
 nm -D --defined-only build/async/capi/libtap_sr_async_capi.so | grep tap_sr_async_
 
-# The one-integer smoke test (0.4.0 -> 1024, i.e. 0x000400):
+# The one-integer smoke test (0.5.0 -> 1280, i.e. 0x000500):
 python3 -c "import ctypes; \
   print(ctypes.CDLL('build/async/capi/libtap_sr_async_capi.so').tap_sr_async_version())"
 

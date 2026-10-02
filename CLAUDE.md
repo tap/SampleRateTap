@@ -8,10 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 over one substrate. `async/` (`tap::sr::async`) is the asynchronous near-unity converter that
 *absorbs the clock*; `bridge/` (`tap::sr::bridge`) is the synchronous 44.1 ↔ 48 kHz converter that
 *converts the number*; `rational/` (`tap::sr::rational`) is the synchronous small-factor L/M
-converter within a rate family (L, M ∈ {2^a·3^b}), chains of Nyquist stages, at M5 of its plan
-(ratio types, pinned designs, the single stages, the named chains, the 182-row coverage matrix and
-the fixed-point profiles measured per stage; the C ABI follows). All build on DspTap (`submodules/dsptap`,
-`tap::dsp`), pinned once at the root. Each engine has its own `README.md`, `PLAN.md` and `CLAUDE.md`;
+converter within a rate family (L, M ∈ {2^a·3^b}), chains of Nyquist stages, at M6 of its plan
+(ratio types, pinned designs, the single stages, the named chains, the 182-row coverage matrix, the
+fixed-point profiles measured per stage, the C ABI, the executed matrix notebook and the ratchet).
+All build on DspTap (`submodules/dsptap`, `tap::dsp`), pinned once at the root. Each engine has its own `README.md`, `PLAN.md` and `CLAUDE.md`;
 read the engine's before touching its code.
 
 **`PLAN.md` is the family plan**: the charters and the coverage rule (section 2), the settled
@@ -42,10 +42,10 @@ made this tree (sections 5–6). Do not re-derive what it settles.
 - **Substrate discipline.** Shared code (design math, sample traits, kernels, quantization,
   measurement instruments) lands in DspTap first; this tree bumps the submodule pin. Never fork
   substrate code into an engine.
-- **One version (D13).** `TAP_SR_VERSION_*` is 0.4.0, defined token-identically in each umbrella
+- **One version (D13).** `TAP_SR_VERSION_*` is 0.5.0, defined token-identically in each umbrella
   header (checked by `tests/family/version_macros.cpp`) and returned bit-packed by each C ABI's
   `tap_sr_<engine>_version()` (pinned by `CApi.VersionIsBitPacked`). Tags are `vX.Y.Z`; bump all
-  three headers and the root `project()` together (0.5.0 at `rational`'s M6).
+  three headers and the root `project()` together (0.5.0 came with `rational`'s M6).
 - **Clean renames, no aliases (D7).** Retired options fail the configure
   (`cmake/retired_options.cmake`); retired override macros hit an `#error`. Do not add aliases.
 
@@ -67,12 +67,12 @@ over statistical sampling, and measured numbers stated with their provenance.
 
 **Embedded legs.** CI runs every engine's battery on Cortex-M33 and M55 under `qemu-system-arm`
 (`cmake/arm-cortex-*.cmake`, one-shot `bare_metal_main.cpp` per engine) and on Hexagon under
-`qemu-hexagon`, and the instruction-count ratchet gates every workload of async and bridge
-(`rational`'s arrive at its M6) two-sided at
-±3 % (`scripts/icount.py --engine async|bridge --target m33|m55|hexagon`, baselines in
+`qemu-hexagon`, and the instruction-count ratchet gates every workload of every engine two-sided
+at ±3 % (`scripts/icount.py --engine async|bridge|rational --target m33|m55|hexagon`, baselines in
 `<engine>/bench/baselines.json`). A change that moves a count beyond tolerance re-records the
 baseline in the same PR; an improvement beyond tolerance fails too, by design. Guest markers
-(`SRT_ICOUNT_DONE`, `RATIO_ICOUNT_DONE`) are part of the counted binaries and never change.
+(`SRT_ICOUNT_DONE`, `RATIO_ICOUNT_DONE`, `RATIONAL_ICOUNT_DONE`) are part of the counted binaries
+and never change.
 
 ## Style
 
@@ -98,5 +98,6 @@ migration's gates and their run record are in `PLAN.md` sections 5–6 and `docs
 DspTap changes land in DspTap first, then this tree bumps `submodules/dsptap`. The book
 (`book/`, https://tap.github.io/SampleRateTap/) is published from `main` by `book-pages`; the
 notebooks are committed executed against the shipping C++ through each engine's C ABI and
-binding (`async/notebooks/`, `bridge/notebooks/tap_sr_bridge_py.py`) — re-execute them when the
+binding (`async/notebooks/`, `bridge/notebooks/tap_sr_bridge_py.py`,
+`rational/notebooks/tap_sr_rational_py.py`) — re-execute them when the
 behaviour they measure changes.

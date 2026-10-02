@@ -14,7 +14,7 @@ substrate ([DspTap](https://github.com/tap/DspTap): the L-th-band designer
 and the stage composition landed there first, with the float/Q15/Q31
 sample-format traits, the dot kernels and the row-sum quantization).
 
-> **Status: M5 of [PLAN.md](PLAN.md) section 6.** The single stages ship
+> **Status: M6 of [PLAN.md](PLAN.md) section 6, the plan complete.** The single stages ship
 > for every ratio of the vocabulary — ↑2, ↓2, ↑3, ↓3, ↑6, ↓6, ↑8, ↓8 and the
 > mixed 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 — as `converter<ratio<L, M>>` (float,
 > the golden model pinned sample-for-sample against committed scipy
@@ -34,7 +34,8 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > bit-pinned tables, saturation without wrap, Q31 within 3.4e−9 of double;
 > Q15 is format-limited, and its numbers are stated per stage — at Q15 use
 > `economy`, and note that a Q15 decimator by 6 or 8 attains −65 / −63 dB
-> of stopband, not 70. The C ABI and the ratchet baselines (M6) follow. The
+> of stopband, not 70. The C ABI, the executed coverage-matrix notebook and
+> the instruction-count ratchet landed at M6 (below). The
 > plan is authoritative: charter, the decisions R1–R16, the generated
 > matrix, layout, test strategy, non-goals and risks.
 
@@ -92,7 +93,7 @@ message). `pull(out, n, pop_fn)` is the callback-driven shape and
   relaxation tables of `design.h`); `chain<R...>` / `chain_q15` /
   `chain_q31`; `macs_per_output()` exact; and the 20 named multi-stage
   chains of the coverage matrix (`up_2_up_2<S>` … `down_3_down_8_down_2<S>`).
-- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.4.0; 0.5.0 at M6);
+- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.5.0, from M6);
   the named ratios of the vocabulary (`up_2` … `ratio_3_8`) are `ratio.h`'s.
 
 ## The boundaries are identity, not policy
@@ -124,6 +125,63 @@ This engine lives in `rational/` of the SampleRateTap family repository; the
 root build configures every engine and the `rational` label selects this
 one's tests, including the family's dependency-rule checks for it and the
 compile-fail charter test. `cmake -S SampleRateTap/rational` configures it on
-its own. The design-spike notebook is committed executed; re-run it with
-`jupyter nbconvert --to notebook --execute --inplace notebooks/design_spike.ipynb`
-in the root `requirements.lock` environment when the design changes.
+its own. The notebooks are committed executed; re-run them with
+`jupyter nbconvert --to notebook --execute --inplace notebooks/<name>.ipynb`
+in the root `requirements.lock` environment when what they measure changes:
+`design_spike.ipynb` (the M2 pins, an independent numpy leg) and
+`matrix.ipynb` (the coverage matrix through the C ABIs, below).
+
+### C ABI
+
+`capi/tap_sr_rational_capi.h` (`-DTAP_SR_BUILD_CAPI=ON`, or
+`cmake -S rational/capi -B build_capi` on its own) exposes the float chains
+to FFI consumers: `tap_sr_rational_create(chain, profile, channels)` takes
+one of the 28 named within-family chains of the coverage matrix as a
+constant (`TAP_SR_RATIONAL_UP_2` … `TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2`),
+never a rate; `tap_sr_rational_create_stage(L, M, profile, divisor_num,
+divisor_den, channels)` is one stage of the vocabulary at a stated design
+divisor, what a chain through `bridge` composes. Each converter reports its
+exact accounting, its latency and its MACs per output as exact rationals,
+per-stage design lengths, and the bit-packed family version
+(`tap_sr_rational_version()`). `notebooks/tap_sr_rational_py.py` is the
+ctypes binding the notebook measures the shipping C++ through.
+
+### Embedded targets and the instruction-count ratchet
+
+Every push runs this engine's emulation-sized battery on **Cortex-M33**
+(QEMU mps2-an505), **Cortex-M55** (mps3-an547) and **Hexagon**
+(qemu-hexagon, static musl), and gates twelve fixed workloads — the by-2
+and by-3 stages both ways in float and Q15 at `economy`, the Q15 by-4
+chain, the by-2 pair in float at `transparent`, and construction alone —
+against committed per-target instruction counts (`bench/baselines.json`,
+two-sided ±3 %), measured by the family's shared harness from the
+repository root:
+
+```sh
+cmake -B build-m55 -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
+      -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
+      -DTAP_SR_BUILD_ICOUNT_BENCH=ON
+cmake --build build-m55 -j
+python3 scripts/icount.py --engine rational --target m55 --build-dir build-m55 \
+      --plugin libinsncount.so
+```
+
+<!-- ICOUNT:BEGIN -->
+Executed instructions per fixed workload (`rational/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `rational/bench/baselines.json`:
+
+| Workload | Cortex-M33 | Cortex-M55 | Hexagon |
+|---|---:|---:|---:|
+| `construct_q15_eco` | 774,741 | 33,682 | 183,854 |
+| `down2_down2_q15_eco` | 62,508,360 | 54,506,280 | 22,251,668 |
+| `down2_float_eco` | 366,459,700 | 24,577,869 | 72,734,422 |
+| `down2_float_tr` | 955,278,690 | 47,997,517 | 174,664,319 |
+| `down2_q15_eco` | 47,494,712 | 25,070,113 | 18,554,089 |
+| `down3_float_eco` | 476,573,580 | 31,908,454 | 90,345,997 |
+| `down3_q15_eco` | 51,977,458 | 28,017,447 | 19,350,211 |
+| `up2_float_eco` | 732,658,864 | 43,442,565 | 137,930,738 |
+| `up2_float_tr` | 1,961,674,119 | 89,901,988 | 340,655,706 |
+| `up2_q15_eco` | 67,354,778 | 47,493,112 | 28,133,275 |
+| `up3_float_eco` | 1,407,620,075 | 75,330,937 | 254,903,952 |
+| `up3_q15_eco` | 92,695,694 | 74,874,023 | 39,793,932 |
+<!-- ICOUNT:END -->

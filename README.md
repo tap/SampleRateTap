@@ -13,7 +13,7 @@ quantization, measurement instruments).
 |---|---|---|---|
 | **`async`** | `tap::sr::async` | Asynchronous, near-unity (±`max_deviation_ppm`, default 1000 ppm): two clock domains at nominally the same rate, one thread pushing at the input clock and one pulling at the output clock. **Absorbs the clock.** | [`async/`](async/README.md) |
 | **`bridge`** | `tap::sr::bridge` | Synchronous 44.1 ↔ 48 kHz (160/147 up, 147/160 down) and the pair at 2× and 4× (88.2 ↔ 96, 176.4 ↔ 192), direction and rate scale fixed at compile time, speed-first with Q15/Q31 profiles for M33/M55-class targets. **Converts the number.** | [`bridge/`](bridge/README.md) |
-| **`rational`** | `tap::sr::rational` | Synchronous small-factor L/M *within* a rate family (L, M ∈ {2^a·3^b}: ↑2, ↓3, 2/3, …), as chains of Nyquist (L-th-band) stages, the ratio a compile-time type. **Converts the number.** M1–M5 landed (ratio types, pinned designs, the single stages for every ratio of the vocabulary, the named chains and the 182-row coverage matrix generated from the measured lengths, the fixed-point profiles measured per stage); the C ABI follows its plan. | [`rational/`](rational/README.md) |
+| **`rational`** | `tap::sr::rational` | Synchronous small-factor L/M *within* a rate family (L, M ∈ {2^a·3^b}: ↑2, ↓3, 2/3, …), as chains of Nyquist (L-th-band) stages, the ratio a compile-time type. **Converts the number.** M1–M6 landed (ratio types, pinned designs, the single stages for every ratio of the vocabulary, the named chains and the 182-row coverage matrix generated from the measured lengths, the fixed-point profiles measured per stage, the C ABI, the executed matrix notebook and the instruction-count ratchet): its plan is complete. | [`rational/`](rational/README.md) |
 
 The engines never route by rate. The caller declares the clock topology by
 choosing a type: `async` when the clocks are independent, `bridge` when the
@@ -49,8 +49,8 @@ tests, by ctest label. The family options are `TAP_SR_*`:
 |---|---|---|
 | `TAP_SR_BUILD_TESTS` | ON | the engines' tests and the family's own (`tests/`) |
 | `TAP_SR_BUILD_EXAMPLES` | ON | the engines' examples |
-| `TAP_SR_BUILD_CAPI` | OFF | the engines' C ABI shared libraries (`libtap_sr_async_capi`, `libtap_sr_bridge_capi`; `rational`'s at its M6) |
-| `TAP_SR_BUILD_ICOUNT_BENCH` | OFF | the engines' instruction-count ratchet workloads (`rational`'s at its M6) |
+| `TAP_SR_BUILD_CAPI` | OFF | the engines' C ABI shared libraries (`libtap_sr_async_capi`, `libtap_sr_bridge_capi`, `libtap_sr_rational_capi`) |
+| `TAP_SR_BUILD_ICOUNT_BENCH` | OFF | every engine's instruction-count ratchet workloads |
 | `TAP_SR_BUILD_BENCHMARKS`, `TAP_SR_BUILD_COMPARE_BENCH`, `TAP_SR_BUILD_COMPARE_SHIM` | OFF | the async engine's host-only benchmarks and comparison tooling |
 | `TAP_SR_ASYNC_WERROR`, `TAP_SR_BRIDGE_WERROR`, `TAP_SR_RATIONAL_WERROR` | OFF | warnings as errors, per engine |
 
@@ -58,9 +58,11 @@ A retired pre-family option (`SRT_*`, `TAP_RATIO_*`) fails the configure
 loudly (`cmake/retired_options.cmake`) rather than dropping a gate silently.
 
 **Version.** One family version, `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}`
-(0.4.0), defined identically in each engine's umbrella header and returned
-bit-packed — `(major << 16) | (minor << 8) | patch` — by each C ABI's
-`tap_sr_async_version()` / `tap_sr_bridge_version()`. Tags are `vX.Y.Z`.
+(0.5.0, the minor bump the third engine's C ABI brought), defined
+identically in each engine's umbrella header and returned bit-packed —
+`(major << 16) | (minor << 8) | patch` — by each C ABI's
+`tap_sr_async_version()` / `tap_sr_bridge_version()` /
+`tap_sr_rational_version()`. Tags are `vX.Y.Z`.
 
 ## Build and test
 

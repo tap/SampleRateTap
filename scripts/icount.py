@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 # Copyright 2026 Timothy Place and the SampleRateTap contributors
-"""Deterministic instruction-count ratchet for both engines.
+"""Deterministic instruction-count ratchet for every engine.
 
 Runs every workload binary of one engine in a build directory under QEMU
 with the instruction-counting plugin (tools/qemu_insn_plugin), then
@@ -9,7 +9,7 @@ compares against that engine's committed baselines
 (async/docs/PERFORMANCE.md, bridge/PLAN.md section 7).
 
   icount.py --target {hexagon,m55,m33} --build-dir DIR --plugin LIB
-            [--engine {async,bridge}] [--baselines FILE] [--tolerance 0.03]
+            [--engine {async,bridge,rational}] [--baselines FILE] [--tolerance 0.03]
             [--exact] [--update] [--json-out FILE] [--compare-json FILE]
 
 --engine (default async) selects the workload binaries, the guest's
@@ -43,11 +43,12 @@ import sys
 
 # Per engine: the workload binary prefix and the completion marker the
 # guest prints. The guest markers are kept byte-identical to the two
-# repositories' originals on purpose: they are part of what the counted
-# binaries execute.
+# repositories' originals on purpose (rational's from its first baseline):
+# they are part of what the counted binaries execute.
 ENGINES = {
     "async": {"prefix": "tap_sr_async_icount_", "done": "SRT_ICOUNT_DONE"},
     "bridge": {"prefix": "tap_sr_bridge_icount_", "done": "RATIO_ICOUNT_DONE"},
+    "rational": {"prefix": "tap_sr_rational_icount_", "done": "RATIONAL_ICOUNT_DONE"},
 }
 # Printed by the host-side plugin; never affects the guest's count.
 COUNT_MARKER = "TAP_SR_INSN_COUNT"

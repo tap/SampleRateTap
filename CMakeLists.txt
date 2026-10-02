@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.24)
 # composes them over one tap::dsp, declares the family options (D9) and the
 # umbrella target, and adds the family's own tests (the dependency rule of
 # PLAN.md 4.2).
-project(SampleRateTap VERSION 0.4.0 LANGUAGES CXX)
+project(SampleRateTap VERSION 0.5.0 LANGUAGES CXX)
 enable_testing()
 
 include(cmake/retired_options.cmake)
@@ -19,8 +19,8 @@ include(cmake/retired_options.cmake)
 # calls find the cache entry set.
 option(TAP_SR_BUILD_TESTS "Build the engines' tests and the family's own" ON)
 option(TAP_SR_BUILD_EXAMPLES "Build the engines' examples" ON)
-option(TAP_SR_BUILD_CAPI "Build both engines' C ABI shared libraries" OFF)
-option(TAP_SR_BUILD_ICOUNT_BENCH "Build both engines' instruction-count ratchet workloads" OFF)
+option(TAP_SR_BUILD_CAPI "Build every engine's C ABI shared library" OFF)
+option(TAP_SR_BUILD_ICOUNT_BENCH "Build every engine's instruction-count ratchet workloads" OFF)
 option(TAP_SR_BUILD_BENCHMARKS "Build the async engine's benchmarks (host-only)" OFF)
 option(TAP_SR_BUILD_COMPARE_BENCH "Build the async engine's resampler comparison benchmarks (host-only)" OFF)
 option(TAP_SR_BUILD_COMPARE_SHIM "Build the async engine's r8brain shim for its comparison notebook" OFF)

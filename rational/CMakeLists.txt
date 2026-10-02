@@ -36,6 +36,14 @@ else()
     option(TAP_SR_BUILD_TESTS "Build the rational engine's tests" OFF)
 endif()
 
+# C ABI shared library for FFI consumers (the notebooks drive the shipping
+# C++ through it — notebooks/matrix.ipynb).
+option(TAP_SR_BUILD_CAPI "Build the C ABI shared library" OFF)
+
+# Fixed deterministic workloads for the QEMU instruction-count ratchet;
+# buildable for any target including bare metal (PLAN.md section 5).
+option(TAP_SR_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF)
+
 # Warning flags for this engine's own tests; never exported to consumers of
 # the INTERFACE library.
 option(TAP_SR_RATIONAL_WERROR "Treat warnings as errors in the rational engine's own targets" OFF)
@@ -65,4 +73,12 @@ endif()
 if(TAP_SR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(TAP_SR_BUILD_CAPI)
+    add_subdirectory(capi)
+endif()
+
+if(TAP_SR_BUILD_ICOUNT_BENCH)
+    add_subdirectory(bench/icount)
 endif()

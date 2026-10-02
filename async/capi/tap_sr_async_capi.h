@@ -34,7 +34,8 @@ typedef struct tap_sr_async_converter tap_sr_async_converter;
 
 /* ABI/version probe: the family version, bit-packed as
  * (TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH
- * (0x000400 for 0.4.0); tap_sr_bridge_version returns the same value. */
+ * (0x000500 for 0.5.0); tap_sr_bridge_version and tap_sr_rational_version
+ * return the same value. */
 unsigned tap_sr_async_version(void);
 
 /* preset: 0 = fast, 1 = balanced, 2 = transparent.
