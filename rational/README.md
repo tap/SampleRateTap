@@ -14,7 +14,7 @@ substrate ([DspTap](https://github.com/tap/DspTap): the L-th-band designer
 and the stage composition landed there first, with the float/Q15/Q31
 sample-format traits, the dot kernels and the row-sum quantization).
 
-> **Status: M4 of [PLAN.md](PLAN.md) section 6.** The single stages ship
+> **Status: M5 of [PLAN.md](PLAN.md) section 6.** The single stages ship
 > for every ratio of the vocabulary — ↑2, ↓2, ↑3, ↓3, ↑6, ↓6, ↑8, ↓8 and the
 > mixed 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 — as `converter<ratio<L, M>>` (float,
 > the golden model pinned sample-for-sample against committed scipy
@@ -23,20 +23,20 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > `flush`, `reset`, the latency as an exact rational. Each stage is one
 > L-th-band filter at the pinned length of the M2 design spike
 > ([`notebooks/design_spike.ipynb`](notebooks/design_spike.ipynb)); its
-> structural zeros are never multiplied, so the half-band decimator costs
-> 23 MACs per output of its 43 taps and an interpolator's centre phase is a
-> copy. The chains ship too (`chain.h`): `basic_chain<S, R...>` runs stages
-> in sequence with each stage designed at its own rate — the plan's design
-> divisor, with pinned lengths per divisor — and the 20 named multi-stage
-> chains of the coverage matrix (`up_2_up_2`, `down_3_down_8_down_2`, …),
-> and the 14 × 14 matrix of PLAN.md section 3 — one chain for every ordered
-> pair of the family's fourteen rates, the cross-family rows through
-> `bridge` — is generated from the pinned lengths and pinned row by row by
-> `tests/test_matrix.cpp` (MACs per output and latency exactly, the
-> passband and the stopband promise by a tone battery). The fixed-point
-> floors (M5), the C ABI and the ratchet baselines (M6) follow. The plan is
-> authoritative: charter, the decisions R1–R16, the generated matrix,
-> layout, test strategy, non-goals and risks.
+> structural zeros are never multiplied by an interpolator or a decimator,
+> so the half-band decimator costs 23 MACs per output of its 43 taps and an
+> interpolator's centre phase is a copy. The chains ship too (`chain.h`):
+> `basic_chain<S, R...>` runs stages in sequence with each stage designed at
+> its own rate, and the 20 named multi-stage chains of the 14 × 14 coverage
+> matrix (PLAN.md section 3), pinned row by row by `tests/test_matrix.cpp`.
+> The fixed-point profiles are measured per stage (`tests/test_fixed_point.cpp`,
+> PLAN.md section 6): exact-unity rows and full-scale DC in Q15 and Q31,
+> bit-pinned tables, saturation without wrap, Q31 within 3.4e−9 of double;
+> Q15 is format-limited, and its numbers are stated per stage — at Q15 use
+> `economy`, and note that a Q15 decimator by 6 or 8 attains −65 / −63 dB
+> of stopband, not 70. The C ABI and the ratchet baselines (M6) follow. The
+> plan is authoritative: charter, the decisions R1–R16, the generated
+> matrix, layout, test strategy, non-goals and risks.
 
 ## Quick start
 

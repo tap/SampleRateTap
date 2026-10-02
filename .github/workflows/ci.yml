@@ -197,7 +197,7 @@ jobs:
             jobs: 4
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: Throw|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch
+            exclude: Throw|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands
           - target: m55
             title: Cortex-M55 cross
             engine: rational

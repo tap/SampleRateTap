@@ -58,7 +58,18 @@
 //     flush() and reset() are noexcept and allocation-free; one stream per
 //     instance, channels planar inside and interleaved at the API, every
 //     channel sharing the coefficient row per frame;
-//   - the stage satisfies tap::dsp::sync_stage, so chains compose it.
+//   - the stage satisfies tap::dsp::sync_stage, so chains compose it;
+//   - fixed point (PLAN.md section 6, M5; pinned by test_fixed_point.cpp):
+//     every row sums to exact unity in the format, so full-scale DC of
+//     either sign comes out at exactly full scale; full-scale drive
+//     saturates in the trait's finalize and never wraps; Q31 tracks double
+//     within 3.4e-9 of full scale; Q15 is format-limited — RMS -85.6 to
+//     -95.8 dBFS from double, and a decimator's quantized table (h / M)
+//     attains about 20 log10 M dB less stopband than an interpolator's
+//     (by 8 at economy: -62.9 dB), stated per stage in PLAN.md;
+//   - MACs: no structural zero enters the dot of an interpolator, a
+//     decimator or a mixed ratio going up; a mixed ratio going down (band
+//     M, rows of stride L) multiplies the band's zeros its rows cross.
 #pragma once
 
 #include <array>

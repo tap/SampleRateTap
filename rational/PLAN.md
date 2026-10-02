@@ -15,6 +15,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.3 | 2026-10-01 | M0 landed (DspTap `nyquist.h` and `chain.h`, tap/DspTap#48); 2.3's half- and third-band counts are measured by the shipped designer, the harris estimates kept beside them |
 | v0.4 | 2026-10-01 | M1 landed: the `rational/` tree, `tap::sr::rational`, `ratio<L, M>` and `ratio_traits` (R1), `profile` and `design_stage<R>` (R5, R4), the family's dependency-rule tests over three engines, the compile-fail charter test; the M2 table's half- and third-band columns are re-measured through the engine's own design |
 | v0.6 | 2026-10-02 | M3 landed: `stage.h` (`basic_stage<S, R>`: the L-phase schedule machine for interpolators and mixed ratios with trimmed phase rows, the M-branch commutator for decimators summing its nonzero branches under one finalize, bridge's call shapes, the exact-rational latency), `converter.h` (the aliases), the committed scipy vectors for every ratio of the vocabulary, the M3 battery; the symmetry-halved table of section 4's layout is deferred to the codegen levers after M6's baselines, as bridge did (M7 lever 3) |
+| v0.8 | 2026-10-02 | M5 landed: the fixed-point profiles measured and pinned for every ratio at every profile (`tests/test_fixed_point.cpp`): exact-unity rows, bit-pinned Q15 / Q31 tables, the structural zeros out of the dot, Q31 a decade under float's floor, Q15's floor and attained stopband stated per stage, saturation without wrap, full-scale DC exact; two honest limits recorded (a Q15 decimator's stopband loses about 20 log10 M; a mixed ratio going down multiplies its band's zeros), section 6 |
 | v0.7 | 2026-10-02 | M4 landed: `chain.h` (`basic_chain<S, R...>` over DspTap's `chain<>`, each stage designed at its **design divisor** — its lower rate over the chain's lowest, 3.1 — and the 20 named multi-stage chains), `tools/coverage/matrix.py` committed and re-run on the pinned lengths with the per-stage relaxation pins (`design.h`'s relaxation tables, verified by `test_design.cpp`), section 3 regenerated from measured counts (35 of 182 rows changed chain, the ledger in section 8 S1), `test_matrix.cpp` over all 182 rows (every row measured, none skipped: 2.2 had landed), DspTap's `chain<>::flush` (tap/DspTap#52) |
 | v0.5 | 2026-10-02 | M2 landed: the design spike (`notebooks/design_spike.ipynb`, executed) pins N for every band ∈ {2, 3, 4, 6, 8} × profile on a 16384-point grid, the mixed ratios' taps per phase, measured worst stopband and ripple; `profile` carries the pins and `test_design.cpp` enforces them; the M2 table below is filled from measurements. Finding: the designer's 1024-point default grid under-pins two rows (tap/DspTap#50 made the search grid a parameter) |
 
@@ -30,9 +31,10 @@ with `bridge` at k > 0 is marked as waiting for it. M0 is
 implemented (v0.3: DspTap's `nyquist.h` and `chain.h`), M1 (v0.4: the
 tree, the ratio types, the profiles and the stage design), M2 (v0.5: the
 pinned lengths per band and profile, measured), M3 (v0.6: the single
-stages, every ratio of the vocabulary, pinned against scipy) and M4 (v0.7:
+stages, every ratio of the vocabulary, pinned against scipy), M4 (v0.7:
 the chains and the matrix, every row of section 3 regenerated from the
-pinned lengths and pinned by `test_matrix.cpp`). The numbers still marked
+pinned lengths and pinned by `test_matrix.cpp`) and M5 (v0.8: the
+fixed-point profiles, measured per stage). The numbers still marked
 *est.* — 2.1's arithmetic and 3.2's worked cases — are Kaiser/harris
 length estimates (`tap::dsp::estimate_taps`, `kaiser.h:77-85`) kept as the
 derivation of the rules; the measured chains and counts are 3.3–3.6, and
@@ -815,7 +817,7 @@ Plus:
 | M2 | **Design spike**: `notebooks/design_spike.ipynb`, executed, pins N per (single-stage ratio ∈ {2, 3, 6, 8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8} × profile; the 4th-band row is measured for the record only, decision 6, and serves 4/3 and 3/4) by the ≥ 1 dB margin criterion on a fine grid, with measured worst stopband and ripple; `test_design.cpp` enforces the pins. **Done** (2026-10-02, v0.5: the notebook is the independent numpy leg from the same published math, `profile::taps_per_branch` carries the pins per band, `design_stage<R>` reads them, a custom profile without pins is searched on the same grid) | The table below filled ✓; every pinned N of the form 2mL − 1 ✓ (mixed: T = ⌈N / L⌉ per phase); measured A ≥ spec + 1 dB on 16384 points ✓ (−71.1 … −72.8 dB at 70 dB, −121.1 … −121.7 dB at 120 dB) with m − 1 missing it ✓; ripple ≤ 2.3's candidate ✓ (≤ 0.0025 / 0.00001 dB); the scipy `upfirdn` end-to-end check of the economy half-band decimator: a tone just past the stopband edge aliases at −72.1 dB, passband tones within 0.001 dB ✓ | no |
 | M3 | **Single stages, float golden leg**: `basic_stage<S, R>` for ↑2 / ↓2 (half-band) and ↑3 / ↓3 (third-band) first, then the rest of the vocabulary; both call shapes; `flush`; scipy vectors committed. **Done** (2026-10-02, v0.6: the whole vocabulary at once, since the two machines are generic — the L-phase schedule machine with trimmed phase rows for interpolators and mixed ratios, the M-branch commutator for decimators, its nonzero branches summed under one finalize through DspTap's `accumulate_row` (tap/DspTap#51, the substrate addition M3 needed); MACs per output are the design's nonzero counts for every interpolator and decimator, the half-band decimator 23 of its 43 taps) | Scipy vectors sample-for-sample ✓ (16 vectors, every ratio at `economy` and the by-2 pair at `transparent`; float within 6e-8 of the float64 reference, the 3e-5 tolerance is bridge's); exhaustive phase sweeps ✓ (the impulse reproduces the table bit for bit from every input phase, every format; accounting exact from every position of every superblock); `PullMatchesProcessBitExact` ✓; chunking invariance ✓ (every format); `decimate.h` second-golden agreement at ↓2 / ↓3 / ↓6 within the documented design difference ✓; latency equals (N − 1)/2 at the higher rate by impulse ✓ (every ratio, the exact rational (N − 1)/(2M) at the output rate); DC gain exactly 1 in every format ✓; flush equals zero padding bit for bit ✓ | no |
 | M4 | **Chains and the coverage matrix**: `chain.h`'s named chains, `tools/coverage/matrix.py` committed, `test_matrix.cpp` pinning (f_pass, A, δ, MACs/out, latency) for all 182 rows. **Done** (2026-10-02, v0.7: `basic_chain<S, R...>` constructs each stage at its design divisor (3.1) over DspTap's `chain<>`, whose `flush` landed for it (tap/DspTap#52); the relaxation tables in `design.h`; the generator re-run on the pinned lengths, section 3 regenerated — 35 rows changed chain, the ledger in S1 — and the 20 named multi-stage chains follow it) | Every row measured and pinned, the k > 0 rows included (2.2 had landed, so nothing was skipped) ✓; chain vectors against sequenced upfirdn ✓ (seven chains, float within 3e-5 and double within 1e-7 of the float64 reference); a chain equals its stages run in sequence bit for bit in every format ✓; `frames_needed` / `outputs_for` exact from every position of every named chain ✓; flush equals zero padding bit for bit ✓; the tone battery's numbers in section 5 | no |
-| M5 | **Fixed-point profiles**: Q15 and Q31 datapaths through the traits; per-branch quantization; bit-pinned tables; cross-precision numbers | Q31 within the format floor of float on the reference noise (`bridge`: 5e−8, `../bridge/PLAN.md` §8); Q15 format-limited numbers stated per stage; exact-unity row sums; wrap safety; the Q15 half-band's zero taps absent from the dot (counted MACs equal the nonzero count) | no |
+| M5 | **Fixed-point profiles**: Q15 and Q31 datapaths through the traits; per-branch quantization; bit-pinned tables; cross-precision numbers. **Done** (2026-10-02, v0.8: the datapaths were M3's — the stage is format-generic over `tap::dsp::sample_traits` — so M5 is the battery that states each format's contract as numbers, `tests/test_fixed_point.cpp`, every ratio at every profile; the measured table and the two limits below) | Q31 within the format floor of float on the reference noise ✓ (worst \|Q31 − double\| 3.4e−9 against float's 5.1e−8, bridge's 5e−8); Q15 format-limited numbers stated per stage ✓ (the table below: RMS −85.6 … −95.8 dBFS, attained stopband per stage); exact-unity row sums ✓ (every phase row, every decimator's whole filter, both formats); wrap safety ✓ (±full-scale noise lands within 8.8e−4 / 1.6e−8 of the clamped double model; full-scale DC of either sign is exactly full scale from every phase); the Q15 half-band's zero taps absent from the dot ✓ (23 MACs of 43 taps at `economy`; no structural zero inside any interpolator's, decimator's or mixed-up stage's dot, Q15 MACs pinned per stage); bit-pinned tables ✓ (FNV-1a-64 per ratio, profile and format, 112 pins) | no |
 | M6 | **C ABI, notebook, icount baselines**: `libtap_sr_rational_capi`, `tap_sr_rational_py.py`, `matrix.ipynb` executed through the C ABIs (bridge's for cross rows), `bench/icount/` with baselines on M33 / M55 / Hexagon, README icount table, `CApi.VersionIsBitPacked` | Notebook measures the shipping C++ and reproduces the pinned matrix numbers; ratchet green two-sided on three targets; `nm -D` symbol set recorded; **family version 0.5.0** (decision 10, R11: all three umbrella headers and the root `project()` bump together, D13) | notebook's k > 0 cells wait |
 
 **The M2 table, measured** (N = 2mB − 1 per band × profile, the worst
@@ -845,8 +847,59 @@ their trimmed rows' lengths over L — a 2/3 stage at `economy` costs 32.5,
 not the 26 the v0.2 arithmetic in 2.1 estimated — and the matrix's figures
 were regenerated from these counts at M4 (v0.7, section 3; risk S1).
 
+**The fixed-point profiles, measured** (M5, `test_fixed_point.cpp`; the
+reference noise, 480 frames at peak 0.9; Q15's attained stopband is the
+quantized Q1.14 table's worst response on the 16384-point design grid;
+Q31's equals the design's within 0.1 dB at every stage and profile, and its
+worst deviation from double is 3.4e−9; Q15 / float MACs are the counted
+MACs per superblock):
+
+| Stage | Q15 stopband eco (dB) | Q15 RMS vs double eco (dBFS) | Q15 / float MACs eco | Q15 stopband tr (dB) | Q15 RMS tr (dBFS) | Q15 / float MACs tr |
+|---|---|---|---|---|---|---|
+| ↑2 | -72.3 | -95.8 | 23 / 23 | -77.3 | -93.4 | 55 / 63 |
+| ↓2 | -71.6 | -92.8 | 23 / 23 | -69.2 | -89.3 | 53 / 63 |
+| ↑3 | -70.2 | -93.5 | 45 / 45 | -76.1 | -91.2 | 89 / 101 |
+| ↓3 | -72.4 | -90.8 | 45 / 45 | -63.8 | -86.4 | 82 / 101 |
+| ↑6 | -71.5 | -92.4 | 121 / 121 | -78.5 | -90.7 | 219 / 251 |
+| ↓6 | -64.7 | -86.5 | 119 / 121 | -62.9 | -85.6 | 193 / 251 |
+| ↑8 | -71.7 | -92.3 | 169 / 169 | -78.2 | -90.2 | 303 / 351 |
+| ↓8 | -62.9 | -86.8 | 165 / 169 | -61.1 | -85.6 | 259 / 351 |
+| 3/2 | -70.2 | -93.4 | 45 / 45 | -76.1 | -91.1 | 89 / 101 |
+| 2/3 | -69.7 | -91.0 | 65 / 65 | -73.9 | -90.6 | 125 / 149 |
+| 4/3 | -71.7 | -93.6 | 67 / 67 | -77.2 | -90.6 | 131 / 151 |
+| 3/4 | -72.8 | -91.0 | 87 / 87 | -75.8 | -89.2 | 167 / 199 |
+| 8/3 | -71.7 | -92.2 | 169 / 169 | -78.2 | -90.4 | 303 / 351 |
+| 3/8 | -71.2 | -87.9 | 189 / 191 | -69.6 | -87.1 | 325 / 399 |
+
+Two limits, stated rather than papered over (both pinned by the battery):
+
+- **A Q15 decimator's stopband is format-limited.** Its table is h / M,
+  the whole filter quantized as one row summing to 2^14 so that DC stays
+  exact, so each coefficient is M times smaller than an interpolator's on
+  the same Q1.14 LSB: the quantization noise floor of the response rises by
+  about 20 log10 M. ↓2 and ↓3 hold 70 dB at `economy`; ↓6 reaches −64.7 dB
+  and ↓8 −62.9 dB. Interpolators and mixed ratios hold within about a dB of
+  70 at the 70 dB tiers. `transparent` buys nothing in Q15 (−61 … −78 dB,
+  and the outer taps of its long designs round to zero and are trimmed:
+  Q15 MACs below float's), so at Q15 `economy` is the pairing, as `bridge`
+  found (`../bridge/tests/test_converter_fixed_point.cpp`). The 70 / 120 dB
+  promises of 2.3 and section 3 are float's and Q31's. A lever exists for
+  the decimators — quantize each branch at unity and fold the 1 / M into a
+  power-of-two finalize where M is one (↓2, ↓8), or a Q1.14 multiply-back
+  where it is not — and is deferred with the codegen levers after M6: it
+  changes the bit-pinned tables and the rounding point, and no consumer has
+  asked.
+- **A mixed ratio going down multiplies its band's structural zeros.** 2/3,
+  3/4 and 3/8 run the L-phase machine over a band-M design: the zeros stride
+  by M, the rows by L, so every row crosses every M-th zero and the trimmed
+  dot still holds them — 20 of 65 MACs per superblock for 2/3 at `economy`,
+  20 of 87 for 3/4, 22 of 191 for 3/8. Interpolators, decimators and the
+  mixed ratios going up (band L, every zero in the centre phase) multiply
+  none. Sparse rows are a codegen lever after M6, as the symmetry-halved
+  table is; the matrix's MAC figures count what runs today.
+
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
-(`../CLAUDE.md`, "Substrate discipline"); M1–M4 are done; the 2.2
+(`../CLAUDE.md`, "Substrate discipline"); M1–M5 are done; the 2.2
 follow-up landed before M4, so nothing waits for it. Every milestone's PR
 carries its measurements, as `bridge`'s M7 entries do.
 

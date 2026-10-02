@@ -1020,8 +1020,12 @@ G13 and G14, plus G9 from 3.7.
   one of the 182 rows measured and pinned, the cross rows through
   `bridge` at every k — landed (`rational/PLAN.md` v0.7; the matrix was
   regenerated from the measured lengths, 35 rows changed chain, the
-  ledger in its section 8). Next: the fixed-point profiles (M5), then the
-  C ABI, notebook and icount baselines with the family version 0.5.0 (M6).
+  ledger in its section 8). M5 — the fixed-point profiles, measured per
+  stage: bit-pinned Q15 / Q31 tables, exact unity, saturation, Q31 within
+  3.4e−9 of double, Q15's floor and attained stopband stated (a Q15
+  decimator by 6 or 8 attains −65 / −63 dB, not 70) — landed
+  (`rational/PLAN.md` v0.8). Next: the C ABI, notebook and icount
+  baselines with the family version 0.5.0 (M6).
 
 ---
 

@@ -19,7 +19,7 @@ anything; do not re-derive what it settles (the compile-time ratio, one Nyquist 
 stage factoring by MACs then by stage count, `bridge` at the lowest k, the profile vocabulary,
 latency as an exact rational).
 
-Current state: **M4** — the tree, `ratio<L, M>` with its charter `static_assert`s and
+Current state: **M5** — the tree, `ratio<L, M>` with its charter `static_assert`s and
 `ratio_traits`, `profile` carrying the pinned taps per branch for every band of the vocabulary
 (the M2 design spike, `notebooks/design_spike.ipynb`, executed; the pins found on a
 16384-point grid and enforced by `tests/test_design.cpp`) and, since M4, the relaxation tables
@@ -32,8 +32,11 @@ the vocabulary with bridge's call shapes, `converter<R>` / `converter_q15<R>` /
 divisor (PLAN.md 3.1), the 20 named multi-stage chains, and the 182-row coverage matrix
 generated from the pinned lengths by `tools/coverage/matrix.py` (section 3 of the plan;
 `tests/coverage/matrix_rows.h`) and pinned row by row by `tests/test_matrix.cpp` (the
-cross-family rows through `tests/support/bridge_stage.h`). M5 (fixed point) and M6 (C ABI,
-notebook, icount baselines; family version 0.5.0) follow in PLAN.md section 6.
+cross-family rows through `tests/support/bridge_stage.h`), and, since M5, the fixed-point
+profiles measured per stage by `tests/test_fixed_point.cpp` (bit-pinned Q15 / Q31 tables, exact
+unity, saturation, the Q15 floors and attained stopbands stated in PLAN.md section 6 — a
+change that moves a table pin is a numeric change to the fixed-point datapath). M6 (C ABI,
+notebook, icount baselines; family version 0.5.0) follows in PLAN.md section 6.
 
 ## The charter constraints (load-bearing)
 
