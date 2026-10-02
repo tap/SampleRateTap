@@ -19,7 +19,7 @@ anything; do not re-derive what it settles (the compile-time ratio, one Nyquist 
 stage factoring by MACs then by stage count, `bridge` at the lowest k, the profile vocabulary,
 latency as an exact rational).
 
-Current state: **M5** — the tree, `ratio<L, M>` with its charter `static_assert`s and
+Current state: **M6**, the plan complete — the tree, `ratio<L, M>` with its charter `static_assert`s and
 `ratio_traits`, `profile` carrying the pinned taps per branch for every band of the vocabulary
 (the M2 design spike, `notebooks/design_spike.ipynb`, executed; the pins found on a
 16384-point grid and enforced by `tests/test_design.cpp`) and, since M4, the relaxation tables
@@ -35,8 +35,13 @@ generated from the pinned lengths by `tools/coverage/matrix.py` (section 3 of th
 cross-family rows through `tests/support/bridge_stage.h`), and, since M5, the fixed-point
 profiles measured per stage by `tests/test_fixed_point.cpp` (bit-pinned Q15 / Q31 tables, exact
 unity, saturation, the Q15 floors and attained stopbands stated in PLAN.md section 6 — a
-change that moves a table pin is a numeric change to the fixed-point datapath). M6 (C ABI,
-notebook, icount baselines; family version 0.5.0) follows in PLAN.md section 6.
+change that moves a table pin is a numeric change to the fixed-point datapath), and, since M6,
+the C ABI (`capi/`: the named chains as stable `TAP_SR_RATIONAL_*` constants, one stage at a
+stated design divisor, exactly sixteen exported symbols; `CApi.*` pins it bit for bit against
+`basic_chain`), the ctypes binding and `notebooks/matrix.ipynb` executed through the C ABIs, and
+the icount ratchet (`bench/icount/`, `bench/baselines.json`, marker `RATIONAL_ICOUNT_DONE`; a
+change that moves a count beyond ±3 % re-records the baselines in the same PR). The codegen
+levers PLAN.md defers after M6 wait for a consumer.
 
 ## The charter constraints (load-bearing)
 
@@ -45,7 +50,7 @@ notebook, icount baselines; family version 0.5.0) follows in PLAN.md section 6.
   writes; absorbing a clock is `async`, by composition. The charter is a `static_assert` on
   `ratio<L, M>`: L and M of the form 2^a · 3^b, lowest terms, L ≠ M. Nothing else compiles.
 - **Never routed to by rate (D12).** `ratio<L, M>` names the number, a chain names the stages;
-  there is no `(in_hz, out_hz)` lookup here or in the C ABI (whose enumerators name chains). The
+  there is no `(in_hz, out_hz)` lookup here or in the C ABI (whose constants name chains). The
   coverage matrix in PLAN.md documents chains; it dispatches nothing.
 - **Speed-first, like `bridge`.** The ratio is a compile-time type, so every trip count and
   schedule is a compile-time fact; the stage factoring is chosen by MACs on the measured lengths

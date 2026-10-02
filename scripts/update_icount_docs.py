@@ -3,7 +3,7 @@
 # Copyright 2026 Timothy Place and the SampleRateTap contributors
 """Regenerate an engine README's instruction-count table from its baselines.
 
-Usage: scripts/update_icount_docs.py [--engine async|bridge]
+Usage: scripts/update_icount_docs.py [--engine async|bridge|rational]
 
 Each engine's table lives between the ICOUNT markers in <engine>/README.md
 and is generated from <engine>/bench/baselines.json. Run from the
@@ -43,7 +43,7 @@ def table(baselines: dict, engine: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--engine", choices=["async", "bridge"], default="async")
+    ap.add_argument("--engine", choices=["async", "bridge", "rational"], default="async")
     args = ap.parse_args()
     readme = pathlib.Path(args.engine) / "README.md"
     baselines = json.loads((pathlib.Path(args.engine) / "bench" / "baselines.json").read_text())

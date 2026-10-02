@@ -519,9 +519,9 @@ jobs:
           echo "$(dirname "$clangxx")" >> "$GITHUB_PATH"
           echo "$HOME/qemu-hexagon-plugins" >> "$GITHUB_PATH"
 
-      # Release (-O2), matching how the baselines were recorded; both engines'
-      # workloads in one tree, tests and examples off.
-      - name: Build workloads (both engines)
+      # Release (-O2), matching how the baselines were recorded; every
+      # engine's workloads in one tree, tests and examples off.
+      - name: Build workloads (every engine)
         run: |
           case "${{ matrix.target }}" in
             m55) tc=cmake/arm-cortex-m55-mps3.cmake ;;
@@ -539,11 +539,17 @@ jobs:
           --build-dir build --plugin /tmp/libinsncount.so
 
       # Runs even if async failed: each engine's numbers are independent
-      # evidence. The job still fails if either step failed.
+      # evidence. The job still fails if any step failed.
       - name: Ratchet bridge
         if: ${{ !cancelled() }}
         run: >
           python3 scripts/icount.py --engine bridge --target ${{ matrix.target }}
+          --build-dir build --plugin /tmp/libinsncount.so
+
+      - name: Ratchet rational
+        if: ${{ !cancelled() }}
+        run: >
+          python3 scripts/icount.py --engine rational --target ${{ matrix.target }}
           --build-dir build --plugin /tmp/libinsncount.so
 
   # Each engine README's instruction-count table derives 1:1 from its
@@ -555,7 +561,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        engine: [async, bridge]
+        engine: [async, bridge, rational]
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Docs freshness

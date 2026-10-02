@@ -1024,8 +1024,15 @@ G13 and G14, plus G9 from 3.7.
   stage: bit-pinned Q15 / Q31 tables, exact unity, saturation, Q31 within
   3.4e−9 of double, Q15's floor and attained stopband stated (a Q15
   decimator by 6 or 8 attains −65 / −63 dB, not 70) — landed
-  (`rational/PLAN.md` v0.8). Next: the C ABI, notebook and icount
-  baselines with the family version 0.5.0 (M6).
+  (`rational/PLAN.md` v0.8). M6 — the C ABI (the named chains as
+  constants, never a rate; one stage at a stated design divisor), the
+  binding and `matrix.ipynb` executed through the C ABIs (728 of 728
+  pins reproduced), the icount ratchet on M33 / M55 / Hexagon, and the
+  family version 0.5.0 — landed (`rational/PLAN.md` v0.9). The plan's
+  milestones are complete; the codegen levers it defers (sparse rows for
+  the mixed ratios going down, the symmetry-halved table, the Q15
+  decimators' per-branch quantization, an MVE Q15 kernel) wait for a
+  consumer.
 
 ---
 

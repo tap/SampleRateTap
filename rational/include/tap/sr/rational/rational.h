@@ -36,5 +36,5 @@
 #include "tap/sr/rational/stage.h"     // IWYU pragma: export
 
 #define TAP_SR_VERSION_MAJOR 0
-#define TAP_SR_VERSION_MINOR 4
+#define TAP_SR_VERSION_MINOR 5
 #define TAP_SR_VERSION_PATCH 0

@@ -39,6 +39,14 @@ add_executable(tap_sr_rational_tests
 if(NOT TAP_SR_BARE_METAL)
     target_sources(tap_sr_rational_tests PRIVATE test_matrix.cpp)
 endif()
+# The C ABI, pinned against the shipped shared library wherever it is built
+# (the version probe, D13, and every enumerator against its named chain);
+# the library target is defined after this directory, which
+# target_link_libraries allows.
+if(TAP_SR_BUILD_CAPI)
+    target_sources(tap_sr_rational_tests PRIVATE test_capi.cpp)
+    target_link_libraries(tap_sr_rational_tests PRIVATE tap_sr_rational_capi)
+endif()
 # The tests' own headers (the committed reference vectors, the generated
 # matrix rows, the bridge adapter) resolve relative to this directory.
 target_include_directories(tap_sr_rational_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

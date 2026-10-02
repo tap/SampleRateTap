@@ -22,7 +22,7 @@ namespace {
 
     TEST(Ratio, VersionIsTheFamilys) {
         EXPECT_EQ(TAP_SR_VERSION_MAJOR, 0);
-        EXPECT_EQ(TAP_SR_VERSION_MINOR, 4);
+        EXPECT_EQ(TAP_SR_VERSION_MINOR, 5); // 0.5.0 from M6 (R11)
         EXPECT_EQ(TAP_SR_VERSION_PATCH, 0);
     }
 
