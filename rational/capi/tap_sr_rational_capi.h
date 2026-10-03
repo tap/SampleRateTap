@@ -1,12 +1,15 @@
 /// @file tap_sr_rational_capi.h
-/// @brief Minimal C ABI over the float chains and stages, for FFI consumers.
+/// @brief Minimal C ABI over the chains and stages in float, Q15 and Q31, for FFI consumers.
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // The verification layer's seam (family convention): the notebooks drive the
 // SHIPPING C++ through this ABI via ctypes rather than re-implementing
-// anything in Python. Float only — the notebooks measure the golden model;
-// the fixed-point contracts are pinned by the C++ test suite (M5).
+// anything in Python, in float, the golden-model profile. Unlike the
+// siblings' float-only ABIs, this one also carries the Q15 and Q31 profiles,
+// for fixed-point FFI consumers (Bluetooth-adjacent M33 / M55 deployments,
+// the reason the profiles exist): the same C++ in each format, its
+// contracts pinned by the C++ test suite (PLAN.md section 6).
 //
 // What a caller constructs is named, never looked up (D12): a chain is one of
 // the coverage matrix's within-family chains (PLAN.md 3.3 / 3.4, R16), a
@@ -57,6 +60,15 @@ typedef struct tap_sr_rational_converter tap_sr_rational_converter;
 #define TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2 27
 #define TAP_SR_RATIONAL_CHAIN_COUNT 28
 
+/// The sample formats: float (the golden-model profile the notebooks
+/// measure), Q15 (int16_t Q0.15 samples) and Q31 (int32_t Q0.31), each the
+/// C++ basic_chain / basic_stage of that sample type bit for bit, with the
+/// fixed-point contracts PLAN.md section 6 states (exact unity DC,
+/// saturation, the attained stopband per stage). Values are stable.
+#define TAP_SR_RATIONAL_FORMAT_FLOAT 0
+#define TAP_SR_RATIONAL_FORMAT_Q15 1
+#define TAP_SR_RATIONAL_FORMAT_Q31 2
+
 /// Every function below requires a valid converter from a successful create;
 /// passing NULL is undefined behavior. The one exception is
 /// tap_sr_rational_destroy, where NULL is a safe no-op (the free() convention).
@@ -64,8 +76,11 @@ typedef struct tap_sr_rational_converter tap_sr_rational_converter;
 /// chain:   one of the TAP_SR_RATIONAL_* chain constants above.
 /// profile: 0 = economy (default tier), 1 = transparent, 2 = balanced,
 ///          3 = super_economy (bridge's C ABI tags).
-/// Returns NULL on invalid arguments.
+/// Returns NULL on invalid arguments. A float converter.
 tap_sr_rational_converter* tap_sr_rational_create(int chain, int profile, unsigned channels);
+/// As tap_sr_rational_create in a stated format (TAP_SR_RATIONAL_FORMAT_*);
+/// NULL on an unknown format too.
+tap_sr_rational_converter* tap_sr_rational_create_format(int chain, int profile, int format, unsigned channels);
 
 /// One stage at ratio L/M (one of the vocabulary's fourteen: 2/1, 1/2, 3/1,
 /// 1/3, 6/1, 1/6, 8/1, 1/8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8) designed at the
@@ -75,6 +90,10 @@ tap_sr_rational_converter* tap_sr_rational_create(int chain, int profile, unsign
 /// NULL on invalid arguments.
 tap_sr_rational_converter* tap_sr_rational_create_stage(unsigned L, unsigned M, int profile, uint32_t divisor_num,
                                                         uint32_t divisor_den, unsigned channels);
+/// As tap_sr_rational_create_stage in a stated format.
+tap_sr_rational_converter* tap_sr_rational_create_stage_format(unsigned L, unsigned M, int profile,
+                                                               uint32_t divisor_num, uint32_t divisor_den, int format,
+                                                               unsigned channels);
 void                       tap_sr_rational_destroy(tap_sr_rational_converter* c);
 
 /// The converter's ratio, reduced: output frames per input frame = L / M.
@@ -84,13 +103,23 @@ void tap_sr_rational_ratio(const tap_sr_rational_converter* c, unsigned* L, unsi
 uint64_t tap_sr_rational_outputs_for(const tap_sr_rational_converter* c, uint64_t in_frames);
 uint64_t tap_sr_rational_frames_needed(const tap_sr_rational_converter* c, uint64_t out_frames);
 
-/// Push-transform over interleaved float frames; returns frames written.
-/// out must hold tap_sr_rational_outputs_for(c, in_frames) frames.
+/// The converter's sample format (TAP_SR_RATIONAL_FORMAT_*).
+int tap_sr_rational_format(const tap_sr_rational_converter* c);
+
+/// Push-transform over interleaved frames of the converter's format; returns
+/// frames written. out must hold tap_sr_rational_outputs_for(c, in_frames)
+/// frames. A call in another format than the converter's returns 0 and
+/// consumes and writes nothing.
 size_t tap_sr_rational_process(tap_sr_rational_converter* c, const float* in, size_t in_frames, float* out);
+size_t tap_sr_rational_process_q15(tap_sr_rational_converter* c, const int16_t* in, size_t in_frames, int16_t* out);
+size_t tap_sr_rational_process_q31(tap_sr_rational_converter* c, const int32_t* in, size_t in_frames, int32_t* out);
 
 /// Drains the tail, bit-identical to zero padding (out must hold
-/// tap_sr_rational_flush_output_frames(c) frames).
+/// tap_sr_rational_flush_output_frames(c) frames); in another format than
+/// the converter's, returns 0 and writes nothing.
 size_t   tap_sr_rational_flush(tap_sr_rational_converter* c, float* out);
+size_t   tap_sr_rational_flush_q15(tap_sr_rational_converter* c, int16_t* out);
+size_t   tap_sr_rational_flush_q31(tap_sr_rational_converter* c, int32_t* out);
 uint64_t tap_sr_rational_flush_output_frames(const tap_sr_rational_converter* c);
 
 void tap_sr_rational_reset(tap_sr_rational_converter* c);
@@ -101,7 +130,8 @@ void   tap_sr_rational_latency_output_frames(const tap_sr_rational_converter* c,
 double tap_sr_rational_latency_seconds(const tap_sr_rational_converter* c, double out_rate_hz);
 
 /// Multiply-accumulates per output frame per channel, an exact reduced
-/// rational (the trimmed rows the kernels execute, PLAN.md 3.3).
+/// rational (the trimmed rows the kernels execute, PLAN.md 3.3; in Q15 the
+/// quantized spans, which may trim outer taps that round to zero).
 void tap_sr_rational_macs_per_output(const tap_sr_rational_converter* c, uint64_t* num, uint64_t* den);
 
 /// The number of stages, and stage i's Nyquist design length N (0 when i is

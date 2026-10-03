@@ -1,5 +1,5 @@
 /// @file tap_sr_rational_capi.cpp
-/// @brief C ABI implementation: one interface over the named chains and the single stages.
+/// @brief C ABI implementation: one interface over the named chains and the single stages, in float, Q15 and Q31.
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 
@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <memory>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "tap/sr/rational/rational.h"
@@ -20,33 +21,59 @@ namespace {
 
     // The chain or stage is a compile-time type in C++; the C ABI makes the
     // choice a runtime tag over the instantiations, behind one interface.
+    // The sample format is a runtime tag too: each engine runs one format,
+    // and a process / flush call in another format is refused (returns 0,
+    // consumes and writes nothing).
     struct engine {
-        virtual ~engine()                                                       = default;
-        virtual std::size_t process(const float* in, std::size_t n, float* out) = 0;
-        virtual std::size_t outputs_for(std::size_t n) const                    = 0;
-        virtual std::size_t frames_needed(std::size_t k) const                  = 0;
-        virtual std::size_t flush(float* out)                                   = 0;
-        virtual std::size_t flush_output_frames() const                         = 0;
-        virtual void        reset()                                             = 0;
-        virtual exact_ratio latency_output_frames() const                       = 0;
-        virtual exact_ratio macs_per_output() const                             = 0;
-        virtual exact_ratio ratio() const                                       = 0;
-        virtual std::size_t stages() const                                      = 0;
-        virtual std::size_t stage_taps(std::size_t i) const                     = 0;
+        virtual ~engine()                                                                     = default;
+        virtual int         format() const                                                    = 0;
+        virtual std::size_t process(const float* in, std::size_t n, float* out)               = 0;
+        virtual std::size_t process(const std::int16_t* in, std::size_t n, std::int16_t* out) = 0;
+        virtual std::size_t process(const std::int32_t* in, std::size_t n, std::int32_t* out) = 0;
+        virtual std::size_t flush(std::int16_t* out)                                          = 0;
+        virtual std::size_t flush(std::int32_t* out)                                          = 0;
+        virtual std::size_t outputs_for(std::size_t n) const                                  = 0;
+        virtual std::size_t frames_needed(std::size_t k) const                                = 0;
+        virtual std::size_t flush(float* out)                                                 = 0;
+        virtual std::size_t flush_output_frames() const                                       = 0;
+        virtual void        reset()                                                           = 0;
+        virtual exact_ratio latency_output_frames() const                                     = 0;
+        virtual exact_ratio macs_per_output() const                                           = 0;
+        virtual exact_ratio ratio() const                                                     = 0;
+        virtual std::size_t stages() const                                                    = 0;
+        virtual std::size_t stage_taps(std::size_t i) const                                   = 0;
     };
 
-    /// Over a tap::dsp::chain of basic_stage<float, R>: a named chain
+    template <typename S>
+    constexpr int format_of() {
+        return std::is_same_v<S, float>          ? TAP_SR_RATIONAL_FORMAT_FLOAT
+               : std::is_same_v<S, std::int16_t> ? TAP_SR_RATIONAL_FORMAT_Q15
+                                                 : TAP_SR_RATIONAL_FORMAT_Q31;
+    }
+
+    /// Over a tap::dsp::chain of basic_stage<S, R>: a named chain
     /// (basic_chain) or a one-stage chain built at a stated divisor.
     template <typename Chain>
     class chain_engine final : public engine {
       public:
+        using sample = typename Chain::sample;
+
         explicit chain_engine(Chain c)
             : m_c(std::move(c)) {}
 
-        std::size_t process(const float* in, std::size_t n, float* out) override { return m_c.process(in, n, out); }
+        int         format() const override { return format_of<sample>(); }
+        std::size_t process(const float* in, std::size_t n, float* out) override { return run(in, n, out); }
+        std::size_t process(const std::int16_t* in, std::size_t n, std::int16_t* out) override {
+            return run(in, n, out);
+        }
+        std::size_t process(const std::int32_t* in, std::size_t n, std::int32_t* out) override {
+            return run(in, n, out);
+        }
+        std::size_t flush(float* out) override { return drain(out); }
+        std::size_t flush(std::int16_t* out) override { return drain(out); }
+        std::size_t flush(std::int32_t* out) override { return drain(out); }
         std::size_t outputs_for(std::size_t n) const override { return m_c.outputs_for(n); }
         std::size_t frames_needed(std::size_t k) const override { return m_c.frames_needed(k); }
-        std::size_t flush(float* out) override { return m_c.flush(out); }
         std::size_t flush_output_frames() const override { return m_c.flush_output_frames(); }
         void        reset() override { m_c.reset(); }
         exact_ratio latency_output_frames() const override { return m_c.latency_output_frames(); }
@@ -71,6 +98,26 @@ namespace {
         }
 
       private:
+        template <typename T>
+        std::size_t run(const T* in, std::size_t n, T* out) {
+            if constexpr (std::is_same_v<T, sample>) {
+                return m_c.process(in, n, out);
+            }
+            else {
+                return 0; // another format's converter
+            }
+        }
+
+        template <typename T>
+        std::size_t drain(T* out) {
+            if constexpr (std::is_same_v<T, sample>) {
+                return m_c.flush(out);
+            }
+            else {
+                return 0;
+            }
+        }
+
         template <std::size_t I>
         void stage_fold(exact_ratio& total, exact_ratio& after) const {
             const auto& s = m_c.template stage<I>();
@@ -92,114 +139,131 @@ namespace {
                         : rat::profile::super_economy();
     }
 
-    template <rat::rational_ratio... Rs>
+    template <typename S, rat::rational_ratio... Rs>
     std::unique_ptr<engine> make_chain(const rat::profile& p, unsigned channels) {
-        using chain = rat::basic_chain<float, Rs...>;
+        using chain = rat::basic_chain<S, Rs...>;
         return std::make_unique<chain_engine<chain>>(chain(channels, p));
     }
 
+    template <typename S>
     std::unique_ptr<engine> make_named(int chain, const rat::profile& p, unsigned ch) {
         using namespace tap::sr::rational; // NOLINT(google-build-using-namespace)
         switch (chain) {
         case TAP_SR_RATIONAL_UP_2:
-            return make_chain<up_2>(p, ch);
+            return make_chain<S, up_2>(p, ch);
         case TAP_SR_RATIONAL_DOWN_2:
-            return make_chain<down_2>(p, ch);
+            return make_chain<S, down_2>(p, ch);
         case TAP_SR_RATIONAL_UP_3:
-            return make_chain<up_3>(p, ch);
+            return make_chain<S, up_3>(p, ch);
         case TAP_SR_RATIONAL_DOWN_3:
-            return make_chain<down_3>(p, ch);
+            return make_chain<S, down_3>(p, ch);
         case TAP_SR_RATIONAL_RATIO_3_2:
-            return make_chain<ratio_3_2>(p, ch);
+            return make_chain<S, ratio_3_2>(p, ch);
         case TAP_SR_RATIONAL_RATIO_2_3:
-            return make_chain<ratio_2_3>(p, ch);
+            return make_chain<S, ratio_2_3>(p, ch);
         case TAP_SR_RATIONAL_RATIO_4_3:
-            return make_chain<ratio_4_3>(p, ch);
+            return make_chain<S, ratio_4_3>(p, ch);
         case TAP_SR_RATIONAL_RATIO_3_4:
-            return make_chain<ratio_3_4>(p, ch);
+            return make_chain<S, ratio_3_4>(p, ch);
         case TAP_SR_RATIONAL_UP_2_UP_2:
-            return make_chain<up_2, up_2>(p, ch);
+            return make_chain<S, up_2, up_2>(p, ch);
         case TAP_SR_RATIONAL_UP_2_UP_3:
-            return make_chain<up_2, up_3>(p, ch);
+            return make_chain<S, up_2, up_3>(p, ch);
         case TAP_SR_RATIONAL_UP_2_RATIO_4_3_UP_3:
-            return make_chain<up_2, ratio_4_3, up_3>(p, ch);
+            return make_chain<S, up_2, ratio_4_3, up_3>(p, ch);
         case TAP_SR_RATIONAL_UP_3_RATIO_8_3:
-            return make_chain<up_3, ratio_8_3>(p, ch);
+            return make_chain<S, up_3, ratio_8_3>(p, ch);
         case TAP_SR_RATIONAL_UP_2_UP_6:
-            return make_chain<up_2, up_6>(p, ch);
+            return make_chain<S, up_2, up_6>(p, ch);
         case TAP_SR_RATIONAL_UP_2_UP_8:
-            return make_chain<up_2, up_8>(p, ch);
+            return make_chain<S, up_2, up_8>(p, ch);
         case TAP_SR_RATIONAL_UP_2_UP_6_UP_2:
-            return make_chain<up_2, up_6, up_2>(p, ch);
+            return make_chain<S, up_2, up_6, up_2>(p, ch);
         case TAP_SR_RATIONAL_UP_2_UP_8_UP_2:
-            return make_chain<up_2, up_8, up_2>(p, ch);
+            return make_chain<S, up_2, up_8, up_2>(p, ch);
         case TAP_SR_RATIONAL_UP_2_UP_8_UP_3:
-            return make_chain<up_2, up_8, up_3>(p, ch);
+            return make_chain<S, up_2, up_8, up_3>(p, ch);
         case TAP_SR_RATIONAL_UP_2_RATIO_4_3:
-            return make_chain<up_2, ratio_4_3>(p, ch);
+            return make_chain<S, up_2, ratio_4_3>(p, ch);
         case TAP_SR_RATIONAL_RATIO_3_4_DOWN_2:
-            return make_chain<ratio_3_4, down_2>(p, ch);
+            return make_chain<S, ratio_3_4, down_2>(p, ch);
         case TAP_SR_RATIONAL_DOWN_2_DOWN_2:
-            return make_chain<down_2, down_2>(p, ch);
+            return make_chain<S, down_2, down_2>(p, ch);
         case TAP_SR_RATIONAL_DOWN_3_DOWN_2:
-            return make_chain<down_3, down_2>(p, ch);
+            return make_chain<S, down_3, down_2>(p, ch);
         case TAP_SR_RATIONAL_DOWN_3_RATIO_3_4_DOWN_2:
-            return make_chain<down_3, ratio_3_4, down_2>(p, ch);
+            return make_chain<S, down_3, ratio_3_4, down_2>(p, ch);
         case TAP_SR_RATIONAL_RATIO_3_8_DOWN_3:
-            return make_chain<ratio_3_8, down_3>(p, ch);
+            return make_chain<S, ratio_3_8, down_3>(p, ch);
         case TAP_SR_RATIONAL_DOWN_6_DOWN_2:
-            return make_chain<down_6, down_2>(p, ch);
+            return make_chain<S, down_6, down_2>(p, ch);
         case TAP_SR_RATIONAL_DOWN_8_DOWN_2:
-            return make_chain<down_8, down_2>(p, ch);
+            return make_chain<S, down_8, down_2>(p, ch);
         case TAP_SR_RATIONAL_DOWN_2_DOWN_6_DOWN_2:
-            return make_chain<down_2, down_6, down_2>(p, ch);
+            return make_chain<S, down_2, down_6, down_2>(p, ch);
         case TAP_SR_RATIONAL_DOWN_2_DOWN_8_DOWN_2:
-            return make_chain<down_2, down_8, down_2>(p, ch);
+            return make_chain<S, down_2, down_8, down_2>(p, ch);
         case TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2:
-            return make_chain<down_3, down_8, down_2>(p, ch);
+            return make_chain<S, down_3, down_8, down_2>(p, ch);
         default:
             return nullptr;
         }
     }
 
-    template <rat::rational_ratio R>
+    template <typename S, rat::rational_ratio R>
     std::unique_ptr<engine> make_stage(const rat::profile& p, exact_ratio divisor, unsigned ch) {
-        using chain = tap::dsp::chain<rat::basic_stage<float, R>>;
-        return std::make_unique<chain_engine<chain>>(chain(ch, rat::basic_stage<float, R>(ch, p.relaxed(divisor))));
+        using chain = tap::dsp::chain<rat::basic_stage<S, R>>;
+        return std::make_unique<chain_engine<chain>>(chain(ch, rat::basic_stage<S, R>(ch, p.relaxed(divisor))));
     }
 
+    template <typename S>
     std::unique_ptr<engine> make_single(unsigned l, unsigned m, const rat::profile& p, exact_ratio d, unsigned ch) {
         using namespace tap::sr::rational; // NOLINT(google-build-using-namespace)
         const auto key = (static_cast<unsigned>(l) << 8) | m;
         switch (key) {
         case (2u << 8) | 1u:
-            return make_stage<up_2>(p, d, ch);
+            return make_stage<S, up_2>(p, d, ch);
         case (1u << 8) | 2u:
-            return make_stage<down_2>(p, d, ch);
+            return make_stage<S, down_2>(p, d, ch);
         case (3u << 8) | 1u:
-            return make_stage<up_3>(p, d, ch);
+            return make_stage<S, up_3>(p, d, ch);
         case (1u << 8) | 3u:
-            return make_stage<down_3>(p, d, ch);
+            return make_stage<S, down_3>(p, d, ch);
         case (6u << 8) | 1u:
-            return make_stage<up_6>(p, d, ch);
+            return make_stage<S, up_6>(p, d, ch);
         case (1u << 8) | 6u:
-            return make_stage<down_6>(p, d, ch);
+            return make_stage<S, down_6>(p, d, ch);
         case (8u << 8) | 1u:
-            return make_stage<up_8>(p, d, ch);
+            return make_stage<S, up_8>(p, d, ch);
         case (1u << 8) | 8u:
-            return make_stage<down_8>(p, d, ch);
+            return make_stage<S, down_8>(p, d, ch);
         case (3u << 8) | 2u:
-            return make_stage<ratio_3_2>(p, d, ch);
+            return make_stage<S, ratio_3_2>(p, d, ch);
         case (2u << 8) | 3u:
-            return make_stage<ratio_2_3>(p, d, ch);
+            return make_stage<S, ratio_2_3>(p, d, ch);
         case (4u << 8) | 3u:
-            return make_stage<ratio_4_3>(p, d, ch);
+            return make_stage<S, ratio_4_3>(p, d, ch);
         case (3u << 8) | 4u:
-            return make_stage<ratio_3_4>(p, d, ch);
+            return make_stage<S, ratio_3_4>(p, d, ch);
         case (8u << 8) | 3u:
-            return make_stage<ratio_8_3>(p, d, ch);
+            return make_stage<S, ratio_8_3>(p, d, ch);
         case (3u << 8) | 8u:
-            return make_stage<ratio_3_8>(p, d, ch);
+            return make_stage<S, ratio_3_8>(p, d, ch);
+        default:
+            return nullptr;
+        }
+    }
+
+    /// The format tag's sample type, as a factory call.
+    template <typename Make>
+    std::unique_ptr<engine> by_format(int format, Make&& make) {
+        switch (format) {
+        case TAP_SR_RATIONAL_FORMAT_FLOAT:
+            return make(float{});
+        case TAP_SR_RATIONAL_FORMAT_Q15:
+            return make(std::int16_t{});
+        case TAP_SR_RATIONAL_FORMAT_Q31:
+            return make(std::int32_t{});
         default:
             return nullptr;
         }
@@ -228,13 +292,37 @@ struct tap_sr_rational_converter {
 
 extern "C" {
 
-tap_sr_rational_converter* tap_sr_rational_create(int chain, int profile, unsigned channels) {
+tap_sr_rational_converter* tap_sr_rational_create_format(int chain, int profile, int format, unsigned channels) {
     if (chain < 0 || chain >= TAP_SR_RATIONAL_CHAIN_COUNT || profile < 0 || profile > 3 || channels == 0) {
         return nullptr;
     }
     try {
         auto c = std::make_unique<tap_sr_rational_converter>();
-        c->e   = make_named(chain, profile_for(profile), channels);
+        c->e   = by_format(format,
+                           [&](auto tag) { return make_named<decltype(tag)>(chain, profile_for(profile), channels); });
+        return c->e ? c.release() : nullptr;
+    }
+    catch (...) {
+        return nullptr;
+    }
+}
+
+tap_sr_rational_converter* tap_sr_rational_create(int chain, int profile, unsigned channels) {
+    return tap_sr_rational_create_format(chain, profile, TAP_SR_RATIONAL_FORMAT_FLOAT, channels);
+}
+
+tap_sr_rational_converter* tap_sr_rational_create_stage_format(unsigned L, unsigned M, int profile,
+                                                               uint32_t divisor_num, uint32_t divisor_den, int format,
+                                                               unsigned channels) {
+    if (L > 255 || M > 255 || profile < 0 || profile > 3 || channels == 0 || divisor_num == 0 || divisor_den == 0) {
+        return nullptr;
+    }
+    try {
+        auto c = std::make_unique<tap_sr_rational_converter>();
+        c->e   = by_format(format, [&](auto tag) {
+            return make_single<decltype(tag)>(L, M, profile_for(profile), exact_ratio{divisor_num, divisor_den},
+                                                channels);
+        });
         return c->e ? c.release() : nullptr;
     }
     catch (...) {
@@ -244,17 +332,8 @@ tap_sr_rational_converter* tap_sr_rational_create(int chain, int profile, unsign
 
 tap_sr_rational_converter* tap_sr_rational_create_stage(unsigned L, unsigned M, int profile, uint32_t divisor_num,
                                                         uint32_t divisor_den, unsigned channels) {
-    if (L > 255 || M > 255 || profile < 0 || profile > 3 || channels == 0 || divisor_num == 0 || divisor_den == 0) {
-        return nullptr;
-    }
-    try {
-        auto c = std::make_unique<tap_sr_rational_converter>();
-        c->e   = make_single(L, M, profile_for(profile), exact_ratio{divisor_num, divisor_den}, channels);
-        return c->e ? c.release() : nullptr;
-    }
-    catch (...) {
-        return nullptr;
-    }
+    return tap_sr_rational_create_stage_format(L, M, profile, divisor_num, divisor_den, TAP_SR_RATIONAL_FORMAT_FLOAT,
+                                               channels);
 }
 
 void tap_sr_rational_destroy(tap_sr_rational_converter* c) {
@@ -284,6 +363,26 @@ size_t tap_sr_rational_process(tap_sr_rational_converter* c, const float* in, si
 }
 
 size_t tap_sr_rational_flush(tap_sr_rational_converter* c, float* out) {
+    return c->e->flush(out);
+}
+
+int tap_sr_rational_format(const tap_sr_rational_converter* c) {
+    return c->e->format();
+}
+
+size_t tap_sr_rational_process_q15(tap_sr_rational_converter* c, const int16_t* in, size_t in_frames, int16_t* out) {
+    return c->e->process(in, in_frames, out);
+}
+
+size_t tap_sr_rational_process_q31(tap_sr_rational_converter* c, const int32_t* in, size_t in_frames, int32_t* out) {
+    return c->e->process(in, in_frames, out);
+}
+
+size_t tap_sr_rational_flush_q15(tap_sr_rational_converter* c, int16_t* out) {
+    return c->e->flush(out);
+}
+
+size_t tap_sr_rational_flush_q31(tap_sr_rational_converter* c, int32_t* out) {
     return c->e->flush(out);
 }
 

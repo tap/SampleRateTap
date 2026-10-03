@@ -37,15 +37,17 @@ profiles measured per stage by `tests/test_fixed_point.cpp` (bit-pinned Q15 / Q3
 unity, saturation, the Q15 floors and attained stopbands stated in PLAN.md section 6 — a
 change that moves a table pin is a numeric change to the fixed-point datapath), and, since M6,
 the C ABI (`capi/`: the named chains as stable `TAP_SR_RATIONAL_*` constants, one stage at a
-stated design divisor, exactly sixteen exported symbols; `CApi.*` pins it bit for bit against
-`basic_chain`), the ctypes binding and `notebooks/matrix.ipynb` executed through the C ABIs, and
+stated design divisor, in float and, since the levers, Q15 / Q31 through `create_format`;
+exactly 23 exported symbols; `CApi.*` pins it bit for bit against `basic_chain` in every
+format), the ctypes binding and `notebooks/matrix.ipynb` executed through the C ABIs, and
 the icount ratchet (`bench/icount/`, `bench/baselines.json`, marker `RATIONAL_ICOUNT_DONE`; a
 change that moves a count beyond ±3 % re-records the baselines in the same PR). The codegen
 levers after M6 are measured and recorded in PLAN.md section 6: the Helium Q15 dot and the Q15
 decimators' per-branch quantization shipped (a Q15 decimator's table is its band's interpolator
 table, the 1 / M in `tap::dsp::finalize_divided`; `basic_stage::k_table_gain` and
-`finalize_output()` state it), the sparse rows and the symmetry-halved table were declined on
-their numbers.
+`finalize_output()` state it; a Q15 mixed ratio going down holds its rows at a power-of-two
+gain the same way, so every Q15 stage attains the 70 dB tier), the sparse rows and the
+symmetry-halved table were declined on their numbers.
 
 ## The charter constraints (load-bearing)
 
