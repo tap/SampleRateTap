@@ -47,8 +47,12 @@
 // quantized at its own unity sum — bit for bit the Q15 interpolator's table
 // of the same band — and the 1 / M is applied in the single rounding
 // (tap::dsp::finalize_divided: a shift for M = 2, 8, an exact-at-DC
-// multiply-back for M = 3, 6). k_table_gain states what the rows sum to;
-// finalize_output() is the stage's rounding point.
+// multiply-back for M = 3, 6). A Q15 mixed ratio going down has the same
+// shrinkage at a smaller factor (its unity rows' centre tap is about L / M),
+// so its rows are held at a power-of-two gain G (G L / M < 2: 2/3 and 3/4
+// at 2, 3/8 at 4), shifted back out exactly in the rounding. k_table_gain
+// states what the rows sum to; finalize_output() is the stage's rounding
+// point.
 //
 // Contract, as numbers (PLAN.md 2.5, R7, R9, R10):
 //   - zero-primed and causal; outputs_for(n) and frames_needed(k) are exact
@@ -71,16 +75,17 @@
 //     every row sums to exact unity in the format, so full-scale DC of
 //     either sign comes out at exactly full scale; full-scale drive
 //     saturates in the trait's finalize and never wraps; Q31 tracks double
-//     within 3.4e-9 of full scale; Q15 is format-limited — RMS -87.1 to
-//     -99.8 dBFS from double, attained stopband -68.2 to -78.5 dB, a
-//     decimator's equal to the interpolator's of its band (by 8 at economy
-//     -71.7 dB), stated per stage in PLAN.md;
+//     within 3.4e-9 of full scale; Q15 is format-limited — RMS -90.2 to
+//     -99.8 dBFS from double, attained stopband -70.0 to -83.1 dB (every
+//     stage the 70 dB tier; transparent's 120 dB is float's), a decimator's
+//     equal to the interpolator's of its band, stated per stage in PLAN.md;
 //   - MACs: no structural zero enters the dot of an interpolator, a
 //     decimator or a mixed ratio going up; a mixed ratio going down (band
 //     M, rows of stride L) multiplies the band's zeros its rows cross.
 #pragma once
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -154,16 +159,32 @@ namespace tap::sr::rational {
         /// rounding (tap::dsp::finalize_divided): Q1.14 cannot hold h / M at
         /// the precision h needs (see the file header).
         static constexpr bool k_branch_quantized = k_is_decimator && std::is_same_v<S, std::int16_t>;
+        /// A Q15 mixed ratio going down holds each L-phase row at a power-of-
+        /// two gain G instead of unity: normalized to unity its centre tap is
+        /// about L / M (2/3: 0.67, 3/8: 0.38), so the Q1.14 range is part
+        /// unused; G is the largest power of two with G L / M < 2, which keeps
+        /// every tap inside Q1.14 (2/3 and 3/4: 2, 3/8: 4), and the single
+        /// rounding shifts it back out exactly.
+        static constexpr std::size_t k_mixed_down_gain = [] {
+            std::size_t g = 1;
+            while (2 * g * k_up < 2 * k_down) {
+                g *= 2;
+            }
+            return g;
+        }();
+        static constexpr bool k_row_scaled = !traits::k_is_up && !k_is_decimator && std::is_same_v<S, std::int16_t>;
         /// What the table's rows sum to, in units of the format's unity: 1,
-        /// or M for a Q15 decimator (M branches each at unity), which the
-        /// single rounding divides back out.
-        static constexpr std::size_t k_table_gain = k_branch_quantized ? k_down : 1;
+        /// M for a Q15 decimator (M branches each at unity), the power-of-two
+        /// G above for a Q15 mixed ratio going down; the single rounding
+        /// divides it back out.
+        static constexpr std::size_t k_table_gain =
+            k_branch_quantized ? k_down : (k_row_scaled ? k_mixed_down_gain : 1);
 
         /// The stage's single rounding point, accumulator -> sample: the
-        /// trait's finalize, or finalize_divided by M for a Q15 decimator.
+        /// trait's finalize, or finalize_divided by k_table_gain.
         static S finalize_output(typename tap::dsp::sample_traits<S>::accum acc) noexcept {
-            if constexpr (k_branch_quantized) {
-                return tap::dsp::finalize_divided<S, static_cast<std::uint32_t>(k_down)>(acc);
+            if constexpr (k_table_gain != 1) {
+                return tap::dsp::finalize_divided<S, static_cast<std::uint32_t>(k_table_gain)>(acc);
             }
             else {
                 return tap::dsp::sample_traits<S>::finalize(acc);
@@ -449,9 +470,19 @@ namespace tap::sr::rational {
                     }
                     if constexpr (!traits::k_is_up) {
                         // A mixed ratio going down: the L phases are not the
-                        // design's M branches; normalize each to DC gain 1.
+                        // design's M branches; normalize each to DC gain 1
+                        // (k_table_gain in Q15, divided out in the rounding).
                         for (auto& v : row) {
-                            v /= sum;
+                            v = v / sum * static_cast<double>(k_table_gain);
+                            if constexpr (k_row_scaled) {
+                                // Snapped to 2^-34 (2^-20 of a Q1.14 LSB) so
+                                // the design's last-bit differences between
+                                // libms (glibc vs newlib, measured) cannot
+                                // move a row-sum residual between the equal
+                                // remainders of a symmetric pair: ties are
+                                // then exact, broken by index on every target.
+                                v = std::round(v * 0x1p34) * 0x1p-34;
+                            }
                         }
                     }
                     tap::dsp::quantize_row_preserving_sum<S>(row, q);
@@ -558,7 +589,13 @@ namespace tap::sr::rational {
                 const coeff*         row  = m_rows.data() + step.phase * m_row_len + m_first[step.phase];
                 for (std::size_t c = 0; c < m_channels; ++c) {
                     const S* window = line(c, 0) + m_end[0] - m_row_len + m_first[step.phase];
-                    out[c]          = tap::dsp::dot_row<S>(row, window, m_count[step.phase]);
+                    if constexpr (k_table_gain != 1) {
+                        out[c] = finalize_output(tap::dsp::accumulate_row<S>(
+                            typename tap::dsp::sample_traits<S>::accum{}, row, window, m_count[step.phase]));
+                    }
+                    else {
+                        out[c] = tap::dsp::dot_row<S>(row, window, m_count[step.phase]);
+                    }
                 }
                 m_pending = step.advance;
                 m_pos     = m_pos + 1 == k_up ? 0 : m_pos + 1;

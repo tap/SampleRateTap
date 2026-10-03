@@ -7,7 +7,8 @@
 // the vocabulary at every named profile:
 //
 //   - every row of every table sums to exact unity in the format (a phase
-//     row of an interpolator or mixed ratio to 2^14 / 2^30; a Q15
+//     row of an interpolator or mixed ratio to 2^14 / 2^30 — a Q15 mixed
+//     ratio going down's to G 2^14, G its power-of-two gain; a Q15
 //     decimator's every branch to 2^14, its finalize dividing by M; a Q31
 //     decimator's whole filter, quantized as one row, to 2^30), so DC gain is
 //     exactly 1 and full-scale DC comes out at exactly full scale from every
@@ -27,8 +28,9 @@
 //     interpolator table, each branch at unity with the 1 / M in the
 //     finalize, so it attains what the interpolator does — by 8 at economy
 //     -71.7 dB; quantized as h / M in one row, as before the lever, it lost
-//     about 20 log10 M dB: -62.9 dB; the 70 dB / 120 dB promises are float's
-//     and Q31's);
+//     about 20 log10 M dB: -62.9 dB; a mixed ratio going down holds its rows
+//     at a power-of-two gain for the same reason, so every stage attains the
+//     70 dB tier; the 120 dB promise is float's and Q31's);
 //   - full-scale drive saturates, never wraps, in both formats.
 //
 // Numbers measured 2026-10-02 (clang 18, x86-64; the formats are exact
@@ -179,26 +181,26 @@ namespace {
         ROW(ratio_3_2, economy, 45, 45, 0xf843d9f1da25e251ULL, 0xffcac366d1724905ULL, -70.2, -93.4) \
         ROW(ratio_3_2, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xe9b4f733f5f69a49ULL, -71.5, -94.0) \
         ROW(ratio_3_2, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x658e039e0cf17da1ULL, -76.1, -91.1) \
-        ROW(ratio_2_3, super_economy, 47, 47, 0xdb8cfd8e21dd8209ULL, 0x73dd9f039a900588ULL, -69.1, -92.1) \
-        ROW(ratio_2_3, economy, 65, 65, 0xbe9edd5a10f87fedULL, 0xd990f930d9d2e66fULL, -69.7, -91.0) \
-        ROW(ratio_2_3, balanced, 77, 77, 0x626ef4bf4a08d9b5ULL, 0xe2019e0deca448ddULL, -71.1, -91.5) \
-        ROW(ratio_2_3, transparent, 149, 125, 0xdde5bec80bdf050dULL, 0x174688556c046e2bULL, -73.9, -90.6) \
+        ROW(ratio_2_3, super_economy, 47, 47, 0x82be2b09b1e3e71cULL, 0x73dd9f039a900588ULL, -71.0, -96.9) \
+        ROW(ratio_2_3, economy, 65, 65, 0x6a10e7523141627cULL, 0xd990f930d9d2e66fULL, -70.5, -95.9) \
+        ROW(ratio_2_3, balanced, 77, 77, 0xfc4820b544115c9cULL, 0xe2019e0deca448ddULL, -72.1, -95.8) \
+        ROW(ratio_2_3, transparent, 149, 131, 0x4f5173a3477e3d44ULL, 0x174688556c046e2bULL, -78.2, -94.6) \
         ROW(ratio_4_3, super_economy, 49, 49, 0xaba05cd262d404a9ULL, 0xf789914bb74deab5ULL, -70.6, -94.0) \
         ROW(ratio_4_3, economy, 67, 67, 0x54b85d414b471985ULL, 0xf803f1ea55624179ULL, -71.7, -93.6) \
         ROW(ratio_4_3, balanced, 85, 85, 0x441dab53737b273dULL, 0x088ccad6c8e4a9b9ULL, -70.4, -92.9) \
         ROW(ratio_4_3, transparent, 151, 131, 0x2766dd02d84bd799ULL, 0x5491f247aa9ad425ULL, -77.2, -90.6) \
-        ROW(ratio_3_4, super_economy, 63, 63, 0x0ec9089ed99ced7dULL, 0xcacc9866f85a1482ULL, -70.7, -92.3) \
-        ROW(ratio_3_4, economy, 87, 87, 0x6c0c99983b8387b2ULL, 0x5b0bcd2edd57e081ULL, -72.8, -91.0) \
-        ROW(ratio_3_4, balanced, 111, 111, 0xf55da00d5439796fULL, 0xddc050765dd8bd23ULL, -68.2, -91.0) \
-        ROW(ratio_3_4, transparent, 199, 167, 0xe50acc0baa4ec77dULL, 0x78b0ec09e7310bffULL, -75.8, -89.2) \
+        ROW(ratio_3_4, super_economy, 63, 63, 0x37e88d3e5f085cf7ULL, 0xcacc9866f85a1482ULL, -71.6, -96.5) \
+        ROW(ratio_3_4, economy, 87, 87, 0x75302a3d8b4e5354ULL, 0x5b0bcd2edd57e081ULL, -70.0, -96.8) \
+        ROW(ratio_3_4, balanced, 111, 111, 0xb633f47c0bfc20e1ULL, 0xddc050765dd8bd23ULL, -72.4, -95.5) \
+        ROW(ratio_3_4, transparent, 199, 175, 0xe6f0871efac7d3f1ULL, 0x78b0ec09e7310bffULL, -78.3, -94.3) \
         ROW(ratio_8_3, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -93.0) \
         ROW(ratio_8_3, economy, 169, 169, 0xdc280c16130175d1ULL, 0x192bcfb9abf918edULL, -71.7, -92.2) \
         ROW(ratio_8_3, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xbcda6fae5723088dULL, -72.6, -91.4) \
         ROW(ratio_8_3, transparent, 351, 303, 0x4b96078b2928931dULL, 0x11b5febcf65e1475ULL, -78.2, -90.4) \
-        ROW(ratio_3_8, super_economy, 127, 127, 0xaebfc38e6ba5a325ULL, 0xca47a7f8e9a6c523ULL, -69.2, -90.6) \
-        ROW(ratio_3_8, economy, 191, 189, 0x58767e8f10428845ULL, 0x3cc9b1b3c17f0e3bULL, -71.2, -87.9) \
-        ROW(ratio_3_8, balanced, 223, 221, 0x48312e1a4a99cc49ULL, 0x3c098ec5243f25ecULL, -69.4, -89.3) \
-        ROW(ratio_3_8, transparent, 399, 325, 0x4f12dd31639b2c9dULL, 0x7e280258af2f97a4ULL, -69.6, -87.1)
+        ROW(ratio_3_8, super_economy, 127, 127, 0xba84c60134e2ac09ULL, 0xca47a7f8e9a6c523ULL, -71.5, -98.9) \
+        ROW(ratio_3_8, economy, 191, 191, 0x6bd0306058cbe5adULL, 0x3cc9b1b3c17f0e3bULL, -71.8, -97.8) \
+        ROW(ratio_3_8, balanced, 223, 223, 0x0861406e06673615ULL, 0x3c098ec5243f25ecULL, -71.7, -97.0) \
+        ROW(ratio_3_8, transparent, 399, 349, 0xc39ffccbb8c18bd5ULL, 0x7e280258af2f97a4ULL, -83.1, -96.6)
     // clang-format on
 
     struct pin_row {
@@ -238,7 +240,9 @@ namespace {
             }
             whole += sum;
             if constexpr (R::k_up != 1) {
-                EXPECT_EQ(sum, unity) << row.ratio << " " << row.profile << " q" << sizeof(S) * 8 << " row " << r;
+                // Unity, or a Q15 mixed ratio going down's power-of-two gain.
+                EXPECT_EQ(sum, unity * static_cast<std::int64_t>(basic_stage<S, R>::k_table_gain))
+                    << row.ratio << " " << row.profile << " q" << sizeof(S) * 8 << " row " << r;
             }
         }
         if constexpr (R::k_up == 1) {

@@ -20,6 +20,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.5 | 2026-10-02 | M2 landed: the design spike (`notebooks/design_spike.ipynb`, executed) pins N for every band ∈ {2, 3, 4, 6, 8} × profile on a 16384-point grid, the mixed ratios' taps per phase, measured worst stopband and ripple; `profile` carries the pins and `test_design.cpp` enforces them; the M2 table below is filled from measurements. Finding: the designer's 1024-point default grid under-pins two rows (tap/DspTap#50 made the search grid a parameter) |
 | v0.9 | 2026-10-02 | M6 landed: the C ABI (`capi/`, `libtap_sr_rational_capi`: the 28 named within-family chains as stable `TAP_SR_RATIONAL_*` constants, one stage of the vocabulary at a stated design divisor for chains through `bridge`, exact accounting, latency and MACs as rationals; exactly sixteen exported symbols), the ctypes binding and `matrix.ipynb` executed through the C ABIs (all 728 row × profile pins reproduced), the icount ratchet (twelve workloads, `RATIONAL_ICOUNT_DONE`, baselines on M33 / M55 / Hexagon, gated two-sided at ±3 % in CI), family version 0.5.0 |
 | v0.10 | 2026-10-02 | The codegen levers after M6, each measured (section 6): the Helium Q15 dot (tap/DspTap#53, shipped: the M55 Q15 workloads −21 … −48 %); the Q15 decimators quantized per branch with the 1 / M in the single rounding (tap/DspTap#54's `finalize_divided`, shipped: ↓6 / ↓8 attain −71.5 / −71.7 dB at `economy`, the Q15 decimator's table is its band's interpolator table); the sparse rows for the mixed ratios going down (built, measured, declined: Q15 +22 … +60 %); the symmetry-halved table (declined: memory only, 1.6 KB at most). The 2/3 workloads join the ratchet |
+| v0.11 | 2026-10-06 | After the levers: the Q15 mixed ratios going down hold their rows at a power-of-two gain (2/3 and 3/4: 2, 3/8: 4), shifted out in the rounding, so every Q15 stage attains the 70 dB tier (−70.0 … −72.4 dB, from −68.2 … −69.7); DspTap pinned at its `main` with tap/DspTap#55 (`decimate.h`'s Q15 tables at M·h, which this engine's tests use only in float) |
 
 **Status.** This draft is the reviewed-plan deliverable that the family
 plan's "Next — `rational` (separate plan)" entry asks for
@@ -867,11 +868,11 @@ MACs per superblock):
 | ↑8 | -71.7 | -92.3 | 169 / 169 | -78.2 | -90.2 | 303 / 351 |
 | ↓8 | -71.7 | -97.9 | 169 / 169 | -78.2 | -99.5 | 303 / 351 |
 | 3/2 | -70.2 | -93.4 | 45 / 45 | -76.1 | -91.1 | 89 / 101 |
-| 2/3 | -69.7 | -91.0 | 65 / 65 | -73.9 | -90.6 | 125 / 149 |
+| 2/3 | -70.5 | -95.9 | 65 / 65 | -78.2 | -94.6 | 131 / 149 |
 | 4/3 | -71.7 | -93.6 | 67 / 67 | -77.2 | -90.6 | 131 / 151 |
-| 3/4 | -72.8 | -91.0 | 87 / 87 | -75.8 | -89.2 | 167 / 199 |
+| 3/4 | -70.0 | -96.8 | 87 / 87 | -78.3 | -94.3 | 175 / 199 |
 | 8/3 | -71.7 | -92.2 | 169 / 169 | -78.2 | -90.4 | 303 / 351 |
-| 3/8 | -71.2 | -87.9 | 189 / 191 | -69.6 | -87.1 | 325 / 399 |
+| 3/8 | -71.8 | -97.8 | 191 / 191 | -83.1 | -96.6 | 349 / 399 |
 
 Two limits, stated rather than papered over (both pinned by the battery):
 
@@ -892,14 +893,22 @@ Two limits, stated rather than papered over (both pinned by the battery):
   −71.5 dB, ↓8 −71.7 dB at `economy`; −76 … −79 dB at `transparent`), the
   Q15 RMS deviation from double fell by 5–12 dB, full-scale DC is still
   exact, and ↓3 at `economy` moved from −72.4 to −70.2 dB (still the 70 dB
-  tier). Q31 and float are unchanged. What remains format-limited in Q15
-  is `transparent` (−76 … −79 dB, not 120; the outer taps of its long
-  designs round to zero and are trimmed: Q15 MACs below float's) and the
-  mixed ratios going down (−68.2 … −69.7 dB at the 70 dB tiers: their
-  L-phase rows are normalized at the branch-spread level, the same
-  coefficient-shrinking at a smaller factor), so at Q15 `economy` is the
-  pairing, as `bridge` found (`../bridge/tests/test_converter_fixed_point.cpp`).
-  The 70 / 120 dB promises of 2.3 and section 3 are float's and Q31's.
+  tier). Q31 and float are unchanged. The mixed ratios going down had the
+  same shrinkage at a smaller factor — each L-phase row normalized to unity
+  puts its centre tap near L / M (2/3: 0.67, 3/8: 0.38), so they attained
+  −68.2 … −69.7 dB at the 70 dB tiers — and the same remedy at a
+  power-of-two gain followed: their Q15 rows sum to G x unity, G the
+  largest power of two with G L / M < 2 (2/3 and 3/4: 2, 3/8: 4), shifted
+  back out exactly in the rounding (`k_table_gain`). Measured after it
+  (the table above), every Q15 stage attains the 70 dB tier at every 70 dB
+  profile: the mixed ratios going down −70.0 … −72.4 dB (3/4 at `economy`
+  moved from −72.8 to −70.0, its tightest; 3/4 at `balanced` from −68.2 to
+  −72.4), their Q15 RMS from double 4–10 dB lower. What remains
+  format-limited in Q15 is `transparent` (−76 … −83 dB, not 120; the outer
+  taps of its long designs round to zero and are trimmed: Q15 MACs below
+  float's), so at Q15 `economy` is the pairing, as `bridge` found
+  (`../bridge/tests/test_converter_fixed_point.cpp`). The 120 dB promise of
+  2.3 and section 3 is float's and Q31's.
 - **A mixed ratio going down multiplies its band's structural zeros.** 2/3,
   3/4 and 3/8 run the L-phase machine over a band-M design: the zeros stride
   by M, the rows by L, so every row crosses every M-th zero and the trimmed
