@@ -92,7 +92,7 @@ namespace {
                 else {
                     const std::size_t newest = n * m / l;
                     if (newest >= d && newest - d < t_len) {
-                        expected = tr::finalize(
+                        expected = basic_stage<S, R>::finalize_output(
                             tr::mac(typename tr::accum{}, x[d], c.coefficient((n * m) % l, t_len - 1 - (newest - d))));
                     }
                 }
@@ -159,7 +159,8 @@ namespace {
                 for (std::size_t t = 0; t < mixed.row_length(); ++t) {
                     sum += mixed.coefficient(p, t);
                 }
-                EXPECT_EQ(sum, unity) << "mixed phase " << p;
+                EXPECT_EQ(sum, unity * static_cast<std::int64_t>(basic_stage<sample, ratio_2_3>::k_table_gain))
+                    << "mixed phase " << p;
             }
             basic_stage<sample, down_3> down(1);
             std::int64_t                whole = 0;
