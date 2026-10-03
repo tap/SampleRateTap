@@ -136,8 +136,12 @@ in the root `requirements.lock` environment when what they measure changes:
 ### C ABI
 
 `capi/tap_sr_rational_capi.h` (`-DTAP_SR_BUILD_CAPI=ON`, or
-`cmake -S rational/capi -B build_capi` on its own) exposes the float chains
-to FFI consumers: `tap_sr_rational_create(chain, profile, channels)` takes
+`cmake -S rational/capi -B build_capi` on its own) exposes the chains to FFI
+consumers in float and, through `tap_sr_rational_create_format(chain,
+profile, format, channels)` with `TAP_SR_RATIONAL_FORMAT_Q15` / `_Q31`, in the
+fixed-point profiles (`tap_sr_rational_process_q15` / `_q31` and the matching
+flush; a call in another format than the converter's returns 0 and touches
+nothing — the siblings' ABIs are float-only). `tap_sr_rational_create(chain, profile, channels)` takes
 one of the 28 named within-family chains of the coverage matrix as a
 constant (`TAP_SR_RATIONAL_UP_2` … `TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2`),
 never a rate; `tap_sr_rational_create_stage(L, M, profile, divisor_num,
@@ -146,7 +150,8 @@ divisor, what a chain through `bridge` composes. Each converter reports its
 exact accounting, its latency and its MACs per output as exact rationals,
 per-stage design lengths, and the bit-packed family version
 (`tap_sr_rational_version()`). `notebooks/tap_sr_rational_py.py` is the
-ctypes binding the notebook measures the shipping C++ through.
+ctypes binding the notebook measures the shipping C++ through
+(`Chain(name, fmt="q15")` for the fixed-point formats).
 
 ### Embedded targets and the instruction-count ratchet
 

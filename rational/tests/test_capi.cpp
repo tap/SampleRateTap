@@ -3,13 +3,17 @@
 //
 // The C ABI (capi/tap_sr_rational_capi.h) is the notebooks' seam, so it must
 // be the shipping C++ exactly: every chain constant equals its named
-// basic_chain bit for bit on the reference noise, with the same exact
+// basic_chain bit for bit on the reference noise, in float, Q15 and Q31
+// (a call in another format than the converter's is refused), with the same exact
 // latency, MACs and accounting; the stage constructor equals a stage built
 // at the same divisor; invalid arguments return NULL; and the version probe
 // pins the family encoding (D13). Links the shipped shared library, so it
 // exists wherever TAP_SR_BUILD_CAPI builds one.
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <type_traits>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -34,17 +38,57 @@ namespace {
         EXPECT_EQ(v & 0xFFu, 0u);
     }
 
+    // The ABI's typed entry points by sample type.
+    std::size_t abi_process(tap_sr_rational_converter* c, const float* in, std::size_t n, float* out) {
+        return tap_sr_rational_process(c, in, n, out);
+    }
+    std::size_t abi_process(tap_sr_rational_converter* c, const std::int16_t* in, std::size_t n, std::int16_t* out) {
+        return tap_sr_rational_process_q15(c, in, n, out);
+    }
+    std::size_t abi_process(tap_sr_rational_converter* c, const std::int32_t* in, std::size_t n, std::int32_t* out) {
+        return tap_sr_rational_process_q31(c, in, n, out);
+    }
+    std::size_t abi_flush(tap_sr_rational_converter* c, float* out) {
+        return tap_sr_rational_flush(c, out);
+    }
+    std::size_t abi_flush(tap_sr_rational_converter* c, std::int16_t* out) {
+        return tap_sr_rational_flush_q15(c, out);
+    }
+    std::size_t abi_flush(tap_sr_rational_converter* c, std::int32_t* out) {
+        return tap_sr_rational_flush_q31(c, out);
+    }
+
+    template <typename S>
+    constexpr int format_tag() {
+        return std::is_same_v<S, float>          ? TAP_SR_RATIONAL_FORMAT_FLOAT
+               : std::is_same_v<S, std::int16_t> ? TAP_SR_RATIONAL_FORMAT_Q15
+                                                 : TAP_SR_RATIONAL_FORMAT_Q31;
+    }
+
+    template <typename S>
+    S to_sample(float v) {
+        if constexpr (std::is_same_v<S, float>) {
+            return v;
+        }
+        else {
+            return static_cast<S>(std::llround(static_cast<double>(v) * std::numeric_limits<S>::max()));
+        }
+    }
+
     /// The ABI's converter against the C++ chain, on the reference noise
-    /// (stereo, the second channel negated): outputs bit-identical, the
-    /// accounting, latency and MACs equal, flush equal.
+    /// (stereo, the second channel negated) in the chain's format: outputs
+    /// bit-identical, the accounting, latency and MACs equal, flush equal; a
+    /// call in another format is refused and leaves the converter untouched.
     template <typename Chain>
     void expect_abi_is_the_chain(tap_sr_rational_converter* c, Chain& ref, const char* name) {
+        using sample = typename Chain::sample;
         ASSERT_NE(c, nullptr) << name;
-        const auto&        n = rational_ref::k_input;
-        std::vector<float> x(2 * n.size());
+        EXPECT_EQ(tap_sr_rational_format(c), format_tag<sample>()) << name;
+        const auto&         n = rational_ref::k_input;
+        std::vector<sample> x(2 * n.size());
         for (std::size_t i = 0; i < n.size(); ++i) {
-            x[2 * i]     = n[i];
-            x[2 * i + 1] = -n[i];
+            x[2 * i]     = to_sample<sample>(n[i]);
+            x[2 * i + 1] = to_sample<sample>(-n[i]);
         }
         unsigned l = 0, m = 0;
         tap_sr_rational_ratio(c, &l, &m);
@@ -61,31 +105,52 @@ namespace {
         EXPECT_EQ((exact_ratio{num, den}), ref.latency_output_frames()) << name;
         EXPECT_DOUBLE_EQ(tap_sr_rational_latency_seconds(c, 48000.0), ref.latency_seconds(48000.0)) << name;
 
-        std::vector<float> ya(2 * ref.outputs_for(n.size()));
-        std::vector<float> yb(ya.size());
-        ASSERT_EQ(tap_sr_rational_process(c, x.data(), n.size(), ya.data()), ya.size() / 2) << name;
+        if constexpr (!std::is_same_v<sample, float>) {
+            std::vector<float> fx(2 * n.size()), fy(2 * n.size() * 8 + 64);
+            EXPECT_EQ(tap_sr_rational_process(c, fx.data(), n.size(), fy.data()), 0u) << name << ": wrong format";
+            EXPECT_EQ(tap_sr_rational_flush(c, fy.data()), 0u) << name << ": wrong format";
+        }
+        else {
+            std::vector<std::int16_t> qx(2 * n.size()), qy(2 * n.size() * 8 + 64);
+            EXPECT_EQ(tap_sr_rational_process_q15(c, qx.data(), n.size(), qy.data()), 0u) << name;
+            EXPECT_EQ(tap_sr_rational_flush_q15(c, qy.data()), 0u) << name;
+        }
+        EXPECT_EQ(tap_sr_rational_outputs_for(c, n.size()), fresh) << name << ": the refused call left it untouched";
+        std::vector<sample> ya(2 * ref.outputs_for(n.size()));
+        std::vector<sample> yb(ya.size());
+        ASSERT_EQ(abi_process(c, x.data(), n.size(), ya.data()), ya.size() / 2) << name;
         ASSERT_EQ(ref.process(x.data(), n.size(), yb.data()), yb.size() / 2) << name;
         EXPECT_TRUE(ya == yb) << name;
-        const std::size_t  tail = static_cast<std::size_t>(tap_sr_rational_flush_output_frames(c));
-        std::vector<float> fa(2 * tail);
-        std::vector<float> fb(2 * ref.flush_output_frames());
+        const std::size_t   tail = static_cast<std::size_t>(tap_sr_rational_flush_output_frames(c));
+        std::vector<sample> fa(2 * tail);
+        std::vector<sample> fb(2 * ref.flush_output_frames());
         ASSERT_EQ(fa.size(), fb.size()) << name;
-        EXPECT_EQ(tap_sr_rational_flush(c, fa.data()), tail) << name;
+        EXPECT_EQ(abi_flush(c, fa.data()), tail) << name;
         ref.flush(fb.data());
         EXPECT_TRUE(fa == fb) << name;
         tap_sr_rational_reset(c);
         EXPECT_EQ(tap_sr_rational_outputs_for(c, n.size()), fresh) << name << ": reset returns to the fresh state";
     }
 
-    template <rational_ratio... Rs>
-    void expect_named(int chain, const char* name) {
-        tap_sr_rational_converter* c = tap_sr_rational_create(chain, 0, 2);
-        basic_chain<float, Rs...>  ref(2, profile::economy());
+    template <typename S, rational_ratio... Rs>
+    void expect_named_in(int chain, const char* name) {
+        tap_sr_rational_converter* c = std::is_same_v<S, float>
+                                           ? tap_sr_rational_create(chain, 0, 2)
+                                           : tap_sr_rational_create_format(chain, 0, format_tag<S>(), 2);
+        basic_chain<S, Rs...>      ref(2, profile::economy());
         expect_abi_is_the_chain(c, ref, name);
         std::uint64_t num = 0, den = 0;
         tap_sr_rational_macs_per_output(c, &num, &den);
         EXPECT_EQ((exact_ratio{num, den}), ref.macs_per_output_exact()) << name;
         tap_sr_rational_destroy(c);
+    }
+
+    /// Every format: the float ABI, and Q15 and Q31 through create_format.
+    template <rational_ratio... Rs>
+    void expect_named(int chain, const char* name) {
+        expect_named_in<float, Rs...>(chain, name);
+        expect_named_in<std::int16_t, Rs...>(chain, name);
+        expect_named_in<std::int32_t, Rs...>(chain, name);
     }
 
     TEST(CApi, EveryChainEnumeratorIsItsNamedChain) {
@@ -133,11 +198,11 @@ namespace {
     }
 
     /// The stage constructor is a stage at profile.relaxed(divisor).
-    template <rational_ratio R>
+    template <rational_ratio R, typename S = float>
     void expect_stage(unsigned l, unsigned m, int tag, const profile& p, exact_ratio d) {
-        tap_sr_rational_converter* c = tap_sr_rational_create_stage(l, m, tag, static_cast<std::uint32_t>(d.num),
-                                                                    static_cast<std::uint32_t>(d.den), 2);
-        tap::dsp::chain<basic_stage<float, R>> ref(2, basic_stage<float, R>(2, p.relaxed(d)));
+        tap_sr_rational_converter* c = tap_sr_rational_create_stage_format(
+            l, m, tag, static_cast<std::uint32_t>(d.num), static_cast<std::uint32_t>(d.den), format_tag<S>(), 2);
+        tap::dsp::chain<basic_stage<S, R>> ref(2, basic_stage<S, R>(2, p.relaxed(d)));
         expect_abi_is_the_chain(c, ref, "stage");
         std::uint64_t num = 0, den = 0;
         tap_sr_rational_macs_per_output(c, &num, &den);
@@ -153,6 +218,15 @@ namespace {
         expect_stage<ratio_3_4>(3, 4, 0, profile::economy(), exact_ratio{2, 1});
         expect_stage<ratio_2_3>(2, 3, 2, profile::balanced(), exact_ratio{1, 1});
         expect_stage<down_6>(1, 6, 3, profile::super_economy(), exact_ratio{9, 1}); // a searched divisor
+        expect_stage<ratio_3_4, std::int16_t>(3, 4, 0, profile::economy(), exact_ratio{2, 1});
+        expect_stage<down_6, std::int16_t>(1, 6, 0, profile::economy(), exact_ratio{1, 1});
+        expect_stage<up_8, std::int32_t>(8, 1, 1, profile::transparent(), exact_ratio{2, 1});
+        expect_stage<ratio_3_8, std::int32_t>(3, 8, 0, profile::economy(), exact_ratio{1, 1});
+        // create_stage is create_stage_format in float.
+        tap_sr_rational_converter* c = tap_sr_rational_create_stage(2, 1, 0, 1, 1, 1);
+        ASSERT_NE(c, nullptr);
+        EXPECT_EQ(tap_sr_rational_format(c), TAP_SR_RATIONAL_FORMAT_FLOAT);
+        tap_sr_rational_destroy(c);
     }
 
     TEST(CApi, InvalidArgumentsReturnNull) {
@@ -168,6 +242,12 @@ namespace {
         EXPECT_EQ(tap_sr_rational_create_stage(2, 1, 0, 1, 0, 1), nullptr);
         EXPECT_EQ(tap_sr_rational_create_stage(2, 1, 9, 1, 1, 1), nullptr);
         EXPECT_EQ(tap_sr_rational_create_stage(258, 1, 0, 1, 1, 1), nullptr);
+        EXPECT_EQ(tap_sr_rational_create_format(0, 0, 3, 1), nullptr); // unknown format
+        EXPECT_EQ(tap_sr_rational_create_format(0, 0, -1, 1), nullptr);
+        EXPECT_EQ(tap_sr_rational_create_stage_format(2, 1, 0, 1, 1, 7, 1), nullptr);
+        EXPECT_EQ(TAP_SR_RATIONAL_FORMAT_FLOAT, 0);
+        EXPECT_EQ(TAP_SR_RATIONAL_FORMAT_Q15, 1);
+        EXPECT_EQ(TAP_SR_RATIONAL_FORMAT_Q31, 2);
         tap_sr_rational_destroy(nullptr); // the free() convention
     }
 

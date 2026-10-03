@@ -10,7 +10,7 @@ if(NOT TARGET tap_sr_rational)
 endif()
 
 # Hidden by default, the C entry points exported by the source's visibility
-# pragma: the dynamic symbol table is exactly the sixteen tap_sr_rational_*
+# pragma: the dynamic symbol table is exactly the 23 tap_sr_rational_*
 # functions (no template or inline C++ leaks into it).
 add_library(tap_sr_rational_capi SHARED tap_sr_rational_capi.cpp)
 target_link_libraries(tap_sr_rational_capi PRIVATE tap::sr::rational tap_sr_rational_warnings)

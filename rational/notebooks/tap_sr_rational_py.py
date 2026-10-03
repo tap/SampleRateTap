@@ -9,6 +9,7 @@ older checkout would silently measure old code.
     from tap_sr_rational_py import Chain, Stage
     c = Chain("down_3_down_8_down_2", profile="economy")
     y = c.process(x)                    # float32 in, float32 out
+    q = Chain("down_2", fmt="q15")      # int16 (Q0.15) in and out; "q31": int32
     s = Stage(2, 1, divisor=(147, 160))  # the up 2 after bridge in 48 -> 88.2
     c.latency_output_frames             # Fraction
     c.macs_per_output                   # Fraction
@@ -34,6 +35,7 @@ CHAINS = [  # the TAP_SR_RATIONAL_* chain constants, in value order
     "down_8_down_2", "down_2_down_6_down_2", "down_2_down_8_down_2", "down_3_down_8_down_2",
 ]
 PROFILES = {"economy": 0, "transparent": 1, "balanced": 2, "super_economy": 3}
+FORMATS = {"float": 0, "q15": 1, "q31": 2}  # the TAP_SR_RATIONAL_FORMAT_* constants
 
 
 def _lib_path():
@@ -68,12 +70,22 @@ def _load():
     lib = ctypes.CDLL(str(_lib_path()))
     vp, u64, sz = ctypes.c_void_p, ctypes.c_uint64, ctypes.c_size_t
     fp = ctypes.POINTER(ctypes.c_float)
+    p16 = ctypes.POINTER(ctypes.c_int16)
+    p32 = ctypes.POINTER(ctypes.c_int32)
     pu64 = ctypes.POINTER(ctypes.c_uint64)
     pun = ctypes.POINTER(ctypes.c_uint)
     sig = {
         "create": (vp, [ctypes.c_int, ctypes.c_int, ctypes.c_uint]),
         "create_stage": (vp, [ctypes.c_uint, ctypes.c_uint, ctypes.c_int, ctypes.c_uint32, ctypes.c_uint32,
                               ctypes.c_uint]),
+        "create_format": (vp, [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint]),
+        "create_stage_format": (vp, [ctypes.c_uint, ctypes.c_uint, ctypes.c_int, ctypes.c_uint32, ctypes.c_uint32,
+                                     ctypes.c_int, ctypes.c_uint]),
+        "format": (ctypes.c_int, [vp]),
+        "process_q15": (sz, [vp, p16, sz, p16]),
+        "process_q31": (sz, [vp, p32, sz, p32]),
+        "flush_q15": (sz, [vp, p16]),
+        "flush_q31": (sz, [vp, p32]),
         "destroy": (None, [vp]),
         "ratio": (None, [vp, pun, pun]),
         "outputs_for": (u64, [vp, u64]),
@@ -99,10 +111,19 @@ def _load():
 _LIB = _load()
 
 
-class _Converter:
-    """The shared surface of a chain and a stage (float32, interleaved)."""
+# Per format: numpy dtype, ctypes element, process and flush entry points.
+_IO = {
+    "float": ("float32", ctypes.c_float, "process", "flush"),
+    "q15": ("int16", ctypes.c_int16, "process_q15", "flush_q15"),
+    "q31": ("int32", ctypes.c_int32, "process_q31", "flush_q31"),
+}
 
-    def __init__(self, handle, channels):
+
+class _Converter:
+    """The shared surface of a chain and a stage (interleaved frames in the
+    converter's format: float32, or int16 / int32 for Q15 / Q31)."""
+
+    def __init__(self, handle, channels, fmt="float"):
         import numpy as np  # local import keeps the binding numpy-optional
 
         if not handle:
@@ -110,6 +131,12 @@ class _Converter:
         self._np = np
         self._h = handle
         self._channels = channels
+        self.fmt = fmt
+        dtype, elem, proc, fl = _IO[fmt]
+        self._dtype = np.dtype(dtype)
+        self._ptr = ctypes.POINTER(elem)
+        self._process = getattr(_LIB, "tap_sr_rational_" + proc)
+        self._flush = getattr(_LIB, "tap_sr_rational_" + fl)
 
     def __del__(self):
         if getattr(self, "_h", None):
@@ -150,21 +177,16 @@ class _Converter:
 
     def process(self, x):
         np = self._np
-        x = np.ascontiguousarray(x, dtype=np.float32)
+        x = np.ascontiguousarray(x, dtype=self._dtype)
         frames = len(x) // self._channels
-        y = np.empty(int(self.outputs_for(frames)) * self._channels, np.float32)
-        made = _LIB.tap_sr_rational_process(
-            self._h,
-            x.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
-            frames,
-            y.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
-        )
+        y = np.empty(int(self.outputs_for(frames)) * self._channels, self._dtype)
+        made = self._process(self._h, x.ctypes.data_as(self._ptr), frames, y.ctypes.data_as(self._ptr))
         return y[: made * self._channels]
 
     def flush(self):
         np = self._np
-        y = np.empty(int(_LIB.tap_sr_rational_flush_output_frames(self._h)) * self._channels, np.float32)
-        made = _LIB.tap_sr_rational_flush(self._h, y.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+        y = np.empty(int(_LIB.tap_sr_rational_flush_output_frames(self._h)) * self._channels, self._dtype)
+        made = self._flush(self._h, y.ctypes.data_as(self._ptr))
         return y[: made * self._channels]
 
     def reset(self):
@@ -174,17 +196,25 @@ class _Converter:
 class Chain(_Converter):
     """A named within-family chain (a chain constant of the C ABI)."""
 
-    def __init__(self, name, profile="economy", channels=1):
-        super().__init__(_LIB.tap_sr_rational_create(CHAINS.index(name), PROFILES[profile], channels), channels)
+    def __init__(self, name, profile="economy", channels=1, fmt="float"):
+        super().__init__(
+            _LIB.tap_sr_rational_create_format(CHAINS.index(name), PROFILES[profile], FORMATS[fmt], channels),
+            channels,
+            fmt,
+        )
         self.name = name
 
 
 class Stage(_Converter):
     """One stage at ratio L/M, designed at the profile relaxed by a divisor."""
 
-    def __init__(self, L, M, profile="economy", divisor=(1, 1), channels=1):
+    def __init__(self, L, M, profile="economy", divisor=(1, 1), channels=1, fmt="float"):
         n, d = divisor
-        super().__init__(_LIB.tap_sr_rational_create_stage(L, M, PROFILES[profile], n, d, channels), channels)
+        super().__init__(
+            _LIB.tap_sr_rational_create_stage_format(L, M, PROFILES[profile], n, d, FORMATS[fmt], channels),
+            channels,
+            fmt,
+        )
 
 
 def version():
