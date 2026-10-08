@@ -116,6 +116,16 @@ and a C foreign-function interface each demanded.
 **Part V** reaches hardware: real crystals, real cycle counters, and the
 configuration rules that scale across channel counts and sample rates.
 
+**Part VI** reads the family's synchronous sibling, the `rational` engine
+that now shares this tree — a small-factor converter whose every degree
+of freedom is a compile-time constant — header by header, the way Part I
+read the ASRC: the ratio as a type, the Nyquist filter that gives away
+half its taps, the two machines that run it, the chains and the 182-row
+coverage matrix, the fixed-point limits lifted one by one, and a
+host-versus-target bug that turned out to be in the designer. The
+asynchronous converter earned its numbers against a moving clock; this
+engine pins its own with `==`.
+
 The appendices collect the C++ decision log (every idiom adopted or
 rejected, with reasons), a glossary, and an annotated bibliography.
 

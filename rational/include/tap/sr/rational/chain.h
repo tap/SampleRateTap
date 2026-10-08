@@ -56,6 +56,7 @@ namespace tap::sr::rational {
             return exact_ratio{a.num * b.den, a.den * b.num};
         }
 
+        // ANCHOR: rational_design_divisor
         /// The design divisor of a stage whose lower rate over the chain's
         /// lowest is q (see the file header): the largest 2^a 3^b at or
         /// below q, or q itself below 1.
@@ -101,9 +102,11 @@ namespace tap::sr::rational {
                 return d;
             }();
         };
+        // ANCHOR_END: rational_design_divisor
 
     } // namespace detail
 
+    // ANCHOR: rational_chain
     /// A chain of stages at the ratios Rs, in order, over sample format S;
     /// see the file header. Constructs each stage at the profile relaxed by
     /// the stage's design divisor (k_divisors); everything else is
@@ -150,6 +153,7 @@ namespace tap::sr::rational {
         basic_chain(std::size_t channels, const profile& p, std::index_sequence<I...>)
             : base(channels, basic_stage<S, Rs>(channels, p.relaxed(k_divisors[I]))...) {}
     };
+    // ANCHOR_END: rational_chain
 
     /// The float chain at the ratios Rs (the golden-model profile), and the
     /// Q15 / Q31 chains (R8).

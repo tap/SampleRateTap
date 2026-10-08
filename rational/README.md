@@ -157,9 +157,10 @@ ctypes binding the notebook measures the shipping C++ through
 
 Every push runs this engine's emulation-sized battery on **Cortex-M33**
 (QEMU mps2-an505), **Cortex-M55** (mps3-an547) and **Hexagon**
-(qemu-hexagon, static musl), and gates twelve fixed workloads — the by-2
+(qemu-hexagon, static musl), and gates fourteen fixed workloads — the by-2
 and by-3 stages both ways in float and Q15 at `economy`, the Q15 by-4
-chain, the by-2 pair in float at `transparent`, and construction alone —
+chain, the by-2 pair in float at `transparent`, the 2/3 stage in float and
+Q15, and construction alone —
 against committed per-target instruction counts (`bench/baselines.json`,
 two-sided ±3 %), measured by the family's shared harness from the
 repository root:

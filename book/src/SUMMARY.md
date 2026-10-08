@@ -40,6 +40,15 @@
 - [Real clocks: bridges and firmware](part5/hardware.md)
 - [Channels, rates, and the rules that scale](part5/scaling.md)
 
+# Part VI — The rational engine
+
+- [A ratio is a type: ratio.h](part6/charter.md)
+- [One filter per stage: nyquist.h and design.h](part6/nyquist.md)
+- [Two machines, one filter: stage.h](part6/stage.md)
+- [Chains and the coverage matrix: chain.h](part6/chain.md)
+- [Sixteen bits, per stage](part6/fixed-point.md)
+- [The proof, the ABI, and the levers that lost](part6/proof.md)
+
 # Epilogue
 
 - [A letter from the list](epilogue/letter.md)
