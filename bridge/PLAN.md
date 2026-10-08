@@ -444,7 +444,11 @@ still holds on the new default, re-measured in the same test batteries.*
   `converter_to_88k2` / `converter_to_192k` / `converter_to_176k4` aliases
   (and `_q15` / `_q31`), the profile edges documented as fractions of the
   rate, and the bit-identity of every design and converter at every `K`
-  pinned by test. The C ABI stays at `K = 0` until a consumer asks.
+  pinned by test. The C ABI stays at `K = 0` until a consumer asks; it
+  carries Q15 and Q31 beside float (`tap_sr_bridge_create_format`,
+  `_format`, `_process_q15` / `_q31`, `_flush_q15` / `_q31`; 17 exported
+  symbols, hidden visibility), the shape `rational`'s ABI set, since the
+  family decided to keep fixed point at every engine's C boundary.
 - **Book/white-paper chapter** ("the degenerate case"): explicitly deferred
   past v0.1. Code is written anchor-friendly (`ANCHOR:` comments on the
   load-bearing excerpts) from day one so the chapter can be added without

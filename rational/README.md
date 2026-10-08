@@ -141,7 +141,7 @@ consumers in float and, through `tap_sr_rational_create_format(chain,
 profile, format, channels)` with `TAP_SR_RATIONAL_FORMAT_Q15` / `_Q31`, in the
 fixed-point profiles (`tap_sr_rational_process_q15` / `_q31` and the matching
 flush; a call in another format than the converter's returns 0 and touches
-nothing — the siblings' ABIs are float-only). `tap_sr_rational_create(chain, profile, channels)` takes
+nothing — the shape the siblings' ABIs share). `tap_sr_rational_create(chain, profile, channels)` takes
 one of the 28 named within-family chains of the coverage matrix as a
 constant (`TAP_SR_RATIONAL_UP_2` … `TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2`),
 never a rate; `tap_sr_rational_create_stage(L, M, profile, divisor_num,

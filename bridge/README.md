@@ -25,7 +25,11 @@ quantization, measurement instruments).
 > `economy`, which is both cheaper *and* quieter than `transparent` at 16
 > bits), plus the golden cross-validation against the family's `async`
 > engine (every phase, floor at the one deliberate design difference), the
-> `bluetooth_bridge` example, the C ABI, and the executed demo notebook.
+> `bluetooth_bridge` example, the C ABI (`capi/`: float for the notebooks,
+> and Q15 / Q31 through `tap_sr_bridge_create_format` with the `_q15` /
+> `_q31` process and flush, each format pinned bit for bit against
+> `basic_converter`; `notebooks/tap_sr_bridge_py.py` takes `fmt="q15"`),
+> and the executed demo notebook.
 > v0.2 was the measured optimization campaign — superblock walk, committed
 > compile-time trip counts, symmetry-halved tables, each gated by the
 > instruction-count ratchet, outputs bit-identical throughout: **Q15

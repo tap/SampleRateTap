@@ -89,11 +89,11 @@ through `bridge` is composed from, by a caller who writes the chain — which
 is exactly how the matrix notebook builds the cross rows, through
 `bridge`'s own C ABI.
 
-The second is a departure from the siblings, and the plan flags it as
-one. `async`'s and `bridge`'s ABIs are float-only, on the argument Part IV
-gave — the notebooks are metrology instruments, float is what they
-measure with, and every function in an ABI is a promise kept forever.
-`rational`'s ABI also carries Q15 and Q31, through
+The second was a departure from the siblings when it landed, and the plan
+flagged it as one. `async`'s and `bridge`'s ABIs were float-only, on the
+argument Part IV gave — the notebooks are metrology instruments, float is
+what they measure with, and every function in an ABI is a promise kept
+forever. `rational`'s ABI also carries Q15 and Q31, through
 `tap_sr_rational_create_format` and `_process_q15` / `_q31`, because the
 fixed-point profiles exist for a reason that is not metrology: the
 Bluetooth-adjacent M33 / M55 deployments that are the Q15 profile's whole
@@ -101,7 +101,12 @@ purpose are FFI consumers too. A call in another format than the
 converter's returns 0 and touches nothing; every format is pinned bit for
 bit against the C++ `basic_chain` of that sample type. Twenty-three
 exported symbols, the library built with hidden visibility so that no C++
-leaks into the table, and the symbol count is a test.
+leaks into the table, and the symbol count is a test. The departure did
+not last: faced with one engine in this shape and two in the other, the
+family chose the one, and the siblings adopted it — `create_format`,
+`format`, the `_q15` / `_q31` entry points, hidden visibility, the same
+three format values — so the three ABIs now differ only in what each
+engine names.
 
 The notebook, `rational/notebooks/matrix.ipynb`, is committed executed:
 all 182 rows at four profiles through the C ABIs, reproducing every one

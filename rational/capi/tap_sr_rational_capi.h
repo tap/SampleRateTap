@@ -5,11 +5,12 @@
 //
 // The verification layer's seam (family convention): the notebooks drive the
 // SHIPPING C++ through this ABI via ctypes rather than re-implementing
-// anything in Python, in float, the golden-model profile. Unlike the
-// siblings' float-only ABIs, this one also carries the Q15 and Q31 profiles,
-// for fixed-point FFI consumers (Bluetooth-adjacent M33 / M55 deployments,
-// the reason the profiles exist): the same C++ in each format, its
-// contracts pinned by the C++ test suite (PLAN.md section 6).
+// anything in Python, in float, the golden-model profile. The ABI also
+// carries the Q15 and Q31 profiles — the shape this engine set and the
+// siblings' ABIs then adopted — for fixed-point FFI consumers
+// (Bluetooth-adjacent M33 / M55 deployments, the reason the profiles
+// exist): the same C++ in each format, its contracts pinned by the C++
+// test suite (PLAN.md section 6).
 //
 // What a caller constructs is named, never looked up (D12): a chain is one of
 // the coverage matrix's within-family chains (PLAN.md 3.3 / 3.4, R16), a
