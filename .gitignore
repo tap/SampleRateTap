@@ -8,5 +8,6 @@ CMakeUserPresets.json
 !.claude/settings.json
 !.claude/hooks/
 book/book/
+book/print-build/
 __pycache__/
 docs/html/

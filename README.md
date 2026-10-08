@@ -97,7 +97,8 @@ cmake/  platform/       toolchains (Cortex-M33/M55, Hexagon), bare-metal startup
 scripts/                icount.py (the ratchet), tidy.sh, fetch_hexagon_toolchain.sh, doc updaters
 tools/qemu_insn_plugin  the QEMU instruction-counting plugin
 tests/                  the family's own tests: the dependency rule and the version macros
-book/                   the async engine's book (published at https://tap.github.io/SampleRateTap/)
+book/                   the family's book (published at https://tap.github.io/SampleRateTap/, the
+                        print edition beside it as SampleRateTap.pdf; book/print builds it)
 docs/                   Doxyfile; the migration's run record
 async/                  include/tap/sr/async  tests  bench  examples  capi  notebooks  docs  README  PLAN
 bridge/                 include/tap/sr/bridge tests  bench  examples  capi  notebooks  docs  README  PLAN

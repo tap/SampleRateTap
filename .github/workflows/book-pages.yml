@@ -1,5 +1,5 @@
-# Publishes the book (at /) and the Doxygen API reference (at /api/) to
-# GitHub Pages on every push to main.
+# Publishes the book (at /), its print edition (/SampleRateTap.pdf) and the
+# Doxygen API reference (at /api/) to GitHub Pages on every push to main.
 #
 # The site is PUBLIC (https://tap.github.io/SampleRateTap/) even though the
 # repository is private; it contains the book's code excerpts by design.
@@ -38,6 +38,10 @@ concurrency:
 env:
   MDBOOK_URL: https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz
   MDBOOK_SHA256: "9ef07fd288ba58ff3b99d1c94e6d414d431c9a61fdb20348e5beb74b823d546b"
+  PANDOC_URL: https://github.com/jgm/pandoc/releases/download/3.6.4/pandoc-3.6.4-linux-amd64.tar.gz
+  PANDOC_SHA256: "5def6e1ff535e397becce292ee97767a947306150b9fb1488003b67ac3417c5e"
+  TYPST_URL: https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-unknown-linux-musl.tar.xz
+  TYPST_SHA256: "7d214bfeffc2e585dc422d1a09d2b144969421281e8c7f5d784b65fc69b5673f"
 
 jobs:
   deploy:
@@ -71,13 +75,28 @@ jobs:
             exit 1
           fi
 
+      - name: Install pandoc + typst (pinned; the print edition)
+        run: |
+          curl -sfLo /tmp/pandoc.tar.gz "$PANDOC_URL"
+          curl -sfLo /tmp/typst.tar.xz "$TYPST_URL"
+          echo "$PANDOC_SHA256  /tmp/pandoc.tar.gz" | sha256sum -c - || { echo "::error::pandoc checksum mismatch"; exit 1; }
+          echo "$TYPST_SHA256  /tmp/typst.tar.xz" | sha256sum -c - || { echo "::error::typst checksum mismatch"; exit 1; }
+          tar -xzf /tmp/pandoc.tar.gz -C /tmp
+          tar -xJf /tmp/typst.tar.xz -C /tmp
+
+      - name: Build the print edition (PDF)
+        run: |
+          MDBOOK=/tmp/mdbook PANDOC=/tmp/pandoc-3.6.4/bin/pandoc TYPST=/tmp/typst-x86_64-unknown-linux-musl/typst \
+            book/print/build.sh
+
       - name: Build the API reference
         run: doxygen docs/Doxyfile
 
-      - name: Compose the Pages site (book at /, API at /api/)
+      - name: Compose the Pages site (book at /, the PDF beside it, API at /api/)
         run: |
           mkdir -p site
           cp -r book/book/. site/
+          cp book/print-build/SampleRateTap.pdf site/SampleRateTap.pdf
           mkdir -p site/api
           cp -r docs/html/. site/api/
 
