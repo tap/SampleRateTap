@@ -158,6 +158,13 @@ costs ≥ 116 MACs per output for an 11.025 kHz result. Those rows are
 and the flag is documentation: nothing dispatches on it, because nothing
 dispatches on a rate.
 
+![The coverage matrix at economy: MACs per output for every ordered pair of the family's fourteen rates, the flagged rows marked](../img/coverage-matrix.svg)
+
+*The 14 × 14 matrix at `economy`, read from the engine's own generator by
+`scripts/book_figures.py`: each cell is one chain's MACs per output frame
+at the output rate, from 7.8 (8 → 384 kHz) to 551 (384 → 11.025 kHz); the
+marked cells are the 38 dipping rows, covered and not recommended.*
+
 The test is `test_matrix.cpp`, and it is the engine's heaviest: for every
 row it builds the chain in double from the generated row table (the
 cross-family rows through a test-only adapter over `bridge`'s converter —

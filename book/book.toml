@@ -1,6 +1,6 @@
 [book]
-title = "SampleRateTap: The Story of an Asynchronous Sample Rate Converter"
-description = "A working tour of a real-time asynchronous sample rate converter: the DSP, the C++, the concurrency, and the measurements that hold it together."
+title = "SampleRateTap: The Story of a Sample Rate Converter Family"
+description = "A working tour of three real-time sample rate converters on one substrate — asynchronous, fixed-ratio and small-factor: the DSP, the C++, the concurrency, and the measurements that hold them together."
 authors = ["The SampleRateTap project"]
 language = "en"
 src = "src"

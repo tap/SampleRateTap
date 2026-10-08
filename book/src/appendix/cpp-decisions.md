@@ -23,8 +23,10 @@ embedded targets that cannot fake their way around a bad choice.
 
 ## 1. Header-only distribution
 
-The entire library is seven headers under `include/tap/sr/async/`. The build system
-declares exactly one library target, and it has no compiled artifact:
+The asynchronous engine is seven headers under `include/tap/sr/async/`
+(its two siblings add five and six under `bridge/` and `rational/`, the
+same way). The build system declares one library target per engine, and
+none has a compiled artifact:
 
 ```cmake
 add_library(SampleRateTap INTERFACE)
@@ -757,3 +759,97 @@ was already right. The comment was the bug.
 That is the standard this appendix has been documenting all along. A
 decision is not what the code happens to do; it is a claim, written where
 the code makes it true, precise enough to be checked — and checked.
+
+## 19. The synchronous engines: five more decisions, the same two masters
+
+Parts VI and VII added two engines and about a dozen headers, and every
+C++ decision in them is one of the eighteen above wearing the sync
+engines' clothes — with five exceptions that are worth their own rows,
+because each converts something the asynchronous engine had to leave as
+runtime state into a compile-time fact.
+
+### 19.1 The ratio is a type
+
+`bridge`'s `direction` is an `enum class` template parameter and
+`rational`'s `ratio<L, M>` is a class template whose definition is three
+`static_assert`s: L and M of the form 2ᵃ·3ᵇ, coprime, unequal. The
+rejected alternative — a runtime `(L, M)` pair or direction flag validated
+in the constructor — would have put the family's one rule, *never route by
+rate*, in a review checklist. As a type it is in the language: there is
+no C++ expression that takes two measured rates and yields a `ratio<L, M>`,
+so a converter cannot be chosen from a float by accident. The schedule
+(`k_schedule<D>`, `k_schedule<R>`) is a `constexpr std::array` of L
+entries because L is a template argument; the compile-fail test
+(`Ratio.ChartersFailToCompileWithTheMessage`) runs a `try_compile` project
+with the build's own compiler, cross toolchains included, and asserts the
+diagnostic carries the charter's sentence.
+
+| Decision | Rejected | Reason | Evidence |
+|---|---|---|---|
+| direction and ratio as template parameters, the charter as `static_assert` | runtime values, constructor validation | the rule becomes a property of the language; schedules and trip counts become `constexpr`; the diagnostic is tested | `bridge/include/tap/sr/bridge/design.h`, `rational/include/tap/sr/rational/ratio.h`, `rational/tests/compile_fail/` |
+
+### 19.2 `if constexpr` selects the machine
+
+`rational`'s `basic_stage` runs one of two machines — the L-phase schedule
+or the M-branch commutator — chosen by `if constexpr (k_is_decimator)`,
+and `bridge`'s `process()` dispatches once per call onto four
+instantiations of its walk, one per pinned taps-per-phase count. The
+rejected alternative is the runtime switch, or a strategy object with a
+virtual dot. Both put a branch where the loop's *shape* is decided, and the
+shape is known at compile time; the measured cost of not committing is in
+Part VI's converter chapter (Hexagon −7 … −12 % on fixed point, M55
+`up_q15` −15 % from committing the trip count alone).
+
+| Decision | Rejected | Reason | Evidence |
+|---|---|---|---|
+| `if constexpr` on the ratio; one dispatch per call onto `constexpr` trip counts | runtime switch per sample, virtual strategy | the loop's shape is a compile-time fact; exact-count loops pipeline and unroll where bounded ones do not | `rational/include/tap/sr/rational/stage.h` (`process`, `emit`), `bridge/include/tap/sr/bridge/converter.h` (`process`, `process_walk`) |
+
+### 19.3 Exact rationals, not doubles
+
+Latency, MACs per output and the chain's ratio are `tap::dsp::exact_ratio`
+— a reduced numerator and denominator — and `outputs_for` / `frames_needed`
+are closed-form integer arithmetic from the current position. The rejected
+alternative, a `double` with a tolerance, is what the asynchronous engine
+*must* use, because its ratio moves; the sync engines do not have to, and a
+number that can be compared with `==` is a pin that drift cannot hide
+behind. The 182-row matrix test compares `373/1` and `49/1`, not
+`373.0 ± ε`; a chain's latency is a sum of rationals that never rounds.
+
+| Decision | Rejected | Reason | Evidence |
+|---|---|---|---|
+| `exact_ratio` for latency, MACs and the chain ratio; integer accounting | `double` and a tolerance | `==` pins; chains compose without rounding; `frames_needed` is arithmetic the async engine cannot offer | `submodules/dsptap/include/tap/dsp/chain.h`, `rational/tests/test_matrix.cpp`, `bridge/include/tap/sr/bridge/schedule.h` |
+
+### 19.4 Quantize once; let symmetry carry the rest
+
+`bridge` stores ⌈L/2⌉ rows and dots a mirrored phase's partner backwards
+through `tap::dsp::dot_row_reversed`; it quantizes *only the stored half*,
+so a mirrored row is its partner's reversal by construction and the
+exact-unity row sums carry over with no second quantization to disagree.
+The rejected alternative — quantize all L rows and assert they mirror —
+would fail by an LSB wherever the largest-remainder correction landed on
+different taps. The same principle one layer down is tap/DspTap#56: the
+Nyquist designer now copies its second half from its first after
+normalization, because two independently computed halves had differed by
+an ulp under a different libm and a mirrored pair inside one quantized row
+had tied only by luck.
+
+| Decision | Rejected | Reason | Evidence |
+|---|---|---|---|
+| quantize the stored half only; mirror by construction, in the table and in the designer | quantize both halves and compare | one quantization, so unity sums carry over; a mirror that is computed twice is a mirror that can disagree | `bridge/include/tap/sr/bridge/phase_table.h`, `submodules/dsptap/include/tap/dsp/nyquist.h`, `submodules/dsptap/include/tap/dsp/quantize.h` |
+
+### 19.5 A `noinline` gated per target, with the numbers in the comment
+
+`TAP_SR_BRIDGE_MIRRORED_DOT_ATTR` is `__attribute__((noinline))` on Arm and
+empty on Hexagon. Inlining both dot arms of the superblock walk cost the
+M55 +3.3 % by breaking the forward arm's unrolled codegen; out-lining the
+mirrored arm cost Hexagon +3.3 % for the call. Neither choice is right for
+both cores, so the attribute is chosen per target and the comment above it
+records both measurements. This is section 12's compile-time gate applied
+to the compiler rather than the hardware: a knob that is set by a number
+the ratchet produced, so that the next person to simplify the code can see
+what they are about to un-fix.
+
+| Decision | Rejected | Reason | Evidence |
+|---|---|---|---|
+| per-target inlining attribute on the mirrored dot | one choice for all targets | +3.3 % on the M55 one way, +3.3 % on Hexagon the other; measured, gated, commented | `bridge/include/tap/sr/bridge/converter.h` (the attribute and `dot_mirrored`), `bridge/PLAN.md` M7d |
+

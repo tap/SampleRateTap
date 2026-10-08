@@ -31,6 +31,23 @@ table. The tap-length estimate in `estimate_taps()` is the Kaiser/harris
 formula in the form `N = (A − 8) / (2.285 · Δω)`, applied per polyphase
 branch; the codebase credits both names, as the literature does.
 
+**F. Mintzer, "On half-band, third-band, and Nth-band FIR filters and
+their design," *IEEE Trans. Acoustics, Speech, and Signal Processing*,
+vol. 30, no. 5, 1982.** The L-th-band (Nyquist) filter: a lowpass whose
+every L-th tap from the centre is zero by construction, which is the
+`rational` engine's one filter per stage (Part VII). The engine takes the
+structure — the zeros, the symmetric transition, the centre tap at 1/L —
+and designs it with the Kaiser window above; `tap/dsp/nyquist.h` cites
+this paper and the next for the structure and writes the zeros exactly.
+
+**P. P. Vaidyanathan, *Multirate Systems and Filter Banks*, Prentice
+Hall, 1993.** Section 4.6 is the textbook treatment of Nyquist filters and
+the polyphase identities the two synchronous engines run on — in
+particular the fact that the shifted responses of an L-th-band filter sum
+to one, which is what makes a stage's passband and stopband edges mirror
+images about the lower rate's Nyquist, and so makes the family's coverage
+rule hold with equality.
+
 **J. O. Smith, "Digital Audio Resampling Home Page" (and the *Bandlimited
 Interpolation* material), CCRMA, Stanford University.** The theory the
 datapath implements: resampling as evaluation of a windowed-sinc
