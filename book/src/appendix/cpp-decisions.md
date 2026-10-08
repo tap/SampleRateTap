@@ -66,7 +66,7 @@ compiler executes.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| `INTERFACE` target, `add_subdirectory`/`FetchContent` only | compiled library; install/export packaging | four incompatible toolchains in CI; templates need instantiation in the consumer's TU; costs (compile time, no ABI) accepted, C ABI shim covers the binary-boundary case | `CMakeLists.txt`; README "Consuming the library"; `tools/capi/` |
+| `INTERFACE` target, `add_subdirectory`/`FetchContent` only | compiled library; install/export packaging | four incompatible toolchains in CI; templates need instantiation in the consumer's TU; costs (compile time, no ABI) accepted, C ABI shim covers the binary-boundary case | `CMakeLists.txt`; README "Consuming the library"; `capi/` |
 
 ## 2. Templates and a concept for the sample-type axis
 
@@ -593,17 +593,19 @@ behind `operator new`) is still a fine place to get memory from.
 
 ## 15. The C ABI: opaque handles, `reinterpret_cast`, and `impl()` outside `extern "C"`
 
-The FFI surface (`tools/capi/`) wraps the float converter behind an
-opaque `tap_sr_async_converter*`. The pattern is textbook, but two details record
+The FFI surface (`capi/`) wraps the converter — in float, Q15 or Q31,
+one format per handle, chosen at `create` — behind an opaque
+`tap_sr_async_converter*`. The pattern is textbook, but two details record
 decisions. First, the handle is a declared-but-never-defined struct, and
-the conversion is a `reinterpret_cast` in a pair of helpers:
+the conversion is a `reinterpret_cast` in a pair of helpers (to the small
+engine interface over the three `basic_converter<S>` instantiations):
 
 ```cpp
 extern "C" { struct tap_sr_async_converter; } // opaque
 
 namespace {
-tap::sr::async::converter* impl(tap_sr_async_converter* h) noexcept { ... }
-const tap::sr::async::converter* impl(const tap_sr_async_converter* h) noexcept { ... }
+engine* impl(tap_sr_async_converter* h) noexcept { ... }
+const engine* impl(const tap_sr_async_converter* h) noexcept { ... }
 }
 ```
 
@@ -629,7 +631,7 @@ crash, which for an audio library is the correct failure sound.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| opaque `tap_sr_async_converter*` + `reinterpret_cast`; `impl()` overloads outside `extern "C"`; null-tolerant entry points | exposed class; handle tables; unguarded entries | ABI boundary with zero C++ leakage; C linkage forbids overloads; unchecked create must fail soft | `tools/capi/tap_sr_async_capi.cpp`, `tools/capi/tap_sr_async_capi.h` |
+| opaque `tap_sr_async_converter*` + `reinterpret_cast`; `impl()` overloads outside `extern "C"`; null-tolerant entry points; one format per handle | exposed class; handle tables; unguarded entries; a handle per format | ABI boundary with zero C++ leakage; C linkage forbids overloads; unchecked create must fail soft; the float surface unchanged when Q15/Q31 joined | `async/capi/tap_sr_async_capi.cpp`, `async/capi/tap_sr_async_capi.h` |
 
 ## 16. Deleted copy operations: these are identity types
 

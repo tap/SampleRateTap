@@ -62,7 +62,7 @@ jobs:
             capi: ON
           # async's warnings stay non-fatal on MSVC until its /W4 output has
           # been triaged (async/docs/PERFORMANCE.md "Known debt"); bridge keeps
-          # /WX, as RatioTap's CI did. The C ABI stays OFF: neither library
+          # /WX, as RatioTap's CI did. The C ABI stays OFF: none of the three libraries
           # carries __declspec(dllexport), so an MSVC build would link DLLs
           # exporting nothing and gate nothing.
           - name: Windows MSVC

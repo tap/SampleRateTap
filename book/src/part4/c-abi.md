@@ -22,14 +22,14 @@ it. The one interface every FFI on earth speaks (`ctypes`, `cffi`, Julia's
 `ccall`, Rust's `extern "C"`, every scripting language's dlopen wrapper) is
 the C ABI: plain functions, plain data, names that mean what they say.
 
-So the library ships a shim: `tools/capi/`, about ninety lines of C++
+So the library ships a shim: `capi/`, about two hundred lines of C++
 presenting a C face, built as a shared library with `-DTAP_SR_BUILD_CAPI=ON`.
 This chapter is small because the shim is small, but three of its design
 decisions were paid for the hard way — one by a compile error, one by an
 audit finding, and one by a toolchain that turned out to be unable to
 throw an exception at all.
 
-## The surface: eight functions
+## The surface: fourteen functions
 
 The entire foreign-function interface:
 
@@ -37,11 +37,21 @@ The entire foreign-function interface:
 {{#include ../../../async/capi/tap_sr_async_capi.h:abi_surface}}
 ```
 
-Create, destroy, push, pull, status, latency, reset, version. The shim
-wraps the *float* converter only — the notebooks are metrology instruments
-and float is what they measure with; tripling the surface for Q15/Q31
-would triple the contract for consumers that don't exist yet. Minimalism
-here is a feature: every function in an ABI is a promise you keep forever.
+Create, destroy, push, pull, status, latency, reset, version — and the
+format family: `create_format`, `format`, and push and pull in Q15 and
+Q31. For most of its life the shim wrapped the *float* converter only, on
+an argument worth keeping even though it lost: the notebooks are metrology
+instruments and float is what they measure with, so tripling the surface
+for Q15/Q31 would have tripled the contract for consumers that did not
+exist. Minimalism here is a feature, because every function in an ABI is a
+promise you keep forever. What changed was the consumer. The third engine's
+ABI (Part VII) carried the fixed-point profiles from the start, because the
+Bluetooth-adjacent M33/M55 deployments that are the Q15 profile's whole
+purpose reach the library through C; once one engine had the shape, the
+family chose one shape over two, and the siblings adopted it. The eight
+float functions are unchanged — the promise was kept, and extended: a
+converter runs one format, chosen at `create`, and a call in another
+format's entry point returns 0 and moves nothing.
 
 `tap_sr_async_converter` is the classic opaque-handle pattern: a `typedef` of a struct
 that is *declared* and never *defined*. C callers can hold a
@@ -61,11 +71,15 @@ fossil of a compile error:
 {{#include ../../../async/capi/tap_sr_async_capi.cpp:abi_impl}}
 ```
 
-The handle is simply the converter pointer in disguise —
+The handle is simply the engine pointer in disguise —
 `reinterpret_cast` in `tap_sr_async_create`, `reinterpret_cast` back on every call.
-No wrapper struct, no registry of live handles, no indirection table:
-there is nothing to store beyond the object itself, so the handle *is* the
-object.
+No registry of live handles, no indirection table: there is nothing to
+store beyond the object itself, so the handle *is* the object. The object
+is one small interface over the three `basic_converter<S>` instantiations,
+so that the format chosen at `create` is a *type* on the C++ side and a
+tag on the C side; a push or pull through another format's entry point
+hits an `if constexpr` branch that returns 0 — the refusal costs one
+virtual call and no state.
 
 Look at where the `impl()` helpers live: in an anonymous namespace,
 *between* two `extern "C"` regions rather than inside one. That placement
@@ -80,8 +94,11 @@ here. The fix is what you see: the helpers sit outside the C-linkage
 region, in an anonymous namespace that both gives them ordinary C++
 linkage (overloading welcome) and keeps them out of the shared library's
 exported symbol table, where an FFI user enumerating symbols would only be
-confused by them. The general rule: `extern "C"` is for the eight names
-you are promising to the world, and *nothing else* belongs inside it.
+confused by them. The general rule: `extern "C"` is for the fourteen names
+you are promising to the world, and *nothing else* belongs inside it —
+and the library is now built with hidden visibility, so the dynamic symbol
+table *is* those fourteen names, nothing of the engine class or the
+templates behind it.
 
 ## The error convention, and why every function tolerates `NULL`
 
@@ -121,7 +138,7 @@ With the guards, an unchecked failed create degrades to a converter that
 accepts nothing and produces zeros: `tap_sr_async_pull` returns silence, which is —
 not coincidentally — the same thing the real converter produces on
 underrun. The failure is still visible (`tap_sr_async_status` reports zeros, the
-audio is silent), but it is *debuggable* instead of fatal. Eight null
+audio is silent), but it is *debuggable* instead of fatal. A dozen null
 checks on functions that move hundreds of frames per call cost nothing
 measurable; they buy an FFI that fails the way dynamic-language users can
 diagnose.
@@ -275,14 +292,16 @@ forgive, present anyway, because tolerance is for accidents, not policy.
 Everything downstream — the lock-acquisition plot, the ≥125 dB
 transparency assertion, the impulse-response latency check that agrees
 with `tap_sr_async_designed_latency_seconds()` to within 0.3 ms — runs through
-these eight functions.
+the float half of these functions; `async/tests/test_capi.cpp` pins the
+other half, every format bit for bit against `basic_converter<S>` on one
+push/pull sequence, and the refusal of a wrong-format call.
 
 ## Why these ~90 lines look the way they do
 
 | Decision | Alternative rejected | Reason |
 |---|---|---|
 | C shim over the C++ API | Python bindings / pybind11 | one C ABI serves ctypes, cffi, Julia, and everything else; bindings serve one language and drag in a build dependency |
-| Float converter only | mirror all three sample types | the consumers are metrology notebooks; unused surface is unpaid-for contract |
+| Float first, then all three sample types behind one handle | three handles, or float forever | the consumers were metrology notebooks until the fixed-point deployments reached C through the third engine; one format per converter, chosen at `create`, keeps the float surface unchanged |
 | Named opaque handle | `void*` | keeps compiler type-checking alive at the FFI edge |
 | Handle = object pointer, `reinterpret_cast` | handle registry / wrapper struct | there is nothing else to store; indirection would add state and failure modes |
 | `impl()` overloads outside `extern "C"` | helpers inside the block | overloading is ill-formed with C linkage — the compiler enforced this one personally |
@@ -299,9 +318,13 @@ these eight functions.
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BUILD_CAPI=ON
 cmake --build build --target tap_sr_async_capi -j
 
-# The exported surface — eight tap_sr_async_* symbols, unmangled, and nothing else
-# from this file (the impl() helpers are invisible, as promised):
-nm -D --defined-only build/async/capi/libtap_sr_async_capi.so | grep tap_sr_async_
+# The exported surface — fourteen tap_sr_async_* symbols, unmangled, and nothing
+# else from this file (the impl() helpers and the engine class are invisible,
+# as promised; the count is 14):
+nm -D --defined-only build/async/capi/libtap_sr_async_capi.so | grep -c ' T tap_sr_async_'
+
+# Every format against basic_converter<S>, and the wrong-format refusal:
+ctest --test-dir build -R 'async\.CApi\.' --output-on-failure
 
 # The one-integer smoke test (0.5.0 -> 1280, i.e. 0x000500):
 python3 -c "import ctypes; \

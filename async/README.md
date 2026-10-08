@@ -56,7 +56,9 @@ the lock acquisition and rate estimate. For a visual tour — lock, measured
 transparency vs. a naive FIFO, spectrograms, latency, drift tracking,
 dropout recovery — see
 [notebooks/asrc_demo.ipynb](notebooks/asrc_demo.ipynb), which drives the
-library through its C ABI (`-DTAP_SR_BUILD_CAPI=ON`, `tools/capi/`) via ctypes
+library through its C ABI (`-DTAP_SR_BUILD_CAPI=ON`, `capi/`; float for the
+notebooks, and Q15 / Q31 through `tap_sr_async_create_format` with the
+`_q15` / `_q31` push and pull for fixed-point FFI consumers) via ctypes
 (the notebook environment is pinned, with hashes, in `requirements.lock`:
 `pip install --require-hashes -r requirements.lock`; the first cell
 rebuilds the shared library incrementally on every run). A second notebook,

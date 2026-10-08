@@ -133,11 +133,14 @@ recipe, measured.
 
 ## The C boundary and the ratchet
 
-The C ABI is the family's minimal shim — eleven functions, float only,
-direction as an integer, the profile as an integer, exact accounting,
-flush, latency, taps, and the bit-packed family version — built so that the
-demo notebook measures the shipping C++. It stays at K = 0 until a
-consumer asks for the scaled pairs through C. The instruction-count ratchet
+The C ABI is the family's minimal shim — seventeen functions: direction
+as an integer, the profile as an integer, the format as an integer (float
+for the notebook, Q15 and Q31 for the deployments the Q15 profile exists
+for, each pinned bit for bit against `basic_converter`), exact accounting,
+process and flush in the converter's format, latency, taps, and the
+bit-packed family version — built so that the demo notebook measures the
+shipping C++. It stays at K = 0 until a consumer asks for the scaled pairs
+through C. The instruction-count ratchet
 gates ten workloads — direction × float / Q15 / Q31 at `economy`, both
 `transparent` float legs, and both `super_economy` Q15 legs, two seconds of
 stereo each — on the M33, the M55 and Hexagon at ±3 % two-sided. Every

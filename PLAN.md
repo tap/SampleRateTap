@@ -1033,6 +1033,15 @@ G13 and G14, plus G9 from 3.7.
   the mixed ratios going down, the symmetry-halved table, the Q15
   decimators' per-branch quantization, an MVE Q15 kernel) wait for a
   consumer.
+- **The C boundary carries fixed point in every engine.** `rational`'s ABI
+  shipped Q15 / Q31 beside float (`rational/PLAN.md` v0.12); the
+  question whether the family would keep that or move to a separate,
+  uniform fixed-point ABI was decided for the former: `async` and
+  `bridge` adopted the same shape (`tap_sr_<engine>_create_format`,
+  `_format`, the `_q15` / `_q31` entry points, hidden visibility, each
+  format pinned bit for bit against the engine's `basic_converter`), so
+  the three ABIs differ only in what each engine names (D12) and the
+  `TAP_SR_<ENGINE>_FORMAT_*` values are the same three numbers.
 
 ---
 
