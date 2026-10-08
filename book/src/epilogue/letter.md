@@ -4,7 +4,7 @@
 >
 > — George Box
 
-Twenty-one chapters ago this book promised that the codebase's history was
+Thirty-one chapters ago this book promised that the codebase's history was
 its curriculum. This chapter was not planned; the history kept happening.
 
 Shortly after the library was announced on the music-dsp mailing list,

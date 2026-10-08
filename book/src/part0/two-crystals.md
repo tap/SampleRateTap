@@ -171,8 +171,9 @@ limitations, and `docs/COMPARISON.md` is blunt that for genuine rate
 libsamplerate, or — for exactly the 44.1 ↔ 48 pair, built on the same
 DspTap substrate as this library and cross-validated against its engine —
 the family's own `bridge` engine ([`bridge/`](https://github.com/tap/SampleRateTap/tree/main/bridge) in this repository,
-formerly RatioTap). Part V returns to that composition and its decision
-rule: `bridge` converts the *number*, the ASRC absorbs the *clock*.
+formerly RatioTap). The rule that decides between them closes this
+chapter; Part V returns to the composition, and Parts VI and VII read the
+two synchronous engines in full.
 
 Here is what the restriction buys. A general-ratio converter must be able
 to place output samples anywhere relative to input samples, at any
@@ -277,6 +278,31 @@ and "120 dB transparency" have been used here as if self-evident. They are
 not. The next chapter derives each one — including why this library's
 quality target works out to a timing tolerance of about eight
 *picoseconds*.
+
+## The rule the family runs on
+
+The specialization above is one of three. The family's other two engines
+each refuse the asynchronous problem as firmly as this engine refuses the
+synchronous one, and the rule that tells them apart is the one every later
+part will restate: **which converter applies is a property of the clock
+topology, never inferred from a ratio of two numbers.** The caller says
+what the topology is by choosing a type:
+
+- two independent clocks at one nominal rate — `async`, the engine of
+  Parts 0–V, which *absorbs the clock*;
+- one clock and the fixed 44.1 ↔ 48 kHz pair — `bridge` (Part VI), which
+  *converts the number*, as fast as one ratio allows;
+- one clock and a small-factor ratio inside a rate family (96 → 48,
+  48 → 32, 8 → 384) — `rational` (Part VII), chains of Nyquist stages.
+
+A 44.1 kHz file rendered for a 48 kHz interface is `bridge` alone. Two
+48 kHz devices on separate crystals is `async` alone. A Bluetooth chip
+running 44.1 kHz on its own crystal into a 48 kHz host is both, composed,
+and Part VI measures that composition. There is no `(in_hz, out_hz)`
+lookup anywhere in the family, in C++ or in the C ABIs, because a lookup
+would be exactly the inference the rule forbids — and in the two
+synchronous engines the rule is not policy but the type system, since no
+expression in C++ turns two measured rates into a `ratio<L, M>`.
 
 ## Verify it yourself
 

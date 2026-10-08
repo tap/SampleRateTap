@@ -63,12 +63,34 @@ all.
 unit in which the block-size study reports the low-rate FM that coarse
 blocks impose (~0.9 cents rms at 32-frame blocks).
 
+**Commutator (M-branch)** — the decimator structure of the `rational`
+engine: input n goes to sub-line n mod M, and each output is the sum of M
+short dots, one per polyphase branch against its sub-line, summed through
+one accumulator and rounded once. The branch holding the centre tap is
+trimmed to that one tap, so a half-band decimator computes 2m + 1 of its
+4m − 1 taps.
+
+**Coverage matrix** — the `rational` engine's table of one chain per
+ordered pair of the family's fourteen rates, 182 rows, generated from the
+pinned stage lengths by `rational/tools/coverage/matrix.py` and pinned row
+by row (MACs per output and latency as exact rationals, the tone battery at
+four profiles) by `test_matrix.cpp`. It documents chains and dispatches
+nothing.
+
 **dBc** — decibels relative to the carrier: the level of a sideband or
 spur measured against the signal that carries it, used for the servo's
 sawtooth-rejection figures.
 
 **dBFS** — decibels relative to digital full scale; −1 dBFS is the AES17
 measurement level, 0.5 FS (−6 dBFS) the quality suite's.
+
+**Design divisor** — in a `rational` chain, a stage's lower rate over the
+chain's lowest rate, taken down to the largest 2ᵃ·3ᵇ at or below it (or
+the fraction itself below 1, the one stage at `bridge`'s rate). Each stage
+is designed with its passband at the chain's f_pass over its own divisor,
+so a stage higher up a chain gets the wider transition it can afford;
+every divisor the matrix uses has a pinned row in `design.h`'s relaxation
+tables.
 
 **DWT / CYCCNT** — the Data Watchpoint and Trace unit of Arm M-profile
 cores and its free-running 32-bit cycle counter. Optional silicon (hence
@@ -119,6 +141,14 @@ latency (a fraction of the block size) as the servo phase-tracks the
 block beat in Track stage; benign, and distinct from an actual setpoint
 change.
 
+**L-th-band (Nyquist) filter** — a lowpass with cutoff exactly π/L whose
+every L-th tap from the centre is exactly zero and whose centre tap is
+1/L (here 1, by the per-branch normalization). The `rational` engine's
+one filter per stage: phase 0 of an interpolator by L is a copy, a
+half-band decimator computes about half its taps, and the response is
+antisymmetric about π/L so the transition is symmetric, f_p + f_s = r.
+Mintzer 1982; Vaidyanathan §4.6; `tap/dsp/nyquist.h`.
+
 **Lock-free** — progress guarantee: every operation completes in a
 bounded number of steps regardless of what other threads do, including
 being suspended at the worst instruction. Required of everything on the
@@ -130,6 +160,13 @@ values a load may observe across threads, controlled per-operation by
 ordering annotations. This codebase's idiom is *sufficiency as
 documentation*: each annotation is exactly as strong as the proof needs,
 so each one tells the reader why it exists.
+
+**Mirrored phase / symmetry halving** — `bridge`'s storage lever: a
+linear-phase prototype makes branch p the reverse of branch L − 1 − p, so
+the table stores ⌈L/2⌉ rows and a mirrored phase dots its partner's row
+backwards (`tap::dsp::dot_row_reversed`), bit-identical to a full table at
+half the bytes. Quantization is canonical over the stored half, so the
+mirror is exact by construction.
 
 **MVE / Helium** — Arm's M-profile Vector Extension (Cortex-M55 class):
 128-bit SIMD including fp32, but no double precision. Its presence or
@@ -176,6 +213,12 @@ regression fails, and an unexplained improvement also fails until the
 baseline is deliberately re-committed. Two-sided so that numbers can
 only change on purpose.
 
+**Rate scale (K)** — `bridge`'s one admitted generality: the 44.1 ↔ 48
+pair at 2ᴷ, K ≤ 2 (88.2 ↔ 96, 176.4 ↔ 192). The same L and M, the same
+schedule and the same coefficient table bit for bit, since every hertz in
+the design is the base pair's times a power of two; K states which rates
+the frames carry and infers nothing.
+
 **Semihosting** — a debug protocol by which a bare-metal program calls
 into its host/debugger for I/O; how the Cortex-M test binaries print
 results and exit under QEMU system emulation.
@@ -221,6 +264,19 @@ block, not per sample.
 of the library's ring: exactly one pushing agent and one pulling agent.
 The restriction is what makes lock-freedom cheap — and it is a contract
 about agents, not threads, which is what lets two CPU cores satisfy it.
+
+**Structural zero** — a coefficient that an L-th-band design makes
+exactly zero by construction (every L-th tap from the centre), as opposed
+to one that merely rounds to zero in a fixed-point format. The `rational`
+engine's rows are trimmed to their nonzero span so that structural zeros
+are never multiplied; the one exception, a mixed ratio going down, is
+stated as a limit.
+
+**Superblock** — one full period of a rational L/M schedule: L outputs
+consuming exactly M inputs, every polyphase phase visited once. The
+schedule is a `constexpr` table of L `(phase, advance)` entries, and
+`bridge`'s hot path is a *superblock walk* whose trip count is settled by
+arithmetic before the first sample moves.
 
 **TCG plugin** — an instrumentation hook in QEMU's Tiny Code Generator;
 the project's counting plugin observes every executed guest instruction,

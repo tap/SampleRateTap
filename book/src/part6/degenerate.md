@@ -1,8 +1,12 @@
 # The degenerate case: 44.1 ↔ 48 as a type
 
-> The cheapest, fastest, and most reliable components are those that aren't there.
+> Simplicity is prerequisite for reliability.
 >
-> — Gordon Bell
+> — Edsger W. Dijkstra, "How do we tell truths that might hurt?" (EWD 498, 1975)
+
+Part 0 stated the rule that picks an engine from the clock topology and
+Part V stated it again from the deployment side; this is the engine on the
+synchronous side of it.
 
 The design brief that became this engine called it *the degenerate case of
 the ASRC*: a rational ratio that is known in advance and never drifts. The
@@ -75,6 +79,14 @@ images of baseband content land at 44,100 − f, which is at or above
 22.05 kHz. A 120 dB stopband in this converter buys ultrasonic
 cleanliness, not audible transparency. At 70 dB every alias product sits
 above 20 kHz at ≤ −70 dBFS, and the filter is a quarter the length.
+
+![The alias landing zone going 48 → 44.1 kHz: a 48 kHz source holds nothing above 24 kHz, aliasing maps f to 44,100 − f, so every alias lands between 20.1 and 22.05 kHz — and the stopband edge is the output Nyquist](../img/alias-zone.svg)
+
+*Going down, the only frequencies that can alias into the passband are
+those above the output Nyquist, and a 48 kHz source has none above 24 kHz:
+the whole landing zone is the 2 kHz between 20.1 and 22.05 kHz, drawn to
+scale from `ratio_traits`' numbers by `scripts/book_figures.py`. The
+figure is the argument.*
 
 That is where the profile ladder comes from. Four tiers behind one design
 path, named in the family's vocabulary (the ASRC's presets are

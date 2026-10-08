@@ -15,9 +15,15 @@ Every figure is produced from the same sources the text cites:
   so both panels of that figure are measurements, not models;
 - the phase-wraparound figure runs the resampler's actual uint64 slip
   arithmetic (mod 2^64) in Python integers;
-- the architecture figure is drawn, not computed.
+- the architecture figure is drawn, not computed;
+- the alias-zone figure (Part VI) is bridge's rate arithmetic drawn to
+  scale: the numbers are ratio_traits' and profile::economy()'s;
+- the coverage-matrix figure (Part VII) is read from the rational engine's
+  own generator, rational/tools/coverage/matrix.py — the same chains and
+  MACs per output that tests/coverage/matrix_rows.h pins.
 
-Usage:  python3 scripts/book_figures.py          (from the repo root)
+Usage:  python3 scripts/book_figures.py                  (every figure; from the repo root)
+        python3 scripts/book_figures.py alias-zone coverage-matrix   (only the named ones)
 Needs:  numpy, matplotlib, g++, git.
 
 The SVGs are committed. CI does not regenerate them — matplotlib's SVG
@@ -432,12 +438,158 @@ def fig_architecture():
     plt.close(fig)
 
 
+# --- the synchronous engines (Parts VI and VII) ---
+
+def fig_alias_zone():
+    """bridge, 48 -> 44.1 kHz: where an alias can land. A 48 kHz source holds
+    nothing above 24 kHz; decimation to 44.1 kHz folds f -> 44100 - f, so the
+    only content that can alias into the passband is the source's 22.05-24 kHz,
+    which lands in 20.1-22.05 kHz. Every number is ratio_traits<down_to_44k1>'s
+    and profile::economy()'s (bridge/include/tap/sr/bridge/design.h)."""
+    fs_in, fs_out = 48000.0, 44100.0          # ratio_traits: input and output rate
+    nyq_in, nyq_out = fs_in / 2, fs_out / 2    # 24 kHz; 22.05 kHz = the stopband edge
+    passband = 18000.0                         # profile::economy().passband_hz
+    land_lo = fs_out - nyq_in                  # 20.1 kHz: where 24 kHz lands
+
+    fig, (top, bot) = plt.subplots(2, 1, figsize=(7.4, 3.9), layout="constrained",
+                                   sharex=True, gridspec_kw={"height_ratios": [1, 1]})
+    for ax in (top, bot):
+        ax.set_xlim(0, 25)
+        ax.set_ylim(0, 1.25)
+        ax.set_yticks([])
+        ax.grid(False)
+        despine(ax)
+        ax.spines["left"].set_visible(False)
+    k = 1e-3
+
+    # Top: the 48 kHz source, 0-24 kHz. The band that will fold is marked.
+    top.fill_between([0, nyq_in * k], 0, 1, color=BLUE, alpha=0.18, lw=0)
+    top.fill_between([nyq_out * k, nyq_in * k], 0, 1, color=BLUE, alpha=0.45, lw=0,
+                     hatch="////", edgecolor=SURFACE)
+    top.plot([0, nyq_in * k, nyq_in * k], [1, 1, 0], color=BLUE, lw=1.5)
+    top.text(0.3, 1.08, "48 kHz source: content up to its Nyquist, 24 kHz", color=INK,
+             fontsize=8.6, va="bottom")
+    top.text((nyq_out + nyq_in) / 2 * k, 0.5, "the only\npart that\ncan fold",
+             ha="center", va="center", color=INK, fontsize=7.4)
+    top.text(nyq_in * k, 1.08, "22.05–24 kHz folds to 44 100 − f", ha="right", va="bottom",
+             color=SECONDARY, fontsize=7.8)
+
+    # Bottom: the same axis read at 44.1 kHz. Passband, transition, stopband,
+    # and where the folded band lands: f -> 44100 - f.
+    bot.fill_between([0, passband * k], 0, 1, color=BLUE, alpha=0.18, lw=0)
+    bot.plot([0, passband * k], [1, 1], color=BLUE, lw=1.5)
+    bot.plot([passband * k, nyq_out * k], [1, 0.02], color=BLUE, lw=1.5)
+    bot.fill_between([land_lo * k, nyq_out * k], 0, 0.62, color=AQUA, alpha=0.5, lw=0,
+                     hatch="\\\\\\\\", edgecolor=SURFACE)
+    bot.text(0.3, 1.08, "read at 44.1 kHz: economy passband to 18 kHz, stopband from 22.05 kHz",
+             color=INK, fontsize=8.6, va="bottom")
+    bot.text((land_lo + nyq_out) / 2 * k, 0.70, "alias landing\nzone", ha="center", va="bottom",
+             color=INK, fontsize=7.6)
+    for ax in (top, bot):
+        ax.axvline(nyq_out * k, color=MUTED, lw=0.8, ls=(0, (3, 3)))
+    bot.text(nyq_out * k + 0.2, 0.55, "output Nyquist:\nthe stopband edge", color=SECONDARY,
+             fontsize=7.2, va="center")
+    bot.set_xlabel("kHz")
+    bot.set_xticks([0, 5, 10, 15, 18, 20.1, 22.05, 24], ["0", "5", "10", "15", "18", "20.1", "22.05", "24"])
+    fig.suptitle("Nothing can fold below 20.1 kHz", fontsize=10, color=INK, x=0.02, ha="left")
+    save(fig, "alias-zone")
+    plt.close(fig)
+
+
+def fig_coverage_matrix():
+    """rational's coverage matrix at economy: MACs per output for every ordered
+    pair of the family's fourteen rates, read from the engine's generator
+    (rational/tools/coverage/matrix.py), the flagged rows marked."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "matrix", os.path.join(ROOT, "rational", "tools", "coverage", "matrix.py"))
+    mx = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mx)
+    rates = mx.RATES
+    allc = mx.economy_chains()
+    n = len(rates)
+    macs = np.full((n, n), np.nan)
+    flags = np.zeros((n, n), dtype=bool)
+    for i, src in enumerate(rates):
+        for j, dst in enumerate(rates):
+            if src == dst:
+                continue
+            chosen, _ = allc[(src, dst)]
+            macs[i, j] = float(chosen[0])
+            flags[i, j] = mx.flagged(chosen[3], dst)
+
+    # Sequential, one hue, light -> dark: the surface to the categorical blue
+    # to a deep ink-blue, on a log scale (the cells span 7.8 to about 550).
+    from matplotlib.colors import LinearSegmentedColormap, LogNorm
+    cmap = LinearSegmentedColormap.from_list("seq_blue", [SURFACE, "#c9ddf5", BLUE, "#10325e"])
+    lo, hi = np.nanmin(macs), np.nanmax(macs)
+
+    fig, ax = plt.subplots(figsize=(7.4, 6.6), layout="constrained")
+    ax.grid(False)
+    masked = np.ma.masked_invalid(macs)
+    im = ax.imshow(masked, cmap=cmap, norm=LogNorm(vmin=lo, vmax=hi), interpolation="nearest")
+    labels = [f"{r / 1000:g}" for r in rates]
+    ax.set_xticks(range(n), labels, rotation=60, ha="right", fontsize=7.6)
+    ax.set_yticks(range(n), labels, fontsize=7.6)
+    ax.set_xlabel("to (kHz)")
+    ax.set_ylabel("from (kHz)")
+    # The two families, separated: 48-family rows/cols first, then 44.1's.
+    split = len(mx.A_RATES) - 0.5
+    for f in (ax.axhline, ax.axvline):
+        f(split, color=INK, lw=0.9)
+    # 2px surface gaps between cells.
+    ax.set_xticks(np.arange(-0.5, n, 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, n, 1), minor=True)
+    ax.grid(which="minor", color=SURFACE, lw=2)
+    ax.tick_params(which="minor", length=0)
+    for i in range(n):
+        for j in range(n):
+            if np.isnan(macs[i, j]):
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, fc=GRID, ec="none"))
+                continue
+            v = macs[i, j]
+            dark = v > 60.0  # about the ramp's midpoint on the log scale
+            ax.text(j, i, f"{v:.0f}" if v >= 20 else f"{v:.1f}", ha="center", va="center",
+                    fontsize=6.4, color=SURFACE if dark else INK)
+            if flags[i, j]:  # the dipping rows: a corner mark, not colour alone
+                ax.plot([j + 0.42], [i - 0.42], marker="v", ms=3.2, mec="none",
+                        mfc=SURFACE if dark else INK)
+    cb = fig.colorbar(im, ax=ax, shrink=0.55, pad=0.02)
+    cb.set_label("MACs per output frame (economy, log scale)", color=SECONDARY)
+    cb.outline.set_edgecolor(BASELINE)
+    ax.set_title(f"The coverage matrix: {int(flags.sum())} dipping rows marked ▾ "
+                 f"(bridge runs at ≥ 2× the output rate)", fontsize=9.5, loc="left")
+    save(fig, "coverage-matrix")
+    plt.close(fig)
+    return macs, flags
+
+
+FIGURES = {
+    "kaiser-window": lambda: fig_kaiser_window(),
+    "kaiser-response": lambda: fig_kaiser_response(),
+    "q064-slip": lambda: fig_q064(),
+    "architecture": lambda: fig_architecture(),
+    "alias-zone": lambda: fig_alias_zone(),
+    "coverage-matrix": lambda: fig_coverage_matrix(),
+}
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
+    names = sys.argv[1:]
+    if names:  # only the named figures, none of which needs the trace tool
+        for name in names:
+            if name not in FIGURES:
+                sys.exit(f"unknown figure {name!r}; one of: {', '.join(FIGURES)}")
+            FIGURES[name]()
+        print(f"wrote {len(names)} SVG(s) to {OUT}")
+        return
     fig_kaiser_window()
     fig_kaiser_response()
     fig_q064()
     fig_architecture()
+    fig_alias_zone()
+    macs, flags = fig_coverage_matrix()
 
     with tempfile.TemporaryDirectory() as tmp:
         head_exe = os.path.join(tmp, "trace_head")
@@ -457,7 +609,9 @@ def main():
           f"final ppm {tr['ppm'][-1]:.1f}, underruns {int(tr['underruns'][-1])}")
     print(f"feasibility: before {int(before['underruns'][-1])} underruns/6s, "
           f"after {int(after['underruns'][-1])}")
-    print(f"wrote 6 SVGs to {OUT}")
+    print(f"coverage matrix: {np.nanmin(macs):.1f} .. {np.nanmax(macs):.1f} MACs/out, "
+          f"{int(flags.sum())} flagged rows")
+    print(f"wrote 8 SVGs to {OUT}")
 
 
 if __name__ == "__main__":

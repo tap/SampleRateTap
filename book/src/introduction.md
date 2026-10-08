@@ -4,17 +4,24 @@
 >
 > — Linus Torvalds
 
-This book explains one piece of software completely.
+This book explains one family of software completely: three sample rate
+converters built on one substrate, by one method.
 
-The software is **SampleRateTap**, a header-only C++20 library that solves a
-narrow, stubborn problem in real-time audio: two devices both claim to run at
-48 kHz, but each owns its own crystal oscillator, so neither actually does.
-One drifts a few parts per million against the other — imperceptibly slowly
-and absolutely relentlessly — and any system that moves audio between them
-must either resample adaptively or eventually glitch. The library converts
-between two such clock domains transparently (about 135 dB of measured
-fidelity), in real time (about 1.5 ms of latency), on hardware from Xeon
-servers down to a $5 microcontroller.
+The family is **SampleRateTap**, a header-only C++20 library. Its first and
+largest engine solves a narrow, stubborn problem in real-time audio: two
+devices both claim to run at 48 kHz, but each owns its own crystal
+oscillator, so neither actually does. One drifts a few parts per million
+against the other — imperceptibly slowly and absolutely relentlessly — and
+any system that moves audio between them must either resample adaptively or
+eventually glitch. That engine converts between two such clock domains
+transparently (about 135 dB of measured fidelity), in real time (about
+1.5 ms of latency), on hardware from Xeon servers down to a $5
+microcontroller. Its two siblings solve the problems that engine refuses:
+the fixed 44.1 ↔ 48 kHz pair, and the small-factor ratios inside a rate
+family — synchronous, exact, and as fast as the one ratio they each serve
+allows. Most of this book is about the first engine, because it is where
+the method was built; the last two parts read the siblings with the same
+method and show what changes when the ratio holds still.
 
 That is a small enough problem to fit in your head and a deep enough one to
 teach from. Solving it well demands working knowledge of half a dozen fields
@@ -61,9 +68,12 @@ curves re-run the header's design math formula-for-formula, and the servo
 and feasibility traces are *measured* — the script compiles a small trace
 dumper against the real headers (and, for the before-the-fix panel,
 against the pre-fix commit's headers pulled from git history) and runs it
-in deterministic virtual time. Rerun the script and you reproduce every
-figure; nothing is drawn from memory except the one architecture diagram,
-which is labeled as drawn.
+in deterministic virtual time. The two figures of the synchronous parts
+are the same kind of thing: the alias landing zone is `bridge`'s rate
+arithmetic drawn to scale, and the coverage matrix is read from the
+`rational` engine's own generator, the one that writes its test rows.
+Rerun the script and you reproduce every figure; nothing is drawn from
+memory except the one architecture diagram, which is labeled as drawn.
 
 ## The history is the curriculum
 
@@ -134,6 +144,10 @@ and the 182-row coverage matrix, the fixed-point limits lifted one by one,
 and a host-versus-target bug that turned out to be in the designer. The
 asynchronous converter earned its numbers against a moving clock; these
 engines pin theirs with `==`.
+
+The **epilogue** closes the book where the method was tested from outside:
+a letter from an expert stranger, and what measuring every claim in it did
+to the shipped code.
 
 The appendices collect the C++ decision log (every idiom adopted or
 rejected, with reasons), a glossary, and an annotated bibliography.
