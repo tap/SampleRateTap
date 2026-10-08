@@ -167,7 +167,7 @@ namespace {
         ROW(up_6, transparent, 251, 219, 0xe46f033362196a39ULL, 0xb9fec6bbf1288489ULL, -78.5, -90.7) \
         ROW(down_6, super_economy, 81, 81, 0x7376502a75faf5f5ULL, 0x782ec334d8cf342bULL, -73.2, -99.8) \
         ROW(down_6, economy, 121, 121, 0x36e3c046fa633d21ULL, 0x92a24b5cea1909cfULL, -71.5, -98.6) \
-        ROW(down_6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0x82885ec398c57779ULL, -72.2, -99.6) \
+        ROW(down_6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0xe920f14d1d3d5a05ULL, -72.2, -99.6) \
         ROW(down_6, transparent, 251, 219, 0xe46f033362196a39ULL, 0x6a3f54f3e1587481ULL, -78.5, -98.3) \
         ROW(up_8, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -92.9) \
         ROW(up_8, economy, 169, 169, 0xdc280c16130175d1ULL, 0x192bcfb9abf918edULL, -71.7, -92.3) \
@@ -190,7 +190,7 @@ namespace {
         ROW(ratio_4_3, balanced, 85, 85, 0x441dab53737b273dULL, 0x088ccad6c8e4a9b9ULL, -70.4, -92.9) \
         ROW(ratio_4_3, transparent, 151, 131, 0x2766dd02d84bd799ULL, 0x5491f247aa9ad425ULL, -77.2, -90.6) \
         ROW(ratio_3_4, super_economy, 63, 63, 0x37e88d3e5f085cf7ULL, 0xcacc9866f85a1482ULL, -71.6, -96.5) \
-        ROW(ratio_3_4, economy, 87, 87, 0x75302a3d8b4e5354ULL, 0x5b0bcd2edd57e081ULL, -70.0, -96.8) \
+        ROW(ratio_3_4, economy, 87, 87, 0x75302a3d8b4e5354ULL, 0x692703f8c35bbdd1ULL, -70.0, -96.8) \
         ROW(ratio_3_4, balanced, 111, 111, 0xb633f47c0bfc20e1ULL, 0xddc050765dd8bd23ULL, -72.4, -95.5) \
         ROW(ratio_3_4, transparent, 199, 175, 0xe6f0871efac7d3f1ULL, 0x78b0ec09e7310bffULL, -78.3, -94.3) \
         ROW(ratio_8_3, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -93.0) \

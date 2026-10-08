@@ -85,7 +85,6 @@
 #pragma once
 
 #include <array>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -474,15 +473,6 @@ namespace tap::sr::rational {
                         // (k_table_gain in Q15, divided out in the rounding).
                         for (auto& v : row) {
                             v = v / sum * static_cast<double>(k_table_gain);
-                            if constexpr (k_row_scaled) {
-                                // Snapped to 2^-34 (2^-20 of a Q1.14 LSB) so
-                                // the design's last-bit differences between
-                                // libms (glibc vs newlib, measured) cannot
-                                // move a row-sum residual between the equal
-                                // remainders of a symmetric pair: ties are
-                                // then exact, broken by index on every target.
-                                v = std::round(v * 0x1p34) * 0x1p-34;
-                            }
                         }
                     }
                     tap::dsp::quantize_row_preserving_sum<S>(row, q);
