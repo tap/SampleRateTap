@@ -116,15 +116,24 @@ and a C foreign-function interface each demanded.
 **Part V** reaches hardware: real crystals, real cycle counters, and the
 configuration rules that scale across channel counts and sample rates.
 
-**Part VI** reads the family's synchronous sibling, the `rational` engine
-that now shares this tree — a small-factor converter whose every degree
-of freedom is a compile-time constant — header by header, the way Part I
-read the ASRC: the ratio as a type, the Nyquist filter that gives away
-half its taps, the two machines that run it, the chains and the 182-row
-coverage matrix, the fixed-point limits lifted one by one, and a
-host-versus-target bug that turned out to be in the designer. The
-asynchronous converter earned its numbers against a moving clock; this
-engine pins its own with `==`.
+**Part VI** reads the first of the family's two synchronous siblings that
+now share this tree: `bridge`, the fixed 44.1 ↔ 48 kHz converter that the
+original design brief called *the degenerate case of the ASRC* — the
+exact rational machine you get when the ratio holds still. Four chapters:
+the direction as a type and the argument that a 70 dB stopband is enough,
+the phase table without the ASRC's blend and with half its rows, the
+measured codegen campaign that made the converter fast, and the three
+proof legs including the cross-validation that makes the two engines each
+other's golden reference.
+
+**Part VII** reads the second, the `rational` engine — a small-factor
+converter whose every degree of freedom is a compile-time constant —
+header by header the same way: the ratio as a type, the Nyquist filter
+that gives away half its taps, the two machines that run it, the chains
+and the 182-row coverage matrix, the fixed-point limits lifted one by one,
+and a host-versus-target bug that turned out to be in the designer. The
+asynchronous converter earned its numbers against a moving clock; these
+engines pin theirs with `==`.
 
 The appendices collect the C++ decision log (every idiom adopted or
 rejected, with reasons), a glossary, and an annotated bibliography.

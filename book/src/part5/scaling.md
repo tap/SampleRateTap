@@ -217,10 +217,10 @@ over every polyphase phase. Two independent implementations of the same
 mathematics agreeing at the noise floor is the strongest mutual check
 either repository runs.
 
-The working code lives in RatioTap's repository, which is why this
-section is prose rather than a code walk: the book's include-anchor
-contract quotes only from this tree, and the recipe is RatioTap's to
-keep honest. What this book owes you is the decision rule above.
+This section states the decision rule; the engine on the other side
+of it has since moved into this tree, and Part VI reads it the way
+Part I read the ASRC — including the `bluetooth_bridge` recipe, run and
+measured.
 
 ## Blocks: feasibility, then observability
 
