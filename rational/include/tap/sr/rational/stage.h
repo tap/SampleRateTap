@@ -153,6 +153,7 @@ namespace tap::sr::rational {
         static constexpr std::size_t k_down         = traits::k_down; ///< M
         static constexpr std::size_t k_band         = traits::k_band; ///< B = max(L, M)
         static constexpr bool        k_is_decimator = traits::k_is_decimator;
+        // ANCHOR: rational_gain
         /// A Q15 decimator quantizes each of its M branches at the branch's
         /// own unity sum and divides the summed branches by M in the single
         /// rounding (tap::dsp::finalize_divided): Q1.14 cannot hold h / M at
@@ -189,6 +190,7 @@ namespace tap::sr::rational {
                 return tap::dsp::sample_traits<S>::finalize(acc);
             }
         }
+        // ANCHOR_END: rational_gain
         /// Rows of the table: L phases, or the M branches of a decimator.
         static constexpr std::size_t k_rows = k_is_decimator ? k_down : k_up;
 
@@ -407,6 +409,7 @@ namespace tap::sr::rational {
         /// Delay lines per channel: the M sub-lines of a decimator, else one.
         static constexpr std::size_t k_lines = k_is_decimator ? k_down : 1;
 
+        // ANCHOR: rational_build_table
         /// Builds the rows from the design: scaling (file header), tap
         /// reversal, trimming to the nonzero span, quantization.
         void build_table(const std::vector<double>& h) {
@@ -483,6 +486,7 @@ namespace tap::sr::rational {
                 }
             }
         }
+        // ANCHOR_END: rational_build_table
 
         /// Records the nonzero span [first, first + count) of row r.
         void trim_row(std::size_t r) noexcept {
@@ -558,6 +562,7 @@ namespace tap::sr::rational {
             m_end[sub] = keep;
         }
 
+        // ANCHOR: rational_emit
         /// One output frame at the current position; advances the schedule
         /// (the decimator's phase advances in process / pull / flush).
         void emit(S* out) noexcept {
@@ -591,6 +596,7 @@ namespace tap::sr::rational {
                 m_pos     = m_pos + 1 == k_up ? 0 : m_pos + 1;
             }
         }
+        // ANCHOR_END: rational_emit
 
         std::size_t                      m_channels;
         std::size_t                      m_taps     = 0; ///< N

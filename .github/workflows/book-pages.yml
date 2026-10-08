@@ -18,6 +18,8 @@ on:
       - "async/README.md"
       - "async/tests/**"
       - "async/capi/**"
+      - "rational/include/**"
+      - "submodules/dsptap"
       - "platform/**"
       - "tools/**"
       - "cmake/**"

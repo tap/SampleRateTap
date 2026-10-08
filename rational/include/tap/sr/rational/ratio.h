@@ -68,6 +68,7 @@ namespace tap::sr::rational {
 
     } // namespace detail
 
+    // ANCHOR: rational_ratio
     /// The ratio L/M of one stage or chain, as a type (R1): L output
     /// frames per M input frames. The charter's static_asserts are the
     /// whole definition; ratio_traits holds the derived numbers.
@@ -83,6 +84,7 @@ namespace tap::sr::rational {
         static constexpr unsigned k_up   = L; ///< output frames per superblock
         static constexpr unsigned k_down = M; ///< input frames per superblock
     };
+    // ANCHOR_END: rational_ratio
 
     /// True for a ratio<L, M> specialization.
     template <typename T>
@@ -94,6 +96,7 @@ namespace tap::sr::rational {
     template <typename T>
     concept rational_ratio = is_ratio<T>::value;
 
+    // ANCHOR: rational_ratio_traits
     /// Compile-time facts of one ratio; see the file header.
     template <rational_ratio R>
     struct ratio_traits {
@@ -127,6 +130,7 @@ namespace tap::sr::rational {
                           || k_composite_factor * k_lower_rate_den == k_band * k_lower_rate_num,
                       "the composite rate is k_band times the lower rate for every ratio of the charter");
     };
+    // ANCHOR_END: rational_ratio_traits
 
     /// The single-stage vocabulary of the 48 kHz family (PLAN.md section 1):
     /// the integer factors and the mixed ratios one stage serves, as named
