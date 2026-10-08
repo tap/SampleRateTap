@@ -40,14 +40,21 @@
 - [Real clocks: bridges and firmware](part5/hardware.md)
 - [Channels, rates, and the rules that scale](part5/scaling.md)
 
-# Part VI — The rational engine
+# Part VI — The bridge engine
 
-- [A ratio is a type: ratio.h](part6/charter.md)
-- [One filter per stage: nyquist.h and design.h](part6/nyquist.md)
-- [Two machines, one filter: stage.h](part6/stage.md)
-- [Chains and the coverage matrix: chain.h](part6/chain.md)
-- [Sixteen bits, per stage](part6/fixed-point.md)
-- [The proof, the ABI, and the levers that lost](part6/proof.md)
+- [The degenerate case: 44.1 ↔ 48 as a type](part6/degenerate.md)
+- [The phase table and the schedule](part6/phase-table.md)
+- [The converter, and the campaign that made it fast](part6/converter.md)
+- [Three legs, and the bridge to the ASRC](part6/proof-bridge.md)
+
+# Part VII — The rational engine
+
+- [A ratio is a type: ratio.h](part7/charter.md)
+- [One filter per stage: nyquist.h and design.h](part7/nyquist.md)
+- [Two machines, one filter: stage.h](part7/stage.md)
+- [Chains and the coverage matrix: chain.h](part7/chain.md)
+- [Sixteen bits, per stage](part7/fixed-point.md)
+- [The proof, the ABI, and the levers that lost](part7/proof.md)
 
 # Epilogue
 

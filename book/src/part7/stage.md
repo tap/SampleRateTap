@@ -16,7 +16,7 @@ why one machine would not do.
 ## The L-phase machine
 
 For an interpolator or a mixed ratio (L ≥ 2), the stage runs `bridge`'s
-polyphase schedule. Output n dots phase (n·M) mod L of the table against
+polyphase schedule (Part VI). Output n dots phase (n·M) mod L of the table against
 the T newest inputs — T = ⌈N/L⌉ taps per phase — and then consumes
 ⌊(n + 1)M/L⌋ − ⌊nM/L⌋ inputs. Over a superblock of L outputs every phase
 is visited exactly once and exactly M inputs are consumed, so the schedule

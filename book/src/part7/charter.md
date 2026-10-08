@@ -4,18 +4,16 @@
 >
 > — Yaron Minsky
 
-Part V ended with a decision rule and a confession. The rule: which
-converter applies is a property of the *clock topology*, never inferred
-from a ratio of two numbers. The confession: the synchronous half of the
-family lived in another repository, so the book owed you the rule and
-nothing else. Both halves have since moved in. The tree this book is built
-from holds three engines under one namespace, `tap::sr`, and the rule now
-has three types to choose between:
+Part V ended with a decision rule: which converter applies is a property
+of the *clock topology*, never inferred from a ratio of two numbers. Part
+VI read the engine on one side of that rule. The tree this book is built
+from holds three engines under one namespace, `tap::sr`, and the rule has
+three types to choose between:
 
 - `async` — two independent clocks, one nominal rate. Absorbs the *clock*.
   Parts 0–V.
 - `bridge` — the fixed 44.1 ↔ 48 kHz pair (160/147 up, 147/160 down), one
-  clock. Converts *the* number.
+  clock. Converts *the* number. Part VI.
 - `rational` — a small-factor L/M inside one rate family, one clock.
   Converts *a* number: 96 → 48, 48 → 32, 8 → 384.
 
