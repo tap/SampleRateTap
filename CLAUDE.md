@@ -96,7 +96,9 @@ migration's gates and their run record are in `PLAN.md` sections 5–6 and `docs
 ## Consumers & release flow
 
 DspTap changes land in DspTap first, then this tree bumps `submodules/dsptap`. The book
-(`book/`, https://tap.github.io/SampleRateTap/) is published from `main` by `book-pages`; the
+(`book/`, https://tap.github.io/SampleRateTap/) is published from `main` by `book-pages`, with its
+print edition (`book/print/build.sh`: mdBook → pandoc → typst, the tools pinned by SHA256 in both
+workflows; CI builds it on every PR) beside it as `SampleRateTap.pdf`; the
 notebooks are committed executed against the shipping C++ through each engine's C ABI and
 binding (`async/notebooks/`, `bridge/notebooks/tap_sr_bridge_py.py`,
 `rational/notebooks/tap_sr_rational_py.py`) — re-execute them when the

@@ -712,6 +712,10 @@ jobs:
     env:
       MDBOOK_URL: https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz
       MDBOOK_SHA256: "9ef07fd288ba58ff3b99d1c94e6d414d431c9a61fdb20348e5beb74b823d546b"
+      PANDOC_URL: https://github.com/jgm/pandoc/releases/download/3.6.4/pandoc-3.6.4-linux-amd64.tar.gz
+      PANDOC_SHA256: "5def6e1ff535e397becce292ee97767a947306150b9fb1488003b67ac3417c5e"
+      TYPST_URL: https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-unknown-linux-musl.tar.xz
+      TYPST_SHA256: "7d214bfeffc2e585dc422d1a09d2b144969421281e8c7f5d784b65fc69b5673f"
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -733,6 +737,33 @@ jobs:
             echo "::error::mdbook reported warnings/errors (stale anchor or broken include?)"
             exit 1
           fi
+
+      - name: Install pandoc + typst (pinned; the print edition)
+        run: |
+          curl -sfLo /tmp/pandoc.tar.gz "$PANDOC_URL"
+          curl -sfLo /tmp/typst.tar.xz "$TYPST_URL"
+          echo "$PANDOC_SHA256  /tmp/pandoc.tar.gz" | sha256sum -c - || { echo "::error::pandoc checksum mismatch"; exit 1; }
+          echo "$TYPST_SHA256  /tmp/typst.tar.xz" | sha256sum -c - || { echo "::error::typst checksum mismatch"; exit 1; }
+          tar -xzf /tmp/pandoc.tar.gz -C /tmp
+          tar -xJf /tmp/typst.tar.xz -C /tmp
+
+      # The print edition: the same sources through book/print (mdBook ->
+      # pandoc -> typst), so a chapter that renders on the site but not on
+      # paper fails here. book-pages.yml publishes the PDF beside the site.
+      - name: Build the print edition (PDF)
+        run: |
+          MDBOOK=/tmp/mdbook PANDOC=/tmp/pandoc-3.6.4/bin/pandoc TYPST=/tmp/typst-x86_64-unknown-linux-musl/typst \
+            book/print/build.sh
+          pages=$(grep -c '/Type /Page$' book/print-build/SampleRateTap.pdf || true)
+          echo "print edition: $pages pages"
+          [ "$pages" -ge 200 ] || { echo "::error::the print edition has only $pages pages"; exit 1; }
+
+      - name: Upload the print edition
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: SampleRateTap-print-edition
+          path: book/print-build/SampleRateTap.pdf
+          if-no-files-found: error
 
       # The API reference must build and be non-empty (both engines' headers
       # are its input); book-pages.yml publishes it from main.

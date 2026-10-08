@@ -155,3 +155,9 @@ rejected, with reasons), a glossary, and an annotated bibliography.
 Chapters are largely self-contained, but Part I builds on itself; if you
 read only one chapter, make it [the lock-free ring](part1/spsc-ring.md) —
 it is short, complete, and representative of the whole book's method.
+
+The book is also set for paper: a print edition, a PDF built from these
+same sources by the same continuous integration (the live excerpts
+included), is published beside the site as
+[SampleRateTap.pdf](https://tap.github.io/SampleRateTap/SampleRateTap.pdf)
+and names on its title page the tree it was built from.
