@@ -80,7 +80,7 @@ namespace {
     }
 
     template <typename S>
-    void runCase(const char* typeName, const char* presetName, const tap::sr::async::filter_spec& spec,
+    void runCase(const char* typeName, const char* profileName, const tap::sr::async::filter_spec& spec,
                  std::size_t channels) {
         tap::sr::async::config cfg;
         cfg.channels = channels;
@@ -97,7 +97,7 @@ namespace {
             out.resize(kBlockFrames * channels);
         }
         catch (const std::exception& e) {
-            std::printf("%-6s %-9s %3u  SKIP (%s)\n", typeName, presetName, static_cast<unsigned>(channels), e.what());
+            std::printf("%-6s %-9s %3u  SKIP (%s)\n", typeName, profileName, static_cast<unsigned>(channels), e.what());
             return;
         }
 
@@ -134,7 +134,7 @@ namespace {
         const double pctCore = cyclesPerFrame * 48000.0 / static_cast<double>(clock_get_hz(clk_sys)) * 100.0;
 
         const auto st = asrc->status();
-        std::printf("%-6s %-9s %3u  %10.0f %10lu %10lu %10.1f %8.2f%%%s\n", typeName, presetName,
+        std::printf("%-6s %-9s %3u  %10.0f %10lu %10lu %10.1f %8.2f%%%s\n", typeName, profileName,
                     static_cast<unsigned>(channels), mean, static_cast<unsigned long>(p99),
                     static_cast<unsigned long>(mx), cyclesPerFrame, pctCore,
                     (st.underruns != 0 || st.overruns != 0 || sink != sink) ? "  WARN: not steady-state" : "");
@@ -160,7 +160,7 @@ int main() {
             sleep_ms(1000);
     }
 
-    std::printf("%-6s %-9s %3s  %10s %10s %10s %10s %9s\n", "type", "preset", "ch", "mean/blk", "p99/blk", "max/blk",
+    std::printf("%-6s %-9s %3s  %10s %10s %10s %10s %9s\n", "type", "profile", "ch", "mean/blk", "p99/blk", "max/blk",
                 "cyc/frame", "%core@48k");
 
     for (const std::size_t ch : {std::size_t{1}, std::size_t{2}, std::size_t{12}}) {

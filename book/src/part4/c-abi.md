@@ -176,8 +176,8 @@ of sentence you only think to write after watching Part IV's 32-bit ports
 in action.
 
 **`tap_sr_async_version()` is a probe.** It returns the family version
-bit-packed, `(major << 16) | (minor << 8) | patch` — `0x000500` (1280) for
-0.5.0, the value `tap_sr_bridge_version()` and `tap_sr_rational_version()`
+bit-packed, `(major << 16) | (minor << 8) | patch` — `0x000600` (1536) for
+0.6.0, the value `tap_sr_bridge_version()` and `tap_sr_rational_version()`
 return as well. A version
 *macro* would vanish into the caller's compile; a version *function*
 reports what the loaded shared library actually is, which is the question
@@ -326,7 +326,7 @@ nm -D --defined-only build/async/capi/libtap_sr_async_capi.so | grep -c ' T tap_
 # Every format against basic_converter<S>, and the wrong-format refusal:
 ctest --test-dir build -R 'async\.CApi\.' --output-on-failure
 
-# The one-integer smoke test (0.5.0 -> 1280, i.e. 0x000500):
+# The one-integer smoke test (0.6.0 -> 1536, i.e. 0x000600):
 python3 -c "import ctypes; \
   print(ctypes.CDLL('build/async/capi/libtap_sr_async_capi.so').tap_sr_async_version())"
 

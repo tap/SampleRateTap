@@ -34,10 +34,10 @@ add_executable(tap_sr_async_tests
     test_polyphase.cpp
     test_fixed_point.cpp
     test_servo.cpp
-    test_asrc_lock.cpp
-    test_asrc_program.cpp
-    test_asrc_quality.cpp
-    test_asrc_quality_16k.cpp
+    test_lock.cpp
+    test_program.cpp
+    test_quality.cpp
+    test_quality_16k.cpp
     test_fade.cpp
     test_hardening.cpp
     test_latency.cpp

@@ -107,7 +107,7 @@ jobs:
             flags: -fsanitize=address,undefined -fno-sanitize-recover=all
             labels: ""
           # TSan runs the async engine only: bridge is single-threaded, and
-          # RatioTap never ran a TSan job.
+          # bridge never ran a TSan job before the merge.
           - name: TSan
             flags: -fsanitize=thread
             labels: -L ^async$

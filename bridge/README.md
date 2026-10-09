@@ -95,20 +95,21 @@ exactly, 1.9 ms total latency.
 ```
                     ┌────────────────────────────┐
                     │           DspTap           │  shared substrate (submodules/dsptap)
-                    │  kaiser design · sample    │
-                    │  traits (float/Q15/Q31) ·  │
-                    │  FIR dot kernels · row-sum │
-                    │  quantization · analysis   │
-                    └──────┬──────────────┬──────┘
-                           │              │
-              ┌────────────┴───┐   ┌──────┴─────────┐
-              │ tap::sr::async │   │ tap::sr::bridge│
-              │ async, near-   │   │ sync, 44.1↔48, │
-              │ unity, servo   │   │ speed-first    │
-              └────────────┬───┘   └──────┬─────────┘
-                           │              │
-                           └── test-only ─┘  bridge's golden cross-validation
-                               (bridge/tests/, bridge/examples/bluetooth_bridge)
+                    │  kaiser · nyquist design · │
+                    │  sample traits (float/Q15/ │
+                    │  Q31) · FIR dot kernels ·  │
+                    │  row-sum quantization ·    │
+                    │  chain<> · analysis        │
+                    └──────┬────────┬────────┬───┘
+                           │        │        │
+            ┌──────────────┴─┐ ┌────┴──────────┐ ┌┴────────────────┐
+            │ tap::sr::async │ │ tap::sr::bridge│ │ tap::sr::rational│
+            │ absorbs the    │ │ 44.1 ↔ 48 on  │ │ L/M inside one   │
+            │ clock (servo)  │ │ one clock      │ │ rate family      │
+            └────────────┬───┘ └──┬─────────────┘ └──────────────────┘
+                         │        │
+                         └── test-only ──  bridge's golden cross-validation
+                             (bridge/tests/, bridge/examples/bluetooth_bridge)
 ```
 
 ## Build

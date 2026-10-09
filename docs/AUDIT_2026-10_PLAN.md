@@ -1,6 +1,6 @@
 # Audit response plan (v0.2)
 
-Status: **decisions taken 2026-10-09** (section 6 records them); execution in progress; ✓ in the disposition table marks a closed row (S0, S1 and S2 landed on the branch). Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
+Status: **decisions taken 2026-10-09** (section 6 records them); execution in progress; ✓ in the disposition table marks a closed row (S0 to S3 landed on the branch). Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
 4 major, 14 minor, 1 disputed, 16 nits) and the cohesion assessment that followed it: the
 family reads as one mind at the level of the plans and one vocabulary at the level of
 `bridge` and `rational`, while `async`, the oldest stratum, still speaks the dialect it was
@@ -255,7 +255,7 @@ After S3 so the prose describes the final state. No code.
 | F12 | m (disputed) | reset tests skip decimators | S1 ✓ | add decimator and chain |
 | F13 | m | no stage-level tie pin (3 mutants survive) | S1 ✓ | constructed-tie tests |
 | F14 | m | Doxygen omits rational | S4 | `INPUT`, description |
-| F15 | m | async README 0.1.0 | S3 | 0.6.0 with the restructure |
+| F15 | m | async README 0.1.0 | S3 ✓ | 0.6.0 with the restructure |
 | F16 | m | bridge README retired `ratio` label | S4 | fix |
 | F17 | m | root README two engines | S4 | three engines, profile table |
 | F18 | m | rational PLAN layout promises missing files | S1 ✓ | write the example, strike the row |
@@ -269,17 +269,17 @@ After S3 so the prose describes the final state. No code.
 | F26 | n | two-engine wording in CI comments | S4 | fix |
 | F27 | n | Hexagon exclusion comment incomplete | S4 | fix |
 | F28 | n | passband deviations swapped in PLAN 5 | S1 ✓ | fix with the measurement |
-| F29 | n | bluetooth_bridge latency 1.9 / 2.0 / 1.93; "RatioTap" | S3 | one figure, family name |
+| F29 | n | bluetooth_bridge latency 1.9 / 2.0 / 1.93; "RatioTap" | S3 ✓ | one figure, family name |
 | F30 | n | root PLAN status line and D13 version stale | S4 | update |
 | F31 | n | duplicated flag line; "exact" accessor name | S4 | fix |
 | F32 | n | book's `create` prose predates fc2949e | S4 | fix |
 | F33 | n | async PLAN function count reads as 15 | S2 ✓ | fix |
 | F34 | n | `rational.h` says Status: M3 | S1 ✓ | current status |
 | F35 | n | `outputs_for` wraps above SIZE_MAX / L undocumented | S1 ✓ | document |
-| C1 | — | `preset` vs `profile`; `economy` means two things | S3 | A4 |
-| C2 | — | async C ABI shape differs from the siblings | S3 | A5 (maintainer) |
-| C3 | — | async umbrella header and README in the old voice | S3 | rewrite to the sibling shape |
-| C4 | — | `test_asrc_*` names; "RatioTap" residue | S3 | rename; A11 |
+| C1 | — | `preset` vs `profile`; `economy` means two things | S3 ✓ | A4 |
+| C2 | — | async C ABI shape differs from the siblings | S3 ✓ | A5 (maintainer) |
+| C3 | — | async umbrella header and README in the old voice | S3 ✓ | rewrite to the sibling shape |
+| C4 | — | `test_asrc_*` names; "RatioTap" residue | S3 ✓ | rename; A11 |
 | C5 | — | `test_skeleton.cpp` is an M1 scaffold kept as a test | S1 | keep, retitled "substrate wiring"; it is the bridge's smoke test and costs nothing |
 | C6 | — | no gate catches drift at the seams | S5 | A8, README compile test, the CLAUDE.md rule |
 
@@ -322,4 +322,9 @@ The maintainer accepted every recommendation in section 1:
 4. **S1 / F18**: `examples/multirate_chain.cpp` is written; the cross-validation row is
    struck.
 5. The `asrc` word is dropped from the async notebooks' prose cells in S3 (the notebook
-   filenames stay, A11).
+   filenames stay, A11). Applied as: the retired `preset` word and the C ABI's old argument
+   order left the notebooks' code and prose; the acronym ASRC, the generic name of what the
+   engine is, stays wherever it means that (the engine's README defines it), as do the
+   wrapper class `Asrc` in the notebooks' code cells. `scripts/book_figures.py` keeps the
+   rendered titles that name "presets" until the figures are next regenerated (no
+   matplotlib in this environment); its comments and identifiers changed.

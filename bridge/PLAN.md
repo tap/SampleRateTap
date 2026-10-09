@@ -135,7 +135,7 @@ pinned by `PhaseTable.StorageBudgetsArePinned`); Q15 halves them again.
 speed-first charter; the README must state the reasoning (the §4 argument:
 nothing *can* fold below 20.1 kHz going down; images land ≥ 22.05 kHz going
 up) rather than just the number, and the program-weighted measurement style
-from `async`'s `economy` preset applies here too. The 18 kHz edge is
+from `async`'s `program` profile applies here too. The 18 kHz edge is
 the same species of inaudible trade that put economy at 19 kHz rather than
 transparent's 20: the 18–19 kHz shelf moves into the transition band
 (measured −1.4 dB at 19 kHz going down, −0.5 dB going up). Content that

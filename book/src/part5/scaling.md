@@ -170,7 +170,7 @@ remembered.) Frame-denominated fields — lock and unlock thresholds,
 `target_latency_frames`, ppm limits — are rate-invariant and stay put,
 though their *duration* in milliseconds scales inversely with the rate.
 
-`tests/test_asrc_quality_16k.cpp` runs the full quality methodology
+`tests/test_quality_16k.cpp` runs the full quality methodology
 through the factory, and the outcome is the point of the design: 16 kHz
 matches the 48 kHz *normalized-frequency structure*. The tones sit at the
 same f/fs as the 48 kHz suite's 997 Hz / 6 k / 12 k / 19.5 k, and measure
@@ -183,7 +183,7 @@ samples*, which is three times as many milliseconds at 16 kHz (1.5 ms vs
 slower — the 16 kHz test runs 120 s where the 48 kHz one ran 40 s, the
 same number of samples and of time constants.
 
-### A different rate on each side belongs to RatioTap
+### A different rate on each side belongs to `bridge`
 
 Everything above scales the *common* nominal rate; it does not license
 44.1 ↔ 48. With the default configuration the servo clamps its estimate
@@ -191,27 +191,27 @@ at ±1.5 × `max_deviation_ppm` — ±1500 ppm against an 8.8% gap — and the
 near-unity datapath has none of the band-limiting machinery a genuine
 downward conversion needs. That conversion is a different problem —
 synchronous, rational, known at compile time — and in the Tap family it
-has a different engine: [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge) (formerly RatioTap),
+has a different engine: [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge),
 built on the same DspTap substrate this book has been reading (the same
 Kaiser design path, sample traits, and dot kernels), with its entire
 optimization budget spent on exactly one ratio pair, 160/147 up and
 147/160 down.
 
-The decision rule is worth stating the way RatioTap's README states it,
+The decision rule is worth stating the way `bridge`'s README states it,
 because the failure mode is choosing an engine from a float: **which
 converter applies is a property of the clock topology, never inferred
 from the ratio.** A 44.1 kHz file rendered for a 48 kHz interface is
-RatioTap alone — one clock, a number to convert. Two 48 kHz devices on
+`bridge` alone — one clock, a number to convert. Two 48 kHz devices on
 separate crystals is this library alone — one nominal rate, a clock to
 absorb. A Bluetooth chip running 44.1 kHz on its own crystal into a
-48 kHz host is both, composed: RatioTap converts the *number*, the ASRC
+48 kHz host is both, composed: `bridge` converts the *number*, `async`
 absorbs the *clock*.
 
-The composition is not hypothetical, and it is measured. RatioTap's
+The composition is not hypothetical, and it is measured. `bridge`'s
 `bluetooth_bridge` example is the documented recipe — +200 ppm on the
-simulated crystal, servo locked, 997 Hz recovered exactly, 2.0 ms of
+simulated crystal, servo locked, 997 Hz recovered exactly, 1.93 ms of
 total latency through both stages — and the two engines check each
-other: RatioTap's suite pins its output against this library's async
+other: `bridge`'s suite pins its output against this library's async
 engine at −98 dB (down) / −90 dB (up) on its default `economy` profile,
 over every polyphase phase. Two independent implementations of the same
 mathematics agreeing at the noise floor is the strongest mutual check
@@ -330,7 +330,7 @@ ctest --test-dir build -R MultiChannel --output-on-failure
 # deterministically):
 ctest --test-dir build -R AsrcQuality16k --output-on-failure
 
-# The -32 dB failure itself, reproduced: in test_asrc_quality_16k.cpp,
+# The -32 dB failure itself, reproduced: in test_quality_16k.cpp,
 # keep config::for_sample_rate(k_fs) but overwrite the servo with unscaled
 # defaults (cfg.servo = tap::sr::async::servo_config{};) — the converter still builds
 # and locks, and every threshold fails by ~30 dB, falling 6 dB per octave

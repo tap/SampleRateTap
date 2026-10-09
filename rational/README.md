@@ -96,7 +96,7 @@ message). `pull(out, n, pop_fn)` is the callback-driven shape and
   relaxation tables of `design.h`); `chain<R...>` / `chain_q15` /
   `chain_q31`; `macs_per_output()` exact; and the 20 named multi-stage
   chains of the coverage matrix (`up_2_up_2<S>` … `down_3_down_8_down_2<S>`).
-- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.5.0, from M6);
+- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.6.0 since the audit response; 0.5.0 from M6);
   the named ratios of the vocabulary (`up_2` … `ratio_3_8`) are `ratio.h`'s.
 
 ## The boundaries are identity, not policy
@@ -114,6 +114,46 @@ message). `pull(out, n, pop_fn)` is the callback-driven shape and
   is chosen by MACs (↑4 is two half-bands); the default `economy` profile
   takes the speed side of every inaudible trade, with a 120 dB
   `transparent` profile behind the same design path.
+
+## Position in the Tap family
+
+`rational` is one of the three engines of the `tap::sr` family, all built on
+the same shared substrate and living in one tree:
+
+```
+                    ┌────────────────────────────┐
+                    │           DspTap           │  shared substrate (submodules/dsptap)
+                    │  kaiser · nyquist design · │
+                    │  sample traits (float/Q15/ │
+                    │  Q31) · FIR dot kernels ·  │
+                    │  row-sum quantization ·    │
+                    │  chain<> · analysis        │
+                    └──────┬────────┬────────┬───┘
+                           │        │        │
+            ┌──────────────┴─┐ ┌────┴──────────┐ ┌┴────────────────┐
+            │ tap::sr::async │ │ tap::sr::bridge│ │ tap::sr::rational│
+            │ absorbs the    │ │ 44.1 ↔ 48 on  │ │ L/M inside one   │
+            │ clock (servo)  │ │ one clock      │ │ rate family      │
+            └────────────┬───┘ └──┬─────────────┘ └──────────────────┘
+                         │        │
+                         └── test-only ──  bridge's golden cross-validation
+                             (bridge/tests/, bridge/examples/bluetooth_bridge)
+```
+
+[DspTap](https://github.com/tap/DspTap) (vendored at `submodules/dsptap`)
+provides the L-th-band designer and the stage composition this engine is
+built on, with the Kaiser design path, the float/Q15/Q31 sample-format
+traits, the FIR dot kernels, the row-sum quantization and the analysis
+instruments the three engines share. [`bridge`](../bridge/README.md) is the
+sibling for the one cross-family pair, 44.1 ↔ 48 kHz, which a chain through
+this engine's stages reaches as a type the caller writes (the coverage
+matrix's cross rows, PLAN.md 3.5 / 3.6); [`async`](../async/README.md)
+absorbs a clock, by composition. Which engine applies is a property of the
+clock topology and the rate pair, never inferred from a float ratio
+([the boundaries](#the-boundaries-are-identity-not-policy)). Each engine's
+quality tiers are its own ladder, stated with its numbers in the root
+README's profile table; this engine's four names are `bridge`'s, at the same
+numbers.
 
 ## Build
 

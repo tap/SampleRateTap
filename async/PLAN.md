@@ -47,7 +47,7 @@ The boundaries are identity, not policy:
   through `status()`.
 - Measured quality is a number, not a claim: the README's table and the
   executed notebooks (`notebooks/`, through the C ABI) pin the default
-  presets' SNR figures; `bench/icount/` pins the instruction counts on
+  profiles' SNR figures; `bench/icount/` pins the instruction counts on
   M33, M55 and Hexagon two-sided at ±3 %.
 - The C ABI (`capi/`, `libtap_sr_async_capi`): fourteen `tap_sr_async_*`
   functions in all — the float surface, `create_format` / `format`, the

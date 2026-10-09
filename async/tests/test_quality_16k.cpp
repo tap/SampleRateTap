@@ -2,10 +2,10 @@
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 // 16 kHz -> 16 kHz quality coverage (a real deployment rate, e.g.
 // reference-microphone processing). Same methodology as
-// test_asrc_quality.cpp, configured through Config::forSampleRate — the
+// test_quality.cpp, configured through Config::forSampleRate — the
 // rate-scaling rule this suite originally established by hand:
 //
-//  1. filter_spec band edges are absolute Hz and the presets assume ~48 kHz,
+//  1. filter_spec band edges are absolute Hz and the profiles assume ~48 kHz,
 //     so passbandHz/stopbandHz must scale with the rate.
 //  2. servo_config bandwidths are absolute Hz too. The slip-sawtooth beat
 //     sits at ppm * fs = 3.2 Hz instead of 9.6 Hz, so with default servo
@@ -39,7 +39,7 @@ namespace {
     // Resamples a sine across a +200 ppm clock offset (sample-synchronous
     // transfer) and measures the residual after removing the fitted fundamental
     // from the last second of output. Mirrors measureSnrDb in
-    // test_asrc_quality.cpp at fs = 16 kHz, with all rate adaptation coming
+    // test_quality.cpp at fs = 16 kHz, with all rate adaptation coming
     // from Config::forSampleRate (filter band edges, servo bandwidths and
     // hold times).
     double measure_snr_db16k(double freq_hz) {
@@ -78,7 +78,7 @@ namespace {
     }
 
     // Thresholds sit ~4 dB under measured performance, the convention of
-    // test_asrc_quality.cpp. Measured (balanced-at-16k, +200 ppm):
+    // test_quality.cpp. Measured (balanced-at-16k, +200 ppm):
     // 333 Hz: 136.6 dB, 2 kHz: 121.9 dB, 4 kHz: 114.3 dB, 6.5 kHz: 106.5 dB.
     // The interpolation residual depends on the normalized frequency f/fs and
     // the tones sit at the same f/fs as the 48 kHz suite's 997 Hz/6 k/12 k/

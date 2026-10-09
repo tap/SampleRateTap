@@ -112,7 +112,7 @@ lesson is the spsc-ring chapter's lesson again — the failure signature of
 an alignment bug is so distinctive that a test built to measure the right
 thing diagnoses the bug for you.
 
-Every preset except `fast` now ships this design:
+Every profile except `fast` now ships this design:
 
 ```cpp
 {{#include ../../../async/include/tap/sr/async/polyphase_filter.h:pw_image_zeros}}
@@ -147,7 +147,7 @@ saying which one any given number is quoting.
 
 Which raised an uncomfortable fact: this project's proof system could not
 *test* his promise. Every quality gate in the suite was a single sine. A
-preset built on program-weighted reasoning would have been unverifiable —
+profile built on program-weighted reasoning would have been unverifiable —
 and the third chapter of Part II was blunt about what an unverifiable
 claim is worth here.
 
@@ -193,7 +193,7 @@ yourself,* even — especially — inside your own test support headers.
 ## The outcome
 
 With the instrument in place, the suggestion could finally become a
-shippable preset:
+shippable profile:
 
 ```cpp
 {{#include ../../../async/include/tap/sr/async/polyphase_filter.h:pw_economy}}
@@ -202,12 +202,12 @@ shippable preset:
 And the promise could be measured instead of asserted:
 
 ```cpp
-{{#include ../../../async/tests/test_asrc_program.cpp:pw_measure}}
+{{#include ../../../async/tests/test_program.cpp:pw_measure}}
 ```
 
 The numbers, end to end through the full converter at +200 ppm:
 
-| preset | program-weighted | worst-case 19.5 kHz sine | per-sample compute |
+| profile | program-weighted | worst-case 19.5 kHz sine | per-sample compute |
 |---|---|---|---|
 | `balanced` | **134.5 dB** | 105 dB | 1.0× |
 | `economy` | **131.6 dB** | 77 dB | 0.67× |
@@ -231,7 +231,7 @@ portable answer; the record is the deliverable.
 
 A week after the exchange, his MATLAB script did arrive — updated the same
 day so the Kaiser-windowed method got the sinc² zeros too, and validated,
-by his own report, at R=512 and N=32: the exact shape of `economy()`. With
+by his own report, at R=512 and N=32: the exact shape of `program()`. With
 it came one more claim, stated with his usual precision: *"for DC, this
 should get you infinite S/N ratio... for every phase or fractional delay,
 the FIR coefficients must add to 1."*
@@ -264,7 +264,7 @@ Strip the DSP away and the shape of the episode is this: an expert
 stranger looked at public work and said *your numbers are bigger than they
 need to be, here is a trick, and by the way what is "occupancy."* The
 project's response machinery — notebook verification, adversarial
-measurement of its own instrument, a spec-honest preset, and this chapter
+measurement of its own instrument, a spec-honest profile, and this chapter
 — took about two days. Nothing in that machinery was built for this
 episode; it is the same ratchet-and-verify culture every previous chapter
 described, pointed for the first time at feedback from outside.
@@ -283,10 +283,10 @@ public — which is the most useful thing two wrong models can do.
 jupyter nbconvert --execute --to notebook notebooks/asrc_rbj_analysis.ipynb
 
 # The compensated designs meet spec (ripple, stopband, exact k*fs zeros),
-# including at 16 kHz, plus the economy preset:
+# including at 16 kHz, plus the economy profile:
 ctest --test-dir build -R 'Kaiser' --output-on-failure
 
-# The program-weighted metric: instrument floor first, then both presets
+# The program-weighted metric: instrument floor first, then both profiles
 # and the economy worst-case honesty line:
 ctest --test-dir build -R 'ProgramWeighted' --output-on-failure
 
@@ -299,7 +299,7 @@ ctest --test-dir build -R 'BranchSums|RowSums|DcGain' --output-on-failure
 ```
 
 And one experiment in the spirit of the thread: change `image_zeros` to
-`false` in `filter_spec::economy()` and rerun `ProgramWeighted` — the
+`false` in `filter_spec::program()` and rerun `ProgramWeighted` — the
 program-weighted number collapses toward the mid-90s while the worst-case
 sine barely moves. That difference *is* RBJ's argument, measured; the
-preset is just the argument, shipped.
+profile is just the argument, shipped.

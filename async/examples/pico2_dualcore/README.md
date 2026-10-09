@@ -10,7 +10,7 @@ measured `pull()` cycles — against PASS/FAIL gates.
 
 The README's platform guidance says that on Pico-class parts the Q15/Q31
 paths are the right datapaths, 48 kHz mono fits a 150 MHz core with room to
-spare, and stereo `balanced()` wants the `fast()` preset *or the RP2350's
+spare, and stereo `balanced()` wants the `fast()` profile *or the RP2350's
 second core*. This firmware is that second-core deployment, built the way a
 real one is:
 
