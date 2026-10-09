@@ -67,7 +67,7 @@ callback-driven shape, and `frames_needed(n)` is exact arithmetic. For
 44.1↔48 across *independent clocks* (a Bluetooth chip on its own crystal),
 compose with the family's `async` engine — `examples/bluetooth_bridge.cpp` is the
 documented recipe: +200 ppm crystal, servo locked, 997 Hz recovered
-exactly, 1.9 ms total latency.
+exactly, 1.93 ms total latency.
 
 ## The boundaries are identity, not policy
 
@@ -122,7 +122,7 @@ ctest --test-dir build --output-on-failure -L '^bridge$'
 ```
 
 This engine lives in `bridge/` of the SampleRateTap family repository; the
-root build configures both engines, and the `ratio` label selects this one's
+root build configures every engine, and the `bridge` label selects this one's
 tests. Consume with `add_subdirectory` (or FetchContent) and link
 `tap::sr::bridge`; the DspTap submodule at the repository root rides along
 automatically.
@@ -144,7 +144,6 @@ The counts are deterministic, so the M7 optimization campaign in
 ```sh
 cmake -B build-m55 -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=cmake/arm-cortex-m55-mps3.cmake \
-      -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
       -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
       -DTAP_SR_BUILD_ICOUNT_BENCH=ON
 cmake --build build-m55 -j

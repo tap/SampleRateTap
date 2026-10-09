@@ -31,7 +31,8 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > matrix (PLAN.md section 3), pinned row by row by `tests/test_matrix.cpp`.
 > The fixed-point profiles are measured per stage (`tests/test_fixed_point.cpp`,
 > PLAN.md section 6): exact-unity rows and full-scale DC in Q15 and Q31,
-> bit-pinned tables, saturation without wrap, Q31 within 3.4e−9 of double;
+> bit-pinned tables, saturation without wrap, Q31 within 3.4e−9 of double on the
+> reference noise (480 frames at peak 0.9; 1.6e−8 under full-scale drive);
 > Q15 is format-limited, and its numbers are stated per stage — at Q15 use
 > `economy`, where every stage of the vocabulary attains 70 dB of stopband at its own rate (a Q15 decimator
 > quantizes each branch at unity and divides by M in its one rounding, so ↓6
@@ -94,7 +95,8 @@ message). `pull(out, n, pop_fn)` is the callback-driven shape and
   stage's design divisor (its lower rate over the chain's lowest, the
   largest 2^a · 3^b at or below it; `profile::relaxed`, the pinned
   relaxation tables of `design.h`); `chain<R...>` / `chain_q15` /
-  `chain_q31`; `macs_per_output()` exact; and the 20 named multi-stage
+  `chain_q31`; `macs_per_output_exact()` the MACs per output as a reduced rational and
+  `macs_per_output()` its double; and the 20 named multi-stage
   chains of the coverage matrix (`up_2_up_2<S>` … `down_3_down_8_down_2<S>`).
 - `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.6.0 since the audit response; 0.5.0 from M6);
   the named ratios of the vocabulary (`up_2` … `ratio_3_8`) are `ratio.h`'s.

@@ -389,7 +389,7 @@ jobs:
   # bridge/PLAN.md section 7): fixed workloads under QEMU with a counting
   # plugin, gated two-sided at ±3% against each engine's
   # bench/baselines.json. Noise-free, so a hard gate is safe on shared
-  # runners. One job per target measures both engines with the shared
+  # runners. One job per target measures every engine with the shared
   # harness (tools/qemu_insn_plugin, scripts/icount.py --engine); each
   # engine is still its own gated step, so one engine's regression never
   # hides the other's numbers.
@@ -767,7 +767,7 @@ jobs:
           path: book/print-build/SampleRateTap.pdf
           if-no-files-found: error
 
-      # The API reference must build and be non-empty (both engines' headers
+      # The API reference must build and be non-empty (the three engines' headers
       # are its input); book-pages.yml publishes it from main.
       - name: API reference (Doxygen)
         run: |

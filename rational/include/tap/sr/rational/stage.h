@@ -82,7 +82,8 @@
 //     every row sums to exact unity in the format, so full-scale DC of
 //     either sign comes out at exactly full scale; full-scale drive
 //     saturates in the trait's finalize and never wraps; Q31 tracks double
-//     within 3.4e-9 of full scale; Q15 is format-limited — RMS -90.2 to
+//     within 3.4e-9 of full scale on the reference noise (480 frames at
+//     peak 0.9; 1.6e-8 under full-scale drive); Q15 is format-limited — RMS -90.2 to
 //     -99.8 dBFS from double, attained stopband -70.0 to -83.1 dB (every
 //     stage the 70 dB tier; transparent's 120 dB is float's), a decimator's
 //     equal to the interpolator's of its band, stated per stage in PLAN.md;

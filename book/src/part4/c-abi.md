@@ -72,7 +72,9 @@ fossil of a compile error:
 ```
 
 The handle is simply the engine pointer in disguise —
-`reinterpret_cast` in `tap_sr_async_create`, `reinterpret_cast` back on every call.
+`reinterpret_cast` in `tap_sr_async_create_format` (`tap_sr_async_create` is a
+one-line forwarder to it since the fixed-point formats landed),
+`reinterpret_cast` back on every call.
 No registry of live handles, no indirection table: there is nothing to
 store beyond the object itself, so the handle *is* the object. The object
 is one small interface over the three `basic_converter<S>` instantiations,
@@ -221,7 +223,8 @@ clients, and neither can deadlock or glitch the other side.
 
 ## Exceptions must not cross — and one target where they cannot even fly
 
-Look again at `tap_sr_async_create`'s body: the `new` is wrapped in
+Look again at `tap_sr_async_create_format`'s body (`tap_sr_async_create`
+forwards to it): the allocation is wrapped in
 `try { ... } catch (...) { return nullptr; }`. This is not defensive
 decoration. A C++ exception that propagates out of an `extern "C"`
 function into a C caller is undefined behavior — there is no agreement

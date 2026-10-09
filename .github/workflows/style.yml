@@ -39,7 +39,7 @@ jobs:
       # icount workloads: the coverage each repository's gate had. The async
       # workloads (async/bench/icount) were never under this gate and do not
       # pass it yet; bringing them in is follow-up work, not a migration step.
-      # Since step 3.4 the one family option builds both engines' workloads,
+      # Since step 3.4 the one family option builds every engine's workloads,
       # so the async ones are excluded below by path.
       - name: Configure (compile database)
         run: >
