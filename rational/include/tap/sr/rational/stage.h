@@ -115,7 +115,7 @@ namespace tap::sr::rational {
     /// inputs to consume after it (bridge's schedule_entry).
     struct schedule_entry {
         std::uint16_t phase;   ///< polyphase branch index in [0, L)
-        std::uint32_t advance; ///< input frames consumed after this output: up to M (a mixed ratio's can pass 255: ratio<3, 1024>)
+        std::uint32_t advance; ///< input frames consumed after this output, up to M (past 255 for ratio<3, 1024>)
     };
 
     /// The superblock of ratio R: entry n serves output k L + n; phase(n) =
