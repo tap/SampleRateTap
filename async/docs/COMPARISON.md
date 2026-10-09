@@ -49,11 +49,12 @@ Reading guide:
   ceilings, so this measurement cannot rank them against each other.
 - r8brain is measured through its offline `oneshot()` path (filter delay
   removed, tail flushed) via a two-function C shim over the pinned headers
-  (`tools/compare_shim/`, `cmake/r8brain.cmake`), since it has no maintained
-  Python binding. Its preset for 24-bit/float work, `CDSPResampler24`
-  (180.15 dB stopband, 2 % transition band), is the subject.
+  (the family's `tools/compare/shim/`, `tools/compare/r8brain.cmake`), since
+  it has no maintained Python binding. r8brain's preset for 24-bit/float
+  work, `CDSPResampler24` (180.15 dB stopband, 2 % transition band), is the
+  subject.
 - SpeexDSP is measured the same way through its own shim
-  (`tap_sr_async_speex_shim.cpp`, `cmake/speexdsp.cmake`: upstream's
+  (`tap_sr_cmp_speex_shim.cpp`, `tools/compare/speexdsp.cmake`: upstream's
   `resample.c` compiled twice from the pinned 1.2.1 source, once per
   arithmetic build). Its float build at quality 10 lands where `balanced`
   does, −134 dB, not at the format ceiling the other three reach: its
@@ -196,7 +197,7 @@ Same comparison workload cross-compiled per target (`TAP_SR_ICOUNT_COMPARE`,
 ratchet in [PERFORMANCE.md](PERFORMANCE.md)). Stereo, float I/O (Q15 for
 the Q15 row and SpeexDSP's fixed-point build), 32-frame blocks.
 libsamplerate 0.2.2, r8brain and SpeexDSP at their pinned commits (7.6 and
-1.2.1; SpeexDSP from source in both arithmetic builds, `cmake/speexdsp.cmake`);
+1.2.1; SpeexDSP from source in both arithmetic builds, `tools/compare/`);
 arm-none-eabi-gcc 13.2.1, hexagon-clang 19.1.5, -O3 (CMake Release;
 earlier revisions said -O2, but the build type was the same).
 
@@ -286,7 +287,7 @@ libraries' is (under 100 M instructions on the M33, under 27 M elsewhere).
 
 ³ r8brain guards its process-wide filter cache with `std::mutex` and has no
 hook to replace it; the thread-less arm-none-eabi newlib declares none, so
-the Cortex-M builds force-include `bench/icount/r8b_single_thread_mutex.h`
+the Cortex-M builds force-include `tools/compare/r8b_single_thread_mutex.h`
 (a no-op lock — exact for this single-threaded workload, and outside the
 per-sample path). Hexagon's musl build uses the real mutex.
 

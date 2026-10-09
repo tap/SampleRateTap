@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
-/// \file tap_sr_async_speex_shim.cpp
-/// \brief C entry points over SpeexDSP's resampler, so the comparison
-/// notebook (notebooks/asrc_comparison.ipynb) can measure the real engine
+/// \file tap_sr_cmp_speex_shim.cpp
+/// \brief C entry points over SpeexDSP's resampler, so the family's
+/// comparison notebooks (async/notebooks/asrc_comparison.ipynb,
+/// bridge/notebooks/bridge_comparison.ipynb) can measure the real engine
 /// through ctypes, in both of its arithmetic builds. Build with
-/// TAP_SR_BUILD_COMPARE_SHIM=ON (cmake/speexdsp.cmake).
+/// TAP_SR_BUILD_COMPARE_SHIM=ON (tools/compare/speexdsp.cmake).
 ///
 /// Speex is the one competitor with a fixed-point build, so each entry point
 /// takes the build as an argument: 0 runs the FLOATING_POINT library on float
@@ -157,8 +158,8 @@ extern "C" {
 /// Convert `n_in` mono float frames at `src_hz` into exactly `n_out` frames at
 /// `dst_hz` through SpeexDSP at `quality` (0..10); `fixed_point` selects the
 /// build. Returns 0 on success, -1 on invalid arguments or failure.
-int tap_sr_async_speex_oneshot(const float* in, int n_in, double src_hz, double dst_hz, int quality, int fixed_point,
-                               float* out, int n_out) noexcept {
+int tap_sr_cmp_speex_oneshot(const float* in, int n_in, double src_hz, double dst_hz, int quality, int fixed_point,
+                             float* out, int n_out) noexcept {
     if (in == nullptr || out == nullptr || n_in < 0 || n_out < 0 || src_hz <= 0.0 || dst_hz <= 0.0 || quality < 0
         || quality > 10) {
         return -1;
@@ -169,7 +170,7 @@ int tap_sr_async_speex_oneshot(const float* in, int n_in, double src_hz, double 
 
 /// Streaming latency in input frames (speex_resampler_get_input_latency).
 /// Returns -1 on invalid arguments or failure.
-int tap_sr_async_speex_latency_frames(double src_hz, double dst_hz, int quality, int fixed_point) noexcept {
+int tap_sr_cmp_speex_latency_frames(double src_hz, double dst_hz, int quality, int fixed_point) noexcept {
     if (src_hz <= 0.0 || dst_hz <= 0.0 || quality < 0 || quality > 10) {
         return -1;
     }

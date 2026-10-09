@@ -22,8 +22,8 @@ option(TAP_SR_BUILD_EXAMPLES "Build the engines' examples" ON)
 option(TAP_SR_BUILD_CAPI "Build every engine's C ABI shared library" OFF)
 option(TAP_SR_BUILD_ICOUNT_BENCH "Build every engine's instruction-count ratchet workloads" OFF)
 option(TAP_SR_BUILD_BENCHMARKS "Build the async engine's benchmarks (host-only)" OFF)
-option(TAP_SR_BUILD_COMPARE_BENCH "Build the async engine's resampler comparison benchmarks (host-only)" OFF)
-option(TAP_SR_BUILD_COMPARE_SHIM "Build the async engine's r8brain shim for its comparison notebook" OFF)
+option(TAP_SR_BUILD_COMPARE_BENCH "Build the engines' resampler comparison benchmarks (host-only)" OFF)
+option(TAP_SR_BUILD_COMPARE_SHIM "Build the comparison notebooks' competitor shims (tools/compare/shim, host-only)" OFF)
 # Warnings as errors, per engine: each keeps its own warning policy.
 option(TAP_SR_ASYNC_WERROR "Treat warnings as errors in the async engine's own targets" OFF)
 option(TAP_SR_BRIDGE_WERROR "Treat warnings as errors in the bridge engine's own targets" OFF)
@@ -46,6 +46,12 @@ endif()
 # The shared substrate (tap::dsp), once for every engine; each engine's
 # guard skips its own copy when this target exists.
 add_subdirectory(submodules/dsptap)
+# The family's comparison tooling (tools/compare): the competitor shims the
+# comparison notebooks load, once, before the engines so their standalone
+# guards see the targets.
+if(TAP_SR_BUILD_COMPARE_SHIM)
+    add_subdirectory(tools/compare/shim)
+endif()
 add_subdirectory(async)
 add_subdirectory(bridge)
 add_subdirectory(rational)

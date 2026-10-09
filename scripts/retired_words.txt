@@ -10,3 +10,6 @@
 filter_spec::economy\b # async's program-weighted tier is filter_spec::program(); bridge's and rational's profile::economy() keep their name
 -L '\^ratio\$'          # the bridge label is bridge, never ratio
 Status: M[0-5]\b        # the rational engine is at M6; a stale status line
+\btap_sr_async_(r8b|speex)_(shim|oneshot|latency_frames)\b  # the competitor shims are the family's: tap_sr_cmp_* under tools/compare/shim (bridge comparison)
+\btap_sr_async_(r8brain|speex_fixed|speex_float)\b  # the fetched competitors are family targets: tap_sr_cmp_* (tools/compare)
+\bcompare_shim\b        # tools/compare/shim since the bridge comparison

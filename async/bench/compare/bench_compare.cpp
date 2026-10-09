@@ -36,7 +36,7 @@
 #include <soxr.h>
 // SpeexDSP twice: its fixed-point and float builds, the header read once per
 // build under that build's prefix into its own namespace (the include guard
-// undefined in between; cmake/speexdsp.cmake builds the two libraries). The
+// undefined in between; tools/compare/speexdsp.cmake builds the two libraries). The
 // header's speex_resampler_* names are macros over RANDOM_PREFIX, expanded
 // where they are used, so the calls below name the prefixed symbols directly.
 namespace speex_fixed {
