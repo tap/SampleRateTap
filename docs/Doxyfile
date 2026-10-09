@@ -1,10 +1,9 @@
 # Minimal Doxygen configuration: run `doxygen docs/Doxyfile` from the repo
 # root to generate HTML API documentation in docs/html.
 PROJECT_NAME           = SampleRateTap
-PROJECT_BRIEF          = "Near-unity asynchronous sample rate converter (C++20, header-only)"
-# Both engines' public headers; the async README stays the main page until
-# the family README lands (monorepo migration step 4).
-INPUT                  = async/include bridge/include README.md
+PROJECT_BRIEF          = "The tap::sr sample-rate family: async, bridge and rational (C++20, header-only)"
+# The three engines' public headers, with the family README as the main page.
+INPUT                  = async/include bridge/include rational/include README.md
 RECURSIVE              = YES
 USE_MDFILE_AS_MAINPAGE = README.md
 OUTPUT_DIRECTORY       = docs

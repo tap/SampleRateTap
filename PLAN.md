@@ -1,6 +1,6 @@
 # Monorepo plan: the `tap::sr` sample-rate family
 
-Status: **DRAFT v3.1. Two adversarial audit rounds folded in; step P executed, steps 0–5 not started.**
+Status: **v3.1, executed.** The migration of sections 5–6 ran in 2026 (`docs/MIGRATION_RUNS.md`); the `rational` engine followed under its own plan (`rational/PLAN.md`, M0–M6 complete); the 2026-10 adversarial audit and its response are `docs/AUDIT_2026-10.md` and `docs/AUDIT_2026-10_PLAN.md`. The decisions below stand; where a later step superseded a number (the version, D13), the row says so.
 
 | Version | Commit | What changed |
 |---|---|---|
@@ -45,7 +45,7 @@ How to read it:
 | D10 | **DspTap stays separate**, pinned once at `submodules/dsptap` | It has consumers outside the family: TapTools, and MuTap through the `LogMel`/`Decimator` C ABI |
 | D11 | **Engine directory vs. DspTap:** a capability gets an engine directory when it has its own charter, campaign and ratchet. Building blocks go into DspTap. **Engine-owned datapaths stay with their engine.** `fractional_resampler`, the polyphase bank and the blend stratum belong to `async` | Consistent with RatioTap PLAN.md Appendix A. It also keeps `bridge`'s cross-validation oracle out of `bridge`'s reach |
 | D12 | **No routing by rate, including through composition.** `chain<>` is a caller-named, compile-time chain of **synchronous** stages. There is no `(in_hz, out_hz)` lookup, `async` is never chained, and the coverage matrix documents chains without dispatching them | Keeps HANDOFF preamble item 4 |
-| D13 | **One family version, 0.4.0**, with tags `vX.Y.Z` and bit-packed encoding `(M<<16)\|(m<<8)\|p`. **Mechanics (step 3):** root `project(SampleRateTap VERSION 0.4.0)`; engine subprojects renamed `tap_sr_async` / `tap_sr_bridge` with no VERSION; macros `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}` defined **token-identically** in each engine's umbrella header, checked by a static_assert test (no shared header, so 4.2 check 1 holds); each C ABI library exports its own `tap_sr_<engine>_version()`; a new C ABI test `CApi.VersionIsBitPacked` pins the encoding, **which nothing pins today** (`test_skeleton.cpp` checks only MAJOR = 0) | User decision. 0.4.0 is above both current versions. The encoding is RatioTap's (`ratio_capi.cpp:97`) |
+| D13 | **One family version, 0.4.0** at the migration (0.5.0 at `rational`'s M6, 0.6.0 at the 2026-10 audit response's async vocabulary pass), with tags `vX.Y.Z` and bit-packed encoding `(M<<16)\|(m<<8)\|p`. **Mechanics (step 3):** root `project(SampleRateTap VERSION 0.4.0)`; engine subprojects renamed `tap_sr_async` / `tap_sr_bridge` with no VERSION; macros `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}` defined **token-identically** in each engine's umbrella header, checked by a static_assert test (no shared header, so 4.2 check 1 holds); each C ABI library exports its own `tap_sr_<engine>_version()`; a new C ABI test `CApi.VersionIsBitPacked` pins the encoding, **which nothing pins today** (`test_skeleton.cpp` checks only MAJOR = 0) | User decision. 0.4.0 is above both current versions. The encoding is RatioTap's (`ratio_capi.cpp:97`) |
 | D14 | **One copyright line family-wide:** `Copyright (c) 2026 Timothy Place and the SampleRateTap contributors` in the root `LICENSE`, and the same holder in a **banner on every C/C++/Python source file** | User decision, **reconfirmed**: the user holds SampleRateTap's copyright. SampleRateTap's notice today names only "SampleRateTap contributors"; RatioTap's names the user. So this **adds the author's name** to SampleRateTap's notice, which is accurate on the user's word, and restates RatioTap's. There are 35 banner lines today; about 25 of SampleRateTap's C/C++ files have none. Banners are added everywhere in step 3.8. `STYLE.md`'s banner template ("Copyright 2025-2026 Timothy Place.") is reconciled through taphouse (step 5) |
 | D15 | **`async` renames its converter family to match `bridge`'s `basic_converter` family:** `basic_async_sample_rate_converter<S>` → `basic_converter<S>`, `async_sample_rate_converter` → `converter`, `…_q15`/`…_q31` → `converter_q15`/`converter_q31`, exception prefixes `"async_sample_rate_converter: "` → `"tap::sr::async::converter: "`, and `asrc.h` → `converter.h` | User decision. v2.1's rationale cited a `tap::sr::ratio::converter` that does not exist. The real parallel is RatioTap's (now `bridge`'s) `basic_converter<S, D>` with its `converter_to_48k` family. Scale: about 80 hits in 22 files, plus the book's naming-decision prose (R2-COH-19) |
 | D16 | **Tests carry an engine prefix:** `gtest_discover_tests(… TEST_PREFIX "async." / "bridge.")`, plus a `LABELS` value of `async` / `bridge` on every test, including the bare-metal `*_tests_emulated` entries. Lands in step P.2, so the snapshot already has it, **with RatioTap's pre-rename spelling `ratio.` / `ratio`**; step 3.4 renames it to `bridge.` / `bridge`, and G1/G2 compare through `rename.py`'s name map | CTest applies a duplicate name's properties to both tests. `FixedPoint.FullScaleSineDoesNotWrapQ15` exists in both engines, so labels alias and `ctest -L ratio` selects async's copy (reproduced, R2-GATE-4). Unique names fix G1 and engine selection |
@@ -1023,16 +1023,17 @@ G13 and G14, plus G9 from 3.7.
   ledger in its section 8). M5 — the fixed-point profiles, measured per
   stage: bit-pinned Q15 / Q31 tables, exact unity, saturation, Q31 within
   3.4e−9 of double, Q15's floor and attained stopband stated (a Q15
-  decimator by 6 or 8 attains −65 / −63 dB, not 70) — landed
-  (`rational/PLAN.md` v0.8). M6 — the C ABI (the named chains as
+  decimator by 6 or 8 attained −65 / −63 dB at M5; the per-branch lever
+  after M6 took them to −71.5 / −71.7) — landed (`rational/PLAN.md`
+  v0.8). M6 — the C ABI (the named chains as
   constants, never a rate; one stage at a stated design divisor), the
   binding and `matrix.ipynb` executed through the C ABIs (728 of 728
   pins reproduced), the icount ratchet on M33 / M55 / Hexagon, and the
   family version 0.5.0 — landed (`rational/PLAN.md` v0.9). The plan's
-  milestones are complete; the codegen levers it defers (sparse rows for
-  the mixed ratios going down, the symmetry-halved table, the Q15
-  decimators' per-branch quantization, an MVE Q15 kernel) wait for a
-  consumer.
+  milestones are complete, and the codegen levers it had deferred were
+  measured after M6 (`rational/PLAN.md` section 6): the Q15 decimators'
+  per-branch quantization and the Helium Q15 dot shipped, the sparse rows
+  and the symmetry-halved table were declined on their numbers.
 - **The C boundary carries fixed point in every engine.** `rational`'s ABI
   shipped Q15 / Q31 beside float (`rational/PLAN.md` v0.12); the
   question whether the family would keep that or move to a separate,
