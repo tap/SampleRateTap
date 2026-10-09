@@ -1,9 +1,9 @@
 /// @file ratio.h
-/// @brief RatioTap umbrella header: version constants and the library charter.
+/// @brief The bridge engine's umbrella header: version constants and the charter.
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
-// RatioTap converts between 44.1 kHz and 48 kHz, synchronously, as fast as
+// The bridge engine converts between 44.1 kHz and 48 kHz, synchronously, as fast as
 // possible. One rational ratio pair (L/M = 160/147 up, 147/160 down), one
 // clock, and the entire optimization budget spent on exactly that.
 //
@@ -41,7 +41,7 @@
 #include "tap/sr/bridge/schedule.h"    // IWYU pragma: export
 
 #define TAP_SR_VERSION_MAJOR 0
-#define TAP_SR_VERSION_MINOR 5
+#define TAP_SR_VERSION_MINOR 6
 #define TAP_SR_VERSION_PATCH 0
 
 namespace tap::sr::bridge {

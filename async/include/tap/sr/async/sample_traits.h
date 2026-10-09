@@ -16,11 +16,12 @@
 ///
 /// The format core — coefficient Q formats, mac/finalize, rounding and
 /// saturation — lives in DspTap (tap::dsp::sample_traits, consumed via the
-/// submodules/dsptap submodule) and is shared with RatioTap and the rest of
-/// the family. This header layers the ASRC-specific stratum on top: the
-/// inter-phase coefficient *blend* machinery (mu interpolation between
-/// adjacent polyphase rows, including the Q0.64 phase-accumulator entry
-/// points), which a fixed-ratio converter has no use for.
+/// submodules/dsptap submodule) and is shared with bridge, rational and
+/// the rest of the family. This header layers the stratum only this engine
+/// needs on top: the inter-phase coefficient *blend* machinery (mu
+/// interpolation between adjacent polyphase rows, including the Q0.64
+/// phase-accumulator entry points), which a fixed-ratio converter has no
+/// use for.
 ///
 /// The clock servo and the filter design always run in double regardless of
 /// sample type (control path and one-time init, not the audio path), so the

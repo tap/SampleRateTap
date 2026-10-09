@@ -42,10 +42,12 @@ made this tree (sections 5–6). Do not re-derive what it settles.
 - **Substrate discipline.** Shared code (design math, sample traits, kernels, quantization,
   measurement instruments) lands in DspTap first; this tree bumps the submodule pin. Never fork
   substrate code into an engine.
-- **One version (D13).** `TAP_SR_VERSION_*` is 0.5.0, defined token-identically in each umbrella
+- **One version (D13).** `TAP_SR_VERSION_*` is 0.6.0, defined token-identically in each umbrella
   header (checked by `tests/family/version_macros.cpp`) and returned bit-packed by each C ABI's
   `tap_sr_<engine>_version()` (pinned by `CApi.VersionIsBitPacked`). Tags are `vX.Y.Z`; bump all
-  three headers and the root `project()` together (0.5.0 came with `rational`'s M6).
+  three headers and the root `project()` together (0.5.0 came with `rational`'s M6, 0.6.0 with the
+  audit response's async vocabulary pass: `preset` retired for `profile`, `economy()` to `program()`,
+  the async C ABI in the siblings' shape).
 - **Clean renames, no aliases (D7).** Retired options fail the configure
   (`cmake/retired_options.cmake`); retired override macros hit an `#error`. Do not add aliases.
 

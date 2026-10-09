@@ -302,7 +302,7 @@ namespace {
 
     // balanced() with band edges scaled to 16 kHz: identical L/T — same table
     // size and same per-frame cycle cost — with pass/stop at the same normalized
-    // frequencies (README "Measured performance"; tests/test_asrc_quality_16k.cpp).
+    // frequencies (README "Measured performance"; tests/test_quality_16k.cpp).
     tap::sr::async::filter_spec balanced16k() {
         tap::sr::async::filter_spec f = tap::sr::async::filter_spec::balanced();
         f.passband_hz                 = 20000.0 * 16.0 / 48.0;

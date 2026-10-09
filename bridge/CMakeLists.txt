@@ -7,7 +7,7 @@ if(PROJECT_IS_TOP_LEVEL)
 endif()
 
 # ==============================================================================
-# RatioTap — synchronous 44.1 <-> 48 kHz sample rate conversion, as fast as
+# bridge — synchronous 44.1 <-> 48 kHz sample rate conversion, as fast as
 # possible. Header-only C++20 (include/tap/sr/bridge/), built on the Tap family's
 # shared FIR substrate from DspTap (kaiser design, sample-format traits, dot
 # kernels, quantization, measurement instruments). See PLAN.md for the charter
@@ -31,11 +31,11 @@ target_compile_features(tap_sr_bridge INTERFACE cxx_std_20)
 target_link_libraries(tap_sr_bridge INTERFACE tap::dsp)
 
 if(PROJECT_IS_TOP_LEVEL)
-    option(TAP_SR_BUILD_TESTS "Build RatioTap tests" ON)
-    option(TAP_SR_BUILD_EXAMPLES "Build RatioTap examples" ON)
+    option(TAP_SR_BUILD_TESTS "Build the bridge engine's tests" ON)
+    option(TAP_SR_BUILD_EXAMPLES "Build the bridge engine's examples" ON)
 else()
-    option(TAP_SR_BUILD_TESTS "Build RatioTap tests" OFF)
-    option(TAP_SR_BUILD_EXAMPLES "Build RatioTap examples" OFF)
+    option(TAP_SR_BUILD_TESTS "Build the bridge engine's tests" OFF)
+    option(TAP_SR_BUILD_EXAMPLES "Build the bridge engine's examples" OFF)
 endif()
 
 # C ABI shared library for FFI consumers (the notebooks drive the shipping
@@ -62,7 +62,7 @@ endif()
 
 # Warning flags for this project's own tests; never exported to consumers of
 # the INTERFACE library.
-option(TAP_SR_BRIDGE_WERROR "Treat warnings as errors in RatioTap's own targets" OFF)
+option(TAP_SR_BRIDGE_WERROR "Treat warnings as errors in the bridge engine's own targets" OFF)
 add_library(tap_sr_bridge_warnings INTERFACE)
 target_compile_options(tap_sr_bridge_warnings INTERFACE
     $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra -Wpedantic -Wconversion -Wshadow>

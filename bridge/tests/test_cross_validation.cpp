@@ -39,7 +39,7 @@ namespace {
         using traits    = ratio_traits<D>;
         const profile p = profile::economy();
 
-        // ---- RatioTap: the exact rational machine.
+        // ---- bridge: the exact rational machine.
         basic_converter<float, D> exact(1, p);
         const auto&               x = ratio_ref::k_input;
         std::vector<float>        y_exact(exact.outputs_for(x.size()));
@@ -131,7 +131,7 @@ namespace {
     // L=1024. That equality is itself evidence: the async table's
     // mu-interpolation residual (its documented -12 dB per doubling of L) is
     // already below the one deliberate filter difference between the
-    // machines — RatioTap's per-branch DC normalization, a perturbation the
+    // machines — bridge's per-branch DC normalization, a perturbation the
     // async bank does not apply. The perturbation scales with the branch-sum
     // spread of the raw windowed-sinc, which is larger for the shorter
     // wider-transition economy designs (the v0.2 economy = today's balanced

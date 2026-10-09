@@ -58,7 +58,7 @@ A retired pre-family option (`SRT_*`, `TAP_RATIO_*`) fails the configure
 loudly (`cmake/retired_options.cmake`) rather than dropping a gate silently.
 
 **Version.** One family version, `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}`
-(0.5.0, the minor bump the third engine's C ABI brought), defined
+(0.6.0, the minor bump the async vocabulary pass brought; 0.5.0 was the third engine's C ABI), defined
 identically in each engine's umbrella header and returned bit-packed —
 `(major << 16) | (minor << 8) | patch` — by each C ABI's
 `tap_sr_async_version()` / `tap_sr_bridge_version()` /

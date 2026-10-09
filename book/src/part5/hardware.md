@@ -225,7 +225,7 @@ measured blocks, reported as mean, p99, and max — the tail statistics
 matter, because the workload runs with interrupts live and USB
 housekeeping shows up in the max column.
 
-The output table covers Q15 in both presets at 1, 2, and 12 channels, plus
+The output table covers Q15 in both profiles at 1, 2, and 12 channels, plus
 float at one channel. The float rows are not there in the hope of good
 news; they exist to put a *measured* number on "soft-double accumulation
 is the wrong datapath on an FP64-less core" — the QEMU baselines already
@@ -255,7 +255,7 @@ calibration constants go quietly wrong.
 ## `pico2_dualcore`: one clock domain per core
 
 The README's platform guidance ends with a suggestion: on Pico-class
-parts, stereo `balanced()` wants either the `fast()` preset *or the
+parts, stereo `balanced()` wants either the `fast()` profile *or the
 RP2350's second core*. `examples/pico2_dualcore/` is that suggestion built
 and made falsifiable — the converter's two ends on the two Cortex-M33
 cores, one core per clock domain, judging its own run against PASS/FAIL

@@ -374,7 +374,7 @@ that is still true and resets exactly the state that is not.
 
 For a long time this library's defaults were "the defaults," full stop —
 designed, tested, and shipped at 48 kHz. Then a real deployment shape
-arrived: 16 kHz reference-microphone processing. Same code, same presets,
+arrived: 16 kHz reference-microphone processing. Same code, same profiles,
 a third of the sample rate. The quality suite was duplicated at 16 kHz,
 expecting boring numbers.
 
@@ -385,7 +385,7 @@ position, whose sidebands grow with the modulated signal's frequency —
 which pointed at the servo, not the filter.
 
 The mechanism, worked out in
-`tests/test_asrc_quality_16k.cpp`'s header comment and now baked into the
+`tests/test_quality_16k.cpp`'s header comment and now baked into the
 config comment: servo bandwidths and smoother corners are **absolute
 hertz**, but the disturbance they exist to reject is not. The slip-beat
 sawtooth sits at ε × fs — 9.6 Hz at 48 kHz, only **3.2 Hz at 16 kHz**.
@@ -514,7 +514,7 @@ ctest --test-dir build -R 'AsrcQuality16k\.' --output-on-failure
 # latency breathing and the cents-rms FM decomposition):
 jupyter nbconvert --to notebook --execute notebooks/asrc_block_size_study.ipynb
 
-# Break it on purpose: in tests/test_asrc_quality_16k.cpp, replace
+# Break it on purpose: in tests/test_quality_16k.cpp, replace
 # config::for_sample_rate(k_fs) with a default-constructed config (keeping
 # cfg.sample_rate_hz = 16000.0) and watch ~32 dB vanish from every tone.
 ```

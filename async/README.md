@@ -16,10 +16,10 @@ slips that occur roughly once every `1/ppm` samples.
 - Header-only, no dependencies, `cmake` ≥ 3.24, GCC 11+/Clang 14+/MSVC 19.30+
 - Real-time safe audio path: `push()`/`pull()` are `noexcept`, lock-free and
   allocation-free; all allocation and filter design happen in the constructor
-- Measured quality (default *balanced* preset, +200 ppm offset, THD+N-style
+- Measured quality (default *balanced* profile, +200 ppm offset, THD+N-style
   residual): **135 dB** SNR at 997 Hz, **112 dB** at 12 kHz, **105 dB** at
   19.5 kHz; **134.5 dB** on the program-weighted 24-tone pink multitone.
-  The `economy` preset measures **131.6 dB** program-weighted at two-thirds
+  The `program` profile measures **131.6 dB** program-weighted at two-thirds
   of balanced's per-sample compute (worst-case sine near Nyquist: 77 dB —
   the documented trade)
 - ~**1.5 ms** designed latency with the default configuration at 48 kHz
@@ -58,7 +58,9 @@ dropout recovery — see
 [notebooks/asrc_demo.ipynb](notebooks/asrc_demo.ipynb), which drives the
 library through its C ABI (`-DTAP_SR_BUILD_CAPI=ON`, `capi/`; float for the
 notebooks, and Q15 / Q31 through `tap_sr_async_create_format` with the
-`_q15` / `_q31` push and pull for fixed-point FFI consumers) via ctypes
+`_q15` / `_q31` push and pull for fixed-point FFI consumers; since 0.6.0
+the create functions take the family's argument order, profile and
+format before channels) via ctypes
 (the notebook environment is pinned, with hashes, in `requirements.lock`:
 `pip install --require-hashes -r requirements.lock`; the first cell
 rebuilds the shared library incrementally on every run). A second notebook,
@@ -80,33 +82,95 @@ instruction baselines), and `examples/pico2_dualcore/` (the
 one-clock-domain-per-core RP2350 deployment, self-validating).
 
 **Consuming the library**: `add_subdirectory` or `FetchContent` only —
-there are no install/package rules yet. Version 0.1.0 (`TAP_SR_VERSION_*` in
-`tap/sr/async/async.h`, `tap_sr_async_version()` over the C ABI); pre-1.0, the API may
-still change between versions.
+there are no install/package rules yet. The family version is 0.6.0
+(`TAP_SR_VERSION_*` in `tap/sr/async/async.h`, token-identical in the three
+engines' umbrella headers, `tap_sr_async_version()` over the C ABI, D13);
+pre-1.0, the API may still change between versions.
 
-## The book
+## The boundaries are identity, not policy
 
-The repository includes a full-length tutorial book (`book/`) that walks
-every header file line by line — the DSP, the C++ idioms chosen and
-rejected, how thread safety works, how the servo was tuned, and the
-optimization campaign with its dead ends preserved. It is written for a
-reader learning C++, DSP, and real-time concurrency with this converter as
-the running example. Three mechanical commitments keep it honest: every
-code excerpt is included live from the actual headers at build time (CI
-fails on a stale anchor), every figure is regenerated from the same math
-and measured traces by `scripts/book_figures.py`, and every chapter ends
-with runnable commands that reproduce its claims.
+This engine absorbs a *clock*; it never converts a *number*. Which engine
+applies is a property of the clock topology, never inferred from a float
+ratio (the family rule, D12):
 
-Read it at **<https://tap.github.io/SampleRateTap/>** (published from
-`main` by the `book-pages` workflow), or build it locally with
-[mdBook](https://rust-lang.github.io/mdBook/) (CI pins v0.4.40):
+- Same nominal rate on both sides, independent oscillators (ppm drift) —
+  this engine.
+- 44.1 ↔ 48 kHz on one clock (file conversion, a single interface) —
+  [`bridge`](../bridge/README.md).
+- A small-factor L/M inside one rate family on one clock (96 → 48, 12 → 32)
+  — [`rational`](../rational/README.md).
+- 44.1 ↔ 48 kHz across *independent* oscillators (a Bluetooth chip on its
+  own crystal) — `bridge` then this engine, composed by the caller:
+  `bridge` converts the number, this engine absorbs the clock.
+  `bridge/examples/bluetooth_bridge.cpp` is the documented recipe (+200 ppm
+  crystal, servo locked, 997 Hz recovered exactly, 1.93 ms total latency).
 
-```sh
-mdbook build book        # or: mdbook serve book --open
+The 1000/1001 pull-down rates sit inside this engine's ±1000 ppm and are
+still never served by it: they are a number, and a number is a type in
+`rational` or `bridge`.
+
+## Position in the Tap family
+
+`async` is one of the three engines of the `tap::sr` family, all built on
+the same shared substrate and living in one tree:
+
+```
+                    ┌────────────────────────────┐
+                    │           DspTap           │  shared substrate (submodules/dsptap)
+                    │  kaiser · nyquist design · │
+                    │  sample traits (float/Q15/ │
+                    │  Q31) · FIR dot kernels ·  │
+                    │  row-sum quantization ·    │
+                    │  chain<> · analysis        │
+                    └──────┬────────┬────────┬───┘
+                           │        │        │
+            ┌──────────────┴─┐ ┌────┴──────────┐ ┌┴────────────────┐
+            │ tap::sr::async │ │ tap::sr::bridge│ │ tap::sr::rational│
+            │ absorbs the    │ │ 44.1 ↔ 48 on  │ │ L/M inside one   │
+            │ clock (servo)  │ │ one clock      │ │ rate family      │
+            └────────────┬───┘ └──┬─────────────┘ └──────────────────┘
+                         │        │
+                         └── test-only ──  bridge's golden cross-validation
+                             (bridge/tests/, bridge/examples/bluetooth_bridge)
 ```
 
-Start at `book/src/SUMMARY.md` for the table of contents, or read the
-sources directly — they are plain Markdown.
+[DspTap](https://github.com/tap/DspTap) (vendored at `submodules/dsptap`)
+provides the Kaiser prototype design, the float/Q15/Q31 sample-format
+traits, the measured FIR dot-product kernels, the row-sum quantization,
+and the analysis instruments shared by the tests and notebooks.
+The [`bridge`](../bridge/README.md) engine is the synchronous sibling for
+exactly one rational ratio pair (160/147 up, 147/160 down — 44.1 ↔ 48 kHz),
+one clock, speed-first; [`rational`](../rational/README.md) is the
+synchronous sibling for the small-factor ratios inside one rate family
+(L, M ∈ {2^a · 3^b}), chains of Nyquist stages. Which engine you need is
+decided by the clock topology ([the boundaries](#the-boundaries-are-identity-not-policy)).
+
+The engines check each other: `bridge`'s suite cross-validates its output
+against this engine at −98 dB (down) / −90 dB (up) on its default
+`economy` profile, over every polyphase phase; `rational`'s coverage
+matrix composes `bridge` for every cross-family rate pair.
+
+Each engine's quality tiers are its own ladder, stated with its numbers in
+the root README's profile table: this engine's `fast` / `balanced` /
+`transparent` / `program` are image rejection through the interpolated
+bank (96 to 140 dB-class), the siblings' `super_economy` / `economy` /
+`balanced` / `transparent` are Nyquist stopbands (70 and 120 dB), and a
+name means one thing across the family.
+
+## Build
+
+```sh
+# from the repository root (this engine lives in async/; the root builds every engine)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_ASYNC_WERROR=ON
+cmake --build build
+ctest --test-dir build --output-on-failure -L '^async$'
+```
+
+`-DTAP_SR_BUILD_CAPI=ON` adds `libtap_sr_async_capi` (the notebooks' seam),
+`-DTAP_SR_BUILD_BENCHMARKS=ON` the Google Benchmark throughput suite,
+`-DTAP_SR_BUILD_ICOUNT_BENCH=ON` the instruction-count ratchet workloads
+(`bench/icount/`, `scripts/icount.py --engine async`). The sanitizer, TSan,
+Cortex-M33 / M55 and Hexagon legs are in `.github/workflows/ci.yml`.
 
 ## How it works
 
@@ -116,11 +180,11 @@ conversion degenerates into a *creeping fractional delay*.
 
 **Datapath.** A Kaiser-windowed sinc prototype is designed at construction
 and decomposed into `L` polyphase branches of `T` taps (default 256 × 48,
-120 dB stopband, flat to 20 kHz). Every preset except `fast` additionally
+120 dB stopband, flat to 20 kHz). Every profile except `fast` additionally
 places transmission zeros at each integer multiple of the sample rate
 (droop pre-compensated, same tap budget): the images of low-frequency
 program energy — where real audio concentrates — land on those zeros,
-deepening their rejection 10–20 dB for free. The `economy` preset leans on
+deepening their rejection 10–20 dB for free. The `program` profile leans on
 this hardest: 2/3 the taps of `balanced`, within 3 dB of it program-
 weighted. Each output sample evaluates one branch pair: coefficients are
 linearly interpolated between the two phases adjacent to the fractional
@@ -238,8 +302,8 @@ another rate with unscaled defaults silently costs quality (measured:
 ~32 dB at 16 kHz). Start any non-48 kHz deployment from
 `tap::sr::async::config::for_sample_rate(rate_hz)`, which rescales both (plus the servo
 hold times); `filter_spec::scaled_to` / `servo_config::scaled_to` exist for
-custom presets. Measured through that factory
-(`tests/test_asrc_quality_16k.cpp`), 16 kHz matches the 48 kHz
+custom profiles. Measured through that factory
+(`tests/test_quality_16k.cpp`), 16 kHz matches the 48 kHz
 normalized-frequency structure: 136.6 dB at 333 Hz and 106.5 dB at 6.5 kHz,
 within ~1 dB of the 48 kHz tones at the same f/fs. Interpolation noise
 depends only on f/fs; group delay at the same tap count stays ~24 input
@@ -379,54 +443,29 @@ the float path; Q15's floor is the 16-bit format itself. The servo and the
 filter design always run in double (control path / one-time init, a handful
 of operations per block).
 
-## Position in the Tap family
+## The book
 
-`async` is one of the two engines of the `tap::sr` family, both built on
-the same shared substrate and living in one tree:
+The repository includes a full-length tutorial book (`book/`) that walks
+every header file line by line — the DSP, the C++ idioms chosen and
+rejected, how thread safety works, how the servo was tuned, and the
+optimization campaign with its dead ends preserved. It is written for a
+reader learning C++, DSP, and real-time concurrency with this converter as
+the running example. Three mechanical commitments keep it honest: every
+code excerpt is included live from the actual headers at build time (CI
+fails on a stale anchor), every figure is regenerated from the same math
+and measured traces by `scripts/book_figures.py`, and every chapter ends
+with runnable commands that reproduce its claims.
 
-```
-                    ┌────────────────────────────┐
-                    │           DspTap           │  shared substrate (submodules/dsptap)
-                    │  kaiser design · sample    │
-                    │  traits (float/Q15/Q31) ·  │
-                    │  FIR dot kernels · row-sum │
-                    │  quantization · analysis   │
-                    └──────┬──────────────┬──────┘
-                           │              │
-              ┌────────────┴───┐   ┌──────┴─────────┐
-              │ tap::sr::async │   │ tap::sr::bridge│
-              │ async, near-   │   │ sync, 44.1↔48, │
-              │ unity, servo   │   │ speed-first    │
-              └────────────┬───┘   └──────┬─────────┘
-                           │              │
-                           └── test-only ─┘  bridge's golden cross-validation
-                               (bridge/tests/, bridge/examples/bluetooth_bridge)
+Read it at **<https://tap.github.io/SampleRateTap/>** (published from
+`main` by the `book-pages` workflow), or build it locally with
+[mdBook](https://rust-lang.github.io/mdBook/) (CI pins v0.4.40):
+
+```sh
+mdbook build book        # or: mdbook serve book --open
 ```
 
-[DspTap](https://github.com/tap/DspTap) (vendored at `submodules/dsptap`)
-provides the Kaiser prototype design, the float/Q15/Q31 sample-format
-traits, the measured FIR dot-product kernels, the row-sum quantization,
-and the analysis instruments shared by the tests and notebooks.
-The [`bridge`](https://github.com/tap/SampleRateTap/tree/main/bridge) engine (formerly RatioTap) is the synchronous sibling:
-exactly one rational ratio pair (160/147 up, 147/160 down — 44.1 ↔ 48 kHz),
-one clock, speed-first.
-
-Which converter you need is a property of the **clock topology**, never
-inferred from a float ratio:
-
-- Same nominal rate on both sides, independent oscillators (ppm drift) —
-  this library.
-- 44.1 ↔ 48 kHz on one clock (file conversion, a single interface) —
-  `bridge`.
-- 44.1 ↔ 48 kHz across *independent* oscillators (a Bluetooth chip on its
-  own crystal) — both, composed: `bridge` converts the *number*, this
-  engine absorbs the *clock*. `bridge`'s `bluetooth_bridge` example is
-  the documented recipe (+200 ppm crystal, servo locked, 997 Hz recovered
-  exactly, 2.0 ms total latency).
-
-The two engines check each other: `bridge`'s suite cross-validates its
-output against this engine at −98 dB (down) / −90 dB (up)
-on its default `economy` profile, over every polyphase phase.
+Start at `book/src/SUMMARY.md` for the table of contents, or read the
+sources directly — they are plain Markdown.
 
 ## Limitations
 

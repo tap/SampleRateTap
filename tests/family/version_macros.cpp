@@ -31,5 +31,5 @@ static_assert(k_async_major == TAP_SR_VERSION_MAJOR && k_async_minor == TAP_SR_V
 static_assert(k_async_major == TAP_SR_VERSION_MAJOR && k_async_minor == TAP_SR_VERSION_MINOR
                   && k_async_patch == TAP_SR_VERSION_PATCH,
               "TAP_SR_VERSION_* must be identical in async.h and rational.h (D13)");
-static_assert(k_async_major == 0 && k_async_minor == 5 && k_async_patch == 0,
-              "the family version is 0.5.0 (D13); re-pin here when it is bumped");
+static_assert(k_async_major == 0 && k_async_minor == 6 && k_async_patch == 0,
+              "the family version is 0.6.0 (D13); re-pin here when it is bumped");

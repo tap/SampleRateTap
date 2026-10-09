@@ -96,10 +96,10 @@ namespace {
     }
 
     TEST(Kaiser, EconomyPrototypeMeetsSpec) {
-        check_prototype_meets_spec(tap::sr::async::filter_spec::economy(), 48000.0);
+        check_prototype_meets_spec(tap::sr::async::filter_spec::program(), 48000.0);
     }
 
-    // The compensated presets must also hold their specs at scaled rates (the
+    // The compensated profiles must also hold their specs at scaled rates (the
     // 16 kHz deployment path): normalized design, same numbers.
     // The k*fs transmission zeros ARE branch-DC uniformity, stated in the
     // frequency domain: with exact zeros, every polyphase branch's coefficient
@@ -127,7 +127,7 @@ namespace {
 
     TEST(Kaiser, CompensatedSpecsHoldAt16k) {
         check_prototype_meets_spec(tap::sr::async::filter_spec::balanced().scaled_to(16000.0), 16000.0);
-        check_prototype_meets_spec(tap::sr::async::filter_spec::economy().scaled_to(16000.0), 16000.0);
+        check_prototype_meets_spec(tap::sr::async::filter_spec::program().scaled_to(16000.0), 16000.0);
     }
 
 } // namespace

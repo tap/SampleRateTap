@@ -91,10 +91,10 @@ what happens to the length formula when a caller hands it garbage, why the
 normalization constant is `L` and not 1, or whether any of this should run
 at compile time. That is the rest of this chapter.
 
-![The Kaiser window for the three presets' beta values: higher attenuation
+![The Kaiser window for the three profiles' beta values: higher attenuation
 targets produce more strongly tapered windows](../img/kaiser-window.svg)
 
-*The knob in action: the presets' attenuation targets (96/120/140 dB) map
+*The knob in action: the profiles' attenuation targets (96/120/140 dB) map
 through `kaiser_beta` to β = 9.6/12.3/14.5, and higher β buys its deeper
 stopband by tapering the window harder — which widens the main lobe, which
 is why `estimate_taps` charges more taps for the same transition width.
@@ -122,7 +122,7 @@ Three details carry all the engineering.
 **The recurrence.** Each term is the previous term times `(x/2k)²` — no
 factorials, no powers, no overflow staging. Term k relates to term k−1 by
 exactly the ratio `r²`, computed in two multiplies. For the β values this
-library ever produces (about 12.3 for the 120 dB preset, 14.5 for 140 dB)
+library ever produces (about 12.3 for the 120 dB profile, 14.5 for 140 dB)
 the terms grow until k ≈ x/2 ≈ 6 and then collapse factorially; a few dozen
 terms reach full double precision, matching the "~50-term" budget the
 file's header comment charges against constexpr evaluation.
@@ -167,7 +167,7 @@ cannot hide). Two things are worth understanding rather than memorizing:
 - **Why piecewise.** The relationship between β and achieved attenuation is
   smooth but not polynomial; Kaiser fit it in two regimes. Above 50 dB the
   relationship is essentially linear. Between 21 and 50 dB the fractional
-  power term takes over. Every preset this library ships (96–140 dB) lives
+  power term takes over. Every profile this library ships (96–140 dB) lives
   on the first line; the second exists so that off-spec experiments degrade
   gracefully instead of nonsensically.
 - **Why zero below 21 dB.** A rectangular window — no taper at all —
@@ -193,13 +193,13 @@ pick up the same factor of L, which cancels. Expressing the estimate per
 branch keeps the caller's arithmetic in the units the caller actually has —
 "8 kHz of transition at 48 kHz" — with no L in sight.
 
-Plug in the `balanced()` preset: 120 dB across a 20→28 kHz transition at
+Plug in the `balanced()` profile: 120 dB across a 20→28 kHz transition at
 48 kHz gives `(120 − 8) / (2.285 · 2π · 8000/48000) ≈ 46.8`, so 47 taps;
 the unit test (`Kaiser.TapEstimateMatchesHarrisFormula`) brackets exactly
-this computation at 45–49, and the shipped preset says `taps_per_phase = 48`
+this computation at 45–49, and the shipped profile says `taps_per_phase = 48`
 — the estimate rounded up to an even count (even matters later: the SMLALD
 kernel on Cortex-M33-class parts consumes taps in pairs). This function is
-how the presets were *chosen*; the bank itself takes `T` from the spec, so
+how the profiles were *chosen*; the bank itself takes `T` from the spec, so
 the estimate is a design aid with a unit test rather than a hot dependency.
 
 Then there is the comment at the top of the body, which earns its own
@@ -248,7 +248,7 @@ not here.)
 **What `cutoff_norm` means, and its surprising value.** The cutoff is
 normalized so 1.0 sits at the *input* Nyquist, and the caller centers it in
 the transition band: `(passband_hz + stopband_hz) / fs`. For the balanced
-preset that is (20,000 + 28,000)/48,000 = **exactly 1.0** — the −6 dB point
+profile that is (20,000 + 28,000)/48,000 = **exactly 1.0** — the −6 dB point
 of this anti-imaging filter sits *at* 24 kHz, with the response still flat
 at 20 kHz and 120 dB down by 28 kHz. A reader trained on decimation filters
 may flinch: doesn't a cutoff at Nyquist let aliasing through? No — this
@@ -332,12 +332,12 @@ A filter design module invites a lazy test — "coefficients equal last
 week's coefficients." That freezes bugs in amber. What the library pins
 instead is the *specification*: `tests/test_kaiser.cpp` computes the
 prototype's actual frequency response by direct DFT and asserts the numbers
-the presets advertise.
+the profiles advertise.
 
-![Prototype magnitude response of the three presets, with a passband-ripple
+![Prototype magnitude response of the three profiles, with a passband-ripple
 detail panel](../img/kaiser-response.svg)
 
-*What the spec tests pin: each preset's transition starts at its passband
+*What the spec tests pin: each profile's transition starts at its passband
 edge and reaches its rated floor by its stopband edge, and the detail panel
 shows all three passbands flat within ±0.01 dB. The curves come from
 `scripts/book_figures.py`, which re-runs `design_prototype`'s math verbatim.*
@@ -347,7 +347,7 @@ against the oversampled prototype (rate `L·fs`), normalized by L so the
 passband reads 0 dB — a direct O(n) sum per frequency. No FFT: an FFT
 would demand a power-of-two grid, deliver frequencies nobody asked for,
 and drag in a dependency, all to accelerate a few hundred evaluations in a
-test that runs in milliseconds. Then, for each shipped preset:
+test that runs in milliseconds. Then, for each shipped profile:
 
 - **Passband flatness:** every 500 Hz from DC to the passband edge,
   response within ±0.01 dB of unity. That is the "flat to 20 kHz" claim in
@@ -361,7 +361,7 @@ test that runs in milliseconds. Then, for each shipped preset:
   spaced fs/T ≈ 1 kHz apart, so 250 Hz sampling puts about four probes on
   every lobe — a peak cannot hide between probes. The 1 dB grace absorbs
   the gap between Kaiser's empirical β fit and the realized window; the
-  presets' 120 means "at least 119 measured," and in practice the margin
+  profiles' 120 means "at least 119 measured," and in practice the margin
   is comfortable.
 
 Honest limits, as always: these tests certify the *double-precision
@@ -388,7 +388,7 @@ so a failure names its culprit.
 ```sh
 # Build and run the design-math tests: Bessel/beta reference values, the
 # harris estimate bracket, and the DFT passband/stopband spec checks for
-# all three presets:
+# all three profiles:
 cmake -B build && cmake --build build -j
 ctest --test-dir build -R Kaiser --output-on-failure
 

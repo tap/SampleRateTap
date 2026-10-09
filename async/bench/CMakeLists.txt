@@ -10,7 +10,7 @@ FetchContent_Declare(
     GIT_TAG c58e6d0710581e3a08d65c349664128a8d9a2461) # v1.9.1
 FetchContent_MakeAvailable(googlebenchmark)
 
-add_executable(tap_sr_async_bench bench_asrc.cpp)
+add_executable(tap_sr_async_bench bench_converter.cpp)
 target_link_libraries(tap_sr_async_bench PRIVATE
     tap::sr::async
     tap_sr_async_warnings

@@ -14,7 +14,7 @@
  * tap_sr_async_destroy from any single thread, never concurrently with push/pull.
  *
  * Errors: tap_sr_async_create returns NULL on invalid configuration (a rate
- * or channel count of zero or less, a preset outside 0..2, an unknown
+ * or channel count of zero or less, a profile outside 0..2, an unknown
  * format) or allocation failure. Every function tolerates a NULL handle (no-op / zero return),
  * so an unchecked failed create degrades to silence, not a crash.
  *
@@ -67,23 +67,26 @@ typedef struct tap_sr_async_converter tap_sr_async_converter;
 
 /* ABI/version probe: the family version, bit-packed as
  * (TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH
- * (0x000500 for 0.5.0); tap_sr_bridge_version and tap_sr_rational_version
+ * (0x000600 for 0.6.0); tap_sr_bridge_version and tap_sr_rational_version
  * return the same value. */
 TAP_SR_ASYNC_API unsigned tap_sr_async_version(void);
 
-/* preset: 0 = fast, 1 = balanced, 2 = transparent.
+/* profile: 0 = fast, 1 = balanced, 2 = transparent (the engine's own
+ * ladder, filter_spec::fast() / balanced() / transparent(); the program-
+ * weighted filter_spec::program() has no C tag).
  * target_latency_frames = 0 selects the library default (48).
+ * The argument order is the family's: the engine's own parameters, then
+ * profile (and format), then channels, as tap_sr_bridge_create and
+ * tap_sr_rational_create take them (since 0.6.0; before, channels came
+ * second and the tag carried the retired name).
  * A float converter. */
-TAP_SR_ASYNC_API tap_sr_async_converter* tap_sr_async_create(double sample_rate_hz, size_t channels,
-                                                             size_t target_latency_frames, int preset);
-
-/* As tap_sr_async_create in a stated format (TAP_SR_ASYNC_FORMAT_*); NULL on
- * an unknown format too. */
-TAP_SR_ASYNC_API tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, size_t channels,
-                                                                    size_t target_latency_frames, int preset,
-                                                                    int format);
-
-TAP_SR_ASYNC_API void tap_sr_async_destroy(tap_sr_async_converter* h);
+TAP_SR_ASYNC_API tap_sr_async_converter* tap_sr_async_create(double sample_rate_hz, size_t target_latency_frames,
+                                                             int profile, unsigned channels);
+/* As tap_sr_async_create in a stated format (TAP_SR_ASYNC_FORMAT_*); NULL
+ * on an unknown format too. */
+TAP_SR_ASYNC_API tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, size_t target_latency_frames,
+                                                                    int profile, int format, unsigned channels);
+TAP_SR_ASYNC_API void                    tap_sr_async_destroy(tap_sr_async_converter* h);
 
 /* The converter's sample format (TAP_SR_ASYNC_FORMAT_*); 0 for NULL. */
 TAP_SR_ASYNC_API int tap_sr_async_format(const tap_sr_async_converter* h);

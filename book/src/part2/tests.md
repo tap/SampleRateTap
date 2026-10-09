@@ -23,7 +23,7 @@ this chapter.
 ## Thresholds a few dB under reality
 
 Here is the convention, straight from the top of the quality suite
-(`tests/test_asrc_quality.cpp`):
+(`tests/test_quality.cpp`):
 
 ```cpp
 // Thresholds sit 4-7 dB under measured performance (135/120/113/106 dB for
@@ -69,7 +69,7 @@ from arbitrary constants into a checkable physical model — when the 16 kHz
 suite was added later, its expectations could be *predicted* from the same
 model (the residual depends on the normalized frequency f/fs, so tones at
 the same f/fs should measure the same), then measured, and they matched
-within about 1 dB (`tests/test_asrc_quality_16k.cpp` records both sets of
+within about 1 dB (`tests/test_quality_16k.cpp` records both sets of
 numbers). A threshold you can predict is a specification; a threshold you
 can only observe is a snapshot.
 
@@ -397,7 +397,7 @@ it specifies the boundary of what the platform supports.
 ctest --test-dir build -R AsrcQuality --output-on-failure
 
 # The threshold convention, in the tests' own words:
-grep -n -A4 "Thresholds sit" tests/test_asrc_quality.cpp tests/test_asrc_quality_16k.cpp
+grep -n -A4 "Thresholds sit" tests/test_quality.cpp tests/test_quality_16k.cpp
 
 # Multichannel independence, long and short (per-channel crosstalk prints):
 ctest --test-dir build -R MultiChannel --output-on-failure
