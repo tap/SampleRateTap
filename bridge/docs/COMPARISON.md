@@ -201,6 +201,79 @@ is re-run and re-harvested. The soxr rows are host-only: it is not
 cross-compiled here.
 
 <!-- COMPARE:BEGIN -->
+Measured in `compare.yml` run
+[37985746994](https://github.com/tap/SampleRateTap/actions/runs/37985746994)
+on `45f30a3` (DspTap `d7ebe4b`), 2026-10-09; arm-none-eabi-gcc 15:13.2.rel1-2,
+qemu-system-arm 1:8.2.2+ds-0ubuntu1.18 (ubuntu24 20261004.327.1),
+hexagon-clang 19.1.5 and qemu-hexagon 8.2.2 at the pinned digests.
+
+**48 → 44.1 kHz.** Steady state, instructions per stereo output frame (× = vs. the
+bridge row the label names; the cheapest bridge row per target in bold):
+
+| Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
+|---|---:|---:|---:|
+| **bridge** economy, float | 788 | 18,020 | 3,181 |
+| **bridge** economy, Q15 | **209** | **419** | **235** |
+| **bridge** transparent, float | 2,317 | 57,096 | 9,953 |
+| libsamplerate `MEDIUM` (economy-matched) | 2,374 (3.0×) | 54,015 (3.0×) | 9,768 (3.1×) |
+| r8brain 70 dB, 12 % band (economy-matched)³ | 625 (0.8×) | 14,124 (0.8×) | 3,020 (0.9×) |
+| SpeexDSP float, quality 3 (economy-matched) | 1,388 (1.8×) | 2,012 (0.1×) | 606 (0.2×) |
+| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 1,496 (7.1×) | 1,601 (3.8×) | 545 (2.3×) |
+| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 6,932 (3.0×) | 163,254 (2.9×) | 29,237 (2.9×) |
+| r8brain 120 dB, 6 % band (transparent-matched; × vs. transparent)³ | 673 (0.3×) | 17,461 (0.3×) | 3,642 (0.4×) |
+| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 8,072 (3.5×) | 146,784 (2.6×) | 25,087 (2.5×) |
+
+One-time construction, millions of instructions:
+
+| Engine | Cortex-M55 | Cortex-M33 | Hexagon |
+|---|---:|---:|---:|
+| **bridge** economy, float | 3.9 | 130.8 | 24.0 |
+| **bridge** economy, Q15 | 4.2 | 136.3 | 25.0 |
+| **bridge** transparent, float | 10.4 | 437.0 | 66.5 |
+| libsamplerate `MEDIUM` (economy-matched) | 1.4 | 20.9 | 7.4 |
+| r8brain 70 dB, 12 % band (economy-matched) | 1.7 | 39.5 | 11.4 |
+| SpeexDSP float, quality 3 (economy-matched) | 1.5 | 25.5 | 8.3 |
+| SpeexDSP fixed-point, quality 3 | 1.6 | 28.1 | 8.7 |
+| libsamplerate `BEST` (transparent-matched) | 0.7 | -1.3 | 3.7 |
+| r8brain 120 dB, 6 % band (transparent-matched) | 2.0 | 54.1 | 14.4 |
+| SpeexDSP float, quality 9 (transparent-matched) | 2.7 | 49.4 | 15.1 |
+
+**44.1 → 48 kHz.** Steady state, instructions per stereo output frame (× = vs. the
+bridge row the label names; the cheapest bridge row per target in bold):
+
+| Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
+|---|---:|---:|---:|
+| **bridge** economy, float | 541 | 11,788 | 2,092 |
+| **bridge** economy, Q15 | **164** | **305** | **165** |
+| **bridge** transparent, float | 1,245 | 29,713 | 5,132 |
+| libsamplerate `MEDIUM` (economy-matched) | 2,196 (4.1×) | 49,060 (4.2×) | 9,022 (4.3×) |
+| r8brain 70 dB, 12 % band (economy-matched)³ | 524 (1.0×) | 11,809 (1.0×) | 2,528 (1.2×) |
+| SpeexDSP float, quality 3 (economy-matched) | 1,210 (2.2×) | 1,801 (0.2×) | 535 (0.3×) |
+| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 1,316 (8.0×) | 1,403 (4.6×) | 484 (2.9×) |
+| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 6,383 (5.1×) | 149,012 (5.0×) | 26,917 (5.2×) |
+| r8brain 120 dB, 6 % band (transparent-matched; × vs. transparent)³ | 574 (0.5×) | 14,888 (0.5×) | 3,110 (0.6×) |
+| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 7,460 (6.0×) | 135,180 (4.5×) | 23,142 (4.5×) |
+
+One-time construction, millions of instructions:
+
+| Engine | Cortex-M55 | Cortex-M33 | Hexagon |
+|---|---:|---:|---:|
+| **bridge** economy, float | 3.1 | 97.6 | 18.7 |
+| **bridge** economy, Q15 | 3.3 | 101.9 | 19.5 |
+| **bridge** transparent, float | 6.4 | 255.6 | 40.4 |
+| libsamplerate `MEDIUM` (economy-matched) | 1.3 | 19.0 | 6.8 |
+| r8brain 70 dB, 12 % band (economy-matched) | 1.5 | 30.2 | 9.1 |
+| SpeexDSP float, quality 3 (economy-matched) | 1.4 | 23.2 | 7.6 |
+| SpeexDSP fixed-point, quality 3 | 1.5 | 25.6 | 8.0 |
+| libsamplerate `BEST` (transparent-matched) | 0.6 | -3.1 | 3.1 |
+| r8brain 120 dB, 6 % band (transparent-matched) | 1.5 | 34.7 | 10.2 |
+| SpeexDSP float, quality 9 (transparent-matched) | 2.5 | 44.3 | 14.0 |
+
+Key figures (48 → 44.1): on the M33 the economy Q15 converter costs **419
+instructions/frame** in steady state, SpeexDSP's fixed-point build at quality
+3 **3.8×** that, libsamplerate `MEDIUM` **~129×** and r8brain at 70 dB
+**~34×**; on the M55 the economy float converter (788) is dearer than Q15
+(209) by 276%.
 <!-- COMPARE:END -->
 
 **The Q15 converter is the cheapest row on every target, and the float
