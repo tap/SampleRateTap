@@ -325,6 +325,6 @@ The maintainer accepted every recommendation in section 1:
    filenames stay, A11). Applied as: the retired `preset` word and the C ABI's old argument
    order left the notebooks' code and prose; the acronym ASRC, the generic name of what the
    engine is, stays wherever it means that (the engine's README defines it), as do the
-   wrapper class `Asrc` in the notebooks' code cells. `scripts/book_figures.py` keeps the
-   rendered titles that name "presets" until the figures are next regenerated (no
-   matplotlib in this environment); its comments and identifiers changed.
+   wrapper class `Asrc` in the notebooks' code cells. `scripts/book_figures.py`'s rendered titles
+   changed with the rest, and `kaiser-response.svg` was regenerated with the pinned matplotlib
+   (`requirements.lock`) after the first pass; the other figures carry no retired word.

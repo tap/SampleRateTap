@@ -42,7 +42,6 @@ ALLOWED = [
     r"r8brain|CDSPResampler|136 dB preset|24-bit preset|16-bit preset",  # another library's own presets
     r"VISIBILITY_PRESET|visibility preset",
     r"`preset` retired|preset retires|retired name|preset\b.*retired",  # the retirement itself, stated
-    r"set_title\(|annotate\(",            # rendered figure text in scripts/book_figures.py until the figures are regenerated
 ]
 TEXT_SUFFIXES = {".md", ".h", ".hpp", ".c", ".cpp", ".py", ".yml", ".yaml", ".txt", ".cmake", ".sh", ".ipynb", ".in", ".json"}
 

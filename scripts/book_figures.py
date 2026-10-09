@@ -198,14 +198,14 @@ def fig_kaiser_response():
     ax.set_ylim(-185, 8)
     ax.set_xlim(0, 48)
     ax.set_ylabel("magnitude (dB)")
-    ax.set_title("Prototype magnitude response, the three presets")
+    ax.set_title("Prototype magnitude response, the three profiles")
     ax.legend(loc="upper right", fontsize=8.5)
     despine(ax)
     axz.set_xlim(0, 22)
     axz.set_ylim(-0.031, 0.031)
     axz.set_xlabel("frequency at 48 kHz (kHz)")
     axz.set_ylabel("passband detail (dB)")
-    axz.annotate("all three presets flat within ±0.01 dB across their passbands",
+    axz.annotate("all three profiles flat within ±0.01 dB across their passbands",
                  (0.5, 0.021), color=SECONDARY, fontsize=8.5, ha="left")
     despine(axz)
     save(fig, "kaiser-response")
