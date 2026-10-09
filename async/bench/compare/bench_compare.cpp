@@ -17,7 +17,9 @@
 //                               and 8%: the lowest-latency setting flat to 20 kHz)
 //   srt transparent (140 dB)  ~ libsamplerate BEST (144 dB)   ~ soxr VHQ (~170 dB)
 //                             ~ r8brain CDSPResampler16 (136.45 dB)
-// plus r8brain's CDSPResampler24 (180.15 dB), its preset for 24-bit/float work.
+// plus r8brain's CDSPResampler24 (180.15 dB), its setting for 24-bit/float
+// work, and SpeexDSP, whose best quality (10) is "~100 dB" by its own table —
+// below both tiers, kept for being the one competitor with a fixed-point build.
 //
 // r8brain is mono per instance with double-precision I/O, so the harness runs
 // one instance per channel and pays the float<->double (de)interleave inside
@@ -32,6 +34,26 @@
 #include <benchmark/benchmark.h>
 #include <samplerate.h>
 #include <soxr.h>
+// SpeexDSP twice: its fixed-point and float builds, the header read once per
+// build under that build's prefix into its own namespace (the include guard
+// undefined in between; cmake/speexdsp.cmake builds the two libraries). The
+// header's speex_resampler_* names are macros over RANDOM_PREFIX, expanded
+// where they are used, so the calls below name the prefixed symbols directly.
+namespace speex_fixed {
+#define OUTSIDE_SPEEX 1
+#define EXPORT
+#define RANDOM_PREFIX tap_sr_cmp_fixed
+#define FIXED_POINT 1
+#include <speex_resampler.h>
+} // namespace speex_fixed
+namespace speex_float {
+#undef SPEEX_RESAMPLER_H
+#undef RANDOM_PREFIX
+#undef FIXED_POINT
+#define RANDOM_PREFIX tap_sr_cmp_float
+#define FLOATING_POINT 1
+#include <speex_resampler.h>
+} // namespace speex_float
 
 #include "tap/sr/async/polyphase_filter.h"
 #include "tap/sr/async/sample_traits.h"
@@ -217,6 +239,91 @@ namespace {
         state.SetItemsProcessed(frames);
     }
 
+    // SpeexDSP at a quality (0..10), interleaved, through one of its two
+    // builds: the fixed-point build on Q15 samples (requantized once at setup,
+    // as srtBench<int16_t> does), the float build on float. The exact +200 ppm
+    // ratio goes in as a fraction, as for every other engine.
+    template <typename Api, typename S>
+    void speexBench(benchmark::State& state, int quality, std::size_t channels) {
+        int   err = 0;
+        auto* st  = Api::init(static_cast<spx_uint32_t>(channels), 48000U,
+                              static_cast<spx_uint32_t>(48000.0 * kRatio + 0.5), quality, &err);
+        if (st == nullptr) {
+            state.SkipWithError("speex_resampler_init failed");
+            return;
+        }
+        Api::set_rate_frac(st, 1000000U, 1000200U, 48000U, static_cast<spx_uint32_t>(48000.0 * kRatio + 0.5));
+        InputTap       inFloat(48000, channels);
+        std::vector<S> buf(48000 * channels);
+        {
+            std::vector<float> tmp(48000 * channels);
+            inFloat.pop(tmp.data(), 48000);
+            for (std::size_t i = 0; i < tmp.size(); ++i) {
+                if constexpr (std::is_floating_point_v<S>)
+                    buf[i] = tmp[i];
+                else
+                    buf[i] = tap::sr::async::detail::round_sat<S>(static_cast<double>(tmp[i])
+                                                                  * static_cast<double>(std::numeric_limits<S>::max()));
+            }
+        }
+        std::size_t    pos = 0;
+        std::vector<S> out(4 * kBlock * channels);
+        std::int64_t   frames = 0;
+        for (auto _ : state) {
+            const S* inPtr      = buf.data() + pos * channels;
+            pos                 = (pos + kBlock) % (48000 - kBlock);
+            spx_uint32_t inLen  = static_cast<spx_uint32_t>(kBlock);
+            spx_uint32_t outLen = static_cast<spx_uint32_t>(4 * kBlock);
+            if (Api::process(st, inPtr, &inLen, out.data(), &outLen) != 0 || inLen != kBlock) {
+                state.SkipWithError("speex_resampler_process failed");
+                break;
+            }
+            benchmark::DoNotOptimize(out.data());
+            frames += outLen;
+        }
+        state.counters["latency_frames"] = Api::latency(st);
+        Api::destroy(st);
+        state.SetItemsProcessed(frames);
+    }
+    struct SpeexFixedApi {
+        static auto init(spx_uint32_t ch, spx_uint32_t in, spx_uint32_t out, int q, int* err) {
+            return speex_fixed::tap_sr_cmp_fixed_resampler_init(ch, in, out, q, err);
+        }
+        static void set_rate_frac(speex_fixed::SpeexResamplerState* st, spx_uint32_t rn, spx_uint32_t rd,
+                                  spx_uint32_t in, spx_uint32_t out) {
+            speex_fixed::tap_sr_cmp_fixed_resampler_set_rate_frac(st, rn, rd, in, out);
+        }
+        static int process(speex_fixed::SpeexResamplerState* st, const std::int16_t* in, spx_uint32_t* inLen,
+                           std::int16_t* out, spx_uint32_t* outLen) {
+            return speex_fixed::tap_sr_cmp_fixed_resampler_process_interleaved_int(st, in, inLen, out, outLen);
+        }
+        static int latency(speex_fixed::SpeexResamplerState* st) {
+            return speex_fixed::tap_sr_cmp_fixed_resampler_get_input_latency(st);
+        }
+        static void destroy(speex_fixed::SpeexResamplerState* st) {
+            speex_fixed::tap_sr_cmp_fixed_resampler_destroy(st);
+        }
+    };
+    struct SpeexFloatApi {
+        static auto init(spx_uint32_t ch, spx_uint32_t in, spx_uint32_t out, int q, int* err) {
+            return speex_float::tap_sr_cmp_float_resampler_init(ch, in, out, q, err);
+        }
+        static void set_rate_frac(speex_float::SpeexResamplerState* st, spx_uint32_t rn, spx_uint32_t rd,
+                                  spx_uint32_t in, spx_uint32_t out) {
+            speex_float::tap_sr_cmp_float_resampler_set_rate_frac(st, rn, rd, in, out);
+        }
+        static int process(speex_float::SpeexResamplerState* st, const float* in, spx_uint32_t* inLen, float* out,
+                           spx_uint32_t* outLen) {
+            return speex_float::tap_sr_cmp_float_resampler_process_interleaved_float(st, in, inLen, out, outLen);
+        }
+        static int latency(speex_float::SpeexResamplerState* st) {
+            return speex_float::tap_sr_cmp_float_resampler_get_input_latency(st);
+        }
+        static void destroy(speex_float::SpeexResamplerState* st) {
+            speex_float::tap_sr_cmp_float_resampler_destroy(st);
+        }
+    };
+
     // --- ~120 dB tier: mono / stereo / 8ch -------------------------------------
     void BM_SRT_Balanced_1ch(benchmark::State& s) {
         srtBench<float>(s, tap::sr::async::filter_spec::balanced(), 1);
@@ -299,11 +406,40 @@ namespace {
     BENCHMARK(BM_R8B_16bit_2ch);
     BENCHMARK(BM_R8B_24bit_2ch);
 
-    // --- Fixed-point (no competitor analog; libsamplerate, soxr and r8brain
-    // are floating-point engines — this is the row embedded targets actually run) ------
+    // --- SpeexDSP (~100 dB at its best, below both tiers above; its float
+    // build beside the ~120 dB rows for the record, its fixed-point build
+    // beside our Q15 row — the one competitor with a fixed-point path) --------
+    void BM_SPEEX_Float_Q10_1ch(benchmark::State& s) {
+        speexBench<SpeexFloatApi, float>(s, 10, 1);
+    }
+    void BM_SPEEX_Float_Q10_2ch(benchmark::State& s) {
+        speexBench<SpeexFloatApi, float>(s, 10, 2);
+    }
+    void BM_SPEEX_Float_Q10_8ch(benchmark::State& s) {
+        speexBench<SpeexFloatApi, float>(s, 10, 8);
+    }
+    void BM_SPEEX_Float_Q4_2ch(benchmark::State& s) {
+        speexBench<SpeexFloatApi, float>(s, 4, 2); // its passband knee: the notebook's sweep
+    }
+    BENCHMARK(BM_SPEEX_Float_Q10_1ch);
+    BENCHMARK(BM_SPEEX_Float_Q10_2ch);
+    BENCHMARK(BM_SPEEX_Float_Q10_8ch);
+    BENCHMARK(BM_SPEEX_Float_Q4_2ch);
+
+    // --- Fixed-point: the row embedded targets actually run. libsamplerate,
+    // soxr and r8brain are floating-point engines; SpeexDSP's FIXED_POINT
+    // build is the one competitor here, at ~100 dB to balanced's 120 ---------
     void BM_SRT_Q15_Balanced_2ch(benchmark::State& s) {
         srtBench<std::int16_t>(s, tap::sr::async::filter_spec::balanced(), 2);
     }
+    void BM_SPEEX_Fixed_Q10_2ch(benchmark::State& s) {
+        speexBench<SpeexFixedApi, std::int16_t>(s, 10, 2);
+    }
+    void BM_SPEEX_Fixed_Q4_2ch(benchmark::State& s) {
+        speexBench<SpeexFixedApi, std::int16_t>(s, 4, 2);
+    }
     BENCHMARK(BM_SRT_Q15_Balanced_2ch);
+    BENCHMARK(BM_SPEEX_Fixed_Q10_2ch);
+    BENCHMARK(BM_SPEEX_Fixed_Q4_2ch);
 
 } // namespace

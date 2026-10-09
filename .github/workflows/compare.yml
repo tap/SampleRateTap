@@ -89,7 +89,8 @@ jobs:
             cmake --build build-$tgt -j 4
             # Each engine at 2 s and 4 s: the difference is steady state, the
             # remainder construction (async/bench/icount/cmp_main.cpp).
-            for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8; do
+            for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8 \
+                                  speex_fixed_q10 speex_float_q10 speex_fixed_q4 speex_float_q4; do
                            echo cmp_icount_$e cmp_icount_${e}_4s; done); do
               out=$(qemu-system-arm -M $machine -nographic -semihosting \
                 -d plugin -plugin /tmp/libinsncount.so \
@@ -148,7 +149,8 @@ jobs:
             -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
             -DTAP_SR_BUILD_ICOUNT_BENCH=ON -DTAP_SR_ICOUNT_COMPARE=ON
           cmake --build build-hex -j 4
-          for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8; do
+          for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8 \
+                                speex_fixed_q10 speex_float_q10 speex_fixed_q4 speex_float_q4; do
                          echo cmp_icount_$e cmp_icount_${e}_4s; done); do
             out=$(qemu-hexagon -d plugin -plugin /tmp/libinsncount.so \
               build-hex/async/bench/icount/$bin 2>&1)

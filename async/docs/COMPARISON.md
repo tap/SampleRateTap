@@ -4,12 +4,15 @@ Two different kinds of product get called an "SRC": **full ASRCs** that
 recover the clock ratio themselves (hardware chips, OS audio engines,
 SampleRateTap), and **resampler libraries** that must be handed the ratio by
 an external servo (libsamplerate, soxr, r8brain-free-src, zita-resampler).
-The second group solves only half of the drift problem.
+The second group solves only half of the drift problem. One of them,
+SpeexDSP's resampler, is also the only one with a fixed-point build, so it
+is the one competitor the Q15 rows below can be measured against on their
+own terms.
 
 ## Measured, identical conditions (software subjects)
 
 From [notebooks/asrc_comparison.ipynb](../notebooks/asrc_comparison.ipynb)
-(re-executed 2026-09-25): one AES17-style measurement implementation applied
+(re-executed 2026-10-09): one AES17-style measurement implementation applied
 to every subject — 997 Hz at −1 dBFS across a +200 ppm clock crossing
 (48 009.6 → 48 000 Hz), fundamental removed by exact fit + ±20 Hz notch,
 residual integrated 20 Hz–20 kHz; DR per AES17 (−60 dBFS, A-weighted). The
@@ -25,13 +28,17 @@ signals before use.
 | libsamplerate `sinc_best` | given exact ratio (oracle) | −143.5 dB | −149.4 dB | 149.1 dB |
 | soxr `VHQ` | given exact ratio (oracle) | −143.8 dB | −150.8 dB | 149.1 dB |
 | r8brain-free-src `CDSPResampler24` | given exact ratio (oracle) | −143.9 dB | −150.8 dB | 149.1 dB |
+| SpeexDSP quality 10, float build | given exact ratio (oracle) | −133.7 dB | −134.1 dB | 149.1 dB |
+| SpeexDSP quality 10, fixed-point build (Q15 IO) | given exact ratio (oracle) | −80.2 dB | −80.2 dB | 97.4 dB |
+| **SampleRateTap** (balanced, Q15) | **recovered by servo** | −76.6 dB | −76.6 dB | 97.3 dB |
 | naive FIFO (drop on full) | n/a | −34.7 dB | −34.7 dB | 94.7 dB |
 
-SampleRateTap's row moved from −132.1 dB (2026-06-11) when the notebook was
-re-executed for the r8brain row: the balanced preset gained its compensated
-prototype (transmission zeros at k·fs) on 2026-07-04, and this is the first
-re-measurement since. The library rows are unchanged to the displayed
-precision.
+SampleRateTap's float row moved from −132.1 dB (2026-06-11) when the
+notebook was re-executed for the r8brain row on 2026-09-25: the balanced
+profile gained its compensated prototype (transmission zeros at k·fs) on
+2026-07-04, and that was the first re-measurement since. The 2026-10-09
+re-execution (SpeexDSP and the Q15 row added) reproduces every earlier row
+to the displayed precision.
 
 Reading guide:
 
@@ -45,6 +52,19 @@ Reading guide:
   (`tools/compare_shim/`, `cmake/r8brain.cmake`), since it has no maintained
   Python binding. Its preset for 24-bit/float work, `CDSPResampler24`
   (180.15 dB stopband, 2 % transition band), is the subject.
+- SpeexDSP is measured the same way through its own shim
+  (`tap_sr_async_speex_shim.cpp`, `cmake/speexdsp.cmake`: upstream's
+  `resample.c` compiled twice from the pinned 1.2.1 source, once per
+  arithmetic build). Its float build at quality 10 lands where `balanced`
+  does, −134 dB, not at the format ceiling the other three reach: its
+  quality rating ("~100 dB" by its own table) is a stopband figure, and at
+  near-unity the images it leaves fall near the 24-bit floor. Its
+  fixed-point build and SampleRateTap's Q15 datapath are the two 16-bit
+  rows: both measure the 16-bit interface's A-weighted DR ceiling (97 dB)
+  and sit within a few dB of each other in THD+N (−80 and −77; the README's
+  "77 dB, format-limited" for `converter_q15` is this measurement). A Q15
+  caller gets the same quality from either; the cost tables below say what
+  each charges for it.
 - SampleRateTap's −134 dB includes the entire problem: the servo discovered
   the ratio from FIFO occupancy and the conversion ran causally at 1.5 ms
   latency. The ~10 dB to the oracle libraries is the measured price of
@@ -61,7 +81,10 @@ datapath with a constant rate deviation (the servo is quiescent at a fixed
 ratio); the libraries take the ratio as an input. Quality tiers are paired
 by vendor-stated stopband: balanced ≈ `MEDIUM` ≈ `HQ` ≈ r8brain at
 `ReqAtten` 120 dB (~120 dB), transparent ≈ `BEST` ≈ `VHQ` ≈ r8brain's
-16-bit preset (~140 dB+). r8brain is mono per instance with double I/O, so
+16-bit preset (~140 dB+). SpeexDSP's best quality (10) is "~100 dB" by its
+own table, below both tiers; it is kept for being the one competitor with
+a fixed-point build, so its fixed-point rows are ratioed against the Q15
+datapath and its float rows against `balanced`. r8brain is mono per instance with double I/O, so
 the harness runs one instance per channel and the float↔double
 (de)interleave is inside the timed loop — what any float-interleaved caller
 pays to use it. Latency figures are measured: SampleRateTap's is the filter
@@ -83,67 +106,98 @@ flat far past 20 kHz; the lowest-latency setting still flat to 20 kHz like
 only at a 45 % band, which is −35 dB at 20 kHz. The tables below carry both
 the default and the passband-matched 8 % configuration.
 
-### Host wall-clock (x86, GCC 13.3 -O3 (CMake Release), shared Xeon @ 2.10 GHz, 2026-09-25)
+### SpeexDSP's quality knob is a latency knob too
+
+SpeexDSP's quality (0–10) sets filter length, oversampling and cutoff
+together, and its filters are short (the sinc spans eight input samples at
+quality 10), so no setting is flat to 20 kHz: measured on the pinned engine
+at this ratio (notebook, "SpeexDSP: the same two questions"), the 20 kHz
+gain settles at **−0.42 dB from quality 4 up**, both builds. Quality 10
+withholds **128 input frames (2.7 ms)**; quality 4, the lowest at that
+passband knee, **32 frames (0.67 ms)** at a quarter of the cost. The tables
+carry both: quality 10 as its ceiling, quality 4 as the row that matches
+`balanced`'s latency class.
+
+### Host wall-clock (x86, GCC 13.3 -O3 (CMake Release), shared Xeon @ 2.80 GHz, 2026-10-09)
 
 Million output frames/s, median of 5 — relative ratios are the meaningful
-figures on a shared machine; all subjects ran in the same session.
+figures on a shared machine; all subjects ran in the same session (an
+earlier session on a 2.10 GHz host, 2026-09-25, gave the same ratios
+within ~15 %).
 libsamplerate 0.2.2 and soxr 0.1.3 are the Ubuntu 24.04 packages; r8brain
-is the pinned commit (7.5), stock configuration (Ooura FFT).
+and SpeexDSP are the pinned commits (7.6 and 1.2.1), stock configurations
+(r8brain with its Ooura FFT).
 
 | Engine (~120 dB tier) | mono | stereo | 8-ch | algorithmic latency |
 |---|---:|---:|---:|---:|
-| **SampleRateTap** balanced | 20.3 | 14.6 | 3.0 | **24 frames (0.50 ms)** |
-| libsamplerate `MEDIUM` (0.2.2) | 5.2 | 4.8 | 1.9 | 46 frames (0.96 ms)¹ |
-| soxr `HQ` (0.1.3) | 114.3 | 52.9 | 12.9 | 424–788 frames (8.8–16.4 ms) |
-| r8brain 120 dB, default 2 % band | 35.4 | 16.5 | 4.1 | 789 frames (16.4 ms) |
-| r8brain 120 dB, 8 % band (flat to 20 kHz) | — | 17.9 | — | 200 frames (4.2 ms) |
+| **SampleRateTap** balanced | 13.9 | 9.5 | 1.8 | **24 frames (0.50 ms)** |
+| libsamplerate `MEDIUM` (0.2.2) | 3.6 | 3.1 | 1.4 | 46 frames (0.96 ms)¹ |
+| soxr `HQ` (0.1.3) | 70.9 | 32.3 | 8.3 | 703–880 frames (14.7–18.3 ms) |
+| r8brain 120 dB, default 2 % band | 21.4 | 10.6 | 2.8 | 789 frames (16.4 ms) |
+| r8brain 120 dB, 8 % band (flat to 20 kHz) | — | 11.9 | — | 200 frames (4.2 ms) |
 
 | Engine (~140 dB tier) | stereo | algorithmic latency |
 |---|---:|---:|
-| **SampleRateTap** transparent | 9.6 | 40 frames (0.83 ms) |
-| libsamplerate `BEST` | 1.6 | 143 frames (3.0 ms)¹ |
-| soxr `VHQ` | 32.1 | 433 frames (9.0 ms) |
-| r8brain `CDSPResampler16` (136.45 dB) | 18.4 | 1,782 frames (37.1 ms) |
-| r8brain `CDSPResampler24` (180.15 dB) | 14.1 | 1,700 frames (35.4 ms) |
+| **SampleRateTap** transparent | 6.0 | 40 frames (0.83 ms) |
+| libsamplerate `BEST` | 0.9 | 143 frames (3.0 ms)¹ |
+| soxr `VHQ` | 22.6 | 597 frames (12.4 ms) |
+| r8brain `CDSPResampler16` (136.45 dB) | 11.8 | 1,782 frames (37.1 ms) |
+| r8brain `CDSPResampler24` (180.15 dB) | 9.6 | 1,700 frames (35.4 ms) |
 
-| No competitor analog | stereo | |
-|---|---:|---|
-| **SampleRateTap** Q15 balanced | 21.9 | the row FPU-less embedded targets actually run |
+| Below both tiers (SpeexDSP, "~100 dB" at best) | mono | stereo | 8-ch | algorithmic latency |
+|---|---:|---:|---:|---:|
+| SpeexDSP float build, quality 10 | 1.9 | 0.9 | 0.2 | 128 frames (2.67 ms) |
+| SpeexDSP float build, quality 4 (its passband knee) | — | 2.4 | — | 32 frames (0.67 ms) |
+
+| The fixed-point rows (Q15 I/O) | stereo | algorithmic latency |
+|---|---:|---:|
+| **SampleRateTap** Q15 balanced | 17.1 | **24 frames (0.50 ms)**; the row FPU-less embedded targets actually run |
+| SpeexDSP fixed-point build, quality 10 | 1.2 | 128 frames (2.67 ms) |
+| SpeexDSP fixed-point build, quality 4 | 4.5 | 32 frames (0.67 ms) |
 
 ¹ Measured 2026-06-12 on the same library version; the harness reports
-latency counters for soxr and r8brain only.
+latency counters for soxr, r8brain and SpeexDSP only.
 
 Reading guide:
 
 - **soxr wins raw host throughput, and the latency column is why.** It
-  processes in large internal batches with SIMD throughout. At ~9–16 ms it
+  processes in large internal batches with SIMD throughout. At ~12–18 ms it
   is a fine batch/offline resampler and unusable inside a 1–2 ms live
   monitoring budget — the regime SampleRateTap is built for. There is no
   setting that buys soxr's throughput at SampleRateTap's latency.
-- **r8brain out-runs SampleRateTap on x86 at the ~120 dB tier** — 1.7×
-  mono, 1.1× stereo, 1.4× at 8 channels (1.2× stereo passband-matched) —
-  and at the ~140 dB tier (1.9× at its 136 dB setting). Its FFT block
+- **r8brain out-runs SampleRateTap on x86 at the ~120 dB tier** — 1.5×
+  mono, 1.1× stereo, 1.6× at 8 channels (1.3× stereo passband-matched) —
+  and at the ~140 dB tier (2.0× at its 136 dB setting). Its FFT block
   convolution amortizes well on a desktop core. The price is the same as
   soxr's: 8× SampleRateTap's filter delay at the matched passband and 33×
   at its default, 45× at the 140 dB tier. On the embedded targets the
   ranking reverses, and it has no fixed-point option (next section).
 - **libsamplerate is the closest architectural analog** (streaming
   time-domain polyphase, block-by-block) and SampleRateTap is 3.1–3.9×
-  (stereo/mono; 1.5× at 8 channels, where both engines amortize)
-  faster at the matched ~120 dB tier, 6.1× at ~140 dB, while also carrying
+  (stereo/mono; 1.3× at 8 channels, where both engines amortize)
+  faster at the matched ~120 dB tier, 6.9× at ~140 dB, while also carrying
   ~2–3.6× less latency. That is the near-unity specialization dividend:
   a 48-tap window with a creeping phase instead of general-ratio
   machinery.
-- Even at 8 channels, one stream costs SampleRateTap ~1.6 % of a single
-  Xeon core (3.0 M frames/s ≈ 62× realtime).
+- **SpeexDSP is the slowest subject on the host at every setting**, in
+  both builds: `balanced` converts 4× its float build's quality 4 and 11×
+  its quality 10 (stereo), and the Q15 datapath 3.8× and 14× its
+  fixed-point build's. Its design centre is the embedded fixed-point core,
+  which is where the next section measures it; on x86 its scalar
+  sinc-table loop has none of the batch or SIMD leverage soxr and r8brain
+  bring.
+- Even at 8 channels, one stream costs SampleRateTap ~2.7 % of a single
+  Xeon core (1.8 M frames/s ≈ 37× realtime).
 
 ### Embedded executed instructions per output frame (QEMU TCG plugin)
 
 Same comparison workload cross-compiled per target (`TAP_SR_ICOUNT_COMPARE`,
 `.github/workflows/compare.yml`; deterministic counts, methodology as the
 ratchet in [PERFORMANCE.md](PERFORMANCE.md)). Stereo, float I/O (Q15 for
-the Q15 row), 32-frame blocks. libsamplerate 0.2.2, r8brain at the pinned
-commit; arm-none-eabi-gcc 13.2.1, hexagon-clang 19.1.5, -O3 (CMake Release;
+the Q15 row and SpeexDSP's fixed-point build), 32-frame blocks.
+libsamplerate 0.2.2, r8brain and SpeexDSP at their pinned commits (7.6 and
+1.2.1; SpeexDSP from source in both arithmetic builds, `cmake/speexdsp.cmake`);
+arm-none-eabi-gcc 13.2.1, hexagon-clang 19.1.5, -O3 (CMake Release;
 earlier revisions said -O2, but the build type was the same).
 
 Every engine is built at 2 s and 4 s of audio: the difference is the
@@ -166,7 +220,8 @@ qemu-system-arm 8.2.2 from the ubuntu-24.04 image, hexagon-clang 19.1.5 and
 qemu-hexagon 8.2.2 at the pinned digests.
 
 Steady state, instructions per stereo output frame (× = vs. SampleRateTap
-balanced float; the cheaper SampleRateTap row per target in bold):
+balanced float, or vs. balanced Q15 where the row says so; the cheaper
+SampleRateTap row per target in bold):
 
 | Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
 |---|---:|---:|---:|
@@ -193,14 +248,32 @@ steady state, libsamplerate `MEDIUM` **~56×** that and r8brain at 8 %
 **~30×**; on the M55 the float datapath (821) is cheaper than Q15 (861) by 5%.
 <!-- COMPARE:END -->
 
-² The float datapath is soft-double-bound on the FP64-less M33 — the
-README directs Pico-class parts to Q15. The key figures above give the
+² The float datapath is soft-double-bound on the FP64-less M33 and
+Hexagon (its accumulation is double by contract) — the README directs
+Pico-class parts and double-less DSPs to Q15. The key figures above give the
 Q15 datapath's steady-state cost there and the multiples libsamplerate
-(no fixed-point path) and r8brain (double precision throughout, no
-fixed-point path either) pay against it. On the M55, whose FPU serves
+(no fixed-point path), r8brain (double precision throughout, no
+fixed-point path either) and SpeexDSP's fixed-point build — the one
+competitor that can run there on the Q15 row's terms — pay against it. On the M55, whose FPU serves
 float well, float and Q15 are within a few percent of each other since
 DspTap's Helium Q15 dot (the key figures say which is cheaper, and by how
 much); before it, Q15 cost 42 % more than float there.
+
+**SpeexDSP's rows read per target.** On the M55, the one target where
+SampleRateTap's float datapath is its cheaper row, SpeexDSP's cheapest
+setting (quality 4, the row that matches `balanced`'s latency class at
+−0.42 dB by 20 kHz) costs ~1.9× `balanced` in either build, and its quality
+10 ~7× (fixed-point) to ~12× (float). On the M33 and Hexagon the Q15 row is
+the one that runs (footnote ²: the float datapath accumulates in double,
+soft-float on both FP64-less cores), and Speex's float build is
+single-precision throughout, so its float rows undercut that float row by
+an order of magnitude; against the Q15 datapath its quality 4 costs 1.3×
+(Hexagon) to 2.0× (M33) fixed-point and 1.4× to 2.5× float, its quality 10
+4× to 7× fixed-point and 70× to 200× float. The one row a Q15 caller
+would weigh is its fixed-point build at quality 4: within 2× of the Q15
+datapath on every target, at a third more latency (32 frames against 24)
+and a −0.42 dB shelf at 20 kHz. Its construction is cheap, as the other
+libraries' is (under 100 M instructions on the M33, under 27 M elsewhere).
 
 ³ r8brain guards its process-wide filter cache with `std::mutex` and has no
 hook to replace it; the thread-less arm-none-eabi newlib declares none, so
@@ -230,6 +303,7 @@ cost for devices that construct at boot.
 | [libsamplerate][lsr] | resampler library | **no** — caller supplies ratio | 1/256–256 | measured above (near-unity); 97 dB worst-case across ratios (own docs) | filter-dependent, offline-friendly | portable C, float | BSD-2 |
 | [soxr][soxr] | resampler library | no (fixed ratio + bounded VR mode) | wide | measured above (near-unity) | quality-dependent | portable C, SIMD | LGPL |
 | [r8brain-free-src][r8b] | resampler library | no — caller supplies ratio | arbitrary | measured above (near-unity, 24-bit preset at the format ceilings); stopband user-set 49–218 dB | transition-band dependent: 16 ms default at 120 dB here, 4.2 ms flat to 20 kHz, ~1 ms only with a 13 kHz-class roll-off | double precision, no fixed-point path; SSE2/AVX/NEON; ~1.1–2.2× SampleRateTap's float steady state on the embedded targets above | MIT, header-only C++ |
+| [SpeexDSP resampler][speex] | resampler library | no — caller supplies ratio (`set_rate_frac`) | arbitrary | measured above: float build at `balanced`'s level, fixed-point build at the 16-bit floor beside the Q15 row; "~100 dB" at best by its own table, and never flat to 20 kHz (−0.42 dB from quality 4 up) | quality-set: 32 frames (0.67 ms) at quality 4, 128 (2.7 ms) at 10 | portable C; **the one competitor with a fixed-point build** (Q15 I/O); its cost against the Q15 datapath on the embedded targets is in the tables above | BSD-3, C |
 | zita-resampler + zita-ajbridge | resampler + DLL servo | ajbridge adds a delay-locked loop | near-unity (bridge) | designed for 24-bit transparency; no published CI-verified figures | several ms (period-driven) | Linux/JACK, float | GPL |
 | OS engines (CoreAudio, WASAPI shared, PipeWire) | system ASRC | built-in, opaque | device-dependent | unpublished; generally well below the above | typically 5–20 ms | bundled | n/a |
 
@@ -260,3 +334,4 @@ cost for devices that construct at boot.
 [lsr]: https://libsndfile.github.io/libsamplerate/quality.html
 [soxr]: https://github.com/chirlu/soxr
 [r8b]: https://github.com/avaneev/r8brain-free-src
+[speex]: https://github.com/xiph/speexdsp
