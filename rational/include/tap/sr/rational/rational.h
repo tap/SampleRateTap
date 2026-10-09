@@ -24,9 +24,11 @@
 // sample-format traits, the dot kernels and the row-sum quantization the
 // family's other engines use.
 //
-// Status: M3 — the ratio types, the pinned stage designs (M2) and the
-// single stages with the family's call shapes (stage.h, converter.h). The
-// chains and the coverage matrix follow (PLAN.md section 6, M4).
+// Status: M6, the plan complete (PLAN.md section 6) — the ratio types, the
+// pinned stage designs, the single stages with the family's call shapes
+// (stage.h, converter.h), the chains and the coverage matrix (chain.h), the
+// fixed-point profiles measured per stage, the C ABI (capi/) and the
+// instruction-count ratchet (bench/).
 #pragma once
 
 #include "tap/sr/rational/chain.h"     // IWYU pragma: export

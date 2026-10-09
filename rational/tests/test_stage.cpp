@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <numbers>
 #include <type_traits>
 #include <vector>
@@ -63,20 +64,67 @@ namespace {
     // n reads row phase(n) at storage index T - 1 - (floor(nM/L) - d). The
     // decimator: x[d] sits in sub-line d, read by branch j = (M - d) mod M
     // at s = k - 1 (k - 0 for d == 0), index T - 1 - s.
+    // The test's own oracle for one product a * c through the stage's single
+    // rounding point: the trait's mac (exact for one product; Q31's carries
+    // its documented 16-bit pre-shift), then round-half-up by 2^f times the
+    // stage's table gain G and saturate, written here and not borrowed from
+    // finalize_output(), so a stage that rounds ties the wrong way fails.
+    // `ties` counts the products whose discarded bits were exactly one half.
+    // The one path whose oracle is the shipping code: Q15 divided by a
+    // non-power-of-two G (down_3, down_6), the multiply-back whose
+    // deviation from the exact quotient near a boundary sample_traits.h
+    // documents.
     template <typename S, rational_ratio R>
-    void check_impulse_reproduces_table(const profile& p) {
-        using tr                = tap::dsp::sample_traits<S>;
-        constexpr std::size_t l = R::k_up;
-        constexpr std::size_t m = R::k_down;
+    S expected_one_product(S a, typename basic_stage<S, R>::coeff c, std::size_t& ties) {
+        using tr                   = tap::dsp::sample_traits<S>;
+        const typename tr::accum p = tr::mac(typename tr::accum{}, a, c);
+        if constexpr (!tr::k_is_fixed_point) {
+            return tr::finalize(p);
+        }
+        else {
+            constexpr std::size_t g = basic_stage<S, R>::k_table_gain;
+            if constexpr (std::is_same_v<S, std::int16_t> && (g & (g - 1)) != 0) {
+                return basic_stage<S, R>::finalize_output(p);
+            }
+            else {
+                constexpr int k = [] {
+                    int n = 0;
+                    while ((std::size_t{1} << n) < g) {
+                        ++n;
+                    }
+                    return n;
+                }();
+                constexpr int          shift = tr::k_finalize_shift + k;
+                constexpr std::int64_t den   = std::int64_t{1} << shift;
+                constexpr std::int64_t half  = den / 2;
+                if (((p % den) + den) % den == half) {
+                    ++ties;
+                }
+                const std::int64_t q  = (p + half) >> shift; // floor: round half up
+                const std::int64_t lo = std::numeric_limits<S>::min(), hi = std::numeric_limits<S>::max();
+                return static_cast<S>(q < lo ? lo : (q > hi ? hi : q));
+            }
+        }
+    }
+
+    template <typename S, rational_ratio R>
+    std::size_t check_impulse_reproduces_table(const profile& p, S amplitude) {
+        using tr                   = tap::dsp::sample_traits<S>;
+        constexpr std::size_t l    = R::k_up;
+        constexpr std::size_t m    = R::k_down;
+        std::size_t           ties = 0;
         for (std::size_t d = 0; d < m; ++d) {
             basic_stage<S, R> c(1, p);
             const std::size_t t_len = c.row_length();
             const std::size_t n_in  = (c.taps() + 2) * m + d;
             std::vector<S>    x(n_in, tr::silence());
-            x[d] = full_scale<S>();
+            x[d] = amplitude;
             std::vector<S>    y(c.outputs_for(n_in));
             const std::size_t made = c.process(x.data(), n_in, y.data());
-            ASSERT_EQ(made, y.size());
+            if (made != y.size()) {
+                ADD_FAILURE() << "d=" << d << " made " << made << " of " << y.size();
+                return ties;
+            }
             for (std::size_t n = 0; n < made; ++n) {
                 S expected = tr::silence();
                 if constexpr (R::k_up == 1) {
@@ -84,21 +132,75 @@ namespace {
                     if (!(d > 0 && n == 0)) {
                         const std::size_t s = d == 0 ? n : n - 1;
                         if (s < t_len) {
-                            expected = basic_stage<S, R>::finalize_output(
-                                tr::mac(typename tr::accum{}, x[d], c.coefficient(j, t_len - 1 - s)));
+                            expected = expected_one_product<S, R>(x[d], c.coefficient(j, t_len - 1 - s), ties);
                         }
                     }
                 }
                 else {
                     const std::size_t newest = n * m / l;
                     if (newest >= d && newest - d < t_len) {
-                        expected = basic_stage<S, R>::finalize_output(
-                            tr::mac(typename tr::accum{}, x[d], c.coefficient((n * m) % l, t_len - 1 - (newest - d))));
+                        expected = expected_one_product<S, R>(
+                            x[d], c.coefficient((n * m) % l, t_len - 1 - (newest - d)), ties);
                     }
                 }
-                ASSERT_EQ(y[n], expected) << "d=" << d << " n=" << n;
+                if (y[n] != expected) {
+                    ADD_FAILURE() << "d=" << d << " n=" << n << " got " << +y[n] << " expected " << +expected;
+                    return ties;
+                }
             }
         }
+        return ties;
+    }
+
+    template <typename S, rational_ratio R>
+    void check_impulse_reproduces_table(const profile& p) {
+        check_impulse_reproduces_table<S, R>(p, full_scale<S>());
+    }
+
+    // The tie direction of the single rounding point, pinned per path: an
+    // impulse whose one product's discarded bits are exactly one half for
+    // every odd stored coefficient (Q15 at unity gain: 8192, a quarter of
+    // full scale; divided by 2: 16384; by 4 and 8: -32768, where the ties
+    // fall on the coefficients congruent to 2 mod 4 for G = 8; Q31: 2^29),
+    // so every such output is a tie and must round up. The battery's noise
+    // and DC vectors never land on a tie (the 2026-10 audit's surviving
+    // mutants M3, M11, M12); this test does, and asserts that it did.
+    template <typename S, rational_ratio R>
+    void check_ties_round_half_up(const profile& p) {
+        if constexpr (tap::dsp::sample_traits<S>::k_is_fixed_point) {
+            constexpr std::size_t g = basic_stage<S, R>::k_table_gain;
+            S                     a{};
+            if constexpr (std::is_same_v<S, std::int32_t>) {
+                a = std::int32_t{1} << 29;
+            }
+            else if constexpr (g == 1) {
+                a = 8192;
+            }
+            else if constexpr (g == 2) {
+                a = 16384;
+            }
+            else {
+                a = std::numeric_limits<std::int16_t>::min();
+            }
+            const std::size_t ties = check_impulse_reproduces_table<S, R>(p, a);
+            if constexpr (std::is_same_v<S, std::int16_t> && (g & (g - 1)) != 0) {
+                EXPECT_EQ(ties, 0u); // the multiply-back path: the shipping code is the oracle, no tie is counted
+            }
+            else {
+                EXPECT_GE(ties, 1u) << "no tie was exercised: the amplitude does not probe the rounding point";
+            }
+        }
+    }
+
+    TYPED_TEST(stage_test, ImpulseTiesRoundHalfUp) {
+        check_ties_round_half_up<TypeParam, up_2>(profile::economy());
+        check_ties_round_half_up<TypeParam, up_3>(profile::economy());
+        check_ties_round_half_up<TypeParam, ratio_3_2>(profile::economy());
+        check_ties_round_half_up<TypeParam, down_2>(profile::economy());     // Q15: divided by 2
+        check_ties_round_half_up<TypeParam, down_8>(profile::economy());     // Q15: divided by 8
+        check_ties_round_half_up<TypeParam, ratio_2_3>(profile::economy());  // Q15: rows at gain 2
+        check_ties_round_half_up<TypeParam, ratio_3_8>(profile::economy());  // Q15: rows at gain 4
+        check_ties_round_half_up<TypeParam, down_3>(profile::transparent()); // Q31 through finalize; Q15 multiply-back
     }
 
     TYPED_TEST(stage_test, ImpulseReproducesTableEveryRatio) {
@@ -261,6 +363,71 @@ namespace {
         }
     }
 
+    // The whole charter runs, not just the vocabulary: a mixed ratio whose
+    // per-output advance passes 255 (ratio<3, 1024> advances 341, 341, 342;
+    // ratio<2, 729>: 364, 365) once truncated to a byte and ran silently
+    // wrong (the 2026-10 audit, F02). At a short custom spec (40 dB, the
+    // search is under a second) the schedule sums to M, chunking is bit-
+    // identical, and the accounting is exact from several positions.
+    template <unsigned L, unsigned M>
+    void check_wide_ratio_runs() {
+        using ratio_t     = ratio<L, M>;
+        std::uint64_t sum = 0;
+        for (const auto& e : k_schedule<ratio_t>) {
+            sum += e.advance;
+        }
+        EXPECT_EQ(sum, M);
+        profile p           = profile::economy();
+        p.stopband_atten_db = 40.0;
+        p.passband_frac     = 0.25;
+        std::vector<float> x(6 * M + 17);
+        std::uint32_t      s = 0x2545F491u;
+        for (auto& v : x) {
+            s ^= s << 13;
+            s ^= s >> 17;
+            s ^= s << 5;
+            v = static_cast<float>(static_cast<double>(s) / 4294967296.0 - 0.5);
+        }
+        const basic_stage<float, ratio_t> fresh(1, p); // one search (about half a second); the runs below copy it
+        basic_stage<float, ratio_t>       whole = fresh;
+        std::vector<float>                ref(whole.outputs_for(x.size()));
+        ASSERT_EQ(whole.process(x.data(), x.size(), ref.data()), ref.size());
+        EXPECT_GT(ref.size(), 6u * L - L);
+        for (const std::size_t chunk : {std::size_t{1}, std::size_t{7}, std::size_t{M - 1}, std::size_t{M + 1}}) {
+            basic_stage<float, ratio_t> c = fresh;
+            std::vector<float>          y;
+            std::vector<float>          buf(c.outputs_for(chunk) + L + 2);
+            for (std::size_t pos = 0; pos < x.size(); pos += chunk) {
+                const std::size_t n    = pos + chunk <= x.size() ? chunk : x.size() - pos;
+                const std::size_t want = c.outputs_for(n);
+                ASSERT_LE(want, buf.size());
+                ASSERT_EQ(c.process(x.data() + pos, n, buf.data()), want) << "chunk " << chunk << " at " << pos;
+                y.insert(y.end(), buf.begin(), buf.begin() + static_cast<std::ptrdiff_t>(want));
+            }
+            EXPECT_TRUE(y == ref) << "chunk " << chunk;
+        }
+        basic_stage<float, ratio_t> c = fresh;
+        std::vector<float>          y(c.outputs_for(x.size()) + L);
+        for (std::size_t step = 0; step < 4; ++step) {
+            const std::size_t probes[] = {0, 1, std::size_t{M} / L, std::size_t{M} / L + 1, M, 2 * std::size_t{M} + 1};
+            for (const std::size_t n : probes) {
+                basic_stage<float, ratio_t> probe = c;
+                EXPECT_EQ(probe.process(x.data(), n, y.data()), c.outputs_for(n)) << "step " << step << " n " << n;
+            }
+            for (std::size_t k = 1; k <= 4; ++k) {
+                const std::size_t n = c.frames_needed(k);
+                EXPECT_GE(c.outputs_for(n), k) << "step " << step << " k " << k;
+                EXPECT_LT(c.outputs_for(n - 1), k) << "step " << step << " k " << k;
+            }
+            c.process(x.data(), M / L + 1, y.data());
+        }
+    }
+
+    TEST(Stage, WideRatiosOfTheCharterRunTheSchedule) {
+        check_wide_ratio_runs<3, 1024>();
+        check_wide_ratio_runs<2, 729>();
+    }
+
     TEST(Stage, AccountingExactFromEveryPosition) {
         check_accounting_from_every_position<up_2>();
         check_accounting_from_every_position<down_2>();
@@ -374,21 +541,30 @@ namespace {
         EXPECT_TRUE(ya == yb);
     }
 
+    // Both machines: the L-phase schedule (3/4) and the decimator's phase
+    // (down_3, left at phase 1 of 3 by 124 frames); the audit's F12.
+    template <typename S, rational_ratio R>
+    void check_reset_reproduces(const std::vector<S>& x) {
+        basic_stage<S, R> c(1);
+        std::vector<S>    y1(c.outputs_for(x.size()));
+        c.process(x.data(), x.size(), y1.data());
+        std::vector<S> scratch(c.outputs_for(124) + 2);
+        c.process(x.data(), 124, scratch.data()); // leave it mid-stream
+        c.reset();
+        std::vector<S> y2(y1.size());
+        ASSERT_EQ(c.process(x.data(), x.size(), y2.data()), y2.size());
+        EXPECT_TRUE(y1 == y2);
+    }
+
     TYPED_TEST(stage_test, ResetReproducesBitExactly) {
         using sample = TypeParam;
         std::vector<sample> x(rational_ref::k_input.size());
         for (std::size_t i = 0; i < x.size(); ++i) {
             x[i] = to_sample<sample>(rational_ref::k_input[i]);
         }
-        basic_stage<sample, ratio_3_4> c(1);
-        std::vector<sample>            y1(c.outputs_for(x.size()));
-        c.process(x.data(), x.size(), y1.data());
-        std::vector<sample> scratch(c.outputs_for(123) + 2);
-        c.process(x.data(), 123, scratch.data()); // leave it mid-stream
-        c.reset();
-        std::vector<sample> y2(y1.size());
-        ASSERT_EQ(c.process(x.data(), x.size(), y2.data()), y2.size());
-        EXPECT_TRUE(y1 == y2);
+        check_reset_reproduces<sample, ratio_3_4>(x);
+        check_reset_reproduces<sample, down_3>(x);
+        check_reset_reproduces<sample, down_8>(x);
     }
 
     // ------------------------------------------------------------------

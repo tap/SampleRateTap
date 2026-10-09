@@ -56,7 +56,10 @@
 //
 // Contract, as numbers (PLAN.md 2.5, R7, R9, R10):
 //   - zero-primed and causal; outputs_for(n) and frames_needed(k) are exact
-//     arithmetic from the current position (schedule or decimation phase);
+//     arithmetic from the current position (schedule or decimation phase)
+//     for every count the address space can hold (n L and k M below
+//     SIZE_MAX; beyond that the arithmetic wraps, as the C ABI's uint64
+//     counts do);
 //     pull() with a source delivering exactly frames_needed(k) frames yields
 //     exactly k outputs, and is bit-identical to process() on the same
 //     stream, for any chunking; from any state process() or flush() leaves
@@ -111,7 +114,7 @@ namespace tap::sr::rational {
     /// inputs to consume after it (bridge's schedule_entry).
     struct schedule_entry {
         std::uint16_t phase;   ///< polyphase branch index in [0, L)
-        std::uint8_t  advance; ///< input frames consumed after this output
+        std::uint32_t advance; ///< input frames consumed after this output: up to M (a mixed ratio's can pass 255: ratio<3, 1024>)
     };
 
     /// The superblock of ratio R: entry n serves output k L + n; phase(n) =
@@ -125,7 +128,7 @@ namespace tap::sr::rational {
         std::array<schedule_entry, R::k_up> s{};
         for (std::size_t n = 0; n < l; ++n) {
             s[n].phase   = static_cast<std::uint16_t>((n * m) % l);
-            s[n].advance = static_cast<std::uint8_t>(((n + 1) * m) / l - (n * m) / l);
+            s[n].advance = static_cast<std::uint32_t>(((n + 1) * m) / l - (n * m) / l);
         }
         return s;
     }

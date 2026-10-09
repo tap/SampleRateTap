@@ -33,10 +33,11 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > PLAN.md section 6): exact-unity rows and full-scale DC in Q15 and Q31,
 > bit-pinned tables, saturation without wrap, Q31 within 3.4e−9 of double;
 > Q15 is format-limited, and its numbers are stated per stage — at Q15 use
-> `economy`, where every stage attains 70 dB of stopband (a Q15 decimator
+> `economy`, where every stage of the vocabulary attains 70 dB of stopband at its own rate (a Q15 decimator
 > quantizes each branch at unity and divides by M in its one rounding, so ↓6
 > and ↓8 attain −71.5 / −71.7 dB, as ↑6 and ↑8 do; a mixed ratio going down
-> holds its rows at a power-of-two gain, shifted out the same way). The C ABI, the executed coverage-matrix notebook and
+> holds its rows at a power-of-two gain, shifted out the same way; the relaxed designs a chain runs are
+> measured too, and the `economy` half-band at the 147/160 divisor attains −67.6 dB, PLAN.md section 6). The C ABI, the executed coverage-matrix notebook and
 > the instruction-count ratchet landed at M6 (below). The
 > plan is authoritative: charter, the decisions R1–R16, the generated
 > matrix, layout, test strategy, non-goals and risks.
