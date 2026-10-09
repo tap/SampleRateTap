@@ -1,0 +1,17 @@
+tap_sr_bridge_create
+tap_sr_bridge_create_format
+tap_sr_bridge_destroy
+tap_sr_bridge_flush
+tap_sr_bridge_flush_output_frames
+tap_sr_bridge_flush_q15
+tap_sr_bridge_flush_q31
+tap_sr_bridge_format
+tap_sr_bridge_frames_needed
+tap_sr_bridge_latency_input_frames
+tap_sr_bridge_outputs_for
+tap_sr_bridge_process
+tap_sr_bridge_process_q15
+tap_sr_bridge_process_q31
+tap_sr_bridge_reset
+tap_sr_bridge_taps
+tap_sr_bridge_version

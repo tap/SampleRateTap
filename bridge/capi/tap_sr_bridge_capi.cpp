@@ -107,11 +107,8 @@ struct tap_sr_bridge_converter {
 };
 
 // The library builds with hidden visibility (CMakeLists.txt); only the C entry
-// points below are exported.
-#if defined(__GNUC__)
-#pragma GCC visibility push(default)
-#endif
-
+// points below are exported, through TAP_SR_BRIDGE_API on their declarations
+// in the header (default visibility here, dllexport on Windows).
 extern "C" {
 
 tap_sr_bridge_converter* tap_sr_bridge_create_format(int direction, int profile, int format, unsigned channels) {
@@ -211,7 +208,3 @@ unsigned tap_sr_bridge_version(void) {
 }
 
 } // extern "C"
-
-#if defined(__GNUC__)
-#pragma GCC visibility pop
-#endif

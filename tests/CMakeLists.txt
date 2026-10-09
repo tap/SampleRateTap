@@ -63,6 +63,28 @@ foreach(_engine IN LISTS _engines)
                          PROPERTIES LABELS ${_engine})
 endforeach()
 
+# 5. The C ABI's exported symbol set (when the libraries are built): nm on
+#    the shared library against tests/family/symbols_<engine>.txt, so a
+#    leaked C++ symbol or a stray entry point is a failing test (the 2026-10
+#    audit, F04). An nm test, so the ELF and Mach-O hosts only; Windows
+#    gates the DLLs through the CApi suites.
+if(TAP_SR_BUILD_CAPI AND NOT WIN32 AND NOT CMAKE_CROSSCOMPILING)
+    find_program(TAP_SR_NM NAMES nm llvm-nm)
+    if(TAP_SR_NM)
+        foreach(_engine IN LISTS _engines)
+            add_test(NAME ${_engine}.Family.ExportedSymbolsArePinned
+                     COMMAND ${CMAKE_COMMAND} -DENGINE=${_engine}
+                             -DLIBRARY=$<TARGET_FILE:tap_sr_${_engine}_capi>
+                             -DEXPECTED=${_family}/symbols_${_engine}.txt
+                             -DNM=${TAP_SR_NM}
+                             -P ${_family}/exported_symbols.cmake)
+            set_tests_properties(${_engine}.Family.ExportedSymbolsArePinned PROPERTIES LABELS ${_engine})
+        endforeach()
+    else()
+        message(WARNING "nm not found: the exported-symbol tests are not registered")
+    endif()
+endif()
+
 # D13: TAP_SR_VERSION_* is defined in each of the three umbrella headers (no
 # shared header, so check 1 holds) and must agree. Compile-only, built by its test, so it
 # runs on every leg including bare metal.
