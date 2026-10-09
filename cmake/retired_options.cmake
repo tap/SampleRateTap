@@ -1,7 +1,7 @@
 # D7 tripwire (PLAN.md): the options the tap::sr monorepo
 # migration retired fail the configure loudly. CMake only warns about an
 # unused -D, so a stale -DSRT_WERROR=ON would otherwise drop a gate silently.
-# Included by the root and, when configured on their own, by both engines.
+# Included by the root and, when configured on their own, by every engine.
 foreach(_retired IN ITEMS
         SRT_BUILD_TESTS SRT_BUILD_EXAMPLES SRT_BUILD_CAPI SRT_BUILD_ICOUNT_BENCH
         SRT_BUILD_BENCHMARKS SRT_BUILD_COMPARE_BENCH SRT_BUILD_COMPARE_SHIM

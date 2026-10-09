@@ -173,7 +173,7 @@ table is already enforced by test thresholds.
   at every shift, so the workloads now print through an `alignas(64)`
   format string. Measured on the local toolchains that match the
   committed baselines to the instruction: Hexagon −95 instructions on each of the four pipeline workloads, +7 on `kernel_q15` and `kernel_q31`, +38 on `kernel_float` (the aligned string's `memcpy` path costs a few more than the kernels' old accidental alignment and fewer than the pipelines'); M33
-  and M55 exact (+0) on every workload of both engines. Hexagon
+  and M55 exact (+0) on every workload of the async and bridge engines. Hexagon
   baselines re-recorded with this entry as the justification. A finding
   from the same measurement, deferred: adding two statics and a
   `setvbuf` call to `main` (a rejected variant) flipped GCC's inlining

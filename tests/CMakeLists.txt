@@ -85,6 +85,44 @@ if(TAP_SR_BUILD_CAPI AND NOT WIN32 AND NOT CMAKE_CROSSCOMPILING)
     endif()
 endif()
 
+# 6. The READMEs' quick starts compile: the first ```cpp block of the root
+#    README and of each engine's, extracted at configure time into a TU
+#    (tests/family/readme_snippet.cmake, a prelude declaring the caller's
+#    buffers), built by its test. A quick start that stops compiling is a
+#    red check, not an audit finding (2026-10, S5).
+set(_readme_dir ${CMAKE_BINARY_DIR}/tests/readme)
+file(MAKE_DIRECTORY ${_readme_dir})
+foreach(_name IN ITEMS family async bridge rational)
+    if(_name STREQUAL family)
+        set(_readme ${CMAKE_SOURCE_DIR}/README.md)
+        set(_labels "async;bridge;rational")
+    else()
+        set(_readme ${CMAKE_SOURCE_DIR}/${_name}/README.md)
+        set(_labels ${_name})
+    endif()
+    set(_prelude ${_family}/readme/${_name}_prelude.h)
+    set(_tu ${_readme_dir}/${_name}_quick_start.cpp)
+    execute_process(COMMAND ${CMAKE_COMMAND} -DREADME=${_readme} -DPRELUDE=${_prelude} -DOUT=${_tu}
+                            -P ${_family}/readme_snippet.cmake
+                    RESULT_VARIABLE _rc OUTPUT_QUIET)
+    if(NOT _rc EQUAL 0)
+        message(FATAL_ERROR "could not extract the quick start of ${_readme}")
+    endif()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_readme})
+    add_executable(tap_sr_readme_${_name} EXCLUDE_FROM_ALL ${_tu})
+    target_include_directories(tap_sr_readme_${_name} PRIVATE
+        ${CMAKE_SOURCE_DIR}/async/include ${CMAKE_SOURCE_DIR}/bridge/include ${CMAKE_SOURCE_DIR}/rational/include)
+    target_link_libraries(tap_sr_readme_${_name} PRIVATE tap::dsp)
+    target_compile_features(tap_sr_readme_${_name} PRIVATE cxx_std_20)
+    if(Threads_FOUND)
+        target_link_libraries(tap_sr_readme_${_name} PRIVATE Threads::Threads)
+    endif()
+    add_test(NAME ${_name}.Family.ReadmeQuickStartCompiles
+             COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG>
+                     --target tap_sr_readme_${_name})
+    set_tests_properties(${_name}.Family.ReadmeQuickStartCompiles PROPERTIES LABELS "${_labels}")
+endforeach()
+
 # D13: TAP_SR_VERSION_* is defined in each of the three umbrella headers (no
 # shared header, so check 1 holds) and must agree. Compile-only, built by its test, so it
 # runs on every leg including bare metal.
