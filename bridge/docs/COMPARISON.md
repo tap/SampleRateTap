@@ -158,13 +158,51 @@ cross-compiled here.
 <!-- COMPARE:BEGIN -->
 <!-- COMPARE:END -->
 
-(reading pending)
+**The Q15 converter is the cheapest row on every target, and the float
+rows are not.** Economy in Q15 costs 209 instructions per stereo output
+frame on the M55, 419 on the M33 and 235 on Hexagon going down (164 / 305 /
+165 going up): 3× under r8brain's economy-matched setting on the M55 and
+13–34× under it on the two soft-double targets, where r8brain's
+double-precision datapath pays for every multiply in software. SpeexDSP's
+fixed-point build, the one competitor that can run there on the Q15 row's
+terms, costs 2.3–7× it. That is the row FPU-less and Bluetooth-class
+deployments run, and it is where `bridge`'s charter is cashed.
+
+**In float, r8brain's FFT block convolution undercuts `bridge`'s direct-form
+polyphase at both tiers on every target**: 0.8–1.0× economy's cost at its
+economy-matched setting, 0.3–0.6× transparent's at its transparent-matched
+one. A 58-tap (economy) or 184-tap (transparent) dot product per output
+sample is more multiplies than an FFT of the same bandwidth, and on the
+soft-double M33 and Hexagon `bridge`'s float path accumulates in double by
+contract, so the comparison is soft-double against soft-double and the
+multiply count decides it. r8brain pays in latency (105–436 input frames
+against 29) and in construction, never in the per-frame count. SpeexDSP's
+single-precision float build tells the same story as in the async
+comparison: on the two soft-double targets it undercuts the float row by an
+order of magnitude and still costs 2.3–7× the Q15 row. The multistage and
+FFT levers `PLAN.md` section 7 defers "until a consumer pulls them" are
+exactly what would move the float rows; this table is the measurement that
+says by how much. libsamplerate's economy-matched `MEDIUM` costs 3–4×
+economy float and its `BEST` 3–5× transparent float, consistently across
+targets: the same architecture, more taps.
+
+**Construction is the one column `bridge` loses outright**, as the async
+engine does: its prototype design runs in double at construction, 98–131 M
+instructions on the M33 for economy and 256–437 M for transparent (seconds
+on a 150 MHz core without an FP64 unit; the RP2350's DCP shortens it),
+against 19–54 M for the libraries. Paid once per converter, never on the
+audio path; a device that constructs at boot should know.
 
 ³ r8brain guards its process-wide filter cache with `std::mutex` and has no
 hook to replace it; the thread-less arm-none-eabi newlib declares none, so
 the Cortex-M builds force-include `tools/compare/r8b_single_thread_mutex.h`
 (a no-op lock — exact for this single-threaded workload, and outside the
 per-sample path). Hexagon's musl build uses the real mutex.
+
+⁴ A small negative construction (libsamplerate `BEST` on the M33) is the
+split's resolution, not a measurement: that engine's per-frame cost drifts
+by a few parts in a thousand over the run, more than its sub-million
+construction, so 2 × (2 s) − (4 s) lands just below zero. Read it as ~0.
 
 ## Caveats, stated plainly
 

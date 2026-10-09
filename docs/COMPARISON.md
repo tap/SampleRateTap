@@ -29,7 +29,11 @@ with their engine.
   direction) at 29 / 19 input frames of latency; r8brain is the one library
   that offers that design point, the others overshoot it by 15–50 dB to keep
   the 18 kHz passband. `transparent` and every frontier setting measure at
-  the 24-bit ceiling. The cost tables are in the engine's document.
+  the 24-bit ceiling. In Q15 `bridge` is the cheapest row on every target
+  (209 instructions per stereo frame on the M55, 419 on the M33, going
+  down), 3–34× under r8brain's matched setting; in float, r8brain's FFT
+  convolution undercuts `bridge`'s polyphase at both tiers, at 4–15× the
+  latency.
 
 ## The shared tooling
 
