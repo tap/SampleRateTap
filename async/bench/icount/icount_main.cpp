@@ -8,7 +8,9 @@
 // elimination and pins down cross-run determinism.
 //
 // TAP_SR_ASYNC_SC_KIND: 0 = kernel (interpolate in isolation), 1 = pipeline (duplex
-//              push/pull through the full converter)
+//              push/pull through the full converter), 2 = the pipeline with
+//              its stream removed (construction and the input fixture, then
+//              one block pushed and pulled)
 // TAP_SR_ASYNC_SC_TYPE: 0 = float, 1 = Q15, 2 = Q31
 // TAP_SR_ASYNC_SC_CH:   pipeline channel count (default 2; 12 = the 7.1.4 shape)
 #include <cmath>
@@ -94,12 +96,36 @@ namespace {
         return sink;
     }
 
+    // The pipeline workload with its stream removed: the converter's
+    // construction (the soft-double filter design and the quantized table)
+    // and the same 0.25 s input fixture the pipeline synthesizes, then one
+    // block pushed and pulled. Gated beside the pipelines, so pipeline minus
+    // this is the streaming loop alone, undiluted, and constructor cost is a
+    // first-class number (docs/PERFORMANCE.md). The fixture belongs here and
+    // not in the pipeline's difference: on soft-FP64 targets its libm sin()
+    // calls are tens of millions of instructions.
+    template <typename S>
+    double runConstruct() {
+        constexpr std::size_t  kCh    = TAP_SR_ASYNC_SC_CH;
+        constexpr std::size_t  kBlock = 32;
+        tap::sr::async::config cfg;
+        cfg.channels = kCh;
+        tap::sr::async::basic_converter<S> asrc(cfg);
+        const auto                         input = sineBlock<S>(12000 * kCh, 997.0, 0.5); // as runPipeline
+        std::vector<S>                     out(kBlock * kCh);
+        asrc.push(input.data(), kBlock);
+        asrc.pull(out.data(), kBlock);
+        return static_cast<double>(out[0]) + asrc.designed_latency_seconds();
+    }
+
     template <typename S>
     double run() {
 #if TAP_SR_ASYNC_SC_KIND == 0
         return runKernel<S>();
-#else
+#elif TAP_SR_ASYNC_SC_KIND == 1
         return runPipeline<S>();
+#else
+        return runConstruct<S>();
 #endif
     }
 

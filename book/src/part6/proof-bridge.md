@@ -141,11 +141,14 @@ process and flush in the converter's format, latency, taps, and the
 bit-packed family version — built so that the demo notebook measures the
 shipping C++. It stays at K = 0 until a consumer asks for the scaled pairs
 through C. The instruction-count ratchet
-gates ten workloads — direction × float / Q15 / Q31 at `economy`, both
-`transparent` float legs, and both `super_economy` Q15 legs, two seconds of
-stereo each — on the M33, the M55 and Hexagon at ±3 % two-sided. Every
-number in the previous chapter's campaign is one of those ten, moved and
-re-recorded in the pull request that moved it.
+gates ten streaming workloads — direction × float / Q15 / Q31 at `economy`,
+both `transparent` float legs, and both `super_economy` Q15 legs, two
+seconds of stereo each — on the M33, the M55 and Hexagon at ±3 % two-sided,
+and since M7e two construct-only legs beside them (the Q15 `economy`
+converter built in each direction and one block processed), because on the
+M33 the Q15 streaming totals were 55–63 % constructor. Every number in the
+previous chapter's campaign is one of those ten, moved and re-recorded in
+the pull request that moved it.
 
 ## What this part was about
 

@@ -1,8 +1,12 @@
 # Cross-resampler instruction-count comparison (async/docs/COMPARISON.md).
 # Manual trigger only: competitor counts are measured once per
-# toolchain/version pin and recorded in the docs, not gated — the ratchet
-# (ci.yml) gates only our own code. Prints one "CMP_COUNT <target> <bin> <n>"
-# line per measurement for harvesting.
+# toolchain/version pin and recorded, not gated — the ratchet (ci.yml) gates
+# only our own code. Every measurement is one "CMP_COUNT <target> <bin> <n>"
+# line; the last step harvests them with their provenance into
+# async/bench/compare_counts.json (scripts/harvest_compare.py), uploads it
+# as an artifact, and shows the doc diff it implies. Committing that file
+# and the regenerated COMPARISON.md block is the manual half: ci.yml's
+# compare-docs job keeps the two in step from then on.
 name: Resampler comparison (icount)
 
 on:
@@ -47,6 +51,19 @@ jobs:
           sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi qemu-system-arm libglib2.0-dev ninja-build meson flex bison
           sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
 
+      # What produced the counts: the runner image and the toolchain
+      # packages (the counts move when either does). Harvested below.
+      - name: Record image and toolchain versions
+        run: |
+          echo "image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          dpkg-query -W gcc-arm-none-eabi qemu-system-arm
+          {
+            echo -n "arm-none-eabi-gcc $(dpkg-query -W -f='${Version}' gcc-arm-none-eabi)"
+            echo -n ", qemu-system-arm $(dpkg-query -W -f='${Version}' qemu-system-arm)"
+            echo -n " (${ImageOS:-unknown} ${ImageVersion:-unknown})"
+            echo ", hexagon-clang 19.1.5 and qemu-hexagon 8.2.2 at the pinned digests"
+          } > /tmp/toolchains.txt
+
       - name: Build counting plugin
         run: |
           curl -sfLo /tmp/qemu-plugin.h "$QEMU_PLUGIN_HEADER_URL"
@@ -80,7 +97,7 @@ jobs:
               echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
                 echo "$out"; echo "::error::$tgt $bin did not complete"; exit 1; }
               n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
-              echo "CMP_COUNT $tgt $bin $n"
+              echo "CMP_COUNT $tgt $bin $n" | tee -a /tmp/cmp_counts.txt
             done
           done
 
@@ -138,5 +155,28 @@ jobs:
             echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
               echo "$out"; echo "::error::hexagon $bin did not complete"; exit 1; }
             n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
-            echo "CMP_COUNT hexagon $bin $n"
+            echo "CMP_COUNT hexagon $bin $n" | tee -a /tmp/cmp_counts.txt
           done
+
+      # The record the docs derive from, with what produced it. The diff
+      # printed here is what committing the artifact would change; nothing
+      # fails on it, since this job measures and the compare-docs job gates.
+      - name: Harvest the counts with their provenance
+        run: |
+          python3 scripts/harvest_compare.py /tmp/cmp_counts.txt \
+            --sha "$GITHUB_SHA" \
+            --dsptap "$(git -C submodules/dsptap rev-parse HEAD)" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --date "$(date -u +%Y-%m-%d)" \
+            --toolchains "$(cat /tmp/toolchains.txt)"
+          python3 scripts/update_compare_docs.py
+          echo "::group::doc diff this run implies (commit async/bench/compare_counts.json and async/docs/COMPARISON.md to apply)"
+          git --no-pager diff --stat -- async/bench/compare_counts.json async/docs/COMPARISON.md
+          git --no-pager diff -- async/docs/COMPARISON.md
+          echo "::endgroup::"
+      - name: Upload the record
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: compare_counts
+          path: async/bench/compare_counts.json

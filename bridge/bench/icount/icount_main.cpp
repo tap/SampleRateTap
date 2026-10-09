@@ -13,6 +13,9 @@
 // TAP_SR_BRIDGE_SC_PROFILE: 0 = economy, 1 = transparent, 3 = super_economy
 //                   (matching the C ABI tags; 2 = balanced unused here)
 // TAP_SR_BRIDGE_SC_CH:      channel count (default 2)
+// TAP_SR_BRIDGE_SC_KIND:    0 = stream 2 s (default), 1 = the workload with its
+//                   stream removed (construction and the input fixture, then
+//                   one block processed)
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -27,6 +30,9 @@ namespace {
 
 #ifndef TAP_SR_BRIDGE_SC_CH
 #define TAP_SR_BRIDGE_SC_CH 2
+#endif
+#ifndef TAP_SR_BRIDGE_SC_KIND
+#define TAP_SR_BRIDGE_SC_KIND 0
 #endif
 
     template <typename S>
@@ -79,6 +85,20 @@ namespace {
 
         tap::sr::bridge::basic_converter<S, k_dir> conv(k_ch, k_prof);
 
+#if TAP_SR_BRIDGE_SC_KIND == 1
+        // The streaming workload with its stream removed: the converter's
+        // construction (the prototype design and the quantized table) and the
+        // same 0.25 s input fixture, then one block processed. Gated beside
+        // the streaming scenarios so stream minus this is the streaming loop
+        // alone, undiluted (PLAN.md section 7, M7e: on M33 the Q15 totals were
+        // 55-63 % constructor). The fixture belongs here, not in the
+        // difference: its libm sin() calls are soft-double on M33.
+        const auto     input = sine_block<S>(12000, k_ch, 997.0, k_rate_in, 0.5); // as the stream
+        std::vector<S> out(64 * k_ch);
+        const auto     made = conv.process(input.data(), k_block, out.data());
+        return static_cast<double>(out[0]) + static_cast<double>(made)
+               + static_cast<double>(conv.latency_input_frames());
+#else
         // 0.25 s of input, cycled block-aligned (12000 % 32 == 0, so the
         // waveform seam repeats identically every cycle: deterministic).
         const auto input = sine_block<S>(12000, k_ch, 997.0, k_rate_in, 0.5);
@@ -102,6 +122,7 @@ namespace {
             sink += static_cast<double>(out[0]) + static_cast<double>(made);
         }
         return sink;
+#endif
     }
 
 } // namespace

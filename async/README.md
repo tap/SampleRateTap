@@ -330,6 +330,7 @@ Executed instructions per fixed workload (`async/bench/icount/`), measured under
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
+| `construct_q15` | 906,236,511 | 19,577,382 | 143,511,094 |
 | `kernel_float` | 2,427,595,993 | 109,298,076 | 422,160,541 |
 | `kernel_q15` | 1,123,119,218 | 192,431,957 | 187,429,187 |
 | `kernel_q31` | 1,169,957,251 | 221,164,795 | 194,964,122 |
