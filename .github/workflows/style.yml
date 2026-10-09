@@ -21,9 +21,9 @@ concurrency:
 
 jobs:
   drift:
-    uses: tap/taphouse/.github/workflows/drift-check.yml@v6
+    uses: tap/taphouse/.github/workflows/drift-check.yml@v7
     with:
-      ref: v6
+      ref: v7
       icon: SampleRateTap
 
   # The family's vocabulary (CLAUDE.md, D7 and A4): no retired word in any
