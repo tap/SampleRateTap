@@ -32,7 +32,9 @@ marked **maintainer** has a cost outside this tree and is not taken here.
   on every chain to serve a use nobody has, so the recommendation is the narrower surface.
   `basic_stage`'s contract block gains the sentence the bound relies on.
 - **A3 — F02's fix shape.** `schedule_entry::advance` widens to `std::uint32_t` (one entry
-  per output; no hot-path cost) and `test_stage.cpp` instantiates `ratio<3, 1024>` and
+  per output; no hot-path cost. Measured otherwise: the 8-byte entry cost the M55 Q15
+  interpolators 8.7 % on the ratchet, so the width is per ratio, a byte for the vocabulary and
+  32 bits for the wide ratios) and `test_stage.cpp` instantiates `ratio<3, 1024>` and
   `ratio<2, 729>` through the chunking-invariance and accounting tests so the whole charter
   set is served, not just the vocabulary. Alternative: `static_assert(M / L < 256)` next to
   the charter asserts, which documents a limit instead of removing one. Recommendation:
