@@ -1,6 +1,6 @@
-# Audit response plan (v0.1, for review)
+# Audit response plan (v0.2)
 
-Status: **draft, 2026-10-09**. Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
+Status: **decisions taken 2026-10-09** (section 6 records them); execution in progress, S0 first. Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
 4 major, 14 minor, 1 disputed, 16 nits) and the cohesion assessment that followed it: the
 family reads as one mind at the level of the plans and one vocabulary at the level of
 `bridge` and `rational`, while `async`, the oldest stratum, still speaks the dialect it was
@@ -310,12 +310,16 @@ S0 (DspTap, then pin)  →  S1 (rational)  →  S2 (C ABI)  →  S3 (async, 0.6.
 - Reworking the book's Parts I to V beyond the stale names and the two sentences the audit
   named.
 
-## 6. Open for the maintainer
+## 6. Decisions taken (2026-10-09)
 
-1. **A4**: the new name for `async`'s program-weighted tier (`program` recommended).
-2. **A5**: does anything outside this tree call `tap_sr_async_create` today? If so, the
-   alternative (name and NULL only), and the signature alignment waits for 1.0.
-3. **A6**: macro and MSVC leg ON (recommended), or document ELF/Mach-O only.
-4. **S1 / F18**: write `examples/multirate_chain.cpp` (recommended) or strike it.
-5. Whether S3's test renames should also drop the `asrc` word from the async notebooks'
-   prose cells, which re-executes nothing but touches committed outputs.
+The maintainer accepted every recommendation in section 1:
+
+1. **A4**: `async`'s program-weighted tier is `filter_spec::program()`.
+2. **A5**: the async C ABI takes the siblings' shape in S3 under 0.6.0. (No consumer of
+   `tap_sr_async_create` outside this tree was named; the C notebooks in `async/notebooks/`
+   are updated in the same PR.)
+3. **A6**: the export macro and the MSVC C ABI leg ON.
+4. **S1 / F18**: `examples/multirate_chain.cpp` is written; the cross-validation row is
+   struck.
+5. The `asrc` word is dropped from the async notebooks' prose cells in S3 (the notebook
+   filenames stay, A11).
