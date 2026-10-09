@@ -42,6 +42,15 @@ endif()
 # C++ through it — see notebooks/ratio_demo.ipynb).
 option(TAP_SR_BUILD_CAPI "Build the C ABI shared library" OFF)
 
+# The family's comparison tooling (competitor fetch recipes, the shims the
+# comparison notebook loads, the bare-metal mutex stub): tools/compare at the
+# repository root, shared with the sibling engines' comparisons.
+set(TAP_SR_COMPARE_TOOLS "${CMAKE_CURRENT_SOURCE_DIR}/../tools/compare")
+option(TAP_SR_BUILD_COMPARE_SHIM "Build the comparison notebooks' competitor shims" OFF)
+if(TAP_SR_BUILD_COMPARE_SHIM AND NOT TARGET tap_sr_cmp_r8b_shim)
+    add_subdirectory(${TAP_SR_COMPARE_TOOLS}/shim ${CMAKE_CURRENT_BINARY_DIR}/tools/compare/shim)
+endif()
+
 # Fixed deterministic workloads for the QEMU instruction-count ratchet;
 # buildable for any target including bare metal. See PLAN.md section 7.
 option(TAP_SR_BUILD_ICOUNT_BENCH "Build instruction-count ratchet workloads" OFF)
@@ -88,4 +97,11 @@ endif()
 
 if(TAP_SR_BUILD_ICOUNT_BENCH)
     add_subdirectory(bench/icount)
+endif()
+
+# Head-to-head vs libsamplerate/soxr/r8brain/SpeexDSP at the 44.1 <-> 48 pair
+# (host-only; needs the system packages). See docs/COMPARISON.md.
+option(TAP_SR_BUILD_COMPARE_BENCH "Build resampler comparison benchmarks" OFF)
+if(TAP_SR_BUILD_COMPARE_BENCH)
+    add_subdirectory(bench/compare)
 endif()

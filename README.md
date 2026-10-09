@@ -78,7 +78,7 @@ tests, by ctest label. The family options are `TAP_SR_*`:
 | `TAP_SR_BUILD_EXAMPLES` | ON | the engines' examples |
 | `TAP_SR_BUILD_CAPI` | OFF | the engines' C ABI shared libraries (`libtap_sr_async_capi`, `libtap_sr_bridge_capi`, `libtap_sr_rational_capi`) |
 | `TAP_SR_BUILD_ICOUNT_BENCH` | OFF | every engine's instruction-count ratchet workloads |
-| `TAP_SR_BUILD_BENCHMARKS`, `TAP_SR_BUILD_COMPARE_BENCH`, `TAP_SR_BUILD_COMPARE_SHIM` | OFF | the async engine's host-only benchmarks and comparison tooling |
+| `TAP_SR_BUILD_BENCHMARKS`, `TAP_SR_BUILD_COMPARE_BENCH`, `TAP_SR_BUILD_COMPARE_SHIM` | OFF | the async engine's host-only benchmarks; the engines' resampler comparison benchmarks; the comparison notebooks' competitor shims (`tools/compare/`) |
 | `TAP_SR_ASYNC_WERROR`, `TAP_SR_BRIDGE_WERROR`, `TAP_SR_RATIONAL_WERROR` | OFF | warnings as errors, per engine |
 
 A retired pre-family option (`SRT_*`, `TAP_RATIO_*`) fails the configure
@@ -125,10 +125,11 @@ submodules/dsptap       the substrate, pinned once
 cmake/  platform/       toolchains (Cortex-M33/M55, Hexagon), bare-metal startup, retired-option tripwire
 scripts/                icount.py (the ratchet), tidy.sh, fetch_hexagon_toolchain.sh, doc updaters
 tools/qemu_insn_plugin  the QEMU instruction-counting plugin
+tools/compare           the resampler comparisons' competitor tooling (fetch recipes, notebook shims)
 tests/                  the family's own tests: the dependency rule, the version macros, the exported symbols
 book/                   the family's book (published at https://tap.github.io/SampleRateTap/, the
                         print edition beside it as SampleRateTap.pdf; book/print builds it)
-docs/                   Doxyfile; the migration's run record; the 2026-10 audit and its response plan
+docs/                   Doxyfile; the family comparison index (COMPARISON.md); the migration's run record; the 2026-10 audit and its response plan
 async/                  include/tap/sr/async  tests  bench  examples  capi  notebooks  docs  README  PLAN
 bridge/                 include/tap/sr/bridge tests  bench  examples  capi  notebooks  docs  README  PLAN
 rational/               include/tap/sr/rational tests bench examples capi notebooks tools README  PLAN

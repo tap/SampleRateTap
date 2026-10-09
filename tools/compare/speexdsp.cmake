@@ -1,8 +1,9 @@
-# SpeexDSP's resampler (Xiph.Org, BSD-3) for the resampler comparison only
-# (docs/COMPARISON.md): included by bench/compare, bench/icount
-# (TAP_SR_ICOUNT_COMPARE) and tools/compare_shim so the host benchmark, the
-# embedded counts and the notebook all measure the same pinned engine. Never
-# linked into the library or its tests.
+# SpeexDSP's resampler (Xiph.Org, BSD-3) for the family's resampler
+# comparisons only (async/docs/COMPARISON.md, bridge/docs/COMPARISON.md):
+# included by each engine's bench/compare and bench/icount
+# (TAP_SR_ICOUNT_COMPARE) and by tools/compare/shim, so the host benchmarks,
+# the embedded counts and the notebooks all measure the same pinned engine.
+# Never linked into a library or its tests.
 #
 # It is the one competitor with a fixed-point build, so it is built twice from
 # the same resample.c: FIXED_POINT (Q15 I/O, the build that can run on an
@@ -13,7 +14,7 @@
 #
 # Pin: the commit the SpeexDSP-1.2.1 tag points at (tags can move; commits
 # cannot). No CMake project upstream: fetch, don't add_subdirectory.
-if(NOT TARGET tap_sr_async_speex_fixed)
+if(NOT TARGET tap_sr_cmp_speex_fixed)
     include(FetchContent)
     FetchContent_Declare(
         speexdsp
@@ -24,7 +25,7 @@ if(NOT TARGET tap_sr_async_speex_fixed)
     enable_language(C)
 
     foreach(_variant IN ITEMS fixed float)
-        set(_lib tap_sr_async_speex_${_variant})
+        set(_lib tap_sr_cmp_speex_${_variant})
         add_library(${_lib} STATIC ${speexdsp_SOURCE_DIR}/libspeexdsp/resample.c)
         # SYSTEM: third-party headers stay out of our warning gates; the C
         # file itself is compiled without them (it is upstream's code).

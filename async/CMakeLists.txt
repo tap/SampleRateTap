@@ -58,8 +58,12 @@ if(TAP_SR_BUILD_BENCHMARKS)
     add_subdirectory(bench)
 endif()
 
-# Head-to-head vs libsamplerate/soxr at a fixed known ratio (host-only;
-# needs the system packages). See docs/COMPARISON.md.
+# The family's comparison tooling (competitor fetch recipes, the shims, the
+# bare-metal mutex stub), shared with the sibling engines' comparisons.
+set(TAP_SR_COMPARE_TOOLS "${CMAKE_CURRENT_SOURCE_DIR}/../tools/compare")
+
+# Head-to-head vs libsamplerate/soxr/r8brain/SpeexDSP at a fixed known ratio
+# (host-only; needs the system packages). See docs/COMPARISON.md.
 option(TAP_SR_BUILD_COMPARE_BENCH "Build resampler comparison benchmarks" OFF)
 if(TAP_SR_BUILD_COMPARE_BENCH)
     if(NOT TAP_SR_BUILD_BENCHMARKS)
@@ -81,10 +85,12 @@ if(TAP_SR_BUILD_CAPI)
     add_subdirectory(capi)
 endif()
 
-# ctypes shim over r8brain-free-src for the comparison notebook (fetched at a
-# commit pin; comparison-only, never linked into the library). See
-# notebooks/asrc_comparison.ipynb and docs/COMPARISON.md.
-option(TAP_SR_BUILD_COMPARE_SHIM "Build the r8brain shim for the comparison notebook" OFF)
-if(TAP_SR_BUILD_COMPARE_SHIM)
-    add_subdirectory(tools/compare_shim)
+# The family's ctypes shims over r8brain-free-src, SpeexDSP and soxr for the
+# comparison notebooks (tools/compare/shim; the competitors are fetched at
+# commit pins, comparison-only, never linked into the library). Added here
+# only when this engine is configured on its own; the root adds them once.
+# See notebooks/asrc_comparison.ipynb and docs/COMPARISON.md.
+option(TAP_SR_BUILD_COMPARE_SHIM "Build the comparison notebooks' competitor shims" OFF)
+if(TAP_SR_BUILD_COMPARE_SHIM AND NOT TARGET tap_sr_cmp_r8b_shim)
+    add_subdirectory(${TAP_SR_COMPARE_TOOLS}/shim ${CMAKE_CURRENT_BINARY_DIR}/tools/compare/shim)
 endif()

@@ -34,16 +34,9 @@ endforeach()
 # picks them up — competitor counts are recorded in docs, not gated.
 option(TAP_SR_ICOUNT_COMPARE "Build resampler-comparison icount workloads" OFF)
 if(TAP_SR_ICOUNT_COMPARE)
-    include(FetchContent)
-    set(BUILD_SHARED_LIBS OFF)
-    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    set(LIBSAMPLERATE_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(LIBSAMPLERATE_INSTALL OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(
-        libsamplerate
-        URL https://github.com/libsndfile/libsamplerate/releases/download/0.2.2/libsamplerate-0.2.2.tar.xz
-        URL_HASH SHA256=3258da280511d24b49d6b08615bbe824d0cacc9842b0e4caf11c52cf2b043893)
-    FetchContent_MakeAvailable(libsamplerate)
+    # libsamplerate from its release tarball, for the target
+    # (tools/compare/libsamplerate.cmake).
+    include(${TAP_SR_COMPARE_TOOLS}/libsamplerate.cmake)
 
     # name:engine. Each engine is built twice, at the default 2 s and at 4 s
     # (suffix _4s): the difference is the steady-state cost, the remainder is
@@ -56,11 +49,12 @@ if(TAP_SR_ICOUNT_COMPARE)
         speex_fixed_q10:6:10 speex_float_q10:7:10 speex_fixed_q4:6:4 speex_float_q4:7:4)
     # r8brain-free-src, same pin as bench/compare. It compiles bare-metal only
     # with a no-op std::mutex supplied for thread-less newlib toolchains
-    # (r8b_single_thread_mutex.h says why that is exact for this workload).
-    include(${PROJECT_SOURCE_DIR}/cmake/r8brain.cmake)
+    # (tools/compare/r8b_single_thread_mutex.h says why that is exact for
+    # this workload).
+    include(${TAP_SR_COMPARE_TOOLS}/r8brain.cmake)
     # SpeexDSP, the one competitor with a fixed-point build, compiled for the
-    # target like the rest (cmake/speexdsp.cmake).
-    include(${PROJECT_SOURCE_DIR}/cmake/speexdsp.cmake)
+    # target like the rest (tools/compare/speexdsp.cmake).
+    include(${TAP_SR_COMPARE_TOOLS}/speexdsp.cmake)
     foreach(_e IN LISTS _srt_cmp_engines)
         string(REPLACE ":" ";" _parts "${_e}")
         list(GET _parts 0 _name)
@@ -87,15 +81,15 @@ if(TAP_SR_ICOUNT_COMPARE)
             elseif(_eng EQUAL 6)
                 # No tap_sr_async_warnings: the Speex headers are third-party.
                 target_compile_definitions(${_bin} PRIVATE OUTSIDE_SPEEX FIXED_POINT RANDOM_PREFIX=tap_sr_cmp_fixed EXPORT=)
-                target_link_libraries(${_bin} PRIVATE tap_sr_async_speex_fixed tap::sr::async)
+                target_link_libraries(${_bin} PRIVATE tap_sr_cmp_speex_fixed tap::sr::async)
             elseif(_eng EQUAL 7)
                 target_compile_definitions(${_bin} PRIVATE OUTSIDE_SPEEX FLOATING_POINT RANDOM_PREFIX=tap_sr_cmp_float EXPORT=)
                 # tap::sr::async for the shared requantize helper's header only.
-                target_link_libraries(${_bin} PRIVATE tap_sr_async_speex_float tap::sr::async)
+                target_link_libraries(${_bin} PRIVATE tap_sr_cmp_speex_float tap::sr::async)
             else()
-                target_compile_options(${_bin} PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/r8b_single_thread_mutex.h)
+                target_compile_options(${_bin} PRIVATE -include ${TAP_SR_COMPARE_TOOLS}/r8b_single_thread_mutex.h)
                 # No tap_sr_async_warnings: the r8brain headers are third-party.
-                target_link_libraries(${_bin} PRIVATE tap_sr_async_r8brain)
+                target_link_libraries(${_bin} PRIVATE tap_sr_cmp_r8brain)
             endif()
         endforeach()
     endforeach()

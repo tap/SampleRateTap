@@ -5,14 +5,17 @@
 
 Usage: scripts/harvest_compare.py COUNTS_FILE --sha SHA --dsptap SHA
            --run-id ID --run-url URL --date YYYY-MM-DD [--toolchains TEXT]
-           [--out async/bench/compare_counts.json]
+           [--prefix cmp_icount_] [--out async/bench/compare_counts.json]
 
 COUNTS_FILE holds the "CMP_COUNT <target> <binary> <count>" lines the
 workflow prints (the whole job log works too; other lines are ignored).
-The output is the committed record docs/COMPARISON.md's embedded tables
-derive from (scripts/update_compare_docs.py): the counts, and what produced
-them — the tree, the DspTap pin, the run and the toolchains — so a stale
-table is a CI failure, not a date line nobody re-reads.
+One record per engine: --prefix selects the binaries (async's are
+cmp_icount_*, bridge's cmp_bridge_icount_*) and --out names the record.
+The output is the committed record each engine's docs/COMPARISON.md
+embedded tables derive from (scripts/update_compare_docs.py): the counts,
+and what produced them — the tree, the DspTap pin, the run and the
+toolchains — so a stale table is a CI failure, not a date line nobody
+re-reads.
 """
 import argparse
 import json
@@ -20,7 +23,7 @@ import pathlib
 import re
 import sys
 
-LINE = re.compile(r"CMP_COUNT (\w+) (cmp_icount_\w+) (\d+)")
+LINE = re.compile(r"CMP_COUNT (\w+) (cmp_\w+) (\d+)")
 
 
 def main() -> int:
@@ -33,14 +36,17 @@ def main() -> int:
     ap.add_argument("--date", required=True, help="YYYY-MM-DD")
     ap.add_argument("--toolchains", default="",
                     help="free text: compiler, QEMU and image versions")
+    ap.add_argument("--prefix", default="cmp_icount_",
+                    help="binary-name prefix of the engine's comparison workloads")
     ap.add_argument("--out", default="async/bench/compare_counts.json")
     args = ap.parse_args()
 
     counts: dict[str, dict[str, int]] = {}
     for m in LINE.finditer(pathlib.Path(args.counts_file).read_text()):
-        counts.setdefault(m.group(1), {})[m.group(2)] = int(m.group(3))
+        if m.group(2).startswith(args.prefix):
+            counts.setdefault(m.group(1), {})[m.group(2)] = int(m.group(3))
     if not counts:
-        print(f"no CMP_COUNT lines in {args.counts_file}", file=sys.stderr)
+        print(f"no CMP_COUNT {args.prefix}* lines in {args.counts_file}", file=sys.stderr)
         return 1
     doc = {
         "provenance": {

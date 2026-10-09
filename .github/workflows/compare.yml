@@ -1,12 +1,13 @@
-# Cross-resampler instruction-count comparison (async/docs/COMPARISON.md).
-# Manual trigger only: competitor counts are measured once per
-# toolchain/version pin and recorded, not gated — the ratchet (ci.yml) gates
-# only our own code. Every measurement is one "CMP_COUNT <target> <bin> <n>"
-# line; the last step harvests them with their provenance into
-# async/bench/compare_counts.json (scripts/harvest_compare.py), uploads it
-# as an artifact, and shows the doc diff it implies. Committing that file
-# and the regenerated COMPARISON.md block is the manual half: ci.yml's
-# compare-docs job keeps the two in step from then on.
+# Cross-resampler instruction-count comparison (async/docs/COMPARISON.md,
+# bridge/docs/COMPARISON.md). Manual trigger only: competitor counts are
+# measured once per toolchain/version pin and recorded, not gated — the
+# ratchet (ci.yml) gates only our own code. Every measurement is one
+# "CMP_COUNT <target> <bin> <n>" line; the last step harvests them with their
+# provenance into each engine's bench/compare_counts.json
+# (scripts/harvest_compare.py), uploads the records as an artifact, and shows
+# the doc diff they imply. Committing those files and the regenerated
+# COMPARISON.md blocks is the manual half: ci.yml's compare-docs job keeps
+# them in step from then on.
 name: Resampler comparison (icount)
 
 on:
@@ -16,7 +17,7 @@ jobs:
   compare-icount:
     name: Comparison instruction counts
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     env:
       # Commit the v8.2.2 tag pointed at when pinned (tags are movable;
       # commit SHAs are not), with the header's digest verified on download.
@@ -88,17 +89,16 @@ jobs:
               -DTAP_SR_BUILD_ICOUNT_BENCH=ON -DTAP_SR_ICOUNT_COMPARE=ON
             cmake --build build-$tgt -j 4
             # Each engine at 2 s and 4 s: the difference is steady state, the
-            # remainder construction (async/bench/icount/cmp_main.cpp).
-            for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8 \
-                                  speex_fixed_q10 speex_float_q10 speex_fixed_q4 speex_float_q4; do
-                           echo cmp_icount_$e cmp_icount_${e}_4s; done); do
+            # remainder construction (async/bench/icount/cmp_main.cpp,
+            # bridge/bench/icount/cmp_main.cpp).
+            for bin in $(scripts/compare_binaries.sh); do
               out=$(qemu-system-arm -M $machine -nographic -semihosting \
                 -d plugin -plugin /tmp/libinsncount.so \
-                -kernel build-$tgt/async/bench/icount/$bin 2>&1)
-              echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
+                -kernel build-$tgt/$bin 2>&1)
+              echo "$out" | grep -q 'ICOUNT_DONE ok=1' || {
                 echo "$out"; echo "::error::$tgt $bin did not complete"; exit 1; }
               n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
-              echo "CMP_COUNT $tgt $bin $n" | tee -a /tmp/cmp_counts.txt
+              echo "CMP_COUNT $tgt $(basename $bin) $n" | tee -a /tmp/cmp_counts.txt
             done
           done
 
@@ -149,36 +149,40 @@ jobs:
             -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
             -DTAP_SR_BUILD_ICOUNT_BENCH=ON -DTAP_SR_ICOUNT_COMPARE=ON
           cmake --build build-hex -j 4
-          for bin in $(for e in srt_float srt_q15 lsr_medium lsr_best r8b_120 r8b_120_tb8 \
-                                speex_fixed_q10 speex_float_q10 speex_fixed_q4 speex_float_q4; do
-                         echo cmp_icount_$e cmp_icount_${e}_4s; done); do
+          for bin in $(scripts/compare_binaries.sh); do
             out=$(qemu-hexagon -d plugin -plugin /tmp/libinsncount.so \
-              build-hex/async/bench/icount/$bin 2>&1)
-            echo "$out" | grep -q 'SRT_ICOUNT_DONE ok=1' || {
+              build-hex/$bin 2>&1)
+            echo "$out" | grep -q 'ICOUNT_DONE ok=1' || {
               echo "$out"; echo "::error::hexagon $bin did not complete"; exit 1; }
             n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
-            echo "CMP_COUNT hexagon $bin $n" | tee -a /tmp/cmp_counts.txt
+            echo "CMP_COUNT hexagon $(basename $bin) $n" | tee -a /tmp/cmp_counts.txt
           done
 
-      # The record the docs derive from, with what produced it. The diff
-      # printed here is what committing the artifact would change; nothing
-      # fails on it, since this job measures and the compare-docs job gates.
+      # The records the docs derive from, with what produced them (one per
+      # engine, selected by binary prefix). The diff printed here is what
+      # committing the artifact would change; nothing fails on it, since this
+      # job measures and the compare-docs job gates.
       - name: Harvest the counts with their provenance
         run: |
-          python3 scripts/harvest_compare.py /tmp/cmp_counts.txt \
-            --sha "$GITHUB_SHA" \
-            --dsptap "$(git -C submodules/dsptap rev-parse HEAD)" \
-            --run-id "$GITHUB_RUN_ID" \
-            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            --date "$(date -u +%Y-%m-%d)" \
-            --toolchains "$(cat /tmp/toolchains.txt)"
+          for engine in async:cmp_icount_ bridge:cmp_bridge_icount_; do
+            python3 scripts/harvest_compare.py /tmp/cmp_counts.txt \
+              --prefix "${engine#*:}" --out "${engine%%:*}/bench/compare_counts.json" \
+              --sha "$GITHUB_SHA" \
+              --dsptap "$(git -C submodules/dsptap rev-parse HEAD)" \
+              --run-id "$GITHUB_RUN_ID" \
+              --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+              --date "$(date -u +%Y-%m-%d)" \
+              --toolchains "$(cat /tmp/toolchains.txt)"
+          done
           python3 scripts/update_compare_docs.py
-          echo "::group::doc diff this run implies (commit async/bench/compare_counts.json and async/docs/COMPARISON.md to apply)"
-          git --no-pager diff --stat -- async/bench/compare_counts.json async/docs/COMPARISON.md
-          git --no-pager diff -- async/docs/COMPARISON.md
+          echo "::group::doc diff this run implies (commit each engine's bench/compare_counts.json and docs/COMPARISON.md to apply)"
+          git --no-pager diff --stat -- '*/bench/compare_counts.json' '*/docs/COMPARISON.md'
+          git --no-pager diff -- '*/docs/COMPARISON.md'
           echo "::endgroup::"
-      - name: Upload the record
+      - name: Upload the records
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: compare_counts
-          path: async/bench/compare_counts.json
+          path: |
+            async/bench/compare_counts.json
+            bridge/bench/compare_counts.json

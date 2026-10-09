@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
-/// \file tap_sr_async_r8b_shim.cpp
+/// \file tap_sr_cmp_r8b_shim.cpp
 /// \brief C entry points over r8brain-free-src's CDSPResampler, so the
-/// comparison notebook (notebooks/asrc_comparison.ipynb) can measure the
-/// real C++ engine through ctypes. Build with TAP_SR_BUILD_COMPARE_SHIM=ON.
+/// family's comparison notebooks (async/notebooks/asrc_comparison.ipynb,
+/// bridge/notebooks/bridge_comparison.ipynb) can measure the real C++ engine
+/// through ctypes. Build with TAP_SR_BUILD_COMPARE_SHIM=ON.
 ///
 /// Two calls, both taking r8brain's own design knobs verbatim (transition
 /// band in percent, stop-band attenuation in dB, linear or minimum phase):
@@ -33,8 +34,8 @@ extern "C" {
 
 /// Convert `n_in` mono float frames at `src_hz` into exactly `n_out` frames at
 /// `dst_hz`. Returns 0 on success, -1 on invalid arguments or failure.
-int tap_sr_async_r8b_oneshot(const float* in, int n_in, double src_hz, double dst_hz, double trans_band_pct,
-                             double atten_db, int min_phase, float* out, int n_out) noexcept {
+int tap_sr_cmp_r8b_oneshot(const float* in, int n_in, double src_hz, double dst_hz, double trans_band_pct,
+                           double atten_db, int min_phase, float* out, int n_out) noexcept {
     if (in == nullptr || out == nullptr || n_in < 0 || n_out < 0 || src_hz <= 0.0 || dst_hz <= 0.0) {
         return -1;
     }
@@ -52,8 +53,8 @@ int tap_sr_async_r8b_oneshot(const float* in, int n_in, double src_hz, double ds
 
 /// Streaming latency: input frames consumed before the first output frame.
 /// Returns -1 on invalid arguments or failure.
-int tap_sr_async_r8b_latency_frames(double src_hz, double dst_hz, double trans_band_pct, double atten_db,
-                                    int min_phase) noexcept {
+int tap_sr_cmp_r8b_latency_frames(double src_hz, double dst_hz, double trans_band_pct, double atten_db,
+                                  int min_phase) noexcept {
     if (src_hz <= 0.0 || dst_hz <= 0.0) {
         return -1;
     }

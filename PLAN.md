@@ -321,6 +321,8 @@ SampleRateTap/
 ├── .git-blame-ignore-revs  repaired at P.1; extended after step 4
 ├── submodules/dsptap
 ├── cmake/  platform/  tools/qemu_insn_plugin/
+├── tools/compare/          the comparisons' competitor tooling (fetch recipes, notebook shims,
+│                           the bare-metal mutex stub), hoisted from async/ by the bridge comparison
 ├── scripts/                icount.py, tidy.sh, fetch_hexagon_toolchain.sh,
 │                           update_icount_docs.py, update_perf_docs.py, book_figures*
 ├── book/                   (bridge chapters are follow-up work)

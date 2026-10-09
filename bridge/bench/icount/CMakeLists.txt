@@ -42,3 +42,71 @@ foreach(_sc IN LISTS _ratio_icount_scenarios)
     target_link_libraries(tap_sr_bridge_icount_${_name} PRIVATE
         tap::sr::bridge tap_sr_bridge_warnings)
 endforeach()
+
+# Cross-resampler comparison workloads (docs/COMPARISON.md): the same fixed
+# task through bridge and through libsamplerate, r8brain and SpeexDSP, built
+# for the same target, in both directions. Named cmp_bridge_icount_* so the
+# ratchet's tap_sr_bridge_icount_* glob never picks them up — competitor
+# counts are recorded in docs, not gated. The option is the family's
+# (async/bench/icount declares it too; CMake tolerates the repeat).
+option(TAP_SR_ICOUNT_COMPARE "Build resampler-comparison icount workloads" OFF)
+if(TAP_SR_ICOUNT_COMPARE)
+    include(${TAP_SR_COMPARE_TOOLS}/libsamplerate.cmake)
+    include(${TAP_SR_COMPARE_TOOLS}/r8brain.cmake)
+    include(${TAP_SR_COMPARE_TOOLS}/speexdsp.cmake)
+
+    # name:engine[:quality], each built per direction (up_, down_) and at 2 s
+    # and 4 s (suffix _4s): the difference is the steady-state cost, the
+    # remainder is one-time construction (cmp_main.cpp's header, which also
+    # says which competitor setting matches which tier).
+    set(_bridge_cmp_engines
+        srt_eco_float:0 srt_eco_q15:1 srt_tr_float:2
+        lsr_medium:3 lsr_best:4
+        r8b_eco:5 r8b_tr:6
+        speex_fixed_q3:7:3 speex_float_q3:8:3 speex_float_q9:8:9)
+    foreach(_dir IN ITEMS up down)
+        if(_dir STREQUAL up)
+            set(_dir_code 0)
+        else()
+            set(_dir_code 1)
+        endif()
+        foreach(_e IN LISTS _bridge_cmp_engines)
+            string(REPLACE ":" ";" _parts "${_e}")
+            list(GET _parts 0 _name)
+            list(GET _parts 1 _eng)
+            set(_quality 10)
+            list(LENGTH _parts _n)
+            if(_n GREATER 2)
+                list(GET _parts 2 _quality)
+            endif()
+            foreach(_secs IN ITEMS 2 4)
+                set(_bin cmp_bridge_icount_${_dir}_${_name})
+                if(_secs EQUAL 4)
+                    set(_bin ${_bin}_4s)
+                endif()
+                add_executable(${_bin} cmp_main.cpp)
+                target_compile_features(${_bin} PRIVATE cxx_std_20)
+                target_compile_definitions(${_bin} PRIVATE
+                    TAP_SR_BRIDGE_CMP_DIR=${_dir_code} TAP_SR_BRIDGE_CMP_ENGINE=${_eng}
+                    TAP_SR_BRIDGE_CMP_SECONDS=${_secs} TAP_SR_BRIDGE_CMP_SPEEX_Q=${_quality})
+                # tap::dsp (through tap::sr::bridge) for the shared requantize
+                # helper's header; the competitors' own headers are third-party,
+                # so their binaries skip the warnings target.
+                if(_eng LESS_EQUAL 2)
+                    target_link_libraries(${_bin} PRIVATE tap::sr::bridge tap_sr_bridge_warnings)
+                elseif(_eng LESS_EQUAL 4)
+                    target_link_libraries(${_bin} PRIVATE samplerate tap::sr::bridge)
+                elseif(_eng LESS_EQUAL 6)
+                    target_compile_options(${_bin} PRIVATE -include ${TAP_SR_COMPARE_TOOLS}/r8b_single_thread_mutex.h)
+                    target_link_libraries(${_bin} PRIVATE tap_sr_cmp_r8brain tap::sr::bridge)
+                elseif(_eng EQUAL 7)
+                    target_compile_definitions(${_bin} PRIVATE OUTSIDE_SPEEX FIXED_POINT RANDOM_PREFIX=tap_sr_cmp_fixed EXPORT=)
+                    target_link_libraries(${_bin} PRIVATE tap_sr_cmp_speex_fixed tap::sr::bridge)
+                else()
+                    target_compile_definitions(${_bin} PRIVATE OUTSIDE_SPEEX FLOATING_POINT RANDOM_PREFIX=tap_sr_cmp_float EXPORT=)
+                    target_link_libraries(${_bin} PRIVATE tap_sr_cmp_speex_float tap::sr::bridge)
+                endif()
+            endforeach()
+        endforeach()
+    endforeach()
+endif()

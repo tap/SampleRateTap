@@ -69,6 +69,14 @@ compose with the family's `async` engine — `examples/bluetooth_bridge.cpp` is 
 documented recipe: +200 ppm crystal, servo locked, 997 Hz recovered
 exactly, 1.93 ms total latency.
 
+Against the general-purpose resampler libraries at exactly this ratio pair
+— libsamplerate, soxr, r8brain-free-src and SpeexDSP at the settings each
+needs to reach `economy` and `transparent`, and at their best — quality,
+latency, host throughput and embedded instruction counts are measured in
+[docs/COMPARISON.md](docs/COMPARISON.md) (the notebook behind it:
+[notebooks/bridge_comparison.ipynb](notebooks/bridge_comparison.ipynb); the
+family index: [docs/COMPARISON.md](../docs/COMPARISON.md) at the root).
+
 ## The boundaries are identity, not policy
 
 - **No other ratios.** Not 2:1, not 96→44.1, not arbitrary L/M. The public

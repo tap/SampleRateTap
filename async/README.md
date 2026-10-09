@@ -495,6 +495,5 @@ CCRMA), polyphase decomposition and the harris length estimate, and textbook
 (BSD-3) is fetched for tests only and is not part of the shipped headers.
 r8brain-free-src (MIT) and SpeexDSP's resampler (BSD-3, compiled from its
 `resample.c` in both arithmetic builds) are fetched at commit pins only when
-the opt-in comparison builds are enabled (`cmake/r8brain.cmake`,
-`cmake/speexdsp.cmake`); neither is ever linked into the library or its
-tests.
+the opt-in comparison builds are enabled (the family's `tools/compare/`);
+neither is ever linked into the library or its tests.
