@@ -131,9 +131,54 @@ settings above. r8brain is mono per instance with double I/O, so the harness
 runs one instance per channel and the float↔double (de)interleave is inside
 the timed loop — what any float-interleaved caller pays to use it.
 
-<!-- HOST:BEGIN -->
-(host table pending)
-<!-- HOST:END -->
+### Host wall-clock (x86, GCC 13.3 -O3 (CMake Release), shared Xeon @ 2.80 GHz, 2026-10-09)
+
+Million output frames/s, stereo, median of 5 — relative ratios are the
+meaningful figures on a shared machine (× = vs. the bridge tier the row is
+matched to; all subjects ran in the same session). libsamplerate 0.2.2 and
+soxr 0.1.3 are the Ubuntu 24.04 packages; r8brain and SpeexDSP are the
+pinned commits (7.6 and 1.2.1), stock configurations.
+
+| Engine | 48 → 44.1 | 44.1 → 48 |
+|---|---:|---:|
+| **bridge** `economy` | **8.4** | **13.0** |
+| **bridge** `transparent` | **2.4** | **4.9** |
+| libsamplerate `FASTEST` (below the ladder) | 6.2 (0.7×) | 6.5 (0.5×) |
+| libsamplerate `MEDIUM` (economy-matched) | 2.9 (0.3×) | 3.1 (0.2×) |
+| soxr 16-bit @ 0.816 (economy-matched) | 38.0 (4.5×) | 42.4 (3.3×) |
+| r8brain 70 dB @ 12 % (economy-matched) | 18.6 (2.2×) | 19.6 (1.5×) |
+| SpeexDSP quality 3, float (economy-matched) | 2.7 (0.3×) | 2.7 (0.2×) |
+| libsamplerate `BEST` (transparent-matched, frontier) | 0.7 (0.3×) | 0.7 (0.1×) |
+| soxr `HQ` (transparent-matched) | 39.9 (16.7×) | 41.8 (8.5×) |
+| soxr `VHQ` (frontier) | 25.0 (10.5×) | 33.1 (6.7×) |
+| r8brain 120 dB @ 6 % (transparent-matched) | 18.3 (7.7×) | 22.2 (4.5×) |
+| r8brain `CDSPResampler24` (frontier) | 15.8 (6.6×) | 15.8 (3.2×) |
+| SpeexDSP quality 9, float (transparent-matched) | 1.0 (0.4×) | 1.2 (0.2×) |
+| SpeexDSP quality 10, float (frontier) | 0.8 (0.4×) | 0.9 (0.2×) |
+
+| Fixed-point rows (Q15 I/O) | 48 → 44.1 | 44.1 → 48 |
+|---|---:|---:|
+| **bridge** `economy` Q15 | **15.5** | **23.4** |
+| SpeexDSP quality 3, fixed-point (economy-matched) | 4.8 (0.3×) | 5.1 (0.2×) |
+| SpeexDSP quality 10, fixed-point (frontier) | 1.1 (0.1×) | 1.1 (0.0×) |
+
+Reading guide:
+
+- **The FFT engines win raw host throughput**, as in the async comparison:
+  soxr at 3–17× `bridge`'s matched tier, r8brain at 1.5–8×, batch convolution
+  amortizing on a desktop core. Their latency column above is the price
+  (soxr's economy-matched setting at ~8× `economy`'s delay, its `HQ` at ~30×;
+  r8brain's matched settings at 4–15×), and on the embedded targets the
+  float ranking narrows to r8brain alone (next section).
+- **Against the other polyphase engines `bridge` is the faster one by
+  3–5×**: libsamplerate `MEDIUM` at 0.2–0.3× `economy`, `BEST` at 0.1–0.3×
+  `transparent`, SpeexDSP's float build at 0.2–0.4× its matched tier. The
+  fixed-point rows separate further: `bridge` economy Q15 converts 3–5× what
+  SpeexDSP's fixed-point build does at the matched quality and 15–20× its
+  frontier.
+- Up-conversion is cheaper for `bridge` than down (38 taps against 58 at
+  economy, 96 against 184 at transparent); the libraries are closer to
+  symmetric.
 
 ### Embedded executed instructions per output frame (QEMU TCG plugin)
 
