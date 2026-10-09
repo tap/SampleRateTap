@@ -326,10 +326,21 @@ executed (it measures the shipping C++, not a Python re-implementation).
     price the constructor, and a hot-path regression there is diluted
     ~2–3× before the ±3% gate sees it; the per-lever M33 percentages
     above were measured through the same dilution (the audio-path
-    improvements were correspondingly larger). A construct-only ratchet
-    scenario, or measuring a second workload length and differencing as
-    `async` now does (steady state = 4 s − 2 s), would restore the
-    gate's sensitivity.
+    improvements were correspondingly larger). **Landed 2026-10-09:**
+    two construct-only legs, `construct_up_q15_eco` and
+    `construct_down_q15_eco` — the Q15 economy workload with its stream
+    removed (the converter built and the same 0.25 s input fixture
+    synthesized, then one block processed), one per direction since the
+    prototypes differ — gated beside the ten streaming workloads, so
+    stream minus construct is the streaming loop alone. Measured (and
+    the share of the streaming total it is): M33 down **136.3 M (78 %)**
+    / up 104.0 M (78 %), Hexagon 24.9 M (55 %) / 20.1 M (56 %), M55
+    4.3 M (19 %) / 3.5 M (18 %); the streaming loop per input frame, M33
+    390 down / 339 up, Hexagon 216 / 180, M55 189 / 177. The shares are
+    higher than the construct-only measurement above because the fixture
+    (24 000 libm `sin()` calls, soft-double on M33) is counted here and
+    not there — deliberately, so the difference is the loop and nothing
+    else. Every existing baseline stayed identical to the instruction.
 
   - **Hexagon harness isolation (monorepo migration step P.2; re-record,
     not a lever).** `scripts/icount.py` now runs every Hexagon workload

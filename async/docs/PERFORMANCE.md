@@ -184,19 +184,39 @@ table is already enforced by test thresholds.
   would re-record every baseline and is left for a deliberate
   re-record.
 
+- [x] **`construct_q15` — construction as a gated scenario (2026-10-09).**
+  The Q15 pipeline workload with its stream removed: the converter built
+  (the soft-double design, the quantized table, the FIFO) and the same
+  0.25 s input fixture synthesized, then one block pushed and pulled.
+  `pipeline_q15 − construct_q15` is therefore the streaming loop alone.
+  Measured, with the share of `pipeline_q15` it is: M33 **906.2 M
+  (88.8 %)**, Hexagon 143.5 M (70.2 %), M55 19.6 M (17.9 %); the
+  streaming loop per frame, 1,188 / 635 / 934. The fixture is in this
+  scenario and not in the difference on purpose — its libm `sin()` calls
+  are 52 M instructions on the soft-double M33 — which is also why this
+  number exceeds the comparison document's "construction" column less
+  than the fixture alone: that column (2·(2 s) − (4 s)) also holds
+  the servo's one-time lock-in, so its steady state (1,138 on M33) sits
+  50/frame below this scenario's streaming figure. Both are measured;
+  they answer different questions (asymptotic cost per frame vs. what a
+  2 s stream costs beyond its setup). Every existing baseline stayed
+  identical to the instruction; the new rows were recorded on all three
+  targets. The 12-channel pipeline shares the design but not the FIFO
+  and fixture sizes, so it has no construct leg: its total is still
+  diluted, and a `construct12_q15` leg is the same change again if its
+  gate ever needs the sensitivity.
+
 ## Known debt
 
-- **Constructor cost on soft-FP64 targets, and ratchet sensitivity.** The
-  compensated design costs ~7M double flops at construction — pennies on
-  hosts and the M55 (hardware FP64), but ~0.9G instructions on the QEMU
-  M33 (soft-double libcalls; ~1.3G before the shared-window entry
-  above): seconds of boot on an M33-class part, and
-  a large share of each M33 icount scenario's total, which dilutes the
-  +/-3% gate's sensitivity to hot-path regressions on that target.
-  Mitigations queued: split construction into its own ratcheted scenario
-  (streaming = full minus construct-only, restoring per-frame
-  sensitivity and making constructor cost a first-class number); note
-  the real RP2350 routes double arithmetic through the DCP coprocessor,
+- **Constructor cost on soft-FP64 targets.** The compensated design costs
+  ~7M double flops at construction — pennies on hosts and the M55
+  (hardware FP64), but ~0.9G instructions on the QEMU M33 (soft-double
+  libcalls; ~1.3G before the shared-window entry above): seconds of boot
+  on an M33-class part. The ratchet now gates it on its own
+  (`construct_q15`, above), so a hot-path regression in `pipeline_q15` is
+  read against the 11 % of the total that is the stream, not diluted by
+  the 89 % that is not; the 12-channel pipeline keeps the old dilution.
+  The real RP2350 routes double arithmetic through the DCP coprocessor,
   so the QEMU soft-double figure overstates real Pico 2 boot cost —
   pico2_cyccnt can measure the truth on hardware.
 

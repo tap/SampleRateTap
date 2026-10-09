@@ -99,9 +99,10 @@ execute a different number of instructions on every run. A countable
 workload must be **fixed**: same work, same iteration counts, same
 everything, decided at compile time.
 
-`bench/icount/icount_main.cpp` defines seven scenarios — `interpolate()` in
-isolation and the full push/pull pipeline, each in float/Q15/Q31, plus a
-12-channel Q15 pipeline for the 7.1.4 deployment shape — selected by
+`bench/icount/icount_main.cpp` defines eight scenarios — `interpolate()` in
+isolation and the full push/pull pipeline, each in float/Q15/Q31, a
+12-channel Q15 pipeline for the 7.1.4 deployment shape, and the Q15
+converter's construction alone — selected by
 preprocessor definitions (`TAP_SR_ASYNC_SC_KIND`, `TAP_SR_ASYNC_SC_TYPE`, `TAP_SR_ASYNC_SC_CH`) into
 one binary each, because the bare-metal targets have no argv to select with
 at runtime. Each binary runs a deterministic loop (two virtual seconds of
@@ -128,10 +129,14 @@ count identically either way.
 A total is the whole binary's cost, construction included, so a pipeline
 baseline divided by its 96 000 frames is *not* the per-frame cost: on the
 M33 the converter's soft-double filter design alone is close to a billion
-instructions. `TAP_SR_ASYNC_SC_SECONDS` (default 2, the only length ever baselined)
-exists for that question. Build the pipeline scenarios again at
-`-DTAP_SR_ASYNC_SC_SECONDS=4` and difference the counts: what doubles is the
-per-frame steady state, and what stays is construction.
+instructions. The `construct_q15` scenario is that cost on its own — the
+converter built and one block pushed and pulled, no stream — gated beside
+the pipelines, so a pipeline minus it is the streaming cost, undiluted,
+and the constructor is a first-class number of the ratchet. (The earlier
+instrument, `TAP_SR_ASYNC_SC_SECONDS`: build a pipeline scenario again at
+`-DTAP_SR_ASYNC_SC_SECONDS=4` and difference the counts — what doubles is
+the per-frame steady state, what stays is construction — remains, and is
+how the comparison document measures every engine, ours and theirs.)
 
 The three gated targets each run under the QEMU mode that matches their
 deployment reality. Hexagon binaries are Linux user-space processes, so

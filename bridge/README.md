@@ -134,7 +134,8 @@ emulation-sized test suite on **Cortex-M33** (QEMU mps2-an505 — Raspberry
 Pi Pico 2 class), **Cortex-M55** (mps3-an547) and **Hexagon**
 (qemu-hexagon, static musl), and gates ten fixed conversion workloads
 (direction × float/Q15/Q31 at the economy profile, plus four profile
-variants) against committed per-target instruction
+variants) and the Q15 economy converter's construction alone in each
+direction against committed per-target instruction
 counts (`bench/baselines.json`, two-sided ±3%), measured by the family's
 shared harness (`scripts/icount.py --engine bridge`, `tools/qemu_insn_plugin/`)
 from the repository root:
@@ -156,6 +157,8 @@ Executed instructions per fixed workload (`bridge/bench/icount/`), measured unde
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
+| `construct_down_q15_eco` | 136,279,322 | 4,260,534 | 24,941,141 |
+| `construct_up_q15_eco` | 104,011,630 | 3,470,962 | 20,108,264 |
 | `down_float_eco` | 1,720,707,553 | 73,794,800 | 304,636,182 |
 | `down_float_tr` | 5,473,297,976 | 214,977,684 | 944,365,072 |
 | `down_q15_eco` | 173,755,176 | 22,404,812 | 45,676,947 |

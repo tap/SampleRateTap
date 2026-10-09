@@ -1,5 +1,6 @@
 {
   "hexagon": {
+    "construct_q15": 143511094,
     "kernel_float": 422160541,
     "kernel_q15": 187429187,
     "kernel_q31": 194964122,
@@ -9,6 +10,7 @@
     "pipeline_q31": 205223931
   },
   "m33": {
+    "construct_q15": 906236511,
     "kernel_float": 2427595993,
     "kernel_q15": 1123119218,
     "kernel_q31": 1169957251,
@@ -18,6 +20,7 @@
     "pipeline_q31": 1102554828
   },
   "m55": {
+    "construct_q15": 19577382,
     "kernel_float": 109298076,
     "kernel_q15": 192431957,
     "kernel_q31": 221164795,

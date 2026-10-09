@@ -1,0 +1,54 @@
+{
+  "provenance": {
+    "sha": "fc2949edf2ba4ce0d896c2846bf9d7cb9045c437",
+    "dsptap": "ef6fdc4bf5ef5a9dcd3ea851f6bec27b6219fa36",
+    "run_id": "37920542901",
+    "run_url": "https://github.com/tap/SampleRateTap/actions/runs/37920542901",
+    "date": "2026-10-09",
+    "toolchains": "arm-none-eabi-gcc 13.2.1 and qemu-system-arm 8.2.2 from the ubuntu-24.04 image, hexagon-clang 19.1.5 and qemu-hexagon 8.2.2 at the pinned digests"
+  },
+  "counts": {
+    "hexagon": {
+      "cmp_icount_lsr_best": 2588013392,
+      "cmp_icount_lsr_best_4s": 5171981607,
+      "cmp_icount_lsr_medium": 873790422,
+      "cmp_icount_lsr_medium_4s": 1740191532,
+      "cmp_icount_r8b_120": 593029803,
+      "cmp_icount_r8b_120_4s": 1174789858,
+      "cmp_icount_r8b_120_tb8": 532902048,
+      "cmp_icount_r8b_120_tb8_4s": 1053204624,
+      "cmp_icount_srt_float": 397694085,
+      "cmp_icount_srt_float_4s": 662088538,
+      "cmp_icount_srt_q15": 179697127,
+      "cmp_icount_srt_q15_4s": 223575034
+    },
+    "m33": {
+      "cmp_icount_lsr_best": 14344956886,
+      "cmp_icount_lsr_best_4s": 28689237905,
+      "cmp_icount_lsr_medium": 4744658258,
+      "cmp_icount_lsr_medium_4s": 9468404411,
+      "cmp_icount_r8b_120": 2918503258,
+      "cmp_icount_r8b_120_4s": 5798921418,
+      "cmp_icount_r8b_120_tb8": 2600924252,
+      "cmp_icount_r8b_120_tb8_4s": 5156358800,
+      "cmp_icount_srt_float": 2339059866,
+      "cmp_icount_srt_float_4s": 3808080433,
+      "cmp_icount_srt_q15": 967845318,
+      "cmp_icount_srt_q15_4s": 1052206578
+    },
+    "m55": {
+      "cmp_icount_lsr_best": 614379291,
+      "cmp_icount_lsr_best_4s": 1228002794,
+      "cmp_icount_lsr_medium": 212909216,
+      "cmp_icount_lsr_medium_4s": 424434441,
+      "cmp_icount_r8b_120": 97715805,
+      "cmp_icount_r8b_120_4s": 193874145,
+      "cmp_icount_r8b_120_tb8": 91504955,
+      "cmp_icount_r8b_120_tb8_4s": 181173599,
+      "cmp_icount_srt_float": 96150559,
+      "cmp_icount_srt_float_4s": 174960038,
+      "cmp_icount_srt_q15": 101050856,
+      "cmp_icount_srt_q15_4s": 183677221
+    }
+  }
+}

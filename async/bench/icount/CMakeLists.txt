@@ -1,5 +1,10 @@
 # One binary per scenario (name:kind:type:channels): bare-metal targets have
 # no argv, and per-binary instruction totals are what the ratchet compares.
+# construct_q15 (kind 2) is the Q15 pipeline with its stream removed —
+# construction and the input fixture — so pipeline_q15 minus it is the
+# streaming loop alone, which the pipeline total dilutes on soft-FP64 targets
+# (docs/PERFORMANCE.md). Q15 stands for the three formats: their constructors
+# differ only in the table's quantization (measured within 2 % of each other).
 set(_srt_icount_scenarios
     kernel_float:0:0:2
     kernel_q15:0:1:2
@@ -7,7 +12,8 @@ set(_srt_icount_scenarios
     pipeline_float:1:0:2
     pipeline_q15:1:1:2
     pipeline_q31:1:2:2
-    pipeline12_q15:1:1:12)
+    pipeline12_q15:1:1:12
+    construct_q15:2:1:2)
 
 foreach(_sc IN LISTS _srt_icount_scenarios)
     string(REPLACE ":" ";" _parts "${_sc}")

@@ -144,24 +144,34 @@ Same comparison workload cross-compiled per target (`TAP_SR_ICOUNT_COMPARE`,
 ratchet in [PERFORMANCE.md](PERFORMANCE.md)). Stereo, float I/O (Q15 for
 the Q15 row), 32-frame blocks. libsamplerate 0.2.2, r8brain at the pinned
 commit; arm-none-eabi-gcc 13.2.1, hexagon-clang 19.1.5, -O3 (CMake Release;
-earlier revisions said -O2, but the build type was the same). Measured
-2026-09-25.
+earlier revisions said -O2, but the build type was the same).
 
 Every engine is built at 2 s and 4 s of audio: the difference is the
 **steady-state** cost per output frame, the remainder the **one-time
-construction** (filter design, tables, FFT setup). Earlier revisions of
-this table divided the 2 s total by the frame count, which folds
-construction into the per-frame figure; the libsamplerate totals under
-that old metric reproduce the previous table exactly (2,218 / 6,400 on
-M55, 49,424 / 149,426 on M33, 9,102 / 26,959 on Hexagon).
+construction** (filter design, tables, FFT setup). The tables below are
+generated from `bench/compare_counts.json`, the record `compare.yml` writes
+(`scripts/harvest_compare.py`), by `scripts/update_compare_docs.py`; CI
+regenerates them and fails on a diff, so a DspTap pin bump that moves a count
+is a red check until the comparison is re-run and re-harvested. Earlier
+revisions of this table divided the 2 s total by the frame count, which folds
+construction into the per-frame figure; the libsamplerate totals under that
+old metric reproduce the previous table exactly (2,218 / 6,400 on M55, 49,424
+/ 149,426 on M33, 9,102 / 26,959 on Hexagon).
+
+<!-- COMPARE:BEGIN -->
+Measured in `compare.yml` run
+[37920542901](https://github.com/tap/SampleRateTap/actions/runs/37920542901)
+on `fc2949e` (DspTap `ef6fdc4`), 2026-10-09; arm-none-eabi-gcc 13.2.1 and
+qemu-system-arm 8.2.2 from the ubuntu-24.04 image, hexagon-clang 19.1.5 and
+qemu-hexagon 8.2.2 at the pinned digests.
 
 Steady state, instructions per stereo output frame (× = vs. SampleRateTap
-balanced float):
+balanced float; the cheaper SampleRateTap row per target in bold):
 
 | Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
 |---|---:|---:|---:|
-| **SampleRateTap** balanced, float | **821** | 15,302² | **2,754** |
-| **SampleRateTap** balanced, Q15 | 1,163 | **879** | **457** |
+| **SampleRateTap** balanced, float | **821** | 15,302 | 2,754 |
+| **SampleRateTap** balanced, Q15 | 861 | **879** | **457** |
 | r8brain 120 dB, default 2 % band³ | 1,002 (1.2×) | 30,004 (2.0×) | 6,060 (2.2×) |
 | r8brain 120 dB, 8 % band (flat to 20 kHz)³ | 934 (1.1×) | 26,619 (1.7×) | 5,420 (2.0×) |
 | libsamplerate `MEDIUM` | 2,203 (2.7×) | 49,206 (3.2×) | 9,025 (3.3×) |
@@ -171,20 +181,26 @@ One-time construction, millions of instructions:
 
 | Engine | Cortex-M55 | Cortex-M33 | Hexagon |
 |---|---:|---:|---:|
-| **SampleRateTap** balanced, float | 17.3 | 870 | 133 |
-| **SampleRateTap** balanced, Q15 | 18.4 | 884 | 136 |
+| **SampleRateTap** balanced, float | 17.3 | 870.0 | 133.3 |
+| **SampleRateTap** balanced, Q15 | 18.4 | 883.5 | 135.8 |
 | r8brain 120 dB, default 2 % band | 1.6 | 38.1 | 11.3 |
-| r8brain 120 dB, 8 % band | 1.8 | 45.5 | 12.6 |
+| r8brain 120 dB, 8 % band (flat to 20 kHz) | 1.8 | 45.5 | 12.6 |
 | libsamplerate `MEDIUM` | 1.4 | 20.9 | 7.4 |
-| libsamplerate `BEST` | 0.8 | 0.7 | 4.1 |
+| libsamplerate `BEST` | 0.8 | 0.7 | 4.0 |
+
+Key figures: on the M33 the Q15 datapath costs **879 instructions/frame** in
+steady state, libsamplerate `MEDIUM` **~56×** that and r8brain at 8 %
+**~30×**; on the M55 the float datapath (821) is cheaper than Q15 (861) by 5%.
+<!-- COMPARE:END -->
 
 ² The float datapath is soft-double-bound on the FP64-less M33 — the
-README directs Pico-class parts to Q15, where the steady-state datapath
-costs **879 instructions/frame**: libsamplerate has no fixed-point path, so
-its cheapest option on such parts costs **~56×** that, and r8brain (double
-precision throughout, no fixed-point path either) **~30×**. On the M55,
-whose FPU and Helium serve float well, the float datapath is the cheaper
-of our two.
+README directs Pico-class parts to Q15. The key figures above give the
+Q15 datapath's steady-state cost there and the multiples libsamplerate
+(no fixed-point path) and r8brain (double precision throughout, no
+fixed-point path either) pay against it. On the M55, whose FPU serves
+float well, float and Q15 are within a few percent of each other since
+DspTap's Helium Q15 dot (the key figures say which is cheaper, and by how
+much); before it, Q15 cost 42 % more than float there.
 
 ³ r8brain guards its process-wide filter cache with `std::mutex` and has no
 hook to replace it; the thread-less arm-none-eabi newlib declares none, so
@@ -192,18 +208,17 @@ the Cortex-M builds force-include `bench/icount/r8b_single_thread_mutex.h`
 (a no-op lock — exact for this single-threaded workload, and outside the
 per-sample path). Hexagon's musl build uses the real mutex.
 
-**Construction is the one column SampleRateTap loses.** Its filter design
-(the compensated prototype, run in double at construction) costs ~0.9 G
-instructions on the M33 as QEMU emulates it (~1.3 G until DspTap shared the
-Kaiser window's Bessel series across the design's kernel builds; the
-construction rows above are re-measured at that pin, the steady-state rows
-did not move by a single instruction) (every double operation a
-software libcall), against tens of millions for r8brain and
+**Construction is the one column SampleRateTap loses.** Its filter design (the
+compensated prototype, run in double at construction) costs ~0.9 G
+instructions on the M33 as QEMU emulates it, every double operation a software
+libcall (~1.3 G until DspTap shared the Kaiser window's Bessel series across
+the design's kernel builds — a change that moved the construction rows and not
+one steady-state instruction), against tens of millions for r8brain and
 libsamplerate. On a generic FP64-less 150 MHz core that is seconds of
-start-up; the RP2350 routes double arithmetic through its DCP coprocessor,
-so a Pico 2 should pay less than the count suggests (`pico2_cyccnt` can
-measure it). It is paid once per converter, never on the audio path, but
-it is a real cost for devices that construct at boot.
+start-up; the RP2350 routes double arithmetic through its DCP coprocessor, so
+a Pico 2 should pay less than the count suggests (`pico2_cyccnt` can measure
+it). It is paid once per converter, never on the audio path, but it is a real
+cost for devices that construct at boot.
 
 ## The landscape
 
