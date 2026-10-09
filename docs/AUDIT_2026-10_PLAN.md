@@ -1,6 +1,6 @@
 # Audit response plan (v0.2)
 
-Status: **decisions taken 2026-10-09** (section 6 records them); execution in progress; ✓ in the disposition table marks a closed row (S0 to S4 landed on the branch; ↗ marks a row referred outside this tree: F25 is a taphouse PR). Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
+Status: **decisions taken 2026-10-09** (section 6 records them); execution in progress; ✓ in the disposition table marks a closed row (S0 to S5 landed on the branch; ↗ marks a row referred outside this tree: F25 is a taphouse PR). Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
 4 major, 14 minor, 1 disputed, 16 nits) and the cohesion assessment that followed it: the
 family reads as one mind at the level of the plans and one vocabulary at the level of
 `bridge` and `rational`, while `async`, the oldest stratum, still speaks the dialect it was
@@ -280,8 +280,8 @@ After S3 so the prose describes the final state. No code.
 | C2 | — | async C ABI shape differs from the siblings | S3 ✓ | A5 (maintainer) |
 | C3 | — | async umbrella header and README in the old voice | S3 ✓ | rewrite to the sibling shape |
 | C4 | — | `test_asrc_*` names; "RatioTap" residue | S3 ✓ | rename; A11 |
-| C5 | — | `test_skeleton.cpp` is an M1 scaffold kept as a test | S1 | keep, retitled "substrate wiring"; it is the bridge's smoke test and costs nothing |
-| C6 | — | no gate catches drift at the seams | S5 | A8, README compile test, the CLAUDE.md rule |
+| C5 | — | `test_skeleton.cpp` is an M1 scaffold kept as a test | S1 ✓ | keep, retitled "substrate wiring"; it is the bridge's smoke test and costs nothing |
+| C6 | — | no gate catches drift at the seams | S5 ✓ | A8, README compile test, the CLAUDE.md rule |
 
 ## 4. Sequencing and what each PR must not do
 

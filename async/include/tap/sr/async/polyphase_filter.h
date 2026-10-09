@@ -85,7 +85,7 @@ namespace tap::sr::async {
         /// but the k*fs zeros hold low/mid-band folded images at balanced-class
         /// depth where program energy actually lives, and L=512 keeps the
         /// inter-phase interpolation floor at the 120 dB tier. Measured by the
-        /// program-weighted multitone metric in test_asrc_program.cpp; the whole
+        /// program-weighted multitone metric in test_program.cpp; the whole
         /// trade is the book's epilogue chapter.
         static filter_spec program() noexcept {
             return {.num_phases        = 512,
