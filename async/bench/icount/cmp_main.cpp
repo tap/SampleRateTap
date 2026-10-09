@@ -17,7 +17,10 @@
 //                 SRC_SINC_BEST_QUALITY, 3 = r8brain 120 dB at its default
 //                 2% transition band, 4 = r8brain 120 dB at 8% (the
 //                 lowest-latency setting still flat to 20 kHz, like balanced),
-//                 5 = SampleRateTap (balanced) Q15 — no competitor analog
+//                 5 = SampleRateTap (balanced) Q15, 6 = SpeexDSP FIXED_POINT
+//                 build on Q15 samples — the one competitor with a
+//                 fixed-point path — and 7 = SpeexDSP FLOATING_POINT, both at
+//                 TAP_SR_ASYNC_CMP_SPEEX_Q (0..10; 10 is its best, "~100 dB")
 //
 // TAP_SR_ASYNC_CMP_SECONDS (default 2) sets the workload length. Every count includes
 // one-time construction (filter design, table and FFT setup), so CMake builds
@@ -30,14 +33,17 @@
 #include <numbers>
 #include <vector>
 
-#if TAP_SR_ASYNC_CMP_ENGINE == 0 || TAP_SR_ASYNC_CMP_ENGINE == 5
+#if TAP_SR_ASYNC_CMP_ENGINE == 0 || TAP_SR_ASYNC_CMP_ENGINE == 5 || TAP_SR_ASYNC_CMP_ENGINE >= 6
 #include <type_traits>
 
 #include "tap/sr/async/polyphase_filter.h"
 #include "tap/sr/async/sample_traits.h"
-#elif TAP_SR_ASYNC_CMP_ENGINE <= 2
+#endif
+#if TAP_SR_ASYNC_CMP_ENGINE == 1 || TAP_SR_ASYNC_CMP_ENGINE == 2
 #include <samplerate.h>
-#else
+#elif TAP_SR_ASYNC_CMP_ENGINE == 6 || TAP_SR_ASYNC_CMP_ENGINE == 7
+#include <speex_resampler.h>
+#elif TAP_SR_ASYNC_CMP_ENGINE == 3 || TAP_SR_ASYNC_CMP_ENGINE == 4
 #include <memory>
 
 #include <CDSPResampler.h>
@@ -62,7 +68,7 @@ namespace {
         return out;
     }
 
-#if TAP_SR_ASYNC_CMP_ENGINE == 0 || TAP_SR_ASYNC_CMP_ENGINE == 5
+#if TAP_SR_ASYNC_CMP_ENGINE == 0 || TAP_SR_ASYNC_CMP_ENGINE == 5 || TAP_SR_ASYNC_CMP_ENGINE >= 6
 
 #if TAP_SR_ASYNC_CMP_ENGINE == 0
     using Sample = float;
@@ -83,6 +89,60 @@ namespace {
         }
         return out;
     }
+
+#endif
+
+#if TAP_SR_ASYNC_CMP_ENGINE == 6 || TAP_SR_ASYNC_CMP_ENGINE == 7
+
+    // SpeexDSP, interleaved, at the quality the build names. The fixed-point
+    // build takes Q15 samples (the input requantized once at setup, as the
+    // SampleRateTap Q15 engine's is), the float build takes float.
+    double run() {
+#if TAP_SR_ASYNC_CMP_ENGINE == 6
+        using S = std::int16_t;
+#else
+        using S = float;
+#endif
+        int   err = 0;
+        auto* st =
+            speex_resampler_init(static_cast<spx_uint32_t>(kCh), 48000U,
+                                 static_cast<spx_uint32_t>(48000.0 * kRatio + 0.5), TAP_SR_ASYNC_CMP_SPEEX_Q, &err);
+        if (st == nullptr)
+            return std::numeric_limits<double>::quiet_NaN();
+        // The integer rates above round the +200 ppm ratio to 48010/48000; the
+        // exact ratio goes in as a fraction so every engine converts the same one.
+        speex_resampler_set_rate_frac(st, 1000000U, 1000200U, 48000U,
+                                      static_cast<spx_uint32_t>(48000.0 * kRatio + 0.5));
+
+        const auto     input = toSample<S>(sineInput(12000)); // 0.25 s, cycled
+        std::size_t    pos   = 0;
+        std::vector<S> inBlock(kBlock * kCh);
+        std::vector<S> out(4 * kBlock * kCh);
+
+        double sink = 0.0;
+        for (std::size_t b = 0; b < kBlocks; ++b) {
+            for (std::size_t i = 0; i < kBlock * kCh; ++i)
+                inBlock[i] = input[pos * kCh + i];
+            pos                 = (pos + kBlock) % 12000;
+            spx_uint32_t inLen  = static_cast<spx_uint32_t>(kBlock);
+            spx_uint32_t outLen = static_cast<spx_uint32_t>(4 * kBlock);
+#if TAP_SR_ASYNC_CMP_ENGINE == 6
+            const int rc = speex_resampler_process_interleaved_int(st, inBlock.data(), &inLen, out.data(), &outLen);
+#else
+            const int rc = speex_resampler_process_interleaved_float(st, inBlock.data(), &inLen, out.data(), &outLen);
+#endif
+            if (rc != 0 || inLen != kBlock) {
+                speex_resampler_destroy(st);
+                return std::numeric_limits<double>::quiet_NaN();
+            }
+            if (outLen > 0)
+                sink += static_cast<double>(out[0]);
+        }
+        speex_resampler_destroy(st);
+        return sink;
+    }
+
+#elif TAP_SR_ASYNC_CMP_ENGINE == 0 || TAP_SR_ASYNC_CMP_ENGINE == 5
 
     double run() {
         const tap::sr::async::polyphase_filter_bank<Sample> bank(tap::sr::async::filter_spec::balanced(), 48000.0);

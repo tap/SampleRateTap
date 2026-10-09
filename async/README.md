@@ -285,7 +285,8 @@ sample-granular transfer, 0.5 FS sine, 1 s analysis window after settling):
 | `transparent()` (L=512, T=80) | 133 dB | — | — | 108 dB | 0.83 ms |
 
 AES17-style THD+N measured under identical conditions against
-libsamplerate, soxr, r8brain-free-src and hardware datasheet figures:
+libsamplerate, soxr, r8brain-free-src, SpeexDSP and hardware datasheet
+figures:
 [docs/COMPARISON.md](docs/COMPARISON.md) (−134 dB THD+N / 149 dB DR at the
 24-bit interface, servo in the loop;
 [notebooks/asrc_comparison.ipynb](notebooks/asrc_comparison.ipynb)).
@@ -384,8 +385,10 @@ two USB audio dongles, a Pi + Pico 2, two Pis over Ethernet), see
 Methodology, optimization roadmap and regression gating live in
 [docs/PERFORMANCE.md](docs/PERFORMANCE.md). Build the benchmarks with
 `-DTAP_SR_BUILD_BENCHMARKS=ON` (host only). A measured computational
-head-to-head against libsamplerate, soxr and r8brain-free-src — host
-wall-clock and embedded instruction counts, steady state and construction
+head-to-head against libsamplerate, soxr, r8brain-free-src and SpeexDSP
+(the one competitor with a fixed-point build, measured against the Q15
+datapath) — host wall-clock and embedded instruction counts, steady state
+and construction
 (`-DTAP_SR_BUILD_COMPARE_BENCH=ON`, `TAP_SR_ICOUNT_COMPARE`) — lives in
 [docs/COMPARISON.md](docs/COMPARISON.md).
 
@@ -490,6 +493,8 @@ window design (Kaiser 1974), band-limited interpolation (J. O. Smith,
 CCRMA), polyphase decomposition and the harris length estimate, and textbook
 2nd-order PLL servo design. No third-party source was copied. GoogleTest
 (BSD-3) is fetched for tests only and is not part of the shipped headers.
-r8brain-free-src (MIT) is fetched at a commit pin only when the opt-in
-comparison builds are enabled (`cmake/r8brain.cmake`); it is never linked
-into the library or its tests.
+r8brain-free-src (MIT) and SpeexDSP's resampler (BSD-3, compiled from its
+`resample.c` in both arithmetic builds) are fetched at commit pins only when
+the opt-in comparison builds are enabled (`cmake/r8brain.cmake`,
+`cmake/speexdsp.cmake`); neither is ever linked into the library or its
+tests.
