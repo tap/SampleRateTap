@@ -220,16 +220,24 @@ namespace tap::sr::rational {
     /// 0.003 dB for every design of the table (the M2 spike).
     inline constexpr std::size_t k_design_grid_points = 16384;
 
-    /// The search bound for a profile without a pin: N up to 2047 at the
-    /// 8th band, four times the longest pin of the table.
+    /// The search bound for a profile without a pin: 128 taps per branch, N
+    /// up to 2047 at the 8th band, 2.8 times the longest pin of the tables
+    /// (46, transparent at the 147/160 divisor). A feasible spec above it
+    /// is reported as unmeetable, by design: a stage that long has no place
+    /// in a speed-first engine.
     inline constexpr std::size_t k_design_max_taps_per_branch = 128;
 
     /// Validates a profile: finite, 0 < p < 1/2, A > 0. Throws
-    /// std::invalid_argument otherwise (construction time; R9).
+    /// std::invalid_argument otherwise (construction time; R9). A relaxed
+    /// profile's passband is the base's times the divisor's reciprocal
+    /// (profile::relaxed), so a custom base passband at or above 1/2 of
+    /// the divisor's reciprocal fails here with the relaxed number.
     inline void validate(const profile& p) {
         if (!(std::isfinite(p.passband_frac) && std::isfinite(p.stopband_atten_db)) || p.passband_frac <= 0.0
             || p.passband_frac >= 0.5 || p.stopband_atten_db <= 0.0) {
-            throw std::invalid_argument("tap::sr::rational::design_stage: bad profile");
+            throw std::invalid_argument(
+                "tap::sr::rational::design_stage: bad profile (passband_frac must be in (0, 1/2) of the stage's "
+                "lower rate, after any divisor; stopband_atten_db > 0)");
         }
     }
 
@@ -274,7 +282,8 @@ namespace tap::sr::rational {
         constexpr std::size_t band = ratio_traits<R>::k_band;
         const std::size_t     m    = taps_per_branch_for(band, p);
         if (m == 0) {
-            throw std::runtime_error("tap::sr::rational::design_stage: no length meets the profile's spec");
+            throw std::runtime_error("tap::sr::rational::design_stage: no length up to the search bound (128 taps "
+                                     "per branch, k_design_max_taps_per_branch) meets the profile's spec");
         }
         std::vector<double> h(tap::dsp::nyquist_length(band, m));
         tap::dsp::design_nyquist(h, band, tap::dsp::kaiser_beta(p.stopband_atten_db));
@@ -284,12 +293,19 @@ namespace tap::sr::rational {
 
     /// Taps per phase of a mixed stage's L-phase polyphase table over the
     /// band's design: ceil(N / L), the last phase zero-padded (the MACs per
-    /// output of a mixed stage; PLAN.md section 6's M2 table).
+    /// output of a mixed stage; PLAN.md section 6's M2 table). Validates and
+    /// searches as design_stage does, and throws the same way.
     template <rational_ratio R>
     std::size_t stage_taps_per_phase(const profile& p) {
+        validate(p);
         constexpr std::size_t phases = ratio_traits<R>::k_composite_factor;
         constexpr std::size_t band   = ratio_traits<R>::k_band;
-        const std::size_t     n      = tap::dsp::nyquist_length(band, taps_per_branch_for(band, p));
+        const std::size_t     m      = taps_per_branch_for(band, p);
+        if (m == 0) {
+            throw std::runtime_error("tap::sr::rational::stage_taps_per_phase: no length up to the search bound (128 "
+                                     "taps per branch, k_design_max_taps_per_branch) meets the profile's spec");
+        }
+        const std::size_t n = tap::dsp::nyquist_length(band, m);
         return (n + phases - 1) / phases;
     }
 

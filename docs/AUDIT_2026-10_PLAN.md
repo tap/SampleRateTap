@@ -1,6 +1,6 @@
 # Audit response plan (v0.2)
 
-Status: **decisions taken 2026-10-09** (section 6 records them); execution in progress; ✓ in the disposition table marks a closed row (S0 landed on the branch). Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
+Status: **decisions taken 2026-10-09** (section 6 records them); execution in progress; ✓ in the disposition table marks a closed row (S0 and S1 landed on the branch). Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
 4 major, 14 minor, 1 disputed, 16 nits) and the cohesion assessment that followed it: the
 family reads as one mind at the level of the plans and one vocabulary at the level of
 `bridge` and `rational`, while `async`, the oldest stratum, still speaks the dialect it was
@@ -242,40 +242,40 @@ After S3 so the prose describes the final state. No code.
 | ID | Sev | Finding (short) | Step | Action |
 |---|---|---|---|---|
 | F01 | M | chain scratch bound breaks after a pulled stage is chained | S0 ✓ | DspTap: const accessor, reset on construction, comment, test |
-| F02 | M | `uint8_t` advance truncates M ≥ 256 L | S1 | widen to `uint32_t`, test `ratio<3,1024>` |
+| F02 | M | `uint8_t` advance truncates M ≥ 256 L | S1 ✓ | widen to `uint32_t`, test `ratio<3,1024>` |
 | F03 | M | chain contract equation and pull do not exist | S0 ✓ | DspTap wording; rational PLAN 2.5 |
 | F04 | M | symbol count called a test, none exists | S2 | `exported_symbols` ctest per engine |
-| F05 | m | relaxed designs' Q15 stopband unmeasured | S1 | measure, state per row, record 147/160 |
+| F05 | m | relaxed designs' Q15 stopband unmeasured | S1 ✓ | measure, state per row, record 147/160 |
 | F06 | m | 3.4e−9 stated without provenance | S4 | state the input |
-| F07 | m | compile_fail never isolates L ≠ M | S1 | fourth case, per-case clang check |
-| F08 | m | search-bound comment stale, exception silent on bound | S1 | correct, name the bound |
+| F07 | m | compile_fail never isolates L ≠ M | S1 ✓ | fourth case, per-case clang check |
+| F08 | m | search-bound comment stale, exception silent on bound | S1 ✓ | correct, name the bound |
 | F09 | m | async accepts any preset | S2 | NULL on out-of-range, test |
 | F10 | m | bindings name a DLL MSVC cannot export | S2 | export macro, MSVC capi leg ON |
-| F11 | m | bare-metal floor 8 vs 88 | S1 | floor near the real count |
-| F12 | m (disputed) | reset tests skip decimators | S1 | add decimator and chain |
-| F13 | m | no stage-level tie pin (3 mutants survive) | S1 | constructed-tie tests |
+| F11 | m | bare-metal floor 8 vs 88 | S1 ✓ | floor near the real count |
+| F12 | m (disputed) | reset tests skip decimators | S1 ✓ | add decimator and chain |
+| F13 | m | no stage-level tie pin (3 mutants survive) | S1 ✓ | constructed-tie tests |
 | F14 | m | Doxygen omits rational | S4 | `INPUT`, description |
 | F15 | m | async README 0.1.0 | S3 | 0.6.0 with the restructure |
 | F16 | m | bridge README retired `ratio` label | S4 | fix |
 | F17 | m | root README two engines | S4 | three engines, profile table |
-| F18 | m | rational PLAN layout promises missing files | S1 | write the example, strike the row |
+| F18 | m | rational PLAN layout promises missing files | S1 ✓ | write the example, strike the row |
 | F19 | m | root PLAN "Next" stale | S4 | update |
-| F20 | n | stale pre-lever numbers in test comments | S1 | replace |
+| F20 | n | stale pre-lever numbers in test comments | S1 ✓ | replace |
 | F21 | n | Q31 pre-shift rationale count wrong | S0 ✓ | DspTap comment |
-| F22 | n | `relaxed()` can invalidate; `stage_taps_per_phase` returns 0 | S1 | validate, throw |
-| F23 | n | reference header is the clang-format reflow | S1 | guards in the generator |
+| F22 | n | `relaxed()` can invalidate; `stage_taps_per_phase` returns 0 | S1 ✓ | validate, throw |
+| F23 | n | reference header is the clang-format reflow | S1 ✓ | guards in the generator |
 | F24 | n | bridge/rational C headers state no thread contract | S2 | state it |
 | F25 | n | banner rule unenforced; STYLE.md template pre-D14 | S4 | taphouse PR, referred |
 | F26 | n | two-engine wording in CI comments | S4 | fix |
 | F27 | n | Hexagon exclusion comment incomplete | S4 | fix |
-| F28 | n | passband deviations swapped in PLAN 5 | S1 | fix with the measurement |
+| F28 | n | passband deviations swapped in PLAN 5 | S1 ✓ | fix with the measurement |
 | F29 | n | bluetooth_bridge latency 1.9 / 2.0 / 1.93; "RatioTap" | S3 | one figure, family name |
 | F30 | n | root PLAN status line and D13 version stale | S4 | update |
 | F31 | n | duplicated flag line; "exact" accessor name | S4 | fix |
 | F32 | n | book's `create` prose predates fc2949e | S4 | fix |
 | F33 | n | async PLAN function count reads as 15 | S2 | fix |
-| F34 | n | `rational.h` says Status: M3 | S1 | current status |
-| F35 | n | `outputs_for` wraps above SIZE_MAX / L undocumented | S1 | document |
+| F34 | n | `rational.h` says Status: M3 | S1 ✓ | current status |
+| F35 | n | `outputs_for` wraps above SIZE_MAX / L undocumented | S1 ✓ | document |
 | C1 | — | `preset` vs `profile`; `economy` means two things | S3 | A4 |
 | C2 | — | async C ABI shape differs from the siblings | S3 | A5 (maintainer) |
 | C3 | — | async umbrella header and README in the old voice | S3 | rewrite to the sibling shape |

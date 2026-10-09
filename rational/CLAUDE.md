@@ -46,7 +46,9 @@ levers after M6 are measured and recorded in PLAN.md section 6: the Helium Q15 d
 decimators' per-branch quantization shipped (a Q15 decimator's table is its band's interpolator
 table, the 1 / M in `tap::dsp::finalize_divided`; `basic_stage::k_table_gain` and
 `finalize_output()` state it; a Q15 mixed ratio going down holds its rows at a power-of-two
-gain the same way, so every Q15 stage attains the 70 dB tier), the sparse rows and the
+gain the same way, so every Q15 stage of the vocabulary attains the 70 dB tier at its own rate; the
+relaxed designs a chain runs are measured separately, and the `economy` half-band relaxed to the
+147/160 divisor attains −67.6 dB, PLAN.md section 6), the sparse rows and the
 symmetry-halved table were declined on their numbers.
 
 ## The charter constraints (load-bearing)
@@ -100,5 +102,5 @@ ctest --test-dir build --output-on-failure -L '^rational$'
 ```
 
 `rational.Ratio.ChartersFailToCompileWithTheMessage` configures `tests/compile_fail/`, a
-`try_compile` project, with this build's compiler or toolchain file: the three rejected ratios
-must fail to compile *with* the charter's message.
+`try_compile` project, with this build's compiler or toolchain file: the four rejected ratios, one
+per static_assert of the charter, must fail to compile *with* the charter's message.

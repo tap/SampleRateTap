@@ -185,7 +185,8 @@ jobs:
           # (the coverage matrix's tone batteries, 182 chains in double per
           # profile, and the relaxation tables' searches, which run every
           # candidate length through the design grid: the 70 dB tables alone
-          # exceed the job's budget under qemu-hexagon); on the Arm legs
+          # exceed the job's budget under qemu-hexagon, and the quantized and
+          # relaxed Q15 tables' stopbands through a 16384-point DFT); on the Arm legs
           # bare_metal_main.cpp bakes in its own
           # filter (the fine-grid sweeps of the long designs and the
           # matrix suite).
@@ -197,7 +198,7 @@ jobs:
             jobs: 4
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: Throw|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands
+            exclude: Throw|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands|RelaxedQ15TablesStopbandsAreStated
           - target: m55
             title: Cortex-M55 cross
             engine: rational

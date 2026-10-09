@@ -300,11 +300,13 @@ namespace {
         check_chunking<sample, ratio_3_8, down_3>(x);
     }
 
-    TYPED_TEST(chain_test, ResetReproducesBitExactly) {
-        using sample                  = TypeParam;
-        const auto                  x = reference_input<sample>();
-        up_2_ratio_4_3_up_3<sample> c(1);
-        std::vector<sample>         a(c.outputs_for(x.size()));
+    // A chain of L-phase stages and one of decimators (left at decimation
+    // phases 1, 4 and 1 by 100 frames; the audit's F12).
+    template <typename C>
+    void check_chain_reset_reproduces(const std::vector<typename C::sample>& x) {
+        using sample = typename C::sample;
+        C                   c(1);
+        std::vector<sample> a(c.outputs_for(x.size()));
         c.process(x.data(), x.size(), a.data());
         std::vector<sample> scratch(c.outputs_for(100));
         c.process(x.data(), 100, scratch.data()); // mid-stream
@@ -313,6 +315,13 @@ namespace {
         ASSERT_EQ(a.size(), b.size());
         c.process(x.data(), x.size(), b.data());
         EXPECT_TRUE(a == b);
+    }
+
+    TYPED_TEST(chain_test, ResetReproducesBitExactly) {
+        using sample = TypeParam;
+        const auto x = reference_input<sample>();
+        check_chain_reset_reproduces<up_2_ratio_4_3_up_3<sample>>(x);
+        check_chain_reset_reproduces<down_3_down_8_down_2<sample>>(x);
     }
 
     // A stage's pull() can stop with up to L - 1 outputs banked, outside the
