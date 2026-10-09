@@ -284,8 +284,11 @@ Mirrors `decimate.h:17-24` and `converter.h:51-56`, per stage:
   (`phase_table.h:83-85`).
 - **Chain**: outputs are the last stage's; `outputs_for` composes forward,
   `frames_needed` composes backward (each stage's is exact arithmetic,
-  `schedule.h:54`), so a pull with a source delivering exactly
-  `frames_needed(n)` frames yields exactly n outputs. Latency is
+  `schedule.h:54`): `outputs_for(frames_needed(k)) >= k` and one frame
+  fewer falls short. Not an equality: one input to an interpolating stage
+  completes L outputs at once, so `process(frames_needed(k))` can write
+  more than k; size the output by `outputs_for()`. (A single stage's
+  `pull()` stops at k; a chain has no pull.) Latency is
   Σ_i (N_i − 1)/2 · (f_out / f_hi,i), an exact rational at the output
   rate, reported as `latency_output_frames()` (numerator, denominator) and
   `latency_seconds()`; the matrix test pins it per pair. `flush()` drains

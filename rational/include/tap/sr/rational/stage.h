@@ -59,7 +59,11 @@
 //     arithmetic from the current position (schedule or decimation phase);
 //     pull() with a source delivering exactly frames_needed(k) frames yields
 //     exactly k outputs, and is bit-identical to process() on the same
-//     stream, for any chunking;
+//     stream, for any chunking; from any state process() or flush() leaves
+//     the stage in, outputs_for(n) <= floor(n L / M) + 2, the bound
+//     tap::dsp::chain sizes its scratch by (pull() can stop with up to
+//     L - 1 outputs banked and exceed it, which is why a chain resets the
+//     stages it is given and hands them out read-only);
 //   - latency_output_frames() = (N - 1) / 2 samples at the composite rate
 //     L f_in = (N - 1) / (2 M) output frames, an exact rational
 //     (tap::dsp::exact_ratio); latency_seconds(out_rate_hz) is its double;
