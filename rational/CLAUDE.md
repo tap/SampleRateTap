@@ -38,8 +38,8 @@ unity, saturation, the Q15 floors and attained stopbands stated in PLAN.md secti
 change that moves a table pin is a numeric change to the fixed-point datapath), and, since M6,
 the C ABI (`capi/`: the named chains as stable `TAP_SR_RATIONAL_*` constants, one stage at a
 stated design divisor, in float and, since the levers, Q15 / Q31 through `create_format`;
-exactly 23 exported symbols; `CApi.*` pins it bit for bit against `basic_chain` in every
-format), the ctypes binding and `notebooks/matrix.ipynb` executed through the C ABIs, and
+exactly 23 exported symbols, the set pinned by `rational.Family.ExportedSymbolsArePinned`;
+`CApi.*` pins the ABI bit for bit against `basic_chain` in every format), the ctypes binding and `notebooks/matrix.ipynb` executed through the C ABIs, and
 the icount ratchet (`bench/icount/`, `bench/baselines.json`, marker `RATIONAL_ICOUNT_DONE`; a
 change that moves a count beyond ±3 % re-records the baselines in the same PR). The codegen
 levers after M6 are measured and recorded in PLAN.md section 6: the Helium Q15 dot and the Q15

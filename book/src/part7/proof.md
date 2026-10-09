@@ -101,7 +101,9 @@ purpose are FFI consumers too. A call in another format than the
 converter's returns 0 and touches nothing; every format is pinned bit for
 bit against the C++ `basic_chain` of that sample type. Twenty-three
 exported symbols, the library built with hidden visibility so that no C++
-leaks into the table, and the symbol count is a test. The departure did
+leaks into the table, and the symbol set is a test
+(`rational.Family.ExportedSymbolsArePinned`, `nm` against a committed
+list, on every ELF and Mach-O host). The departure did
 not last: faced with one engine in this shape and two in the other, the
 family chose the one, and the siblings adopted it — `create_format`,
 `format`, the `_q15` / `_q31` entry points, hidden visibility, the same
@@ -166,7 +168,8 @@ ctest --test-dir build -R 'rational\.Family\.' --output-on-failure
 # The C ABI, pinned against basic_chain in every format, and the symbol count:
 cmake -S rational/capi -B build_capi && cmake --build build_capi -j
 ctest --test-dir build -R 'rational\.CApi\.' --output-on-failure
-nm -D --defined-only build_capi/libtap_sr_rational_capi.so | grep -c ' T tap_sr_rational_'   # 23
+ctest --test-dir build -R 'rational\.Family\.ExportedSymbolsArePinned' --output-on-failure
+nm -D --defined-only build_capi/libtap_sr_rational_capi.so | grep -c ' T tap_sr_rational_'   # 23, by hand
 
 # The ratchet on one target (the plugin and toolchain as in bench/README):
 cmake -S . -B build-m55 -DCMAKE_BUILD_TYPE=Release \

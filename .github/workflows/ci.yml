@@ -62,15 +62,16 @@ jobs:
             capi: ON
           # async's warnings stay non-fatal on MSVC until its /W4 output has
           # been triaged (async/docs/PERFORMANCE.md "Known debt"); bridge keeps
-          # /WX, as RatioTap's CI did. The C ABI stays OFF: none of the three libraries
-          # carries __declspec(dllexport), so an MSVC build would link DLLs
-          # exporting nothing and gate nothing.
+          # /WX, as its CI did before the merge. The C ABI is ON since the
+          # export macro (TAP_SR_<ENGINE>_API, dllexport while building): the
+          # CApi suites gate the DLLs here too; the symbol-set test is an
+          # nm test and runs on the ELF and Mach-O hosts only.
           - name: Windows MSVC
             os: windows-latest
             async_werror: OFF
             bridge_werror: ON
             rational_werror: ON
-            capi: OFF
+            capi: ON
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:

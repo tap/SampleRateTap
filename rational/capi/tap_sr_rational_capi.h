@@ -22,6 +22,23 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Export: on Windows the C entry points are dllexport while the library
+ * is built (TAP_SR_RATIONAL_CAPI_BUILDING, set by capi/CMakeLists.txt) and
+ * dllimport for a consumer; elsewhere default visibility on a library built
+ * hidden, so the dynamic symbol table is exactly the tap_sr_rational_* entry
+ * points (pinned by rational.Family.ExportedSymbolsArePinned). */
+#if defined(_WIN32)
+#if defined(TAP_SR_RATIONAL_CAPI_BUILDING)
+#define TAP_SR_RATIONAL_API __declspec(dllexport)
+#else
+#define TAP_SR_RATIONAL_API __declspec(dllimport)
+#endif
+#elif defined(__GNUC__)
+#define TAP_SR_RATIONAL_API __attribute__((visibility("default")))
+#else
+#define TAP_SR_RATIONAL_API
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -73,15 +90,23 @@ typedef struct tap_sr_rational_converter tap_sr_rational_converter;
 /// Every function below requires a valid converter from a successful create;
 /// passing NULL is undefined behavior. The one exception is
 /// tap_sr_rational_destroy, where NULL is a safe no-op (the free() convention).
+///
+/// Thread contract (identical to the C++ API): one stream per converter,
+/// driven by one thread at a time; no function is reentrant on the same
+/// handle, create and destroy run on any single thread and never
+/// concurrently with the handle's other calls; distinct handles are
+/// independent. The accessors (format, ratio, taps, latency, the counts)
+/// read state the processing calls write and follow the same rule.
 
 /// chain:   one of the TAP_SR_RATIONAL_* chain constants above.
 /// profile: 0 = economy (default tier), 1 = transparent, 2 = balanced,
 ///          3 = super_economy (bridge's C ABI tags).
 /// Returns NULL on invalid arguments. A float converter.
-tap_sr_rational_converter* tap_sr_rational_create(int chain, int profile, unsigned channels);
+TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create(int chain, int profile, unsigned channels);
 /// As tap_sr_rational_create in a stated format (TAP_SR_RATIONAL_FORMAT_*);
 /// NULL on an unknown format too.
-tap_sr_rational_converter* tap_sr_rational_create_format(int chain, int profile, int format, unsigned channels);
+TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create_format(int chain, int profile, int format,
+                                                                             unsigned channels);
 
 /// One stage at ratio L/M (one of the vocabulary's fourteen: 2/1, 1/2, 3/1,
 /// 1/3, 6/1, 1/6, 8/1, 1/8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8) designed at the
@@ -89,59 +114,66 @@ tap_sr_rational_converter* tap_sr_rational_create_format(int chain, int profile,
 /// stage's lower rate over its chain's lowest, PLAN.md 3.1): what a chain
 /// through bridge composes, as the coverage-matrix test builds it. Returns
 /// NULL on invalid arguments.
-tap_sr_rational_converter* tap_sr_rational_create_stage(unsigned L, unsigned M, int profile, uint32_t divisor_num,
-                                                        uint32_t divisor_den, unsigned channels);
+TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create_stage(unsigned L, unsigned M, int profile,
+                                                                            uint32_t divisor_num, uint32_t divisor_den,
+                                                                            unsigned channels);
 /// As tap_sr_rational_create_stage in a stated format.
-tap_sr_rational_converter* tap_sr_rational_create_stage_format(unsigned L, unsigned M, int profile,
-                                                               uint32_t divisor_num, uint32_t divisor_den, int format,
-                                                               unsigned channels);
-void                       tap_sr_rational_destroy(tap_sr_rational_converter* c);
+TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create_stage_format(unsigned L, unsigned M, int profile,
+                                                                                   uint32_t divisor_num,
+                                                                                   uint32_t divisor_den, int format,
+                                                                                   unsigned channels);
+TAP_SR_RATIONAL_API void                       tap_sr_rational_destroy(tap_sr_rational_converter* c);
 
 /// The converter's ratio, reduced: output frames per input frame = L / M.
-void tap_sr_rational_ratio(const tap_sr_rational_converter* c, unsigned* L, unsigned* M);
+TAP_SR_RATIONAL_API void tap_sr_rational_ratio(const tap_sr_rational_converter* c, unsigned* L, unsigned* M);
 
 /// Exact accounting from the current position (see tap::dsp::chain).
-uint64_t tap_sr_rational_outputs_for(const tap_sr_rational_converter* c, uint64_t in_frames);
-uint64_t tap_sr_rational_frames_needed(const tap_sr_rational_converter* c, uint64_t out_frames);
+TAP_SR_RATIONAL_API uint64_t tap_sr_rational_outputs_for(const tap_sr_rational_converter* c, uint64_t in_frames);
+TAP_SR_RATIONAL_API uint64_t tap_sr_rational_frames_needed(const tap_sr_rational_converter* c, uint64_t out_frames);
 
 /// The converter's sample format (TAP_SR_RATIONAL_FORMAT_*).
-int tap_sr_rational_format(const tap_sr_rational_converter* c);
+TAP_SR_RATIONAL_API int tap_sr_rational_format(const tap_sr_rational_converter* c);
 
 /// Push-transform over interleaved frames of the converter's format; returns
 /// frames written. out must hold tap_sr_rational_outputs_for(c, in_frames)
 /// frames. A call in another format than the converter's returns 0 and
 /// consumes and writes nothing.
-size_t tap_sr_rational_process(tap_sr_rational_converter* c, const float* in, size_t in_frames, float* out);
-size_t tap_sr_rational_process_q15(tap_sr_rational_converter* c, const int16_t* in, size_t in_frames, int16_t* out);
-size_t tap_sr_rational_process_q31(tap_sr_rational_converter* c, const int32_t* in, size_t in_frames, int32_t* out);
+TAP_SR_RATIONAL_API size_t tap_sr_rational_process(tap_sr_rational_converter* c, const float* in, size_t in_frames,
+                                                   float* out);
+TAP_SR_RATIONAL_API size_t tap_sr_rational_process_q15(tap_sr_rational_converter* c, const int16_t* in,
+                                                       size_t in_frames, int16_t* out);
+TAP_SR_RATIONAL_API size_t tap_sr_rational_process_q31(tap_sr_rational_converter* c, const int32_t* in,
+                                                       size_t in_frames, int32_t* out);
 
 /// Drains the tail, bit-identical to zero padding (out must hold
 /// tap_sr_rational_flush_output_frames(c) frames); in another format than
 /// the converter's, returns 0 and writes nothing.
-size_t   tap_sr_rational_flush(tap_sr_rational_converter* c, float* out);
-size_t   tap_sr_rational_flush_q15(tap_sr_rational_converter* c, int16_t* out);
-size_t   tap_sr_rational_flush_q31(tap_sr_rational_converter* c, int32_t* out);
-uint64_t tap_sr_rational_flush_output_frames(const tap_sr_rational_converter* c);
+TAP_SR_RATIONAL_API size_t   tap_sr_rational_flush(tap_sr_rational_converter* c, float* out);
+TAP_SR_RATIONAL_API size_t   tap_sr_rational_flush_q15(tap_sr_rational_converter* c, int16_t* out);
+TAP_SR_RATIONAL_API size_t   tap_sr_rational_flush_q31(tap_sr_rational_converter* c, int32_t* out);
+TAP_SR_RATIONAL_API uint64_t tap_sr_rational_flush_output_frames(const tap_sr_rational_converter* c);
 
-void tap_sr_rational_reset(tap_sr_rational_converter* c);
+TAP_SR_RATIONAL_API void tap_sr_rational_reset(tap_sr_rational_converter* c);
 
 /// Group delay in output frames as an exact reduced rational (R7), and in
 /// seconds at a given output rate.
-void   tap_sr_rational_latency_output_frames(const tap_sr_rational_converter* c, uint64_t* num, uint64_t* den);
-double tap_sr_rational_latency_seconds(const tap_sr_rational_converter* c, double out_rate_hz);
+TAP_SR_RATIONAL_API void   tap_sr_rational_latency_output_frames(const tap_sr_rational_converter* c, uint64_t* num,
+                                                                 uint64_t* den);
+TAP_SR_RATIONAL_API double tap_sr_rational_latency_seconds(const tap_sr_rational_converter* c, double out_rate_hz);
 
 /// Multiply-accumulates per output frame per channel, an exact reduced
 /// rational (the trimmed rows the kernels execute, PLAN.md 3.3; in Q15 the
 /// quantized spans, which may trim outer taps that round to zero).
-void tap_sr_rational_macs_per_output(const tap_sr_rational_converter* c, uint64_t* num, uint64_t* den);
+TAP_SR_RATIONAL_API void tap_sr_rational_macs_per_output(const tap_sr_rational_converter* c, uint64_t* num,
+                                                         uint64_t* den);
 
 /// The number of stages, and stage i's Nyquist design length N (0 when i is
 /// out of range).
-size_t tap_sr_rational_stages(const tap_sr_rational_converter* c);
-size_t tap_sr_rational_stage_taps(const tap_sr_rational_converter* c, size_t i);
+TAP_SR_RATIONAL_API size_t tap_sr_rational_stages(const tap_sr_rational_converter* c);
+TAP_SR_RATIONAL_API size_t tap_sr_rational_stage_taps(const tap_sr_rational_converter* c, size_t i);
 
 /// Library version, packed (major << 16) | (minor << 8) | patch.
-unsigned tap_sr_rational_version(void);
+TAP_SR_RATIONAL_API unsigned tap_sr_rational_version(void);
 
 #ifdef __cplusplus
 } // extern "C"

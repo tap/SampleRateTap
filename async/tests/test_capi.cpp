@@ -169,6 +169,8 @@ namespace {
     TEST(CApi, NullAndInvalidAreSoft) {
         EXPECT_EQ(tap_sr_async_create(-1.0, 2, 0, 1), nullptr);
         EXPECT_EQ(tap_sr_async_create(48000.0, 0, 0, 1), nullptr);
+        EXPECT_EQ(tap_sr_async_create(48000.0, 2, 0, 3), nullptr); // preset outside 0..2 (audit F09)
+        EXPECT_EQ(tap_sr_async_create(48000.0, 2, 0, -1), nullptr);
         EXPECT_EQ(tap_sr_async_create_format(48000.0, 2, 0, 1, 3), nullptr); // unknown format
         EXPECT_EQ(tap_sr_async_create_format(48000.0, 2, 0, 1, -1), nullptr);
         EXPECT_EQ(TAP_SR_ASYNC_FORMAT_FLOAT, 0);

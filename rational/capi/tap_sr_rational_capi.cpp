@@ -285,11 +285,8 @@ struct tap_sr_rational_converter {
 };
 
 // The library builds with hidden visibility (CMakeLists.txt); only the C entry
-// points below are exported.
-#if defined(__GNUC__)
-#pragma GCC visibility push(default)
-#endif
-
+// points below are exported, through TAP_SR_RATIONAL_API on their declarations
+// in the header (default visibility here, dllexport on Windows).
 extern "C" {
 
 tap_sr_rational_converter* tap_sr_rational_create_format(int chain, int profile, int format, unsigned channels) {
@@ -419,7 +416,3 @@ unsigned tap_sr_rational_version(void) {
 }
 
 } // extern "C"
-
-#if defined(__GNUC__)
-#pragma GCC visibility pop
-#endif

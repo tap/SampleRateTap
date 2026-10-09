@@ -104,11 +104,8 @@ namespace {
 // ANCHOR_END: abi_impl
 
 // The library builds with hidden visibility (CMakeLists.txt); only the C entry
-// points below are exported.
-#if defined(__GNUC__)
-#pragma GCC visibility push(default)
-#endif
-
+// points below are exported, through TAP_SR_ASYNC_API on their declarations
+// in the header (default visibility here, dllexport on Windows).
 extern "C" {
 
 unsigned tap_sr_async_version(void) {
@@ -126,6 +123,9 @@ tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, std::s
     cfg.channels       = channels;
     if (target_latency_frames != 0) {
         cfg.target_latency_frames = target_latency_frames;
+    }
+    if (preset < 0 || preset > 2) {
+        return nullptr; // the siblings refuse an unknown profile the same way (2026-10 audit, F09)
     }
     cfg.filter = preset == 0   ? tap::sr::async::filter_spec::fast()
                  : preset == 2 ? tap::sr::async::filter_spec::transparent()
@@ -222,7 +222,3 @@ void tap_sr_async_reset_from_consumer(tap_sr_async_converter* h) {
 }
 
 } // extern "C"
-
-#if defined(__GNUC__)
-#pragma GCC visibility pop
-#endif

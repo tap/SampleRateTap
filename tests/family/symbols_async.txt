@@ -1,0 +1,14 @@
+tap_sr_async_create
+tap_sr_async_create_format
+tap_sr_async_designed_latency_seconds
+tap_sr_async_destroy
+tap_sr_async_format
+tap_sr_async_pull
+tap_sr_async_pull_q15
+tap_sr_async_pull_q31
+tap_sr_async_push
+tap_sr_async_push_q15
+tap_sr_async_push_q31
+tap_sr_async_reset_from_consumer
+tap_sr_async_status
+tap_sr_async_version
