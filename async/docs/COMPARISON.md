@@ -214,10 +214,10 @@ old metric reproduce the previous table exactly (2,218 / 6,400 on M55, 49,424
 
 <!-- COMPARE:BEGIN -->
 Measured in `compare.yml` run
-[37920542901](https://github.com/tap/SampleRateTap/actions/runs/37920542901)
-on `fc2949e` (DspTap `ef6fdc4`), 2026-10-09; arm-none-eabi-gcc 13.2.1 and
-qemu-system-arm 8.2.2 from the ubuntu-24.04 image, hexagon-clang 19.1.5 and
-qemu-hexagon 8.2.2 at the pinned digests.
+[37970395757](https://github.com/tap/SampleRateTap/actions/runs/37970395757)
+on `0dc3a73` (DspTap `d7ebe4b`), 2026-10-09; arm-none-eabi-gcc 15:13.2.rel1-2,
+qemu-system-arm 1:8.2.2+ds-0ubuntu1.18 (ubuntu24 20261004.327.1),
+hexagon-clang 19.1.5 and qemu-hexagon 8.2.2 at the pinned digests.
 
 Steady state, instructions per stereo output frame (× = vs. SampleRateTap
 balanced float, or vs. balanced Q15 where the row says so; the cheaper
@@ -231,6 +231,10 @@ SampleRateTap row per target in bold):
 | r8brain 120 dB, 8 % band (flat to 20 kHz)³ | 934 (1.1×) | 26,619 (1.7×) | 5,420 (2.0×) |
 | libsamplerate `MEDIUM` | 2,203 (2.7×) | 49,206 (3.2×) | 9,025 (3.3×) |
 | libsamplerate `BEST` | 6,392 (7.8×) | 149,420 (9.8×) | 26,916 (9.8×) |
+| SpeexDSP float, quality 10 (~100 dB) | 9,903 (12.1×) | 180,098 (11.8×) | 30,771 (11.2×) |
+| SpeexDSP float, quality 4 (its passband knee) | 1,568 (1.9×) | 2,212 (0.1×) | 659 (0.2×) |
+| SpeexDSP fixed-point, quality 10 (× vs. Q15) | 5,902 (6.9×) | 6,430 (7.3×) | 1,873 (4.1×) |
+| SpeexDSP fixed-point, quality 4 (× vs. Q15) | 1,673 (1.9×) | 1,797 (2.0×) | 597 (1.3×) |
 
 One-time construction, millions of instructions:
 
@@ -238,14 +242,19 @@ One-time construction, millions of instructions:
 |---|---:|---:|---:|
 | **SampleRateTap** balanced, float | 17.3 | 870.0 | 133.3 |
 | **SampleRateTap** balanced, Q15 | 18.4 | 883.5 | 135.8 |
-| r8brain 120 dB, default 2 % band | 1.6 | 38.1 | 11.3 |
-| r8brain 120 dB, 8 % band (flat to 20 kHz) | 1.8 | 45.5 | 12.6 |
+| r8brain 120 dB, default 2 % band | 1.6 | 38.0 | 11.3 |
+| r8brain 120 dB, 8 % band (flat to 20 kHz) | 1.8 | 45.4 | 12.6 |
 | libsamplerate `MEDIUM` | 1.4 | 20.9 | 7.4 |
 | libsamplerate `BEST` | 0.8 | 0.7 | 4.0 |
+| SpeexDSP float, quality 10 (~100 dB) | 4.7 | 83.7 | 25.8 |
+| SpeexDSP float, quality 4 (its passband knee) | 1.7 | 27.8 | 9.0 |
+| SpeexDSP fixed-point, quality 10 | 5.2 | 98.8 | 26.6 |
+| SpeexDSP fixed-point, quality 4 | 2.0 | 33.6 | 9.8 |
 
 Key figures: on the M33 the Q15 datapath costs **879 instructions/frame** in
 steady state, libsamplerate `MEDIUM` **~56×** that and r8brain at 8 %
-**~30×**; on the M55 the float datapath (821) is cheaper than Q15 (861) by 5%.
+**~30×**, SpeexDSP's fixed-point build at quality 4 **2.0×**; on the M55 the
+float datapath (821) is cheaper than Q15 (861) by 5%.
 <!-- COMPARE:END -->
 
 ² The float datapath is soft-double-bound on the FP64-less M33 and
