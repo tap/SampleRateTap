@@ -28,9 +28,9 @@ namespace {
             static_cast<unsigned>((TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH);
         const unsigned v = tap_sr_async_version();
         EXPECT_EQ(v, k_packed);
-        EXPECT_EQ(v, 0x000500u); // 0.5.0
+        EXPECT_EQ(v, 0x000600u); // 0.6.0
         EXPECT_EQ(v >> 16, 0u);
-        EXPECT_EQ((v >> 8) & 0xFFu, 5u);
+        EXPECT_EQ((v >> 8) & 0xFFu, 6u);
         EXPECT_EQ(v & 0xFFu, 0u);
     }
 
@@ -90,13 +90,13 @@ namespace {
     /// sequence): every pull bit-identical, every return value and the
     /// telemetry equal; a call in another format refused and moving nothing.
     template <typename S>
-    void expect_abi_is_the_converter(int preset, const tap::sr::async::filter_spec& spec) {
+    void expect_abi_is_the_converter(int profile, const tap::sr::async::filter_spec& spec) {
         constexpr double        k_fs    = 48000.0;
         constexpr std::size_t   k_block = 240; // the notebooks' largest block: the setpoint raise fits the default FIFO
         tap_sr_async_converter* h       = std::is_same_v<S, float>
-                                              ? tap_sr_async_create(k_fs, 2, 0, preset)
-                                              : tap_sr_async_create_format(k_fs, 2, 0, preset, format_tag<S>());
-        ASSERT_NE(h, nullptr) << preset;
+                                              ? tap_sr_async_create(k_fs, 0, profile, 2)
+                                              : tap_sr_async_create_format(k_fs, 0, profile, format_tag<S>(), 2);
+        ASSERT_NE(h, nullptr) << profile;
         EXPECT_EQ(tap_sr_async_format(h), format_tag<S>());
         tap::sr::async::config cfg;
         cfg.sample_rate_hz = k_fs;
@@ -167,10 +167,12 @@ namespace {
     }
 
     TEST(CApi, NullAndInvalidAreSoft) {
-        EXPECT_EQ(tap_sr_async_create(-1.0, 2, 0, 1), nullptr);
-        EXPECT_EQ(tap_sr_async_create(48000.0, 0, 0, 1), nullptr);
-        EXPECT_EQ(tap_sr_async_create_format(48000.0, 2, 0, 1, 3), nullptr); // unknown format
-        EXPECT_EQ(tap_sr_async_create_format(48000.0, 2, 0, 1, -1), nullptr);
+        EXPECT_EQ(tap_sr_async_create(-1.0, 0, 1, 2), nullptr);
+        EXPECT_EQ(tap_sr_async_create(48000.0, 0, 1, 0), nullptr);
+        EXPECT_EQ(tap_sr_async_create(48000.0, 0, 3, 2), nullptr); // profile outside 0..2 (audit F09)
+        EXPECT_EQ(tap_sr_async_create(48000.0, 0, -1, 2), nullptr);
+        EXPECT_EQ(tap_sr_async_create_format(48000.0, 0, 1, 3, 2), nullptr); // unknown format
+        EXPECT_EQ(tap_sr_async_create_format(48000.0, 0, 1, -1, 2), nullptr);
         EXPECT_EQ(TAP_SR_ASYNC_FORMAT_FLOAT, 0);
         EXPECT_EQ(TAP_SR_ASYNC_FORMAT_Q15, 1);
         EXPECT_EQ(TAP_SR_ASYNC_FORMAT_Q31, 2);

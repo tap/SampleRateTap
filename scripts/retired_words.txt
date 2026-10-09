@@ -1,0 +1,12 @@
+# Retired words: each line is "<regex>  # why" and names a word the family
+# retired (D7 clean renames) or a two-engine phrase the third engine
+# obsoleted. scripts/check_retired_words.py greps every tracked text file
+# (notebook source cells included, outputs excluded) and fails on a hit
+# outside the history records it lists. Keep this list short and literal.
+\bRatioTap\b            # the bridge engine's pre-merge name; present tense only ("formerly RatioTap" and the merge sentence are allowed)
+\btest_asrc_[a-z0-9_]+  # the async tests were renamed test_<topic> (0.6.0)
+\bbench_asrc\b          # bench_converter since 0.6.0
+\bpresets?\b            # profile(s) since 0.6.0; r8brain's own presets and CMake's visibility preset are allowed
+filter_spec::economy\b # async's program-weighted tier is filter_spec::program(); bridge's and rational's profile::economy() keep their name
+-L '\^ratio\$'          # the bridge label is bridge, never ratio
+Status: M[0-5]\b        # the rational engine is at M6; a stale status line

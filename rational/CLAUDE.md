@@ -38,15 +38,17 @@ unity, saturation, the Q15 floors and attained stopbands stated in PLAN.md secti
 change that moves a table pin is a numeric change to the fixed-point datapath), and, since M6,
 the C ABI (`capi/`: the named chains as stable `TAP_SR_RATIONAL_*` constants, one stage at a
 stated design divisor, in float and, since the levers, Q15 / Q31 through `create_format`;
-exactly 23 exported symbols; `CApi.*` pins it bit for bit against `basic_chain` in every
-format), the ctypes binding and `notebooks/matrix.ipynb` executed through the C ABIs, and
+exactly 23 exported symbols, the set pinned by `rational.Family.ExportedSymbolsArePinned`;
+`CApi.*` pins the ABI bit for bit against `basic_chain` in every format), the ctypes binding and `notebooks/matrix.ipynb` executed through the C ABIs, and
 the icount ratchet (`bench/icount/`, `bench/baselines.json`, marker `RATIONAL_ICOUNT_DONE`; a
 change that moves a count beyond ±3 % re-records the baselines in the same PR). The codegen
 levers after M6 are measured and recorded in PLAN.md section 6: the Helium Q15 dot and the Q15
 decimators' per-branch quantization shipped (a Q15 decimator's table is its band's interpolator
 table, the 1 / M in `tap::dsp::finalize_divided`; `basic_stage::k_table_gain` and
 `finalize_output()` state it; a Q15 mixed ratio going down holds its rows at a power-of-two
-gain the same way, so every Q15 stage attains the 70 dB tier), the sparse rows and the
+gain the same way, so every Q15 stage of the vocabulary attains the 70 dB tier at its own rate; the
+relaxed designs a chain runs are measured separately, and the `economy` half-band relaxed to the
+147/160 divisor attains −67.6 dB, PLAN.md section 6), the sparse rows and the
 symmetry-halved table were declined on their numbers.
 
 ## The charter constraints (load-bearing)
@@ -100,5 +102,5 @@ ctest --test-dir build --output-on-failure -L '^rational$'
 ```
 
 `rational.Ratio.ChartersFailToCompileWithTheMessage` configures `tests/compile_fail/`, a
-`try_compile` project, with this build's compiler or toolchain file: the three rejected ratios
-must fail to compile *with* the charter's message.
+`try_compile` project, with this build's compiler or toolchain file: the four rejected ratios, one
+per static_assert of the charter, must fail to compile *with* the charter's message.

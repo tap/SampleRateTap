@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.24)
 # composes them over one tap::dsp, declares the family options (D9) and the
 # umbrella target, and adds the family's own tests (the dependency rule of
 # PLAN.md 4.2).
-project(SampleRateTap VERSION 0.5.0 LANGUAGES CXX)
+project(SampleRateTap VERSION 0.6.0 LANGUAGES CXX)
 enable_testing()
 
 include(cmake/retired_options.cmake)

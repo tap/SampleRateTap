@@ -87,7 +87,7 @@ namespace {
             state.SkipWithError("underrun during steady-state benchmark");
     }
 
-    // --- Kernel: type x preset ------------------------------------------------
+    // --- Kernel: type x profile ------------------------------------------------
     void BM_Kernel_Float_Fast(benchmark::State& s) {
         kernelBench<float>(s, tap::sr::async::filter_spec::fast());
     }

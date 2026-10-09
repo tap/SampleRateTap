@@ -24,7 +24,7 @@ namespace {
     TEST(Skeleton, IdentityConstants) {
         // 44.1/48 = 147/160 in lowest terms; the two directions' phase counts
         // are coprime and fixed forever. If either constant changes, this is
-        // not RatioTap anymore.
+        // not the bridge engine anymore.
         EXPECT_EQ(tap::sr::bridge::k_phases_up, 160u);
         EXPECT_EQ(tap::sr::bridge::k_phases_down, 147u);
         EXPECT_EQ(std::gcd(tap::sr::bridge::k_phases_up, tap::sr::bridge::k_phases_down), 1u);

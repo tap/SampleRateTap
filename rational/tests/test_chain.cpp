@@ -10,11 +10,13 @@
 // exact rational sum and by impulse, MACs per output as the stages' sum,
 // DC gain exact in every format, channels.
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <numbers>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -298,11 +300,13 @@ namespace {
         check_chunking<sample, ratio_3_8, down_3>(x);
     }
 
-    TYPED_TEST(chain_test, ResetReproducesBitExactly) {
-        using sample                  = TypeParam;
-        const auto                  x = reference_input<sample>();
-        up_2_ratio_4_3_up_3<sample> c(1);
-        std::vector<sample>         a(c.outputs_for(x.size()));
+    // A chain of L-phase stages and one of decimators (left at decimation
+    // phases 1, 4 and 1 by 100 frames; the audit's F12).
+    template <typename C>
+    void check_chain_reset_reproduces(const std::vector<typename C::sample>& x) {
+        using sample = typename C::sample;
+        C                   c(1);
+        std::vector<sample> a(c.outputs_for(x.size()));
         c.process(x.data(), x.size(), a.data());
         std::vector<sample> scratch(c.outputs_for(100));
         c.process(x.data(), 100, scratch.data()); // mid-stream
@@ -312,6 +316,50 @@ namespace {
         c.process(x.data(), x.size(), b.data());
         EXPECT_TRUE(a == b);
     }
+
+    TYPED_TEST(chain_test, ResetReproducesBitExactly) {
+        using sample = TypeParam;
+        const auto x = reference_input<sample>();
+        check_chain_reset_reproduces<up_2_ratio_4_3_up_3<sample>>(x);
+        check_chain_reset_reproduces<down_3_down_8_down_2<sample>>(x);
+    }
+
+    // A stage's pull() can stop with up to L - 1 outputs banked, outside the
+    // bound tap::dsp::chain sizes its scratch by (stage.h's contract); a
+    // chain therefore resets the stages it is given and exposes them
+    // read-only. Pinned on the audit's scenario (2026-10, F01): an up-by-8
+    // stage pulled one frame, then moved into a chain, equals a chain built
+    // from fresh stages bit for bit, and the chain's accounting is the fresh
+    // chain's. (Under the sanitizer leg, the overflow this guards against
+    // was a heap-buffer-overflow in process().)
+    TEST(Chain, APulledStageMovedIntoAChainIsReset) {
+        using stage_8        = basic_stage<float, up_8>;
+        using stage_2        = basic_stage<float, up_2>;
+        using chain_t        = tap::dsp::chain<stage_8, stage_2>;
+        const auto         x = reference_input<float>();
+        stage_8            used(1, profile::economy());
+        std::vector<float> one(8);
+        std::size_t        fed = 0;
+        auto               pop = [&](float* dst, std::size_t max_frames) noexcept -> std::size_t {
+            const std::size_t n = max_frames < x.size() - fed ? max_frames : x.size() - fed;
+            std::copy_n(x.data() + fed, n, dst);
+            fed += n;
+            return n;
+        };
+        ASSERT_EQ(used.pull(one.data(), 1, pop), 1u); // leaves 7 outputs banked
+        ASSERT_GT(used.outputs_for(64), 8u * 64u);    // past the process-reached bound
+        chain_t from_used(1, std::move(used), stage_2(1, profile::economy()));
+        chain_t fresh(1, stage_8(1, profile::economy()), stage_2(1, profile::economy()));
+        ASSERT_EQ(from_used.outputs_for(64), fresh.outputs_for(64));
+        EXPECT_EQ(from_used.frames_needed(100), fresh.frames_needed(100));
+        std::vector<float> a(fresh.outputs_for(x.size())), b(a.size());
+        ASSERT_EQ(fresh.process(x.data(), x.size(), a.data()), a.size());
+        ASSERT_EQ(from_used.process(x.data(), x.size(), b.data()), b.size());
+        EXPECT_TRUE(a == b);
+    }
+    template <typename C>
+    concept hands_out_a_mutable_stage = requires(C& c) { c.template stage<0>().reset(); };
+    static_assert(!hands_out_a_mutable_stage<up_2_ratio_4_3_up_3<float>>);
 
     // ------------------------------------------------------------------
     // flush: flush_output_frames() frames, equal to zero-padding the chain's

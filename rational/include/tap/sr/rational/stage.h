@@ -56,10 +56,17 @@
 //
 // Contract, as numbers (PLAN.md 2.5, R7, R9, R10):
 //   - zero-primed and causal; outputs_for(n) and frames_needed(k) are exact
-//     arithmetic from the current position (schedule or decimation phase);
+//     arithmetic from the current position (schedule or decimation phase)
+//     for every count the address space can hold (n L and k M below
+//     SIZE_MAX; beyond that the arithmetic wraps, as the C ABI's uint64
+//     counts do);
 //     pull() with a source delivering exactly frames_needed(k) frames yields
 //     exactly k outputs, and is bit-identical to process() on the same
-//     stream, for any chunking;
+//     stream, for any chunking; from any state process() or flush() leaves
+//     the stage in, outputs_for(n) <= floor(n L / M) + 2, the bound
+//     tap::dsp::chain sizes its scratch by (pull() can stop with up to
+//     L - 1 outputs banked and exceed it, which is why a chain resets the
+//     stages it is given and hands them out read-only);
 //   - latency_output_frames() = (N - 1) / 2 samples at the composite rate
 //     L f_in = (N - 1) / (2 M) output frames, an exact rational
 //     (tap::dsp::exact_ratio); latency_seconds(out_rate_hz) is its double;
@@ -75,7 +82,8 @@
 //     every row sums to exact unity in the format, so full-scale DC of
 //     either sign comes out at exactly full scale; full-scale drive
 //     saturates in the trait's finalize and never wraps; Q31 tracks double
-//     within 3.4e-9 of full scale; Q15 is format-limited — RMS -90.2 to
+//     within 3.4e-9 of full scale on the reference noise (480 frames at
+//     peak 0.9; 1.6e-8 under full-scale drive); Q15 is format-limited — RMS -90.2 to
 //     -99.8 dBFS from double, attained stopband -70.0 to -83.1 dB (every
 //     stage the 70 dB tier; transparent's 120 dB is float's), a decimator's
 //     equal to the interpolator's of its band, stated per stage in PLAN.md;
@@ -104,10 +112,18 @@ namespace tap::sr::rational {
 
     // ANCHOR: rational_schedule
     /// One output's step of the L-phase machine: the phase to dot and the
-    /// inputs to consume after it (bridge's schedule_entry).
+    /// inputs to consume after it (bridge's schedule_entry). The advance is
+    /// a byte wherever every advance of the ratio fits one (ceil(M / L) <=
+    /// 255: the whole vocabulary, the 4-byte entry the ratchet measured) and
+    /// 32 bits for the wide ratios of the charter (ratio<3, 1024>: 342), so
+    /// no charter ratio is truncated and no pinned count moves (the 8-byte
+    /// entry cost the M55 Q15 interpolators 8.7 %, the 2026-10 audit's S1).
+    template <rational_ratio R>
     struct schedule_entry {
+        using advance_type =
+            std::conditional_t<((R::k_down + R::k_up - 1) / R::k_up) <= 255, std::uint8_t, std::uint32_t>;
         std::uint16_t phase;   ///< polyphase branch index in [0, L)
-        std::uint8_t  advance; ///< input frames consumed after this output
+        advance_type  advance; ///< input frames consumed after this output, up to ceil(M / L)
     };
 
     /// The superblock of ratio R: entry n serves output k L + n; phase(n) =
@@ -115,19 +131,19 @@ namespace tap::sr::rational {
     /// to M. For an interpolator the advances are L - 1 zeros then a 1; for
     /// a decimator (L = 1) the single entry advances by M.
     template <rational_ratio R>
-    constexpr std::array<schedule_entry, R::k_up> make_schedule() noexcept {
-        constexpr std::size_t               l = R::k_up;
-        constexpr std::size_t               m = R::k_down;
-        std::array<schedule_entry, R::k_up> s{};
+    constexpr std::array<schedule_entry<R>, R::k_up> make_schedule() noexcept {
+        constexpr std::size_t                  l = R::k_up;
+        constexpr std::size_t                  m = R::k_down;
+        std::array<schedule_entry<R>, R::k_up> s{};
         for (std::size_t n = 0; n < l; ++n) {
             s[n].phase   = static_cast<std::uint16_t>((n * m) % l);
-            s[n].advance = static_cast<std::uint8_t>(((n + 1) * m) / l - (n * m) / l);
+            s[n].advance = static_cast<typename schedule_entry<R>::advance_type>(((n + 1) * m) / l - (n * m) / l);
         }
         return s;
     }
 
     template <rational_ratio R>
-    inline constexpr std::array<schedule_entry, R::k_up> k_schedule = make_schedule<R>();
+    inline constexpr std::array<schedule_entry<R>, R::k_up> k_schedule = make_schedule<R>();
 
     /// Inputs the next out_frames outputs need from superblock position pos:
     /// floor((pos + out) M / L) - floor(pos M / L), pure arithmetic.
@@ -580,8 +596,8 @@ namespace tap::sr::rational {
                 }
             }
             else {
-                const schedule_entry step = k_schedule<R>[m_pos];
-                const coeff*         row  = m_rows.data() + step.phase * m_row_len + m_first[step.phase];
+                const schedule_entry<R> step = k_schedule<R>[m_pos];
+                const coeff*            row  = m_rows.data() + step.phase * m_row_len + m_first[step.phase];
                 for (std::size_t c = 0; c < m_channels; ++c) {
                     const S* window = line(c, 0) + m_end[0] - m_row_len + m_first[step.phase];
                     if constexpr (k_table_gain != 1) {

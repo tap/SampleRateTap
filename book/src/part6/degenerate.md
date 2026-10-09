@@ -89,7 +89,7 @@ scale from `ratio_traits`' numbers by `scripts/book_figures.py`. The
 figure is the argument.*
 
 That is where the profile ladder comes from. Four tiers behind one design
-path, named in the family's vocabulary (the ASRC's presets are
+path, named in the family's vocabulary (the ASRC's profiles are
 `economy` / `balanced` / `transparent` too), each a (stopband, passband
 edge) pair with its tap counts pinned:
 

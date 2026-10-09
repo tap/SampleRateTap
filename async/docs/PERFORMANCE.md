@@ -18,7 +18,7 @@ simulator, Cadence xt-run) or hardware counters (DWT.CYCCNT on M-class silicon �
 `examples/pico2_cyccnt/` is a flashable RP2350 harness for exactly that);
 the instruction metric is what CI can gate deterministically.
 
-The benchmark matrix: sample type (float / Q15 / Q31) × filter preset
+The benchmark matrix: sample type (float / Q15 / Q31) × filter profile
 (fast / balanced / transparent) × channels (1 / 2 / 8 / 12 / 16 — 12 is
 the 7.1.4 deployment shape, 16 the AVB-with-reference-mics one), trimmed
 to the combinations that change the answer.
@@ -103,7 +103,7 @@ and fails on any diff — those published numbers cannot go stale. The SNR
 table is already enforced by test thresholds.
 
 - [x] **Compensated prototype design (image_zeros)** — quality change, not
-  a perf hypothesis, recorded here for the ratchet ledger: every preset
+  a perf hypothesis, recorded here for the ratchet ledger: every profile
   except `fast` now designs with transmission zeros at k*fs (droop
   pre-compensated, equal tap budget; see the book's epilogue and
   notebooks/asrc_rbj_analysis.ipynb). Audio-path cost: zero — same T, same
@@ -121,7 +121,7 @@ table is already enforced by test thresholds.
   because on a soft-FP64 target every double flop is a ~140-instruction
   libcall and the design ran ~14M flops — libm was never the M33's
   bottleneck. Cut to one correction pass and 24 probes (ripple margin
-  still >=2.2x on every preset, re-verified; two passband-edge
+  still >=2.2x on every profile, re-verified; two passband-edge
   fractional-delay gates re-pinned against the +/-0.01 dB contract).
   Final measured construction deltas, constant across all seven
   scenarios per target: M55 +16.1M (hardware FP64), Hexagon +131.3M,
@@ -173,7 +173,7 @@ table is already enforced by test thresholds.
   at every shift, so the workloads now print through an `alignas(64)`
   format string. Measured on the local toolchains that match the
   committed baselines to the instruction: Hexagon −95 instructions on each of the four pipeline workloads, +7 on `kernel_q15` and `kernel_q31`, +38 on `kernel_float` (the aligned string's `memcpy` path costs a few more than the kernels' old accidental alignment and fewer than the pipelines'); M33
-  and M55 exact (+0) on every workload of both engines. Hexagon
+  and M55 exact (+0) on every workload of the async and bridge engines. Hexagon
   baselines re-recorded with this entry as the justification. A finding
   from the same measurement, deferred: adding two statics and a
   `setvbuf` call to `main` (a rejected variant) flipped GCC's inlining

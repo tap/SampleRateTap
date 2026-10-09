@@ -136,7 +136,7 @@ def design_prototype(num_phases, taps_per_phase, cutoff_norm, beta):
     return h * (num_phases / h.sum())
 
 
-# FilterSpec presets, verbatim from polyphase_filter.h.
+# filter_spec profiles, verbatim from polyphase_filter.h.
 PRESETS = [
     ("fast", 128, 32, 18000.0, 30000.0, 96.0, BLUE),
     ("balanced", 256, 48, 20000.0, 28000.0, 120.0, AQUA),
@@ -145,7 +145,7 @@ PRESETS = [
 FS = 48000.0
 
 
-def preset_response(L, T, pass_hz, stop_hz, atten_db, nfft=1 << 21):
+def profile_response(L, T, pass_hz, stop_hz, atten_db, nfft=1 << 21):
     cutoff = (pass_hz + stop_hz) / FS
     h = design_prototype(L, T, cutoff, kaiser_beta(atten_db))
     H = np.fft.rfft(h, nfft) / L
@@ -180,10 +180,10 @@ def fig_kaiser_response():
     fig, (ax, axz) = plt.subplots(
         2, 1, figsize=(7.0, 5.6), layout="constrained", height_ratios=[2.4, 1.0])
     for name, L, T, pass_hz, stop_hz, atten, color in PRESETS:
-        f, db = preset_response(L, T, pass_hz, stop_hz, atten)
+        f, db = profile_response(L, T, pass_hz, stop_hz, atten)
         ax.plot(f / 1e3, db, color=color, label=name)
         axz.plot(f / 1e3, db, color=color)
-        # direct label at each preset's measured stopband floor
+        # direct label at each profile's measured stopband floor
         floor = db[f >= stop_hz].max()
         ax.annotate(f"{name}: {floor:.0f} dB past {stop_hz/1e3:.0f} kHz",
                     (47.0, floor), xytext=(0, 7),
@@ -198,14 +198,14 @@ def fig_kaiser_response():
     ax.set_ylim(-185, 8)
     ax.set_xlim(0, 48)
     ax.set_ylabel("magnitude (dB)")
-    ax.set_title("Prototype magnitude response, the three presets")
+    ax.set_title("Prototype magnitude response, the three profiles")
     ax.legend(loc="upper right", fontsize=8.5)
     despine(ax)
     axz.set_xlim(0, 22)
     axz.set_ylim(-0.031, 0.031)
     axz.set_xlabel("frequency at 48 kHz (kHz)")
     axz.set_ylabel("passband detail (dB)")
-    axz.annotate("all three presets flat within ±0.01 dB across their passbands",
+    axz.annotate("all three profiles flat within ±0.01 dB across their passbands",
                  (0.5, 0.021), color=SECONDARY, fontsize=8.5, ha="left")
     despine(axz)
     save(fig, "kaiser-response")

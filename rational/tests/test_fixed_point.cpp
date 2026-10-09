@@ -396,10 +396,10 @@ namespace {
     // ------------------------------------------------------------------
     // Cross-precision on the reference noise (480 frames, peak 0.9), every
     // stage against double. Measured worst |Q31 - double| 3.4e-9 (by 8 at
-    // transparent), worst |float - double| 4.6e-8 (bridge's float floor is
+    // transparent), worst |float - double| 5.1e-8 (bridge's float floor is
     // 5e-8): Q31 sits a decade under float. Q15's RMS deviation is the
-    // format's floor, -85.6 to -95.8 dBFS by stage (pinned per row within
-    // 1 dB); its worst sample 1.64e-4.
+    // format's floor, -90.2 to -99.8 dBFS by stage after the per-branch
+    // lever (pinned per row within 1 dB); its worst sample 1.36e-4.
     struct floors {
         double worst_float = 0.0, worst_q31 = 0.0, worst_q15 = 0.0, worst_rms_q15 = -400.0;
     };
@@ -496,14 +496,74 @@ namespace {
         for_each_row<quantized_stopband>();
     }
 
+    // The stopband the Q15 tables of the RELAXED designs attain: the stages
+    // a chain runs are designed at their design divisor (PLAN.md 3.1,
+    // profile::relaxed), and those tables are not the rows above. Every
+    // (profile, divisor, band) of the relaxation tables, Q15, the band's
+    // interpolator (a decimator's table is the same table, a mixed ratio's
+    // rows the same coefficients at a power-of-two gain): the worst per
+    // profile is printed and pinned within 0.5 dB. The 70 dB tier is not
+    // attained by every relaxed Q15 design: the 147/160 rows (the stage at
+    // bridge's rate) are the widest transitions in the table, and at
+    // economy the half-band there attains -67.6 dB (the 2026-10 audit, F05;
+    // stated in PLAN.md section 6). A host suite (excluded on the QEMU legs).
+    template <typename R>
+    double relaxed_q15_stopband_db(const profile& base, const relaxed_pins& row) {
+        return quantized_stopband_db<std::int16_t, R>(base.relaxed(row.divisor));
+    }
+
+    struct relaxed_worst {
+        const char* profile;
+        double      worst_db;
+    };
+
+    TEST(FixedPoint, RelaxedQ15TablesStopbandsAreStated) {
+        // Measured 2026-10-09 (gcc 13, x86-64; exact integer tables, the same on
+        // every host): the worst relaxed Q15 design per profile, each at the
+        // 147/160 divisor.
+        const relaxed_worst stated[] = {
+            {"super_economy", -70.5}, {"economy", -67.6}, {"balanced", -70.0}, {"transparent", -72.3}};
+        const profile profiles[] = {profile::super_economy(), profile::economy(), profile::balanced(),
+                                    profile::transparent()};
+        for (std::size_t i = 0; i < 4; ++i) {
+            const profile& base  = profiles[i];
+            double         worst = -400.0;
+            const char*    where = "";
+            for (const auto& row : base.relaxations) {
+                if (row.divisor == tap::dsp::exact_ratio{1, 1}) {
+                    continue; // the unrelaxed rows are the table above
+                }
+                const double bands[] = {
+                    row.taps_per_branch[0] ? relaxed_q15_stopband_db<up_2>(base, row) : -400.0,
+                    row.taps_per_branch[1] ? relaxed_q15_stopband_db<up_3>(base, row) : -400.0,
+                    row.taps_per_branch[2] ? relaxed_q15_stopband_db<ratio_4_3>(base, row) : -400.0,
+                    row.taps_per_branch[3] ? relaxed_q15_stopband_db<up_6>(base, row) : -400.0,
+                    row.taps_per_branch[4] ? relaxed_q15_stopband_db<up_8>(base, row) : -400.0,
+                };
+                static const char* const k_names[] = {"up_2", "up_3", "ratio_4_3", "up_6", "up_8"};
+                for (std::size_t b = 0; b < 5; ++b) {
+                    std::printf("[ measured ] relaxed Q15 %s divisor %llu/%llu %s: %.1f dB\n", stated[i].profile,
+                                static_cast<unsigned long long>(row.divisor.num),
+                                static_cast<unsigned long long>(row.divisor.den), k_names[b], bands[b]);
+                    if (bands[b] > worst) {
+                        worst = bands[b];
+                        where = k_names[b];
+                    }
+                }
+            }
+            std::printf("[ measured ] relaxed Q15 %s: worst %.1f dB (%s)\n", stated[i].profile, worst, where);
+            EXPECT_NEAR(worst, stated[i].worst_db, 0.5) << stated[i].profile;
+        }
+    }
+
     // ------------------------------------------------------------------
     // Full scale saturates, never wraps: random +-full-scale noise (the
     // densest drive: every window sum can exceed 1 by the filter's
     // overshoot) through every stage at economy and transparent; each output
     // is the double model's on the same input samples, clamped to full
     // scale, within the format's floor. A wrap would land ~2 away. Measured
-    // worst 8.8e-4 (Q15: Q1.14 coefficient error summed at full scale) and
-    // 1.6e-8 (Q31).
+    // worst 4.83e-4 (Q15: Q1.14 coefficient error summed at full scale,
+    // after the per-branch lever) and 1.6e-8 (Q31).
     template <typename S, rational_ratio R>
     double worst_against_clamped_double(const profile& p) {
         std::vector<double> x(2048);

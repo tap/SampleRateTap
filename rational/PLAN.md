@@ -111,7 +111,7 @@ The boundaries are identity, not policy, as `bridge`'s are
 | R8 | **Sample formats** double / float / Q15 / Q31 through `tap::dsp::sample_traits` (`sample_traits.h:107-266`), coefficient rows quantized with `quantize_row_preserving_sum` (`quantize.h:56-99`) after per-branch DC normalization, so every branch's DC gain is exactly 1 in every format; the zero taps are zero in every format and are never multiplied. Aliases `converter<ratio>` (float), `converter_q15`, `converter_q31`, and `double` as the golden model | DspTap's four-profile ladder (`submodules/dsptap/CLAUDE.md`, "Double is the golden model"); `bridge`'s per-branch normalization (`design.h:180-199`) and its reasons |
 | R9 | **Real-time rules**: geometry fixed at construction, every buffer allocated and every filter designed there (may throw); `process`, `pull`, `flush`, `reset` are `noexcept`, lock-free and allocation-free; one stream per instance, channels share the coefficient row per frame | The family contract (`converter.h:58-61`, `decimate.h:51-52`) |
 | R10 | **Bit-exact repeatability** per format and platform, as `bridge` (`../bridge/PLAN.md` §3): integer paths exactly, float through the fixed accumulation order of the `tap::dsp` kernels (`fir_kernels.h:77-79`); a chain's output is the same for any chunking of its input | Lets the output-hash leg (`test_output_hash.cpp`) and the ratchet's `checksum=` line (`scripts/icount.py:100`) stand |
-| R11 | **One family version** (D13): `TAP_SR_VERSION_*` token-identically in `rational.h` — 0.4.0 until M6, **0.5.0 at M6**, bumped in all three umbrella headers and the root `project()` together (decision 10); `tap_sr_rational_version()` bit-packed; `tests/family/version_macros.cpp` gains a third include and `static_assert` | `../PLAN.md:48`; a new engine is a minor bump |
+| R11 | **One family version** (D13): `TAP_SR_VERSION_*` token-identically in `rational.h` — 0.4.0 until M6, **0.5.0 at M6**, 0.6.0 since the 2026-10 audit response (the async vocabulary pass), bumped in all three umbrella headers and the root `project()` together (decision 10); `tap_sr_rational_version()` bit-packed; `tests/family/version_macros.cpp` gains a third include and `static_assert` | `../PLAN.md:48`; a new engine is a minor bump |
 | R12 | **Tests carry the engine prefix and label** `rational.` / `rational` (D16, `../PLAN.md:51`), including the `*_tests_emulated` entries; guest icount marker `RATIONAL_ICOUNT_DONE`, byte-stable from its first baseline | `../CLAUDE.md`, "Guest markers … never change" |
 | R13 | **`bridge` at the lowest k** (decision 1): a cross-family chain contains exactly one `bridge` stage, at the lowest k ∈ {0, 1, 2} whose lower rate satisfies 2.1(a) for the chain's f_pass (3.1). `transparent` needs no exception: its 20 kHz passband clears both stopband edges at k = 0 (44.1 − 20 = 24.1 ≥ 24 up, ≥ 22.05 down) | `bridge` costs 58 (down) or 38 (up) MACs per output at `economy` whatever k is, so its cost scales with the rate it runs at, while the ↑2 / ↓2 stages that move a chain between k levels cost 9–19; 48 → 88.2 at k = 0 is 62 % of the MACs of k = 1 at the same (f_pass, A). The family plan's illustrative row (`../PLAN.md:120`) was corrected to match |
 | R14 | **Dipping rows are flagged** (decision 3): every row of 3.5/3.6 whose `bridge` stage runs — its output rate — at ≥ 2× the chain's output rate carries ⚑ in a trailing column, "covered, not recommended". Documentation only: the flag dispatches nothing and D12 is untouched | In such a row `bridge` alone costs ≥ 116 MACs per output at `economy` (≥ 368 at `transparent`), 2–4× a within-family chain's total; a consumer who reads the matrix sees the price before choosing. 38 rows carry it |
@@ -284,8 +284,11 @@ Mirrors `decimate.h:17-24` and `converter.h:51-56`, per stage:
   (`phase_table.h:83-85`).
 - **Chain**: outputs are the last stage's; `outputs_for` composes forward,
   `frames_needed` composes backward (each stage's is exact arithmetic,
-  `schedule.h:54`), so a pull with a source delivering exactly
-  `frames_needed(n)` frames yields exactly n outputs. Latency is
+  `schedule.h:54`): `outputs_for(frames_needed(k)) >= k` and one frame
+  fewer falls short. Not an equality: one input to an interpolating stage
+  completes L outputs at once, so `process(frames_needed(k))` can write
+  more than k; size the output by `outputs_for()`. (A single stage's
+  `pull()` stops at k; a chain has no pull.) Latency is
   Σ_i (N_i − 1)/2 · (f_out / f_hi,i), an exact rational at the output
   rate, reported as `latency_output_frames()` (numerator, denominator) and
   `latency_seconds()`; the matrix test pins it per pair. `flush()` drains
@@ -678,7 +681,8 @@ rational/
 │   └── converter.h         basic_converter<S, R> = basic_stage<S, R> under the family's converter name, with the
 │                           float / Q15 / Q31 aliases (converter<R>, converter_q15<R>, converter_q31<R>)
 ├── tests/                  test_ratio, test_design, test_stage, test_chain, test_matrix, test_fixed_point,
-│   │                       test_cross_validation, test_output_hash, test_capi, bare_metal_main.cpp
+│   │                       test_output_hash, test_capi, bare_metal_main.cpp (no cross-validation test: section 5
+│   │                       says why the bridge-vs-async leg is not repeated here; struck by the 2026-10 audit, F18)
 │   ├── reference/          committed scipy vectors (make_reference_vectors.py in tools/reference/), the
 │   │                       single stages and the sequenced-upfirdn chain vectors
 │   ├── coverage/           matrix_rows.h, generated by tools/coverage/matrix.py: the 182 rows with
@@ -782,9 +786,9 @@ As `bridge` (`../bridge/PLAN.md` §6), typed over `float` / `int16_t` /
    (`support/bridge_stage.h`, allowed by 4.2); every row is measured, none
    skipped (2.2 had landed). Measured at M4: worst candidate −71.3 dB at
    `economy`, −71.8 at `super_economy`, −71.5 at `balanced`, −121.6 at
-   `transparent`; worst passband deviation 0.0087 / 0.0081 / 0.0070 /
-   0.00002 dB (about 1700 tones per profile, 24 s on a host; a host suite,
-   excluded on the QEMU legs).
+   `transparent`; worst passband deviation 0.0081 / 0.0087 / 0.0070 /
+   0.00002 dB in that order (about 1700 tones per profile, 10 to 24 s on a
+   host; a host suite, excluded on the QEMU legs).
 
 Plus:
 
@@ -929,6 +933,18 @@ Two limits, stated rather than papered over (both pinned by the battery):
   but +13 % on the M55, and +22 % / +60 % / +24 % in Q15 on M33 / M55 /
   Hexagon, the flagship embedded profile. The matrix's MAC figures count
   what runs: the dense rows.
+
+- **The relaxed designs are the ones a chain runs, and their Q15 tables
+  are measured separately** (`FixedPoint.RelaxedQ15TablesStopbandsAreStated`,
+  2026-10-09, the audit's F05): every (profile, divisor, band) of the
+  relaxation tables in Q15, the worst per profile pinned within 0.5 dB.
+  Super_economy −70.5 dB, economy −67.6 dB, balanced −70.0 dB, transparent
+  −72.3 dB, each at the 147/160 divisor (the stage at `bridge`'s rate, the
+  widest transition the tables relax to). So "every Q15 stage attains the
+  70 dB tier" holds for the vocabulary at its own rate; the `economy`
+  half-band relaxed to 147/160 misses it by 2.4 dB, and a chain through
+  `bridge` at Q15 `economy` carries that number. At `super_economy`,
+  `balanced` and `transparent` every relaxed Q15 design attains 70 dB.
 
 **The icount baselines, measured** (M6, `bench/icount/`: 2 s of stereo at
 48 kHz streamed in 32-frame blocks, counted under QEMU by the family's

@@ -104,11 +104,8 @@ namespace {
 // ANCHOR_END: abi_impl
 
 // The library builds with hidden visibility (CMakeLists.txt); only the C entry
-// points below are exported.
-#if defined(__GNUC__)
-#pragma GCC visibility push(default)
-#endif
-
+// points below are exported, through TAP_SR_ASYNC_API on their declarations
+// in the header (default visibility here, dllexport on Windows).
 extern "C" {
 
 unsigned tap_sr_async_version(void) {
@@ -117,19 +114,24 @@ unsigned tap_sr_async_version(void) {
 }
 
 // ANCHOR: abi_create
-/// preset: 0 = fast, 1 = balanced, 2 = transparent; format: a
-/// TAP_SR_ASYNC_FORMAT_* value.
-tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, std::size_t channels,
-                                                   std::size_t target_latency_frames, int preset, int format) {
+/// profile: 0 = fast, 1 = balanced, 2 = transparent; format: a
+/// TAP_SR_ASYNC_FORMAT_* value. NULL on an invalid configuration (the
+/// converter's constructor throws), an unknown format or profile, or an
+/// allocation failure; the C boundary never unwinds.
+tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, size_t target_latency_frames, int profile,
+                                                   int format, unsigned channels) {
     tap::sr::async::config cfg;
     cfg.sample_rate_hz = sample_rate_hz;
     cfg.channels       = channels;
     if (target_latency_frames != 0) {
         cfg.target_latency_frames = target_latency_frames;
     }
-    cfg.filter = preset == 0   ? tap::sr::async::filter_spec::fast()
-                 : preset == 2 ? tap::sr::async::filter_spec::transparent()
-                               : tap::sr::async::filter_spec::balanced();
+    if (profile < 0 || profile > 2) {
+        return nullptr; // the siblings refuse an unknown profile the same way (2026-10 audit, F09)
+    }
+    cfg.filter = profile == 0   ? tap::sr::async::filter_spec::fast()
+                 : profile == 2 ? tap::sr::async::filter_spec::transparent()
+                                : tap::sr::async::filter_spec::balanced();
     try {
         std::unique_ptr<engine> e;
         switch (format) {
@@ -152,10 +154,10 @@ tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, std::s
     }
 }
 
-tap_sr_async_converter* tap_sr_async_create(double sample_rate_hz, std::size_t channels,
-                                            std::size_t target_latency_frames, int preset) {
-    return tap_sr_async_create_format(sample_rate_hz, channels, target_latency_frames, preset,
-                                      TAP_SR_ASYNC_FORMAT_FLOAT);
+tap_sr_async_converter* tap_sr_async_create(double sample_rate_hz, size_t target_latency_frames, int profile,
+                                            unsigned channels) {
+    return tap_sr_async_create_format(sample_rate_hz, target_latency_frames, profile, TAP_SR_ASYNC_FORMAT_FLOAT,
+                                      channels);
 }
 // ANCHOR_END: abi_create
 
@@ -222,7 +224,3 @@ void tap_sr_async_reset_from_consumer(tap_sr_async_converter* h) {
 }
 
 } // extern "C"
-
-#if defined(__GNUC__)
-#pragma GCC visibility pop
-#endif

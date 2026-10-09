@@ -49,7 +49,7 @@ Tests are typed batteries over `float`/`int16_t`/`int32_t` with exhaustive phase
 than statistical sampling, and measured numbers stated in comments with their provenance.
 
 ```sh
-# from the repository root (this engine lives in bridge/; the root builds both engines)
+# from the repository root (this engine lives in bridge/; the root builds every engine)
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTAP_SR_BRIDGE_WERROR=ON
 cmake --build build
 ctest --test-dir build --output-on-failure -L '^bridge$'

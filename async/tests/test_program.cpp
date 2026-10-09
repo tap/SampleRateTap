@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
-// Program-weighted quality: the metric that makes filter_spec::economy()'s
+// Program-weighted quality: the metric that makes filter_spec::program()'s
 // promise testable, and the evidence that the k*fs transmission zeros do
 // what the design says (see the book's epilogue chapter and
 // notebooks/asrc_rbj_analysis.ipynb).
@@ -52,8 +52,8 @@ namespace {
     }
     // ANCHOR_END: pw_measure
 
-    // Worst-case single sine near Nyquist, for the honesty line in economy()'s
-    // documentation: this preset trades exactly this number.
+    // Worst-case single sine near Nyquist, for the honesty line in program()'s
+    // documentation: this profile trades exactly this number.
     double measure_sine_snr_db(const tap::sr::async::filter_spec& spec, double freq_hz) {
         tap::sr::async::config cfg;
         cfg.channels = 1;
@@ -102,7 +102,7 @@ namespace {
     }
 
     // Thresholds pinned 4-7 dB under first measurement, per suite convention.
-    // The claim under test: economy() (2/3 the taps of balanced) stays within a
+    // The claim under test: program() (2/3 the taps of balanced) stays within a
     // few dB of balanced() on PROGRAM-weighted material, because its k*fs zeros
     // hold the images of the energetic bottom octaves at balanced-class depth —
     // while its worst-case sine near Nyquist honestly reads ~96 dB-class.
@@ -112,8 +112,8 @@ namespace {
     }
     TEST(ProgramWeighted, EconomyNearBalanced) {
         // Measured 131.6 dB — 2.9 dB under balanced at 2/3 the per-sample
-        // compute. This single number is the preset's reason to exist.
-        const double eco = measure_program_snr_db(tap::sr::async::filter_spec::economy());
+        // compute. This single number is the profile's reason to exist.
+        const double eco = measure_program_snr_db(tap::sr::async::filter_spec::program());
         EXPECT_GT(eco, 125.0);
     }
     TEST(ProgramWeighted, EconomyWorstCaseSineIsDocumented) {
@@ -121,7 +121,7 @@ namespace {
         // "96 dB-class"; the extra gap to 77 dB at 19.5 kHz is the L=512
         // interpolation floor at 0.40625 of the sample rate plus the design's
         // transition starting at 18 kHz.)
-        EXPECT_GT(measure_sine_snr_db(tap::sr::async::filter_spec::economy(), 19500.0), 70.0);
+        EXPECT_GT(measure_sine_snr_db(tap::sr::async::filter_spec::program(), 19500.0), 70.0);
     }
 
 } // namespace

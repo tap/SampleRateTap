@@ -6,7 +6,7 @@
 // by-4, by-16), the traits' numbers (band index, composite factor, lower
 // rate, exponents, direction flags), the version macros, and that the
 // composite rate is k_band times the lower rate for every ratio the
-// engine names. The rejected set (ratio<5, 1>, <4, 2>, <2, 2>) is
+// engine names. The rejected set (ratio<5, 1>, <4, 2>, <2, 2>, <1, 1>) is
 // compile_fail/, run as rational.Ratio.ChartersFailToCompileWithTheMessage.
 
 #include <cstddef>
@@ -22,7 +22,7 @@ namespace {
 
     TEST(Ratio, VersionIsTheFamilys) {
         EXPECT_EQ(TAP_SR_VERSION_MAJOR, 0);
-        EXPECT_EQ(TAP_SR_VERSION_MINOR, 5); // 0.5.0 from M6 (R11)
+        EXPECT_EQ(TAP_SR_VERSION_MINOR, 6); // 0.6.0 since the audit response (R11; 0.5.0 from M6)
         EXPECT_EQ(TAP_SR_VERSION_PATCH, 0);
     }
 

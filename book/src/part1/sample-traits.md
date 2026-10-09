@@ -17,7 +17,7 @@ measured quality in each, and pay nothing for the flexibility.
 Here is what "nothing" has to mean, concretely. The inner loop of
 `interpolate()` runs one multiply-accumulate and one coefficient blend per
 tap, per channel, per output sample. At 48 kHz stereo with the default
-balanced preset (48 taps), that is about 4.6 million multiply-accumulates
+balanced profile (48 taps), that is about 4.6 million multiply-accumulates
 per second — and every one of them goes through the customization point this
 chapter describes. Any mechanism that adds even one indirect call to that
 path has already lost.
@@ -203,9 +203,9 @@ even two of them could wrap. An `int32_t` accumulator is therefore not
 
 The accumulator is `int64_t`, and now do the arithmetic the comment
 gestures at. The shipping filters run 32 to 80 taps per phase (fast,
-balanced, transparent presets). Summing N values adds at most log₂N bits
+balanced, transparent profiles). Summing N values adds at most log₂N bits
 to the worst-case magnitude: 48 taps add ~5.6 bits, 80 taps add ~6.3 — call
-it six to seven bits. Worst case for the transparent preset:
+it six to seven bits. Worst case for the transparent profile:
 80 × 2³⁰ < 2³⁷, against an accumulator that holds ±2⁶³. Twenty-six bits of
 spare headroom. That surplus is the point: the sum is exact — not
 approximately safe, *exact*, every intermediate value representable — no
@@ -248,7 +248,7 @@ computing rather than asserting. A full-precision Q0.31 × Q1.30 product
 carries 61 fractional bits and a worst-case magnitude near 2⁶¹ (full-scale
 sample, peak ~1.0 coefficient). An `int64_t` holds ±2⁶³ — barely four such
 products of margin. The shortest shipping filter sums 32 of them; the
-transparent preset sums 80. At 48 taps the worst-case sum is
+transparent profile sums 80. At 48 taps the worst-case sum is
 48 × 2⁶¹ ≈ 2⁶⁶·⁶, over the accumulator's limit by a factor of about twelve.
 Full-precision products simply do not fit, and there is no 128-bit
 accumulator worth having on the targets this path exists for.

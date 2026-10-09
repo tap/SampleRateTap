@@ -17,7 +17,7 @@ multiply-accumulates (compute). A deeper FIFO buys servo stability
 buys interpolation accuracy at the price of memory and cache traffic. The
 design that ships is not the best possible point on any single axis; it is
 a defensible allocation across all three, and the allocation is different
-for a Xeon than for a microcontroller. That is why the library has presets
+for a Xeon than for a microcontroller. That is why the library has profiles
 and sample-type variants rather than one configuration: same architecture,
 different budget splits.
 
@@ -179,7 +179,7 @@ polyphase branches of `T = 48` taps each, `(L·T − 1)/(2L)` is 23.998
 input frames, ~0.50 ms. You cannot negotiate this term down at constant
 quality; you can only buy a shorter filter. `filter_spec::fast()` does
 exactly that, cutting group delay to about 16 frames at reduced stopband,
-and the `transparent()` preset spends the other way — 80 taps, 40 frames,
+and the `transparent()` profile spends the other way — 80 taps, 40 frames,
 0.83 ms — for its extra high-frequency headroom. Quality and latency,
 trading at a posted exchange rate of half a frame per tap.
 

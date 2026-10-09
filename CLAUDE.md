@@ -42,12 +42,22 @@ made this tree (sections 5–6). Do not re-derive what it settles.
 - **Substrate discipline.** Shared code (design math, sample traits, kernels, quantization,
   measurement instruments) lands in DspTap first; this tree bumps the submodule pin. Never fork
   substrate code into an engine.
-- **One version (D13).** `TAP_SR_VERSION_*` is 0.5.0, defined token-identically in each umbrella
+- **One version (D13).** `TAP_SR_VERSION_*` is 0.6.0, defined token-identically in each umbrella
   header (checked by `tests/family/version_macros.cpp`) and returned bit-packed by each C ABI's
   `tap_sr_<engine>_version()` (pinned by `CApi.VersionIsBitPacked`). Tags are `vX.Y.Z`; bump all
-  three headers and the root `project()` together (0.5.0 came with `rational`'s M6).
+  three headers and the root `project()` together (0.5.0 came with `rational`'s M6, 0.6.0 with the
+  audit response's async vocabulary pass: `preset` retired for `profile`, `economy()` to `program()`,
+  the async C ABI in the siblings' shape).
 - **Clean renames, no aliases (D7).** Retired options fail the configure
-  (`cmake/retired_options.cmake`); retired override macros hit an `#error`. Do not add aliases.
+  (`cmake/retired_options.cmake`); retired override macros hit an `#error`; retired words fail
+  the style job (`scripts/retired_words.txt`, `scripts/check_retired_words.py`). Do not add aliases.
+- **One meaning per profile name (A4, the 2026-10 audit response).** Each engine's quality tiers
+  are its own ladder, stated with its numbers in the root README's profile table, and a profile
+  name means one thing across the family: `bridge` and `rational` share four names at the same
+  numbers; `async`'s `fast` / `balanced` / `transparent` / `program` are a different kind of number
+  and keep their own names. The word is `profile` everywhere. A change to any engine's shared
+  vocabulary (a profile name, a call shape, a C ABI argument order, a test or file name the book
+  cites) updates the root README's table and the other engines' READMEs in the same PR.
 
 ## Build & test
 
@@ -78,7 +88,8 @@ and never change.
 
 `STYLE.md` is the shared Tap house style; `.clang-format` and `.clang-tidy` enforce it and CI runs
 both, plus a drift check that these files match the canonical taphouse copies — never edit them
-locally. Run `pre-commit install` once per clone; on Claude Code web the SessionStart hook
+locally — and the vocabulary gate (`scripts/check_retired_words.py` over the tree, notebook
+source cells included; the READMEs' quick starts compile as `*.Family.ReadmeQuickStartCompiles`). Run `pre-commit install` once per clone; on Claude Code web the SessionStart hook
 (`.claude/hooks/session-start.sh`) does this and initializes the submodule. clang-tidy compiles
 with a *clang* front end and clang's `-Wconversion` implies `-Wsign-conversion`, so treat the tidy
 job and a local clang `-Werror` build as second compilers before pushing. Banners: every C/C++ and

@@ -62,15 +62,16 @@ jobs:
             capi: ON
           # async's warnings stay non-fatal on MSVC until its /W4 output has
           # been triaged (async/docs/PERFORMANCE.md "Known debt"); bridge keeps
-          # /WX, as RatioTap's CI did. The C ABI stays OFF: none of the three libraries
-          # carries __declspec(dllexport), so an MSVC build would link DLLs
-          # exporting nothing and gate nothing.
+          # /WX, as its CI did before the merge. The C ABI is ON since the
+          # export macro (TAP_SR_<ENGINE>_API, dllexport while building): the
+          # CApi suites gate the DLLs here too; the symbol-set test is an
+          # nm test and runs on the ELF and Mach-O hosts only.
           - name: Windows MSVC
             os: windows-latest
             async_werror: OFF
             bridge_werror: ON
             rational_werror: ON
-            capi: OFF
+            capi: ON
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -106,7 +107,7 @@ jobs:
             flags: -fsanitize=address,undefined -fno-sanitize-recover=all
             labels: ""
           # TSan runs the async engine only: bridge is single-threaded, and
-          # RatioTap never ran a TSan job.
+          # bridge never ran a TSan job before the merge.
           - name: TSan
             flags: -fsanitize=thread
             labels: -L ^async$
@@ -185,7 +186,8 @@ jobs:
           # (the coverage matrix's tone batteries, 182 chains in double per
           # profile, and the relaxation tables' searches, which run every
           # candidate length through the design grid: the 70 dB tables alone
-          # exceed the job's budget under qemu-hexagon); on the Arm legs
+          # exceed the job's budget under qemu-hexagon, and the quantized and
+          # relaxed Q15 tables' stopbands through a 16384-point DFT); on the Arm legs
           # bare_metal_main.cpp bakes in its own
           # filter (the fine-grid sweeps of the long designs and the
           # matrix suite).
@@ -197,7 +199,7 @@ jobs:
             jobs: 4
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: Throw|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands
+            exclude: Throw|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands|RelaxedQ15TablesStopbandsAreStated
           - target: m55
             title: Cortex-M55 cross
             engine: rational
@@ -387,7 +389,7 @@ jobs:
   # bridge/PLAN.md section 7): fixed workloads under QEMU with a counting
   # plugin, gated two-sided at ±3% against each engine's
   # bench/baselines.json. Noise-free, so a hard gate is safe on shared
-  # runners. One job per target measures both engines with the shared
+  # runners. One job per target measures every engine with the shared
   # harness (tools/qemu_insn_plugin, scripts/icount.py --engine); each
   # engine is still its own gated step, so one engine's regression never
   # hides the other's numbers.
@@ -779,7 +781,7 @@ jobs:
           path: book/print-build/SampleRateTap.pdf
           if-no-files-found: error
 
-      # The API reference must build and be non-empty (both engines' headers
+      # The API reference must build and be non-empty (the three engines' headers
       # are its input); book-pages.yml publishes it from main.
       - name: API reference (Doxygen)
         run: |

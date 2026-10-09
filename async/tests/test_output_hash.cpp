@@ -6,10 +6,10 @@
 // Each test drives the fractional resampler (the async engine's datapath,
 // with the rate pinned instead of servoed so the run is deterministic) over
 // a fixed two-channel multitone, for every sample format (float, Q15, Q31),
-// every filter preset and two rate offsets, and prints an FNV-1a-64 hash of
+// every filter profile and two rate offsets, and prints an FNV-1a-64 hash of
 // the raw output bytes:
 //
-//   [ measured ] hash <format>/<preset>/<ppm> <16 hex digits>
+//   [ measured ] hash <format>/<profile>/<ppm> <16 hex digits>
 //
 // The hashes are deliberately NOT pinned here. The float path's result
 // depends on whether the compiler contracts multiply-adds into FMA, and on
@@ -94,7 +94,7 @@ namespace {
     }
 
     template <class S>
-    void hash_one(const char* preset_name, const tap::sr::async::filter_spec& spec, double ppm) {
+    void hash_one(const char* profile_name, const tap::sr::async::filter_spec& spec, double ppm) {
         const tap::sr::async::polyphase_filter_bank<S> bank(spec, k_fs);
         tap::sr::async::fractional_resampler<S>        rs(bank, k_channels);
         const std::vector<S>                           x   = multitone<S>();
@@ -118,29 +118,29 @@ namespace {
         }
         EXPECT_GT(energy, 0.0) << "silent output would hash stably";
 
-        std::printf("[ measured ] hash %s/%s/%+.0f %016llx\n", format_name<S>(), preset_name, ppm,
+        std::printf("[ measured ] hash %s/%s/%+.0f %016llx\n", format_name<S>(), profile_name, ppm,
                     static_cast<unsigned long long>(fnv1a64(y.data(), y.size() * sizeof(S))));
     }
 
-    void hash_preset(const char* preset_name, const tap::sr::async::filter_spec& spec) {
+    void hash_profile(const char* profile_name, const tap::sr::async::filter_spec& spec) {
         for (const double ppm : k_ppm_offsets) {
-            hash_one<float>(preset_name, spec, ppm);
-            hash_one<std::int16_t>(preset_name, spec, ppm);
-            hash_one<std::int32_t>(preset_name, spec, ppm);
+            hash_one<float>(profile_name, spec, ppm);
+            hash_one<std::int16_t>(profile_name, spec, ppm);
+            hash_one<std::int32_t>(profile_name, spec, ppm);
         }
     }
 
     TEST(OutputHash, Fast) {
-        hash_preset("fast", tap::sr::async::filter_spec::fast());
+        hash_profile("fast", tap::sr::async::filter_spec::fast());
     }
     TEST(OutputHash, Economy) {
-        hash_preset("economy", tap::sr::async::filter_spec::economy());
+        hash_profile("program", tap::sr::async::filter_spec::program());
     }
     TEST(OutputHash, Balanced) {
-        hash_preset("balanced", tap::sr::async::filter_spec::balanced());
+        hash_profile("balanced", tap::sr::async::filter_spec::balanced());
     }
     TEST(OutputHash, Transparent) {
-        hash_preset("transparent", tap::sr::async::filter_spec::transparent());
+        hash_profile("transparent", tap::sr::async::filter_spec::transparent());
     }
 
 } // namespace

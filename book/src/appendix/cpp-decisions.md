@@ -219,7 +219,7 @@ toolchain quirk would have been a field failure.
 ## 5. Runtime filter design, not `constexpr` tables
 
 A modern-C++ reflex says the Kaiser-windowed prototype — pure math on
-compile-time-known presets — should be a `constexpr` table. The library
+compile-time-known profiles — should be a `constexpr` table. The library
 computes it at runtime, in the constructor, and `kaiser.h` opens with
 the reason, arithmetic included:
 
@@ -234,8 +234,8 @@ the reason, arithmetic included:
 /// double precision.
 ```
 
-Unpack the trade. The `balanced()` preset's prototype is 256 × 48 =
-12,288 taps, and the presets range upward from there — the comment's
+Unpack the trade. The `balanced()` profile's prototype is 256 × 48 =
+12,288 taps, and the profiles range upward from there — the comment's
 "12K-33K taps". Each tap evaluates `sin`,
 `sqrt`, and a Bessel-I0 power series that runs to ~50 terms. `constexpr`
 evaluation is an interpreter inside the compiler — three to four orders
@@ -246,7 +246,7 @@ header-only library the bill lands in every consumer TU, repeatedly. The
 runtime version costs under 10 ms, once, in the constructor — which
 section 4 already designated as the place where expensive things happen.
 And a runtime design accepts *runtime* configurations: `filter_spec` is
-not limited to the three presets, so a compile-time table would have been
+not limited to the three profiles, so a compile-time table would have been
 a special case bolted alongside the general path, not a replacement.
 
 This is the header-only cost model (section 1) feeding back into design:
@@ -408,7 +408,7 @@ frame of fill — observability, not metrology.
 
 ## 10. Designated initializers as API
 
-The filter presets are written the way a datasheet reads:
+The filter profiles are written the way a datasheet reads:
 
 ```cpp
 static filter_spec transparent() noexcept {
@@ -438,12 +438,12 @@ The style is also the library's own consumption idiom: the README quick
 start and every test build configs by naming only what deviates from
 default. Readable initialization is not cosmetic in a config API; the
 config *is* the API surface where users make their quality-versus-cost
-decisions, and the presets double as documentation of three known-good
+decisions, and the profiles double as documentation of three known-good
 points in that space.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|
-| aggregate configs + designated initializers | positional constructors; builder chains | named fields make adjacent-double swaps impossible; defaults stay declarative; declaration-order enforcement | `include/tap/sr/async/polyphase_filter.h` (`filter_spec` presets); `include/tap/sr/async/converter.h` (`config`); `include/tap/sr/async/pi_servo.h` (`servo_config`) |
+| aggregate configs + designated initializers | positional constructors; builder chains | named fields make adjacent-double swaps impossible; defaults stay declarative; declaration-order enforcement | `include/tap/sr/async/polyphase_filter.h` (`filter_spec` profiles); `include/tap/sr/async/converter.h` (`config`); `include/tap/sr/async/pi_servo.h` (`servo_config`) |
 
 ## 11. `TAP_DSP_RESTRICT`: a portable `__restrict__`, adopted on measurement
 

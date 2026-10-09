@@ -26,6 +26,19 @@ jobs:
       ref: v6
       icon: SampleRateTap
 
+  # The family's vocabulary (CLAUDE.md, D7 and A4): no retired word in any
+  # tracked text file, notebook source cells included
+  # (scripts/retired_words.txt lists them with the reason, the checker the
+  # allowed senses). The 2026-10 audit found the prose lagging the code at
+  # every seam between rounds of work; this is the gate against it.
+  retired-words:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: No retired word in the tree
+        run: python3 scripts/check_retired_words.py
+
   clang-tidy:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -39,7 +52,7 @@ jobs:
       # icount workloads: the coverage each repository's gate had. The async
       # workloads (async/bench/icount) were never under this gate and do not
       # pass it yet; bringing them in is follow-up work, not a migration step.
-      # Since step 3.4 the one family option builds both engines' workloads,
+      # Since step 3.4 the one family option builds every engine's workloads,
       # so the async ones are excluded below by path.
       - name: Configure (compile database)
         run: >

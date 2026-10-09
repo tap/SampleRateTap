@@ -140,6 +140,7 @@ out.append("// provenance and the tolerance argument.")
 out.append("// SPDX-License-Identifier: MIT")
 out.append("// Copyright 2026 Timothy Place and the SampleRateTap contributors")
 out.append("// NOLINTBEGIN(readability-identifier-naming)")
+out.append("// clang-format off")
 out.append("#pragma once")
 out.append("")
 out.append("#include <array>")
@@ -187,6 +188,7 @@ for tag, n_in, stages in CHAINS:
     out.append("")
 
 out.append("} // namespace rational_ref")
+out.append("// clang-format on")
 out.append("// NOLINTEND(readability-identifier-naming)")
 
 dest = ROOT / "tests" / "reference" / "reference_vectors.h"

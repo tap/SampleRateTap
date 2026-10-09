@@ -63,6 +63,66 @@ foreach(_engine IN LISTS _engines)
                          PROPERTIES LABELS ${_engine})
 endforeach()
 
+# 5. The C ABI's exported symbol set (when the libraries are built): nm on
+#    the shared library against tests/family/symbols_<engine>.txt, so a
+#    leaked C++ symbol or a stray entry point is a failing test (the 2026-10
+#    audit, F04). An nm test, so the ELF and Mach-O hosts only; Windows
+#    gates the DLLs through the CApi suites.
+if(TAP_SR_BUILD_CAPI AND NOT WIN32 AND NOT CMAKE_CROSSCOMPILING)
+    find_program(TAP_SR_NM NAMES nm llvm-nm)
+    if(TAP_SR_NM)
+        foreach(_engine IN LISTS _engines)
+            add_test(NAME ${_engine}.Family.ExportedSymbolsArePinned
+                     COMMAND ${CMAKE_COMMAND} -DENGINE=${_engine}
+                             -DLIBRARY=$<TARGET_FILE:tap_sr_${_engine}_capi>
+                             -DEXPECTED=${_family}/symbols_${_engine}.txt
+                             -DNM=${TAP_SR_NM}
+                             -P ${_family}/exported_symbols.cmake)
+            set_tests_properties(${_engine}.Family.ExportedSymbolsArePinned PROPERTIES LABELS ${_engine})
+        endforeach()
+    else()
+        message(WARNING "nm not found: the exported-symbol tests are not registered")
+    endif()
+endif()
+
+# 6. The READMEs' quick starts compile: the first ```cpp block of the root
+#    README and of each engine's, extracted at configure time into a TU
+#    (tests/family/readme_snippet.cmake, a prelude declaring the caller's
+#    buffers), built by its test. A quick start that stops compiling is a
+#    red check, not an audit finding (2026-10, S5).
+set(_readme_dir ${CMAKE_BINARY_DIR}/tests/readme)
+file(MAKE_DIRECTORY ${_readme_dir})
+foreach(_name IN ITEMS family async bridge rational)
+    if(_name STREQUAL family)
+        set(_readme ${CMAKE_SOURCE_DIR}/README.md)
+        set(_labels "async;bridge;rational")
+    else()
+        set(_readme ${CMAKE_SOURCE_DIR}/${_name}/README.md)
+        set(_labels ${_name})
+    endif()
+    set(_prelude ${_family}/readme/${_name}_prelude.h)
+    set(_tu ${_readme_dir}/${_name}_quick_start.cpp)
+    execute_process(COMMAND ${CMAKE_COMMAND} -DREADME=${_readme} -DPRELUDE=${_prelude} -DOUT=${_tu}
+                            -P ${_family}/readme_snippet.cmake
+                    RESULT_VARIABLE _rc OUTPUT_QUIET)
+    if(NOT _rc EQUAL 0)
+        message(FATAL_ERROR "could not extract the quick start of ${_readme}")
+    endif()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_readme})
+    add_executable(tap_sr_readme_${_name} EXCLUDE_FROM_ALL ${_tu})
+    target_include_directories(tap_sr_readme_${_name} PRIVATE
+        ${CMAKE_SOURCE_DIR}/async/include ${CMAKE_SOURCE_DIR}/bridge/include ${CMAKE_SOURCE_DIR}/rational/include)
+    target_link_libraries(tap_sr_readme_${_name} PRIVATE tap::dsp)
+    target_compile_features(tap_sr_readme_${_name} PRIVATE cxx_std_20)
+    if(Threads_FOUND)
+        target_link_libraries(tap_sr_readme_${_name} PRIVATE Threads::Threads)
+    endif()
+    add_test(NAME ${_name}.Family.ReadmeQuickStartCompiles
+             COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG>
+                     --target tap_sr_readme_${_name})
+    set_tests_properties(${_name}.Family.ReadmeQuickStartCompiles PROPERTIES LABELS "${_labels}")
+endforeach()
+
 # D13: TAP_SR_VERSION_* is defined in each of the three umbrella headers (no
 # shared header, so check 1 holds) and must agree. Compile-only, built by its test, so it
 # runs on every leg including bare metal.

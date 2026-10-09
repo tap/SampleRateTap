@@ -5,7 +5,7 @@
 > — Fred Brooks, *The Mythical Man-Month*
 
 The previous chapter ended with a prototype filter: 12,288 double-precision
-coefficients (for the default preset) describing one ideal anti-imaging
+coefficients (for the default profile) describing one ideal anti-imaging
 lowpass, oversampled 256× against the input rate. This chapter is about a
 data structure. Per output sample, the converter's budget is one dot
 product of 48 multiply-accumulates — not 12,288 — and the fractional
@@ -249,7 +249,7 @@ formerly-constructible pathology now `EXPECT_THROW`s — and, just as
 deliberately, by two `EXPECT_NO_THROW`s: the rate-scaling factory
 `config::for_sample_rate` produces specs sitting *exactly on* the sum-rule
 boundary (passband + stopband == fs up to rounding), and a validation rule
-that rejected its own library's presets would be a different bug. The
+that rejected its own library's profiles would be a different bug. The
 division of labor is a pattern to copy: the class rejects what it can
 express *locally*; the composition layer owns the invariants that only
 exist between components; and every rejected configuration is one a real
@@ -318,7 +318,7 @@ delay. The bank knows its own delay exactly; approximations are for prose.
 |---|---|---|
 | Contiguous T-tap rows per branch | dot the strided prototype directly | the kernel reads rows millions of times; stride-L access wastes the cache the table was sized to fit |
 | Linear blend between adjacent rows | nearest row; cubic blend | nearest needs astronomically large L (first-order error); cubic doubles hot-loop work to fix a residual already below the chain's floor |
-| L = 256 default | 128 / 512 | −12 dB residual per doubling vs table size; 48 KB meets the 105 dB @ 19.5 kHz budget; presets bracket it both ways |
+| L = 256 default | 128 / 512 | −12 dB residual per doubling vs table size; 48 KB meets the 105 dB @ 19.5 kHz budget; profiles bracket it both ways |
 | **Extra row L** | wrap to row 0 + branch; clamp μ | branch-free hot loop; μ-wrap/whole-sample slip exactly continuous; costs 192 bytes |
 | Tap-reversed rows | reversed iteration per sample | reversal paid once at build; forward contiguous dot is what vectorizers and SMLALD pair-loads require |
 | Quantize via `make_coeff` at build | convert coefficients on the fly | error becomes a fixed, testable property of the object; hot path reads storage type directly |
@@ -342,7 +342,7 @@ ctest --test-dir build -R Polyphase --output-on-failure
 ctest --test-dir build -R ConfigValidation --output-on-failure
 
 # The end-to-end SNR numbers the L=256 decision is quoted against
-# (997 Hz / 6 k / 12 k / 19.5 k, both presets, servo in the loop):
+# (997 Hz / 6 k / 12 k / 19.5 k, both profiles, servo in the loop):
 ctest --test-dir build -R AsrcQuality --output-on-failure
 
 # Break it on purpose: in the constructor, change `p <= phases_` to

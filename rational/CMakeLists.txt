@@ -32,8 +32,10 @@ target_link_libraries(tap_sr_rational INTERFACE tap::dsp)
 
 if(PROJECT_IS_TOP_LEVEL)
     option(TAP_SR_BUILD_TESTS "Build the rational engine's tests" ON)
+    option(TAP_SR_BUILD_EXAMPLES "Build the rational engine's examples" ON)
 else()
     option(TAP_SR_BUILD_TESTS "Build the rational engine's tests" OFF)
+    option(TAP_SR_BUILD_EXAMPLES "Build the rational engine's examples" OFF)
 endif()
 
 # C ABI shared library for FFI consumers (the notebooks drive the shipping
@@ -73,6 +75,10 @@ endif()
 if(TAP_SR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(TAP_SR_BUILD_EXAMPLES)
+    add_subdirectory(examples)
 endif()
 
 if(TAP_SR_BUILD_CAPI)

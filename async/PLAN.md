@@ -47,13 +47,14 @@ The boundaries are identity, not policy:
   through `status()`.
 - Measured quality is a number, not a claim: the README's table and the
   executed notebooks (`notebooks/`, through the C ABI) pin the default
-  presets' SNR figures; `bench/icount/` pins the instruction counts on
+  profiles' SNR figures; `bench/icount/` pins the instruction counts on
   M33, M55 and Hexagon two-sided at ±3 %.
 - The C ABI (`capi/`, `libtap_sr_async_capi`): fourteen `tap_sr_async_*`
-  functions — the float surface, `create_format` / `format` and the `_q15` /
-  `_q31` push and pull (the family's shape since `rational`'s ABI set it,
-  each format pinned bit for bit against `basic_converter<S>`) — and
-  `tap_sr_async_version()`, the family's bit-packed version (D13).
+  functions in all — the float surface, `create_format` / `format`, the
+  `_q15` / `_q31` push and pull (the family's shape since `rational`'s ABI
+  set it, each format pinned bit for bit against `basic_converter<S>`) and
+  `tap_sr_async_version()`, the family's bit-packed version (D13); the
+  symbol set is pinned by `async.Family.ExportedSymbolsArePinned`.
 
 ## 3. Status
 

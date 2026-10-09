@@ -54,7 +54,7 @@ namespace tap::sr::async {
         /// runtime cost: the rect that creates the zeros spends the last of the
         /// same tapsPerPhase budget (design uses T-1 taps + 1). Worst-case
         /// single-sine numbers near Nyquist are unchanged. Requires
-        /// tapsPerPhase >= 8. On by default for every preset except fast().
+        /// tapsPerPhase >= 8. On by default for every profile except fast().
         bool image_zeros = true;
         // ANCHOR_END: pw_image_zeros
 
@@ -81,13 +81,13 @@ namespace tap::sr::async {
         // ANCHOR: pw_economy
         /// Program-weighted economy: two-thirds the per-sample compute and
         /// ~0.16 ms less group delay than balanced(). The worst-case single-sine
-        /// floor near Nyquist is 96 dB-class (this preset trades exactly that),
+        /// floor near Nyquist is 96 dB-class (this profile trades exactly that),
         /// but the k*fs zeros hold low/mid-band folded images at balanced-class
         /// depth where program energy actually lives, and L=512 keeps the
         /// inter-phase interpolation floor at the 120 dB tier. Measured by the
-        /// program-weighted multitone metric in test_asrc_program.cpp; the whole
+        /// program-weighted multitone metric in test_program.cpp; the whole
         /// trade is the book's epilogue chapter.
-        static filter_spec economy() noexcept {
+        static filter_spec program() noexcept {
             return {.num_phases        = 512,
                     .taps_per_phase    = 32,
                     .passband_hz       = 18000.0,
@@ -98,7 +98,7 @@ namespace tap::sr::async {
         // ANCHOR_END: bank_spec
 
         /// This spec with the band edges rescaled from the 48 kHz design rate
-        /// to sampleRateHz. The presets' passband/stopband are absolute Hz
+        /// to sampleRateHz. The profiles' passband/stopband are absolute Hz
         /// chosen for ~48 kHz operation; at other rates the same L/T with
         /// proportional band edges gives the identical normalized-frequency
         /// response (and group delay in samples — i.e. more milliseconds at
@@ -161,7 +161,7 @@ namespace tap::sr::async {
             // Row-sum-preserving quantization ("the coefficients of every
             // phase must add to one" — R. Bristow-Johnson, music-dsp): the
             // largest-remainder correction now lives in DspTap's quantize.h,
-            // shared with RatioTap's fixed-ratio tables. Gather each branch
+            // shared with bridge's and rational's fixed-ratio tables. Gather each branch
             // into storage (tap-reversed) order in double, then quantize the
             // row as a unit so its DC sum survives fixed point exactly.
             std::vector<double> row_d(m_taps);

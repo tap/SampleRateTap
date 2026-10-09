@@ -193,6 +193,57 @@ namespace {
     }
 
     // ------------------------------------------------------------------
+    // The tie direction of the single rounding point (the trait's finalize,
+    // round-half-up): an impulse whose one product's discarded bits are
+    // exactly one half for every odd stored coefficient (Q15: 8192, a
+    // quarter of full scale; Q31: 2^29, where the trait's 16-bit pre-shift
+    // leaves 2^13 times the coefficient), so every such output is a tie and
+    // must round up. The oracle is the test's own round-half-up of the mac,
+    // not the trait's finalize, so a rounding point that rounds ties the
+    // wrong way fails here; the noise and DC batteries never land on a tie
+    // (SampleRateTap's 2026-10 audit, F13).
+    template <typename S, direction D>
+    void check_ties_round_half_up(S amplitude) {
+        using tr = tap::dsp::sample_traits<S>;
+        basic_converter<S, D> c(1, profile::economy());
+        const std::size_t     taps = c.taps();
+        const std::size_t     n_in = taps + 4;
+        std::vector<S>        x(n_in, tr::silence());
+        x[0] = amplitude;
+        std::vector<S> y(c.outputs_for(n_in));
+        ASSERT_EQ(c.process(x.data(), n_in, y.data()), y.size());
+        constexpr std::size_t  l     = tap::sr::bridge::ratio_traits<D>::k_phases;
+        constexpr std::size_t  m     = tap::sr::bridge::ratio_traits<D>::k_decimation;
+        constexpr int          shift = tr::k_finalize_shift;
+        constexpr std::int64_t den   = std::int64_t{1} << shift;
+        constexpr std::int64_t half  = den / 2;
+        std::size_t            ties  = 0;
+        for (std::size_t n = 0; n < y.size(); ++n) {
+            const std::size_t k        = n * m / l;
+            S                 expected = tr::silence();
+            if (k < taps) {
+                const typename tr::accum p =
+                    tr::mac(typename tr::accum{}, amplitude, c.table().at((n * m) % l, taps - 1 - k));
+                if (((p % den) + den) % den == half) {
+                    ++ties;
+                }
+                const std::int64_t q  = (p + half) >> shift; // floor: round half up
+                const std::int64_t lo = std::numeric_limits<S>::min(), hi = std::numeric_limits<S>::max();
+                expected = static_cast<S>(q < lo ? lo : (q > hi ? hi : q));
+            }
+            ASSERT_EQ(y[n], expected) << "n=" << n;
+        }
+        EXPECT_GE(ties, 1u) << "no tie was exercised: the amplitude does not probe the rounding point";
+    }
+
+    TEST(FixedPoint, ImpulseTiesRoundHalfUp) {
+        check_ties_round_half_up<std::int16_t, direction::down_to_44k1>(8192);
+        check_ties_round_half_up<std::int16_t, direction::up_to_48k>(8192);
+        check_ties_round_half_up<std::int32_t, direction::down_to_44k1>(std::int32_t{1} << 29);
+        check_ties_round_half_up<std::int32_t, direction::up_to_48k>(std::int32_t{1} << 29);
+    }
+
+    // ------------------------------------------------------------------
     // The call shapes stay bit-identical for integer samples too.
     TEST(FixedPoint, PullMatchesProcessBitExactQ15) {
         std::vector<std::int16_t> x(ratio_ref::k_input.size());

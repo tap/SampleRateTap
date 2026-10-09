@@ -122,7 +122,7 @@ Reading guide:
   setting that buys soxr's throughput at SampleRateTap's latency.
 - **r8brain out-runs SampleRateTap on x86 at the ~120 dB tier** — 1.7×
   mono, 1.1× stereo, 1.4× at 8 channels (1.2× stereo passband-matched) —
-  and at the ~140 dB tier (1.9× for its 136 dB preset). Its FFT block
+  and at the ~140 dB tier (1.9× at its 136 dB setting). Its FFT block
   convolution amortizes well on a desktop core. The price is the same as
   soxr's: 8× SampleRateTap's filter delay at the matched passband and 33×
   at its default, 45× at the 140 dB tier. On the embedded targets the

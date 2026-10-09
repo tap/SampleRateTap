@@ -12,10 +12,14 @@ if(NOT DEFINED TAP_SR_RATIONAL_INCLUDE)
 endif()
 
 # case source ; the phrase the charter's static_assert message must carry
+# One case per static_assert of the charter, each isolated: 5/1 fails the
+# form, 4/2 and 2/2 the lowest terms (2/2 reaches no further), 1/1 passes
+# both and fails L != M alone.
 set(_cases
     "ratio_5_1.cpp|of the form 2\\^a \\* 3\\^b"
     "ratio_4_2.cpp|lowest terms"
-    "ratio_2_2.cpp|lowest terms")
+    "ratio_2_2.cpp|lowest terms"
+    "ratio_1_1.cpp|no conversion")
 set(_checked 0)
 foreach(_case IN LISTS _cases)
     string(REPLACE "|" ";" _parts "${_case}")
@@ -38,6 +42,6 @@ foreach(_case IN LISTS _cases)
     math(EXPR _checked "${_checked} + 1")
     message(STATUS "${_src}: rejected with the charter's message")
 endforeach()
-if(NOT _checked EQUAL 3)
-    message(FATAL_ERROR "expected 3 cases, checked ${_checked}")
+if(NOT _checked EQUAL 4)
+    message(FATAL_ERROR "expected 4 cases, checked ${_checked}")
 endif()

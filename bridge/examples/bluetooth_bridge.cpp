@@ -6,15 +6,15 @@
 // crystal being the motivating case), and the reason neither package ever
 // grows the other's scope:
 //
-//     RatioTap converts the NUMBER (44.1 <-> 48, exact rational, one clock).
+//     bridge converts the NUMBER (44.1 <-> 48, exact rational, one clock).
 //     SampleRateTap absorbs the CLOCK (near-unity ppm drift, servo).
 //
-// RatioTap is clock-agnostic — a pure sample-count transformer — so placing
+// bridge is clock-agnostic — a pure sample-count transformer — so placing
 // it on the Bluetooth side leaves the ASRC running at nominal 48 kHz on both
 // faces, exactly its designed regime; the BT crystal's ppm offset passes
 // through the fixed ratio unchanged (ppm is dimensionless).
 //
-//   receive:  BT codec 44.1k @ BT clock -> RatioTap up 44.1->48 -> asrc.push
+//   receive:  BT codec 44.1k @ BT clock -> bridge up 44.1->48 -> asrc.push
 //             ... asrc.pull @ local 48k clock
 //
 // This example runs the receive path against a deterministic two-clock
@@ -76,7 +76,7 @@ int main() {
             bt_frames[i] = static_cast<float>(
                 k_amp * std::sin(2.0 * std::numbers::pi * k_tone_hz / bt_rate * static_cast<double>(bt_index++)));
         }
-        // RatioTap converts the number; the result is nominal 48 k, still
+        // bridge converts the number; the result is nominal 48 k, still
         // paced by the BT crystal — which is exactly what asrc.push expects.
         up48.resize(ratio.outputs_for(n_bt));
         const std::size_t made = ratio.process(bt_frames.data(), n_bt, up48.data());
@@ -99,7 +99,7 @@ int main() {
     const auto fit = tap::dsp::analysis::fit_sine_tracked(tail, k_tone_hz / 48000.0);
     std::printf("recovered tone: %.3f Hz, amplitude %.4f, SNR %.1f dB\n", fit.freq_norm * 48000.0, fit.amplitude,
                 tap::dsp::analysis::snr_db(fit));
-    std::printf("bridge latency: %.2f ms (RatioTap %.2f + ASRC %.2f)\n",
+    std::printf("bridge latency: %.2f ms (bridge %.2f + async %.2f)\n",
                 ratio.latency_input_frames() / 44100.0 * 1e3 + asrc.designed_latency_seconds() * 1e3,
                 ratio.latency_input_frames() / 44100.0 * 1e3, asrc.designed_latency_seconds() * 1e3);
 
