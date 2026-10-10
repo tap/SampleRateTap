@@ -57,6 +57,12 @@ std::vector<float> tail(down.flush_output_frames() * 2);
 down.flush(tail.data());
 ```
 
+Construction rejects zero channels and a profile the designer refuses
+(`std::invalid_argument`); `converter_to_44k1::validate(channels, profile)`
+is the same verdict as a `noexcept` `const char*` reason (nullptr when it
+constructs), the family's error model (root README, "Errors") — what a
+build without exceptions calls before constructing.
+
 Direction is a compile-time type (`converter_to_48k` / `converter_to_44k1`,
 plus `_q15` / `_q31` fixed-point variants), and so is the rate scale: the
 pair at 2× and 4× is `converter_to_96k` / `converter_to_88k2` and

@@ -51,6 +51,23 @@ foreach(_engine IN LISTS _engines)
              COMMAND ${CMAKE_COMMAND} -DENGINE=${_engine} -DINCLUDE=${_include} "-DOTHER=${_other}"
                      -P ${_family}/check_includes.cmake)
 
+    # 2b. The same TUs under -fno-exceptions (the family's error model, A3:
+    #     a build without exceptions constructs after validate(), and every
+    #     header must compile there). Hosted GCC / Clang only: MSVC spells
+    #     the switch /EHs-c- and the cross legs are the QEMU jobs'.
+    if(NOT CMAKE_CROSSCOMPILING AND CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$"
+       AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        add_library(tap_sr_${_engine}_no_exceptions STATIC EXCLUDE_FROM_ALL ${_tus})
+        target_include_directories(tap_sr_${_engine}_no_exceptions PRIVATE ${_include})
+        target_link_libraries(tap_sr_${_engine}_no_exceptions PRIVATE tap::dsp)
+        target_compile_features(tap_sr_${_engine}_no_exceptions PRIVATE cxx_std_20)
+        target_compile_options(tap_sr_${_engine}_no_exceptions PRIVATE -fno-exceptions)
+        add_test(NAME ${_engine}.Family.HeadersCompileWithoutExceptions
+                 COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG>
+                         --target tap_sr_${_engine}_no_exceptions)
+        set_tests_properties(${_engine}.Family.HeadersCompileWithoutExceptions PROPERTIES LABELS ${_engine})
+    endif()
+
     # 4. Header count, pinned: a header cannot appear or vanish unnoticed.
     add_test(NAME ${_engine}.Family.HeaderCountIsPinned
              COMMAND ${CMAKE_COMMAND} -DENGINE=${_engine} -DINCLUDE=${_include}

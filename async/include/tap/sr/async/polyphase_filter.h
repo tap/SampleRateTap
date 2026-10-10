@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "tap/dsp/detail/expects.h"
 #include "tap/dsp/fir_kernels.h"
 #include "tap/dsp/kaiser.h"
 #include "tap/dsp/quantize.h"
@@ -130,19 +131,21 @@ namespace tap::sr::async {
 
         // ANCHOR: bank_build
         /// Designs the prototype (double precision) and builds the table.
-        /// Allocates; may throw std::invalid_argument / std::bad_alloc. Do this at
-        /// setup time, not on the audio path.
+        /// Allocates; rejects a bad spec with std::invalid_argument through
+        /// tap::dsp::raise (config::validate states the same conditions first,
+        /// for a build without exceptions) and may throw std::bad_alloc. Do
+        /// this at setup time, not on the audio path.
         polyphase_filter_bank(const filter_spec& spec, double sample_rate_hz)
             : m_phases(std::bit_ceil(spec.num_phases))
             , m_taps(spec.taps_per_phase) {
             if (sample_rate_hz <= 0.0 || m_taps < 4 || m_phases < 2) {
-                throw std::invalid_argument("polyphase_filter_bank: bad filter_spec");
+                tap::dsp::raise<std::invalid_argument>("polyphase_filter_bank: bad filter_spec");
             }
             if (spec.image_zeros && m_taps < 8) {
-                throw std::invalid_argument("polyphase_filter_bank: imageZeros needs tapsPerPhase >= 8");
+                tap::dsp::raise<std::invalid_argument>("polyphase_filter_bank: imageZeros needs tapsPerPhase >= 8");
             }
             if (spec.passband_hz <= 0.0 || spec.stopband_hz <= spec.passband_hz || spec.stopband_hz > sample_rate_hz) {
-                throw std::invalid_argument("polyphase_filter_bank: bad band edges");
+                tap::dsp::raise<std::invalid_argument>("polyphase_filter_bank: bad band edges");
             }
 
             const std::size_t   n = m_phases * m_taps;
@@ -341,7 +344,7 @@ namespace tap::sr::async {
             , m_hist(m_frame_major ? 1 : channels)
             , m_row(bank.taps()) {
             if (m_channels == 0 || m_chunk == 0) {
-                throw std::invalid_argument("fractional_resampler: bad config");
+                tap::dsp::raise<std::invalid_argument>("fractional_resampler: bad config");
             }
             for (auto& h : m_hist) {
                 h.assign(m_hist_cap * (m_frame_major ? m_channels : 1), sample_traits<S>::silence());

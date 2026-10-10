@@ -123,8 +123,19 @@ namespace tap::sr::rational {
         static constexpr std::array<tap::dsp::exact_ratio, k_stages> k_divisors =
             detail::chain_rates<Rs...>::k_divisors;
 
-        /// Allocates every stage's state and designs its table; may throw
-        /// (a bad profile, zero channels). Setup time only (R9).
+        /// The reason a chain cannot be built from (channels, p), or nullptr
+        /// when it can: each stage's basic_stage::validate at its design
+        /// divisor (the profile relaxed as the constructor relaxes it), in
+        /// stage order, the first reason wins. noexcept; allocation-free for
+        /// the named profiles (every relaxation the matrix uses has its pin).
+        static const char* validate(std::size_t channels, const profile& p = profile::economy()) noexcept {
+            return validate(channels, p, std::make_index_sequence<k_stages>{});
+        }
+
+        /// Allocates every stage's state and designs its table; rejects what
+        /// validate() rejects, with its text (tap::dsp::raise: a build without
+        /// exceptions terminates there and asks validate() first). Setup time
+        /// only (R9).
         explicit basic_chain(std::size_t channels = 1, const profile& p = profile::economy())
             : basic_chain(channels, p, std::make_index_sequence<k_stages>{}) {}
 
@@ -152,6 +163,14 @@ namespace tap::sr::rational {
         template <std::size_t... I>
         basic_chain(std::size_t channels, const profile& p, std::index_sequence<I...>)
             : base(channels, basic_stage<S, Rs>(channels, p.relaxed(k_divisors[I]))...) {}
+
+        template <std::size_t... I>
+        static const char* validate(std::size_t channels, const profile& p, std::index_sequence<I...>) noexcept {
+            const char* why = nullptr;
+            // Left to right, stopping at the first reason.
+            ((why == nullptr ? (why = basic_stage<S, Rs>::validate(channels, p.relaxed(k_divisors[I]))) : why), ...);
+            return why;
+        }
     };
     // ANCHOR_END: rational_chain
 

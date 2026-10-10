@@ -129,6 +129,15 @@ namespace {
         // rate scale (23 kHz at K = 0 is 46 kHz at K = 1, still above 44.1).
         EXPECT_THROW((design_prototype<direction::down_to_44k1, 1>(p)), std::invalid_argument);
         EXPECT_THROW((design_prototype<direction::down_to_44k1, 2>(p)), std::invalid_argument);
+        // The same verdicts as the noexcept precheck the converter composes (A3).
+        using tap::sr::bridge::validate_profile;
+        static_assert(noexcept(validate_profile<direction::down_to_44k1>(p)));
+        EXPECT_NE((validate_profile<direction::down_to_44k1>(p)), nullptr);
+        EXPECT_NE((validate_profile<direction::down_to_44k1, 1>(p)), nullptr);
+        EXPECT_NE((validate_profile<direction::down_to_44k1, 2>(p)), nullptr);
+        EXPECT_NE((validate_profile<direction::up_to_48k>(q)), nullptr);
+        EXPECT_EQ((validate_profile<direction::up_to_48k>(profile::economy())), nullptr);
+        EXPECT_EQ((validate_profile<direction::down_to_44k1, 2>(profile::transparent())), nullptr);
     }
 
     // ------------------------------------------------------------------

@@ -69,7 +69,12 @@ chain<up_2, ratio_4_3> to_32k_from_12k(2); // 12 -> 32 kHz: 8/3 as the matrix fa
 
 The ratio is a compile-time type (`ratio<L, M>`, L and M of the form
 2^a · 3^b in lowest terms: anything else fails to compile with the charter's
-message). `pull(out, n, pop_fn)` is the callback-driven shape and
+message). Construction rejects zero channels, a profile the designer refuses
+and a spec no length up to the search bound meets (`std::invalid_argument`,
+`std::runtime_error`); `converter<R>::validate(channels, profile)` and a
+chain's `validate` are the same verdict as a `noexcept` `const char*` reason
+(nullptr when it constructs), the family's error model (root README,
+"Errors") — what a build without exceptions calls before constructing. `pull(out, n, pop_fn)` is the callback-driven shape and
 `frames_needed(n)` is exact arithmetic from the current position.
 
 - `ratio.h` — `ratio<L, M>` (R1) and `ratio_traits`: the band index

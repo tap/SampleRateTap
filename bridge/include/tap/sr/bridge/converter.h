@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "tap/dsp/detail/expects.h"
 #include "tap/dsp/fir_kernels.h"
 #include "tap/dsp/sample_traits.h"
 #include "tap/sr/bridge/design.h"
@@ -78,7 +79,26 @@ namespace tap::sr::bridge {
         static constexpr std::size_t k_taps_balanced      = profile::balanced().taps<D>();
         static constexpr std::size_t k_taps_transparent   = profile::transparent().taps<D>();
 
-        /// Allocates histories and designs the table; setup time only.
+        // ANCHOR: rt_validate
+        /// The reason a converter cannot be built from (channels, p), or nullptr
+        /// when it can: the family's error model. noexcept and allocation-free;
+        /// it states every rejection the constructor makes other than a refused
+        /// allocation (zero channels; a profile the designer rejects,
+        /// validate_profile<D, K>). The constructor rejects with the same text
+        /// (std::invalid_argument through tap::dsp::raise), so a build with
+        /// exceptions may construct and catch; a build without them
+        /// (-fno-exceptions, where the rejection terminates) calls this first
+        /// and constructs only on nullptr.
+        static const char* validate(std::size_t channels, const profile& p = profile::economy()) noexcept {
+            if (channels == 0) {
+                return "tap::sr::bridge::basic_converter: channels == 0";
+            }
+            return validate_profile<D, K>(p);
+        }
+        // ANCHOR_END: rt_validate
+
+        /// Allocates histories and designs the table; setup time only. Rejects
+        /// what validate() rejects, with its text.
         explicit basic_converter(std::size_t channels = 1, const profile& p = profile::economy())
             : m_table(p)
             , m_channels(channels)
@@ -86,7 +106,7 @@ namespace tap::sr::bridge {
             , m_hist(channels)
             , m_scratch(k_pop_chunk * channels) {
             if (channels == 0) {
-                throw std::invalid_argument("tap::sr::bridge::basic_converter: channels == 0");
+                tap::dsp::raise<std::invalid_argument>("tap::sr::bridge::basic_converter: channels == 0");
             }
             for (auto& h : m_hist) {
                 h.assign(m_hist_cap, tap::dsp::sample_traits<S>::silence());

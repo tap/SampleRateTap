@@ -45,6 +45,7 @@
 #include "hardware/clocks.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
+#include "tap/dsp/detail/expects.h"
 #include "tap/sr/async/converter.h"
 
 namespace {
@@ -359,9 +360,19 @@ namespace {
         }
 
         // Heap-constructed so allocation failure (the 12-channel phase on a
-        // tighter build) degrades to a printed SKIP instead of a hard fault.
+        // tighter build) degrades to a printed SKIP instead of a hard fault,
+        // where the build has exceptions to catch it with. Built without them
+        // (the SDK default; PICO_CXX_ENABLE_EXCEPTIONS in CMakeLists.txt), the
+        // configuration is checked first — the constructor terminates on what
+        // validate() rejects — and a refused allocation is a hard fault, as
+        // every other allocation's is in such a build.
         std::unique_ptr<Asrc>     asrc;
         std::vector<std::int16_t> input;
+        if (const char* why = tap::sr::async::config::validate(cfg)) {
+            std::printf("PHASE %c %s: SKIP (%s)\n", ph.tag, ph.desc, why);
+            return r;
+        }
+#if TAP_DSP_HAS_EXCEPTIONS
         try {
             asrc  = std::make_unique<Asrc>(cfg);
             input = sineInput(ph.channels, ph.rateHz);
@@ -370,6 +381,10 @@ namespace {
             std::printf("PHASE %c %s: SKIP (%s)\n", ph.tag, ph.desc, e.what());
             return r;
         }
+#else
+        asrc  = std::make_unique<Asrc>(cfg);
+        input = sineInput(ph.channels, ph.rateHz);
+#endif
         r.ran = true;
 
         std::printf("PHASE %c %s: %lu s run, lock limit %.1f s, ppm gate +/-%.0f after %.0f s\n", ph.tag, ph.desc,

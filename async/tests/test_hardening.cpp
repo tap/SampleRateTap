@@ -7,8 +7,12 @@
 // on the bare-metal and Hexagon CI legs, which exclude the long quality
 // suites and previously had no end-to-end SNR coverage at all.
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <numbers>
+#include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -118,6 +122,123 @@ namespace {
         // (passband + stopband == fs up to rounding); it must keep constructing.
         EXPECT_NO_THROW(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(16000.0)});
         EXPECT_NO_THROW(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(44100.0)});
+    }
+
+    // The family's error model (A3): config::validate is the constructor's
+    // rejection as a noexcept precheck — nullptr exactly where the converter
+    // constructs, and otherwise the text the constructor's exception carries.
+    // A build without exceptions calls it first; this build checks that the
+    // two agree on every rejection the constructor makes.
+    namespace validate_support {
+        // The constructor's verdict on a config: nullptr, or its exception's text.
+        template <typename S = float>
+        std::string construction_reason(const tap::sr::async::config& c) {
+            try {
+                tap::sr::async::basic_converter<S> asrc{c};
+                return {};
+            }
+            catch (const std::invalid_argument& e) {
+                return e.what();
+            }
+        }
+        std::string reason(const char* why) {
+            return why == nullptr ? std::string{} : std::string{why};
+        }
+    } // namespace validate_support
+
+    TEST(Hardening, ValidateAgreesWithTheConstructorOnEveryRejection) {
+        using namespace validate_support; // NOLINT(google-build-using-namespace)
+        using tap::sr::async::config;
+        std::vector<config> cases;
+        cases.push_back(config{});
+        cases.push_back(config::for_sample_rate(16000.0));
+        cases.push_back(config::for_sample_rate(44100.0));
+        cases.push_back(config::for_sample_rate(96000.0));
+        {
+            config c = config{};
+            c.filter = tap::sr::async::filter_spec::fast();
+            cases.push_back(c);
+            c.filter = tap::sr::async::filter_spec::transparent();
+            cases.push_back(c);
+            c.filter = tap::sr::async::filter_spec::program();
+            cases.push_back(c);
+        }
+        for (std::size_t ch : {std::size_t{1}, std::size_t{2}, std::size_t{8}}) {
+            config c   = config{};
+            c.channels = ch;
+            cases.push_back(c);
+        }
+        {
+            config c; // bad Config
+            c.channels = 0;
+            cases.push_back(c);
+            c                       = config{};
+            c.target_latency_frames = 0;
+            cases.push_back(c);
+            c                = config{};
+            c.sample_rate_hz = std::numeric_limits<double>::quiet_NaN();
+            cases.push_back(c);
+            c                = config{};
+            c.sample_rate_hz = -48000.0;
+            cases.push_back(c);
+        }
+        {
+            config c; // bad filter_spec: cutoff above input Nyquist
+            c.filter.passband_hz = 23000.0;
+            c.filter.stopband_hz = 47000.0;
+            cases.push_back(c);
+            c                          = config{};
+            c.filter.stopband_atten_db = std::numeric_limits<double>::infinity();
+            cases.push_back(c);
+        }
+        {
+            config c; // what the bank's designer rejects
+            c.filter.taps_per_phase = 3;
+            cases.push_back(c);
+            c                       = config{};
+            c.filter.taps_per_phase = 6; // image_zeros needs 8
+            cases.push_back(c);
+            c                   = config{};
+            c.filter.num_phases = 1;
+            cases.push_back(c);
+            c                    = config{};
+            c.filter.passband_hz = 0.0;
+            cases.push_back(c);
+            c                    = config{};
+            c.filter.stopband_hz = c.filter.passband_hz; // no transition band
+            cases.push_back(c);
+        }
+        {
+            config c; // bad servo_config
+            c.servo.max_deviation_ppm = 400000.0;
+            cases.push_back(c);
+            c                          = config{};
+            c.servo.quiet_bandwidth_hz = std::numeric_limits<double>::infinity();
+            cases.push_back(c);
+        }
+        {
+            config c; // sizes overflow
+            c.filter.num_phases     = std::numeric_limits<std::size_t>::max() / 2 + 1;
+            c.filter.taps_per_phase = 8;
+            cases.push_back(c);
+        }
+        {
+            config c; // fifoFrames too small
+            c.fifo_frames = 64;
+            cases.push_back(c);
+            c             = config{};
+            c.fifo_frames = 1; // the smallest explicit ring
+            cases.push_back(c);
+        }
+        std::size_t rejected = 0;
+        for (std::size_t i = 0; i < cases.size(); ++i) {
+            const std::string by_validate = reason(config::validate(cases[i]));
+            EXPECT_EQ(by_validate, construction_reason<float>(cases[i])) << "case " << i;
+            EXPECT_EQ(by_validate, construction_reason<std::int16_t>(cases[i])) << "case " << i << " (Q15)";
+            rejected += by_validate.empty() ? 0 : 1;
+        }
+        EXPECT_EQ(rejected, 16u) << "every rejection family is exercised";
+        static_assert(noexcept(config::validate(std::declval<const config&>())));
     }
 
     // Audit finding F3: with a setpoint below the resampler's staged-scratch

@@ -53,7 +53,7 @@ is this checklist, not an opinion.
 | P1 | Golden reference and independent leg, pinned in CI | ✓ | ✓ | ✓ (sim) |
 | P2 | RT contract (`noexcept`, allocation-free, lock-free) stated and tested | ✓ | ✓ | ✓ |
 | P3 | Thread contract stated and under TSan with the real call pattern | n/a | n/a | **open** (A4) |
-| P4 | Error model usable without exceptions; Hexagon throw documented | **open** (A3) | **open** (A3) | **open** (A3) |
+| P4 | Error model usable without exceptions; Hexagon throw documented | ✓ (A3) | ✓ (A3) | ✓ (A3) |
 | P5 | Memory footprint per instance and stack high-water per call, stated and gated | **open** (A5) | **open** (A5) | **open** (A5) |
 | P6 | Worst single-call cost gated (QEMU per-call max) | **open** (A6) | **open** (A6) | **open** (A6) |
 | P7 | Measured on silicon: cycles, `%core@48k`, construction time | **open** (B2) | **open** (B2) | **open** (B1, B2) |
@@ -88,7 +88,7 @@ gated on shipping.
   (`-unwindlib=libunwind`) is time-boxed to one day: land it if a constructor throw
   propagates under `qemu-hexagon`, else record the attempt; A3 makes the throw unreachable
   in embedded deployments either way.
-- **A3. An exception-free error model.** Per engine, a `noexcept` precheck
+- **A3. An exception-free error model.** *Landed 2026-10-11 (`PLAN.md` D17: `validate()` returns the reason in each engine, the constructors reject through `tap::dsp::raise` from tap/DspTap#59, every public header compiles under `-fno-exceptions` (`<engine>.Family.HeadersCompileWithoutExceptions`, the `no-exceptions` job, the Pico firmwares built both ways); `bridge` and `rational` exact on the ratchet, `async` +32…+182 instructions of construction on every row, inside tolerance).* Per engine, a `noexcept` precheck
   (`config::validate(cfg)` returning a `const char*` reason, or `std::optional<error>`),
   the constructor's throw kept for hosts and documented as a contract violation when
   exceptions are off, a `__cpp_exceptions` guard so the headers compile under

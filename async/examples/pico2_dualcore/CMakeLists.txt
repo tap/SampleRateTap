@@ -15,10 +15,14 @@ cmake_minimum_required(VERSION 3.24)
 set(PICO_BOARD pico2 CACHE STRING "Pico SDK board")
 set(PICO_PLATFORM rp2350-arm-s CACHE STRING "Pico SDK platform (secure Arm)")
 
-# The library's constructors throw (allocation, filter design); the
-# 12-channel phase relies on catching bad_alloc instead of crashing. The SDK
-# default is -fno-exceptions.
-set(PICO_CXX_ENABLE_EXCEPTIONS 1 CACHE BOOL "")
+# Exceptions are ON by default here, against the SDK's -fno-exceptions
+# default: the 12-channel case relies on catching bad_alloc so a tighter
+# build prints SKIP instead of hard-faulting. The firmware also builds with
+# them off (-DPICO_CXX_ENABLE_EXCEPTIONS=0, what CI's second build checks,
+# the family's error model, A3): the configuration is then checked through
+# tap::sr::async::config::validate() before constructing, and a refused
+# allocation is a hard fault, as in any -fno-exceptions firmware.
+set(PICO_CXX_ENABLE_EXCEPTIONS 1 CACHE BOOL "C++ exceptions in the firmware (0: validate() before constructing)")
 
 include(FetchContent)
 FetchContent_Declare(

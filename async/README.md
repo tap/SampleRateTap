@@ -38,7 +38,8 @@ target_link_libraries(app PRIVATE tap::sr::async)
 tap::sr::async::config cfg;
 cfg.sample_rate_hz = 48000.0;
 cfg.channels = 2;
-tap::sr::async::converter asrc(cfg);   // allocates + designs filter; may throw
+// config::validate(cfg) == nullptr: the noexcept precheck (a build without exceptions calls it first)
+tap::sr::async::converter asrc(cfg);   // allocates + designs filter; rejects what validate() rejects
 
 // Input-device thread (input clock):
 asrc.push(input_interleaved, frames);       // noexcept, lock-free
