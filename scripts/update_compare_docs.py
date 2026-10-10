@@ -184,9 +184,65 @@ def bridge_block(doc: dict) -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# rational: four ratios of the vocabulary, one table pair per ratio (docs:
+# rational/docs/COMPARISON.md). The matched settings are the ones
+# rational/bench/compare/bench_compare.cpp names; floating-point competitors
+# are ratioed against economy float, SpeexDSP's fixed-point build against
+# economy Q15, and the transparent-matched rows against transparent float.
+RATIONAL_ENGINES = [
+    ("srt_eco_float", "**rational** economy, float", None),
+    ("srt_eco_q15", "**rational** economy, Q15", None),
+    ("srt_tr_float", "**rational** transparent, float", None),
+    ("lsr_medium", "libsamplerate `MEDIUM` (economy-matched)", "srt_eco_float"),
+    ("r8b_eco", "r8brain 70 dB, 16 % band (economy-matched)³", "srt_eco_float"),
+    ("speex_float_q2", "SpeexDSP float, quality 2 (economy-matched)", "srt_eco_float"),
+    ("speex_fixed_q3", "SpeexDSP fixed-point, quality 3 (× vs. Q15)", "srt_eco_q15"),
+    ("lsr_best", "libsamplerate `BEST` (transparent-matched; × vs. transparent)", "srt_tr_float"),
+    ("r8b_tr", "r8brain 120 dB, 10 % band (transparent-matched; × vs. transparent)³", "srt_tr_float"),
+    ("speex_float_q9", "SpeexDSP float, quality 9 (transparent-matched; × vs. transparent)", "srt_tr_float"),
+]
+# (binary tag, title, the 2 s workload's output frames)
+RATIONAL_RATIOS = [("up2", "↑2 (48 → 96 kHz)", 2 * 96000), ("down2", "↓2 (96 → 48 kHz)", 2 * 48000),
+                   ("r32", "3/2 (32 → 48 kHz)", 2 * 48000), ("r23", "2/3 (48 → 32 kHz)", 2 * 32000)]
+
+
+def rational_block(doc: dict) -> str:
+    p, counts = doc["provenance"], doc["counts"]
+    targets = [(t, n) for t, n in TARGETS if t in counts]
+    lines = [provenance(p)]
+    for tag, title, frames in RATIONAL_RATIOS:
+        prefix = f"cmp_rational_icount_{tag}_"
+        lines += ["", f"**{title}.** Steady state, instructions per stereo output frame (× = vs. the",
+                  "rational row the label names; the cheapest rational row per target in bold):"]
+        lines += tables(counts, targets, RATIONAL_ENGINES, frames, prefix, [])
+    if "m33" in counts and "m55" in counts:
+        m33, m55 = counts["m33"], counts["m55"]
+        pre = "cmp_rational_icount_down2_"
+
+        def steady(c, e, frames=2 * 48000):
+            return (c[f"{pre}{e}_4s"] - c[f"{pre}{e}"]) / frames
+
+        q15, fl = steady(m55, "srt_eco_q15"), steady(m55, "srt_eco_float")
+        lines += [
+            "",
+            wrap(f"Key figures (↓2, 96 → 48): on the M33 the economy Q15 half-band costs "
+                 f"**{steady(m33, 'srt_eco_q15'):,.0f} instructions/frame** in steady state, "
+                 f"SpeexDSP's fixed-point build at quality 3 "
+                 f"**{steady(m33, 'speex_fixed_q3') / steady(m33, 'srt_eco_q15'):.1f}×** that, "
+                 f"libsamplerate `MEDIUM` **~{steady(m33, 'lsr_medium') / steady(m33, 'srt_eco_q15'):.0f}×** "
+                 f"and r8brain at 70 dB **~{steady(m33, 'r8b_eco') / steady(m33, 'srt_eco_q15'):.0f}×**; "
+                 f"on the M55 the economy float half-band ({fl:,.0f}) is "
+                 f"{'cheaper' if fl < q15 else 'dearer'} than Q15 ({q15:,.0f}) by "
+                 f"{abs(q15 - fl) / min(q15, fl):.0%}."),
+        ]
+    return "\n".join(lines)
+
+
 DOCS = [
     (pathlib.Path("async/docs/COMPARISON.md"), pathlib.Path("async/bench/compare_counts.json"), async_block),
     (pathlib.Path("bridge/docs/COMPARISON.md"), pathlib.Path("bridge/bench/compare_counts.json"), bridge_block),
+    (pathlib.Path("rational/docs/COMPARISON.md"), pathlib.Path("rational/bench/compare_counts.json"), rational_block),
 ]
 
 
