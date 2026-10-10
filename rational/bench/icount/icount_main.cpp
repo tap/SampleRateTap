@@ -5,8 +5,9 @@
 // bare-metal targets have no argv. The qemu plugin counts the whole run,
 // construction included; the streaming loop is sized to dominate (2 s of
 // stereo at the input rate in 32-frame blocks, bridge's shape), and one
-// scenario measures construction alone. The checksum both defeats
-// dead-code elimination and pins cross-run determinism.
+// scenario is the Q15 by-4 chain's workload with its stream removed
+// (construction and the input fixture, then one block). The checksum both
+// defeats dead-code elimination and pins cross-run determinism.
 //
 // TAP_SR_RATIONAL_SC: 0 up2_float_eco, 1 down2_float_eco, 2 up3_float_eco,
 // 3 down3_float_eco, 4 up2_q15_eco, 5 down2_q15_eco, 6 up3_q15_eco,
@@ -120,13 +121,23 @@ namespace {
 #elif TAP_SR_RATIONAL_SC == 13
         return stage_workload<std::int16_t, rat::ratio_2_3>(eco);
 #else
-        // Construction alone: the Q15 by-4 chain's two designs (pinned
-        // lengths, no search) and quantized tables, then one output frame.
-        rat::down_2_down_2<std::int16_t> conv(k_channels, eco);
-        std::int16_t                     in[4 * k_channels]  = {};
-        std::int16_t                     out[2 * k_channels] = {};
-        const std::size_t                made                = conv.process(in, 4, out);
-        return static_cast<double>(made) + static_cast<double>(conv.template stage<0>().taps())
+        // The Q15 by-4 chain's workload (scenario 8) with its stream removed:
+        // the chain's construction (two designs at pinned lengths, no search,
+        // and the quantized tables) and the same 0.25 s input fixture the
+        // stream synthesizes, then one block processed. Gated beside the
+        // streaming scenarios so down2_down2_q15_eco minus this is the
+        // streaming loop alone, undiluted, as the siblings' construct legs
+        // (async's construct_q15, bridge's construct_*_q15_eco). The fixture
+        // belongs here and not in the difference: its libm sin() calls are
+        // soft-double on the M33.
+        using conv_t = rat::down_2_down_2<std::int16_t>;
+        conv_t                    conv(k_channels, eco);
+        const auto                input   = sine_block<std::int16_t>(12000); // as stream()
+        constexpr std::size_t     out_cap = k_block * conv_t::k_up / conv_t::k_down + conv_t::k_up + 2;
+        std::vector<std::int16_t> out(out_cap * k_channels);
+        const std::size_t         made = conv.process(input.data(), k_block, out.data());
+        return static_cast<double>(out[0]) + static_cast<double>(made)
+               + static_cast<double>(conv.template stage<0>().taps())
                + static_cast<double>(conv.template stage<1>().taps());
 #endif
     }

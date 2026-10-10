@@ -816,7 +816,12 @@ Plus:
   `rational/bench/baselines.json`, guest marker `RATIONAL_ICOUNT_DONE
   ok=1 checksum=…` (R12). Construction is measured as its own scenario
   from the first baseline, so the `async` roadmap's "construction as a
-  ratcheted scenario" debt (`../async/PLAN.md` §4.1) is not inherited.
+  ratcheted scenario" debt (`../async/PLAN.md` §4.1) is not inherited;
+  since 2026-10-10 that scenario is the Q15 by-4 chain's workload with
+  its stream removed — construction and the input fixture, then one block
+  — as the siblings' construct legs are, so `down2_down2_q15_eco` minus
+  it is the streaming loop alone (the fixture's libm `sin()` is
+  soft-double on the M33 and belongs in the leg, not the difference).
 
 ## 6. Milestones
 
@@ -959,7 +964,18 @@ README carries the full table, the 2/3 workloads included):
 | `up2_q15_eco` | 67,354,778 | 34,150,590 | 28,133,275 |
 | `up3_float_eco` | 1,407,620,075 | 75,330,937 | 254,903,952 |
 | `up3_q15_eco` | 92,695,694 | 51,156,121 | 39,793,932 |
-| `construct_q15_eco` | 777,433 | 34,522 | 193,048 |
+| `construct_q15_eco` | 26,810,642 | 1,567,568 | 8,341,715 |
+
+The construct row is the 2026-10-10 re-record: the leg became the by-4
+chain's workload with its stream removed — construction and the 0.25 s
+input fixture, then one block — as the siblings' construct legs are, so
+`down2_down2_q15_eco` minus it is the streaming loop alone: 372
+instructions per stereo frame on the M33, 277 on the M55, 145 on
+Hexagon, with the leg 43 % / 5.6 % / 38 % of the chain's total. The old
+construction-only figures (777,433 / 34,522 / 193,048) say what the two
+designs and tables cost by themselves: under a million everywhere, which
+is why the comparison document's construction column for this engine is
+mostly fixture (`docs/COMPARISON.md`).
 
 One finding, recorded for the codegen levers, and the first lever it
 pulled: at M6, Q15 on the M55 was no faster than float (↓2 25.07 M against
