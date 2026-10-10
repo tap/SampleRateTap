@@ -212,7 +212,8 @@ Every push runs this engine's emulation-sized battery on **Cortex-M33**
 (qemu-hexagon, static musl), and gates fourteen fixed workloads — the by-2
 and by-3 stages both ways in float and Q15 at `economy`, the Q15 by-4
 chain, the by-2 pair in float at `transparent`, the 2/3 stage in float and
-Q15, and construction alone —
+Q15, and the Q15 by-4 chain's construction with its input fixture (its
+stream removed, so the chain's row minus it is the streaming loop alone) —
 against committed per-target instruction counts (`bench/baselines.json`,
 two-sided ±3 %), measured by the family's shared harness from the
 repository root:
@@ -232,7 +233,7 @@ Executed instructions per fixed workload (`rational/bench/icount/`), measured un
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `construct_q15_eco` | 777,433 | 34,522 | 193,048 |
+| `construct_q15_eco` | 26,810,642 | 1,567,568 | 8,341,715 |
 | `down2_down2_q15_eco` | 62,510,665 | 28,180,208 | 22,260,862 |
 | `down2_float_eco` | 366,459,676 | 24,433,741 | 72,735,414 |
 | `down2_float_tr` | 955,278,962 | 47,853,525 | 174,664,455 |

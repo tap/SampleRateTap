@@ -1,6 +1,6 @@
 {
   "hexagon": {
-    "construct_q15_eco": 193048,
+    "construct_q15_eco": 8341715,
     "down2_down2_q15_eco": 22260862,
     "down2_float_eco": 72735414,
     "down2_float_tr": 174664455,
@@ -16,7 +16,7 @@
     "up3_q15_eco": 39793932
   },
   "m33": {
-    "construct_q15_eco": 777433,
+    "construct_q15_eco": 26810642,
     "down2_down2_q15_eco": 62510665,
     "down2_float_eco": 366459676,
     "down2_float_tr": 955278962,
@@ -32,7 +32,7 @@
     "up3_q15_eco": 92695694
   },
   "m55": {
-    "construct_q15_eco": 34522,
+    "construct_q15_eco": 1567568,
     "down2_down2_q15_eco": 28180208,
     "down2_float_eco": 24433741,
     "down2_float_tr": 47853525,

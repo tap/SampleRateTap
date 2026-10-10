@@ -3,8 +3,10 @@
 # (scripts/icount.py --engine rational). The workloads are PLAN.md section
 # 5's: the by-2 and by-3 stages both ways in float and Q15 at economy, the
 # by-4 chain (down 2 . down 2) in Q15, the by-2 pair in float at
-# transparent, and construction alone (the Q15 by-4 chain's two designs and
-# tables, no streaming) as its own scenario from the first baseline; the
+# transparent, and the Q15 by-4 chain's workload with its stream removed
+# (construction and the input fixture, then one block: stream minus it is
+# the streaming loop alone, as the siblings' construct legs) as its own
+# scenario from the first baseline, the fixture joining it 2026-10-10; the
 # mixed ratio 2/3 (48 -> 32 kHz) in float and Q15 at economy joined after
 # M6, when the sparse-row lever was measured on it (PLAN.md section 6).
 set(_rational_icount_scenarios
