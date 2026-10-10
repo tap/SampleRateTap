@@ -10,6 +10,7 @@
 #include <memory>
 #include <type_traits>
 
+#include "tap/dsp/detail/expects.h"
 #include "tap/sr/bridge/ratio.h"
 
 namespace {
@@ -119,7 +120,16 @@ tap_sr_bridge_converter* tap_sr_bridge_create_format(int direction, int profile,
                           : profile == 1 ? br::profile::transparent()
                           : profile == 2 ? br::profile::balanced()
                                          : br::profile::super_economy();
-    try {
+    // The constructor's own precheck (the profile's validity does not depend
+    // on the sample format): a rejection is NULL here, never a throw — and,
+    // built without exceptions, never a terminate.
+    const char* const why = direction == 0
+                                ? br::basic_converter<float, br::direction::up_to_48k>::validate(channels, p)
+                                : br::basic_converter<float, br::direction::down_to_44k1>::validate(channels, p);
+    if (why != nullptr) {
+        return nullptr;
+    }
+    const auto construct = [&]() -> tap_sr_bridge_converter* {
         // unique_ptr owns the wrapper until the converter constructor has
         // succeeded, so a throw below cannot leak it.
         auto c = std::make_unique<tap_sr_bridge_converter>();
@@ -137,10 +147,17 @@ tap_sr_bridge_converter* tap_sr_bridge_create_format(int direction, int profile,
             return nullptr;
         }
         return c.release();
+    };
+#if TAP_DSP_HAS_EXCEPTIONS
+    try {
+        return construct();
     }
     catch (...) {
-        return nullptr;
+        return nullptr; // a refused allocation; the arguments were validated above
     }
+#else
+    return construct();
+#endif
 }
 
 tap_sr_bridge_converter* tap_sr_bridge_create(int direction, int profile, unsigned channels) {

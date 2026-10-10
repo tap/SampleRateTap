@@ -228,9 +228,12 @@ table is already enforced by test thresholds.
 - **Hexagon static-musl cannot catch exceptions**: a constructor throw
   terminates via libc++abi instead of propagating (discovered when the
   first EXPECT_THROW test reached that leg; ConfigValidation is excluded
-  there). Deployment note: on this toolchain configuration, treat invalid
-  config as fatal — validate inputs before constructing. Candidate fix:
-  link an unwinder (-unwindlib=libunwind) in cmake/hexagon-linux-musl.cmake.
+  there). Since A3 the deployment answer is the family's error model:
+  `config::validate(cfg)` is the constructor's rejection as a `noexcept`
+  reason, so a deployment on this toolchain (or any `-fno-exceptions`
+  build) validates first and never reaches the throw. The unwinder
+  (-unwindlib=libunwind in cmake/hexagon-linux-musl.cmake) stays a
+  candidate for the test leg itself (A2).
 
 ## Sequencing & status
 

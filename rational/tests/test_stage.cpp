@@ -12,8 +12,11 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <limits>
 #include <numbers>
+#include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -804,6 +807,40 @@ namespace {
 
     TEST(Stage, ZeroChannelsThrows) {
         EXPECT_THROW((converter<up_2>(0)), std::invalid_argument);
+    }
+
+    // The family's error model (A3): validate() is the constructor's rejection
+    // as a noexcept precheck — nullptr exactly where the stage constructs,
+    // else the text the constructor's exception carries. A build without
+    // exceptions calls it first; this build checks the two agree.
+    TEST(Stage, ValidateAgreesWithTheConstructor) {
+        using stage = basic_stage<float, up_2>;
+        static_assert(noexcept(stage::validate(1, profile::economy())));
+        for (const profile& p :
+             {profile::super_economy(), profile::economy(), profile::balanced(), profile::transparent()}) {
+            EXPECT_EQ(stage::validate(1, p), nullptr);
+            EXPECT_EQ((basic_stage<std::int16_t, ratio_2_3>::validate(2, p)), nullptr);
+            EXPECT_EQ((basic_stage<double, down_8>::validate(4, p.relaxed({3, 2}))), nullptr);
+        }
+        const auto rejection = [](auto make) -> std::string {
+            try {
+                make();
+                return {};
+            }
+            catch (const std::exception& e) {
+                return e.what();
+            }
+        };
+        EXPECT_STREQ(stage::validate(0), "tap::sr::rational::basic_stage: channels == 0");
+        EXPECT_EQ(rejection([] { stage s(0); }), stage::validate(0));
+        profile bad       = profile::economy();
+        bad.passband_frac = 0.5; // the lower rate's Nyquist: no transition band
+        EXPECT_EQ(stage::validate(1, bad), validate(bad)) << "the designer's own text";
+        EXPECT_EQ(rejection([&] { stage s(1, bad); }), stage::validate(1, bad));
+        const profile unmeetable = {
+            .passband_frac = 0.4999, .stopband_atten_db = 160.0, .taps_per_branch = {0, 0, 0, 0, 0}};
+        EXPECT_STREQ(stage::validate(1, unmeetable), k_unmeetable_spec_reason);
+        EXPECT_EQ(rejection([&] { stage s(1, unmeetable); }), stage::validate(1, unmeetable));
     }
 
 } // namespace

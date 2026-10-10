@@ -102,6 +102,7 @@
 #include <vector>
 
 #include "tap/dsp/chain.h"
+#include "tap/dsp/detail/expects.h"
 #include "tap/dsp/fir_kernels.h"
 #include "tap/dsp/quantize.h"
 #include "tap/dsp/sample_traits.h"
@@ -210,11 +211,40 @@ namespace tap::sr::rational {
         /// Rows of the table: L phases, or the M branches of a decimator.
         static constexpr std::size_t k_rows = k_is_decimator ? k_down : k_up;
 
+        // ANCHOR: rational_validate
+        /// The reason a stage cannot be built from (channels, p), or nullptr
+        /// when it can: the family's error model. noexcept; it states every
+        /// rejection the constructor makes other than a refused allocation —
+        /// zero channels, a profile the designer rejects (validate(p)), a
+        /// spec no length up to the search bound meets. Allocation-free for a
+        /// profile with a pin for this stage's band (the four named profiles
+        /// and their relaxations); a custom profile runs the design search,
+        /// as construction does. The constructor rejects with the same text
+        /// (std::invalid_argument, or std::runtime_error for the unmeetable
+        /// spec, through tap::dsp::raise), so a build with exceptions may
+        /// construct and catch; a build without them (-fno-exceptions, where
+        /// the rejection terminates) calls this first and constructs only on
+        /// nullptr.
+        static const char* validate(std::size_t channels, const profile& p = profile::economy()) noexcept {
+            if (channels == 0) {
+                return "tap::sr::rational::basic_stage: channels == 0";
+            }
+            if (const char* why = tap::sr::rational::validate(p)) {
+                return why;
+            }
+            if (taps_per_branch_for(ratio_traits<R>::k_band, p) == 0) {
+                return k_unmeetable_spec_reason;
+            }
+            return nullptr;
+        }
+        // ANCHOR_END: rational_validate
+
         /// Designs the table and allocates the histories; setup time only.
+        /// Rejects what validate() rejects, with its text.
         explicit basic_stage(std::size_t channels = 1, const profile& p = profile::economy())
             : m_channels(channels) {
             if (channels == 0) {
-                throw std::invalid_argument("tap::sr::rational::basic_stage: channels == 0");
+                tap::dsp::raise<std::invalid_argument>("tap::sr::rational::basic_stage: channels == 0");
             }
             const std::vector<double> h = design_stage<R>(p);
             m_taps                      = h.size();

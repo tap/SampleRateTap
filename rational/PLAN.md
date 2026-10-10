@@ -1019,6 +1019,31 @@ Q15 pipelines 21–42 % on the same pin). Q15 is now 19 % (↓2) to 32 % (↑3)
 under float on the M55; what remains per output is the stage's own
 bookkeeping around the dot.
 
+**A finding from A3 (2026-10-10), recorded for the levers.** The streaming
+rows depend on the constructor being inlined into its caller. GCC
+constant-folds the channel count through that inlining into the stage's
+`append_frame` / `emit` loops (`for c < m_channels`), and the ratchet's
+workloads, which construct with a literal channel count in `main`, price
+that specialization. The first A3 tree rejected zero channels through
+`tap::dsp::raise`, which GCC kept out of line as a `[[noreturn]]` template;
+the constructor grew enough, as GCC estimates size, to stop being inlined,
+`main` shrank from 900 to 478 bytes on the M55 with the constructor out of
+line at 844, and with no change to the hot path the M55 streaming rows read
++11 … +37 % (`up2_float_eco` +15.6 M, 81 instructions per output frame;
+`ratio23_float_eco` +12.2 M; `down2_q15_eco` −4.3 %) and the M33 Q15 rows
++16 … +51 % (`ratio23_q15_eco` +26.8 M), Hexagon (clang) exact throughout;
+bisected to that one call, and exact again to the instruction with `raise`
+forced inline (DspTap's `TAP_DSP_RAISE_INLINE`, which is why it is). Two
+consequences stand. A consumer that constructs a stage behind a boundary GCC
+does not inline through (a factory in another translation unit, a runtime
+channel count) runs the un-specialized loops and pays these numbers; the
+ratchet does not see that build. And the baselines are hostage to the
+inliner's estimate of the constructor, as `async`'s ledger already found for
+`run<S>()`. The lever this points at — a compile-time channel count on the
+stage, or `channels == 1` / `channels == 2` fast paths that hold without the
+inlining — is unpulled; it would move every Arm count and wants its own
+measurement.
+
 **The codegen levers after M6** (one lever per change, measured, as
 `bridge`'s M7 campaign): the Helium Q15 dot above (shipped); the Q15
 decimators' per-branch quantization (shipped, a quality lever: the limit

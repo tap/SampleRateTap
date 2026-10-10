@@ -69,6 +69,26 @@ target_link_libraries(app PRIVATE tap::sr)           # all of them (the umbrella
 #include <tap/sr/rational/rational.h> // tap::sr::rational::converter<ratio<L, M>>, converter_q15, ...
 ```
 
+**Errors: one model (A3).** Construction is where an engine can reject
+its arguments; processing is `noexcept`. Each engine states the rejection
+twice, in the same words: `validate(...)`, a `noexcept` precheck that returns
+the reason as a `const char*` (nullptr when the converter constructs) —
+`async::config::validate(cfg)`, `bridge::basic_converter<…>::validate(channels,
+profile)`, `rational::basic_stage<…>::validate(channels, profile)` and
+`basic_chain<…>::validate(channels, profile)` — and the constructor, which
+raises that reason as `std::invalid_argument` (`std::runtime_error` for a
+`rational` spec no length meets) through `tap::dsp::raise`. Built with
+exceptions, construct and catch, or call `validate()` first; built with
+`-fno-exceptions` (the Pico SDK's, Zephyr's and most Cortex-M trees' default,
+under which every header here compiles) the constructor's rejection
+*terminates*, so such a build calls `validate()` and constructs only on
+nullptr. A refused allocation stays `std::bad_alloc` where exceptions exist
+and a termination where they do not, as the standard library's is. The C ABIs
+validate before constructing and return NULL, so they never unwind and never
+terminate on a bad argument. CI builds every engine and the three C ABIs with
+exceptions off (`no-exceptions` in `ci.yml`) and compiles every header that
+way on the hosted legs (`<engine>.Family.HeadersCompileWithoutExceptions`).
+
 Every configure builds every engine. CI selects an engine only when it runs
 tests, by ctest label. The family options are `TAP_SR_*`:
 

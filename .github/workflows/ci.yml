@@ -140,6 +140,36 @@ jobs:
           UBSAN_OPTIONS: print_stacktrace=1
         run: ctest --test-dir build ${{ env.CTEST_COMMON }} ${{ matrix.labels }}
 
+  # The family's error model, A3: every engine's headers and the three C
+  # ABIs build with exceptions off (clang, -fno-exceptions, warnings fatal).
+  # Tests and examples are off: gtest's EXPECT_THROW and the examples' catch
+  # blocks need exceptions, and the headers' own exceptions-off compile is
+  # the hosted legs' <engine>.Family.HeadersCompileWithoutExceptions. What
+  # this job adds is the C boundary: the create paths validate first and
+  # carry no try/catch in such a build.
+  no-exceptions:
+    name: Linux Clang, -fno-exceptions (engines + C ABIs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
+
+      - name: Configure
+        env:
+          CC: clang
+          CXX: clang++
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_FLAGS=-fno-exceptions
+          -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF -DTAP_SR_BUILD_CAPI=ON
+          -DTAP_SR_ASYNC_WERROR=ON -DTAP_SR_BRIDGE_WERROR=ON -DTAP_SR_RATIONAL_WERROR=ON
+
+      - name: Build
+        run: cmake --build build -j 4
+
   # Cross-compiled correctness under emulation, one job per (target, engine):
   # every engine is built in one tree and each job runs one engine's label
   # with that engine's own exclusions and parallelism, as each repository ran
@@ -704,6 +734,22 @@ jobs:
         run: >
           cmake -S async/examples/pico2_dualcore -B build-dualcore -DPICO_BOARD=pico2
           && cmake --build build-dualcore -j 4
+
+      # The same two firmwares with the SDK's own -fno-exceptions default
+      # (the family's error model, A3: config::validate() before constructing,
+      # the library's rejections terminate instead of throwing). The SDK is
+      # already fetched into the first trees; the second configure reuses it.
+      - name: Build pico2_cyccnt without exceptions
+        run: >
+          cmake -S async/examples/pico2_cyccnt -B build-cyccnt-noexc -DPICO_BOARD=pico2
+          -DPICO_CXX_ENABLE_EXCEPTIONS=0 -DFETCHCONTENT_SOURCE_DIR_PICO_SDK=build-cyccnt/_deps/pico_sdk-src
+          && cmake --build build-cyccnt-noexc -j 4
+
+      - name: Build pico2_dualcore without exceptions
+        run: >
+          cmake -S async/examples/pico2_dualcore -B build-dualcore-noexc -DPICO_BOARD=pico2
+          -DPICO_CXX_ENABLE_EXCEPTIONS=0 -DFETCHCONTENT_SOURCE_DIR_PICO_SDK=build-dualcore/_deps/pico_sdk-src
+          && cmake --build build-dualcore-noexc -j 4
 
   clang-format:
     name: clang-format

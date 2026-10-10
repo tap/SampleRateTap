@@ -22,6 +22,7 @@
 #include <new>
 #include <type_traits>
 
+#include "tap/dsp/detail/expects.h"
 #include "tap/sr/async/async.h"
 
 // ANCHOR: abi_impl
@@ -115,9 +116,12 @@ unsigned tap_sr_async_version(void) {
 
 // ANCHOR: abi_create
 /// profile: 0 = fast, 1 = balanced, 2 = transparent; format: a
-/// TAP_SR_ASYNC_FORMAT_* value. NULL on an invalid configuration (the
-/// converter's constructor throws), an unknown format or profile, or an
-/// allocation failure; the C boundary never unwinds.
+/// TAP_SR_ASYNC_FORMAT_* value. NULL on an invalid configuration
+/// (config::validate's rejection, checked before constructing), an unknown
+/// format or profile, or — where the library was built with exceptions — an
+/// allocation failure; the C boundary never unwinds. Built without exceptions
+/// (-fno-exceptions), a refused allocation terminates, as the standard
+/// library's does there.
 tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, size_t target_latency_frames, int profile,
                                                    int format, unsigned channels) {
     tap::sr::async::config cfg;
@@ -132,7 +136,10 @@ tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, size_t
     cfg.filter = profile == 0   ? tap::sr::async::filter_spec::fast()
                  : profile == 2 ? tap::sr::async::filter_spec::transparent()
                                 : tap::sr::async::filter_spec::balanced();
-    try {
+    if (tap::sr::async::config::validate(cfg) != nullptr) {
+        return nullptr; // the constructor would reject it (and, without exceptions, terminate)
+    }
+    const auto make = [&]() -> tap_sr_async_converter* {
         std::unique_ptr<engine> e;
         switch (format) {
         case TAP_SR_ASYNC_FORMAT_FLOAT:
@@ -148,10 +155,17 @@ tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, size_t
             return nullptr;
         }
         return reinterpret_cast<tap_sr_async_converter*>(e.release());
+    };
+#if TAP_DSP_HAS_EXCEPTIONS
+    try {
+        return make();
     }
     catch (...) {
-        return nullptr;
+        return nullptr; // a refused allocation; the configuration was validated above
     }
+#else
+    return make();
+#endif
 }
 
 tap_sr_async_converter* tap_sr_async_create(double sample_rate_hz, size_t target_latency_frames, int profile,

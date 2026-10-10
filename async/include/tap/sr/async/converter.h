@@ -13,12 +13,23 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "tap/dsp/detail/expects.h"
 #include "tap/sr/async/pi_servo.h"
 #include "tap/sr/async/polyphase_filter.h"
 #include "tap/sr/async/sample_traits.h"
 #include "tap/sr/async/spsc_ring.h"
 
 namespace tap::sr::async {
+
+    struct config;
+
+    namespace detail {
+        /// The FIFO's capacity in samples for a config whose bank has `taps`
+        /// taps per phase: the caller's fifo_frames, or the automatic size,
+        /// rounded up to a power of two. Shared by the constructor and by
+        /// config::validate, so the two agree to the sample.
+        std::size_t ring_capacity_elems(const config& cfg, std::size_t taps) noexcept;
+    } // namespace detail
 
     // ANCHOR: p0_config
     /// Converter configuration. The defaults give ~1.5 ms designed latency at
@@ -54,6 +65,26 @@ namespace tap::sr::async {
             c.servo          = c.servo.scaled_to(sample_rate_hz);
             return c;
         }
+
+        // ANCHOR: p0_validate
+        /// The reason a converter cannot be built from `cfg`, or nullptr when it
+        /// can: the family's error model. noexcept and allocation-free, and it
+        /// states every rejection the constructor makes other than a refused
+        /// allocation — NaN/Inf anywhere (a NaN sample rate designs an all-NaN
+        /// coefficient table), band edges whose sum exceeds the rate (anti-image
+        /// cutoff above input Nyquist passes images wholesale), a bank the
+        /// designer rejects (fewer than 4 taps per phase, 8 with image_zeros,
+        /// fewer than 2 phases, a stopband edge at or below the passband's or
+        /// above the rate), a deviation clamp large enough to overflow the Q0.64
+        /// eps conversion (UB), size products that overflow 32-bit size_t
+        /// targets, and a FIFO too small for its high-water mark. The
+        /// constructor runs the same check and rejects with the same text
+        /// (std::invalid_argument through tap::dsp::raise), so a build with
+        /// exceptions may construct and catch; a build without them
+        /// (-fno-exceptions, where the rejection terminates) calls this first
+        /// and constructs only on nullptr.
+        static const char* validate(const config& cfg) noexcept;
+        // ANCHOR_END: p0_validate
     };
 
     /// Converter state as seen by status().
@@ -103,14 +134,16 @@ namespace tap::sr::async {
             : m_cfg(validated(cfg))
             , m_bank(m_cfg.filter, m_cfg.sample_rate_hz)
             , m_resampler(m_bank, m_cfg.channels, k_pop_chunk_frames)
-            , m_ring(ring_capacity_elems(m_cfg, m_bank.taps()))
+            , m_ring(detail::ring_capacity_elems(m_cfg, m_bank.taps()))
             , m_servo(m_cfg.servo, m_cfg.sample_rate_hz, static_cast<double>(m_cfg.target_latency_frames))
             , m_target_frames(m_cfg.target_latency_frames)
             , m_fill_threshold_frames(m_cfg.target_latency_frames + m_bank.taps())
             , m_high_water_frames(
                   std::max(3 * m_cfg.target_latency_frames, m_fill_threshold_frames + m_cfg.target_latency_frames)) {
             if (m_ring.capacity() / m_cfg.channels <= m_high_water_frames) {
-                throw std::invalid_argument("tap::sr::async::converter: fifoFrames too small");
+                // Unreachable after validated(): the same arithmetic, kept so
+                // the two cannot drift apart silently.
+                tap::dsp::raise<std::invalid_argument>("tap::sr::async::converter: fifoFrames too small");
             }
             // Largest setpoint the FIFO capacity supports while keeping the
             // high-watermark relation; bounds the adaptive raise in pull().
@@ -273,17 +306,6 @@ namespace tap::sr::async {
       private:
         static constexpr std::size_t k_pop_chunk_frames = 16;
 
-        static std::size_t ring_capacity_elems(const config& cfg, std::size_t taps) {
-            const std::size_t fill_threshold = cfg.target_latency_frames + taps;
-            // The 1024-frame floor (21 ms at 48 kHz) leaves the adaptive
-            // setpoint raise enough capacity for pull blocks up to ~340 frames
-            // without explicit fifoFrames sizing; larger callbacks need
-            // fifoFrames set by the caller (the raise clamps to capacity).
-            const std::size_t frames =
-                cfg.fifo_frames != 0 ? cfg.fifo_frames : std::max<std::size_t>(1024, 4 * fill_threshold);
-            return std::bit_ceil(frames * cfg.channels);
-        }
-
         /// Effective backlog: FIFO occupancy plus frames staged in the resampler's
         /// pop scratch (already off the ring but not yet through the filter).
         double backlog_frames() noexcept {
@@ -330,42 +352,12 @@ namespace tap::sr::async {
             m_fill.store(static_cast<float>(m_servo.smoothed_occupancy()), std::memory_order_relaxed);
         }
 
-        /// Rejects configurations that would otherwise construct successfully
-        /// and misbehave silently: NaN/Inf anywhere (a NaN sample rate designs
-        /// an all-NaN coefficient table), band edges whose sum exceeds the rate
-        /// (anti-image cutoff above input Nyquist passes images wholesale), a
-        /// deviation clamp large enough to overflow the Q0.64 eps conversion
-        /// (UB), and size products that overflow 32-bit size_t targets.
+        /// The constructor's rejection: config::validate's reason, raised as
+        /// std::invalid_argument (a build without exceptions terminates here,
+        /// tap::dsp::raise; such a build calls config::validate first).
         static config validated(config cfg) {
-            const auto finite = [](double v) { return std::isfinite(v); };
-            if (cfg.channels == 0 || cfg.target_latency_frames == 0 || !finite(cfg.sample_rate_hz)
-                || cfg.sample_rate_hz <= 0.0) {
-                throw std::invalid_argument("tap::sr::async::converter: bad Config");
-            }
-            const filter_spec& f = cfg.filter;
-            if (!finite(f.passband_hz) || !finite(f.stopband_hz) || !finite(f.stopband_atten_db)
-                || f.passband_hz + f.stopband_hz > cfg.sample_rate_hz) {
-                throw std::invalid_argument("tap::sr::async::converter: bad filter_spec "
-                                            "(need passbandHz + stopbandHz <= sampleRateHz)");
-            }
-            const servo_config& sv = cfg.servo;
-            if (!finite(sv.acquire_bandwidth_hz) || !finite(sv.track_bandwidth_hz) || !finite(sv.quiet_bandwidth_hz)
-                || !finite(sv.damping) || !finite(sv.acquire_smoother_hz) || !finite(sv.track_smoother_hz)
-                || !finite(sv.quiet_smoother_hz) || !finite(sv.lock_threshold_frames) || !finite(sv.lock_hold_seconds)
-                || !finite(sv.quiet_hold_seconds) || !finite(sv.unlock_threshold_frames)
-                || !finite(sv.max_deviation_ppm) || sv.max_deviation_ppm <= 0.0
-                || sv.max_deviation_ppm > 100000.0) { // |eps| stays far from the Q0.64 int64 limit
-                throw std::invalid_argument("tap::sr::async::converter: bad servo_config");
-            }
-            // Size products evaluated later must not wrap on 32-bit size_t.
-            const auto mul_ok = [](std::size_t a, std::size_t b) {
-                return b == 0 || a <= std::numeric_limits<std::size_t>::max() / b;
-            };
-            const std::size_t phases = std::bit_ceil(f.num_phases);
-            if (!mul_ok(phases + 1, f.taps_per_phase)
-                || !mul_ok(cfg.target_latency_frames + f.taps_per_phase, 8 * cfg.channels)
-                || !mul_ok(cfg.fifo_frames, 2 * cfg.channels)) {
-                throw std::invalid_argument("tap::sr::async::converter: Config sizes overflow");
+            if (const char* why = config::validate(cfg)) {
+                tap::dsp::raise<std::invalid_argument>(why);
             }
             return cfg;
         }
@@ -411,5 +403,70 @@ namespace tap::sr::async {
     using converter_q15 = basic_converter<std::int16_t>;
     /// Q31 fixed-point converter (int32_t samples; see sample_traits<int32_t>).
     using converter_q31 = basic_converter<std::int32_t>;
+
+    inline std::size_t detail::ring_capacity_elems(const config& cfg, std::size_t taps) noexcept {
+        const std::size_t fill_threshold = cfg.target_latency_frames + taps;
+        // The 1024-frame floor (21 ms at 48 kHz) leaves the adaptive
+        // setpoint raise enough capacity for pull blocks up to ~340 frames
+        // without explicit fifoFrames sizing; larger callbacks need
+        // fifoFrames set by the caller (the raise clamps to capacity).
+        const std::size_t frames =
+            cfg.fifo_frames != 0 ? cfg.fifo_frames : std::max<std::size_t>(1024, 4 * fill_threshold);
+        return std::bit_ceil(frames * cfg.channels);
+    }
+
+    inline const char* config::validate(const config& cfg) noexcept {
+        const auto finite = [](double v) { return std::isfinite(v); };
+        if (cfg.channels == 0 || cfg.target_latency_frames == 0 || !finite(cfg.sample_rate_hz)
+            || cfg.sample_rate_hz <= 0.0) {
+            return "tap::sr::async::converter: bad Config";
+        }
+        const filter_spec& f = cfg.filter;
+        if (!finite(f.passband_hz) || !finite(f.stopband_hz) || !finite(f.stopband_atten_db)
+            || f.passband_hz + f.stopband_hz > cfg.sample_rate_hz) {
+            return "tap::sr::async::converter: bad filter_spec "
+                   "(need passbandHz + stopbandHz <= sampleRateHz)";
+        }
+        // What the bank's designer rejects (polyphase_filter_bank's constructor
+        // states the same conditions in the same order).
+        const std::size_t phases = std::bit_ceil(f.num_phases);
+        if (f.taps_per_phase < 4 || phases < 2) {
+            return "polyphase_filter_bank: bad filter_spec";
+        }
+        if (f.image_zeros && f.taps_per_phase < 8) {
+            return "polyphase_filter_bank: imageZeros needs tapsPerPhase >= 8";
+        }
+        if (f.passband_hz <= 0.0 || f.stopband_hz <= f.passband_hz || f.stopband_hz > cfg.sample_rate_hz) {
+            return "polyphase_filter_bank: bad band edges";
+        }
+        const servo_config& sv = cfg.servo;
+        if (!finite(sv.acquire_bandwidth_hz) || !finite(sv.track_bandwidth_hz) || !finite(sv.quiet_bandwidth_hz)
+            || !finite(sv.damping) || !finite(sv.acquire_smoother_hz) || !finite(sv.track_smoother_hz)
+            || !finite(sv.quiet_smoother_hz) || !finite(sv.lock_threshold_frames) || !finite(sv.lock_hold_seconds)
+            || !finite(sv.quiet_hold_seconds) || !finite(sv.unlock_threshold_frames) || !finite(sv.max_deviation_ppm)
+            || sv.max_deviation_ppm <= 0.0
+            || sv.max_deviation_ppm > 100000.0) { // |eps| stays far from the Q0.64 int64 limit
+            return "tap::sr::async::converter: bad servo_config";
+        }
+        // Size products evaluated later must not wrap on 32-bit size_t.
+        const auto mul_ok = [](std::size_t a, std::size_t b) {
+            return b == 0 || a <= std::numeric_limits<std::size_t>::max() / b;
+        };
+        if (!mul_ok(phases + 1, f.taps_per_phase)
+            || !mul_ok(cfg.target_latency_frames + f.taps_per_phase, 8 * cfg.channels)
+            || !mul_ok(cfg.fifo_frames, 2 * cfg.channels)) {
+            return "tap::sr::async::converter: Config sizes overflow";
+        }
+        // The FIFO must hold more than its high-water mark (the constructor's
+        // relation, with the bank's taps per phase as its history).
+        const std::size_t taps           = f.taps_per_phase;
+        const std::size_t fill_threshold = cfg.target_latency_frames + taps;
+        const std::size_t high_water =
+            std::max(3 * cfg.target_latency_frames, fill_threshold + cfg.target_latency_frames);
+        if (detail::ring_capacity_elems(cfg, taps) / cfg.channels <= high_water) {
+            return "tap::sr::async::converter: fifoFrames too small";
+        }
+        return nullptr;
+    }
 
 } // namespace tap::sr::async

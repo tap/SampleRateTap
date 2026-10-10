@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "tap/dsp/detail/expects.h"
 #include "tap/dsp/kaiser.h"
 
 namespace tap::sr::bridge {
@@ -158,6 +159,23 @@ namespace tap::sr::bridge {
     /// with it every coefficient — is bit-identical to K = 0: scaling by a
     /// power of two is exact in IEEE double, and kaiser_beta depends only on
     /// the dB. Pinned by test_design.cpp, RateScaleIsBitIdentical.
+    /// The reason design_prototype<D, K> rejects `p`, or nullptr when it
+    /// designs: finite, a positive passband edge (times 2^K) below the
+    /// direction's stopband edge, a positive stopband target, at least 4 taps
+    /// per phase. noexcept and allocation-free: the precheck
+    /// basic_converter::validate composes, for a build without exceptions.
+    template <direction D, unsigned K = 0>
+    const char* validate_profile(const profile& p) noexcept {
+        using traits = ratio_traits<D, K>;
+        if (!(std::isfinite(p.passband_hz * traits::k_rate_factor) && std::isfinite(p.stopband_atten_db))
+            || p.passband_hz * traits::k_rate_factor <= 0.0
+            || p.passband_hz * traits::k_rate_factor >= traits::k_stopband_edge_hz || p.stopband_atten_db <= 0.0
+            || p.taps<D>() < 4) {
+            return "tap::sr::bridge::design_prototype: bad profile";
+        }
+        return nullptr;
+    }
+
     template <direction D, unsigned K = 0>
     std::vector<double> design_prototype(const profile& p) {
         using traits = ratio_traits<D, K>;
@@ -166,11 +184,8 @@ namespace tap::sr::bridge {
         // the normalization loop and moves the K = 0 construction count by
         // one instruction per phase on Hexagon (measured). Reading it this
         // way keeps the base path's codegen, and the ratchet, exact.
-        if (!(std::isfinite(p.passband_hz * traits::k_rate_factor) && std::isfinite(p.stopband_atten_db))
-            || p.passband_hz * traits::k_rate_factor <= 0.0
-            || p.passband_hz * traits::k_rate_factor >= traits::k_stopband_edge_hz || p.stopband_atten_db <= 0.0
-            || p.taps<D>() < 4) {
-            throw std::invalid_argument("tap::sr::bridge::design_prototype: bad profile");
+        if (const char* why = validate_profile<D, K>(p)) {
+            tap::dsp::raise<std::invalid_argument>(why);
         }
         std::vector<double> h(traits::k_phases * p.taps<D>());
         const double        cutoff_norm =

@@ -15,6 +15,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <numbers>
+#include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -508,6 +510,32 @@ namespace {
 
     TEST(Chain, ZeroChannelsThrows) {
         EXPECT_THROW((up_2_up_2<float>(0)), std::invalid_argument);
+    }
+
+    // The family's error model (A3): a chain's validate() is its stages' at
+    // their design divisors, the first reason winning — nullptr exactly where
+    // the chain constructs, else the constructor's text.
+    TEST(Chain, ValidateAgreesWithTheConstructor) {
+        using c3 = basic_chain<float, up_2, ratio_4_3, up_3>;
+        static_assert(noexcept(c3::validate(1, profile::economy())));
+        for (const profile& p :
+             {profile::super_economy(), profile::economy(), profile::balanced(), profile::transparent()}) {
+            EXPECT_EQ(c3::validate(2, p), nullptr);
+            EXPECT_EQ((basic_chain<std::int16_t, down_2, down_8, down_2>::validate(1, p)), nullptr);
+            EXPECT_NO_THROW((c3(2, p)));
+        }
+        EXPECT_STREQ(c3::validate(0), "tap::sr::rational::basic_stage: channels == 0");
+        profile bad       = profile::economy();
+        bad.passband_frac = 0.5;
+        EXPECT_EQ(c3::validate(1, bad), validate(bad.relaxed(c3::k_divisors[0])));
+        std::string thrown;
+        try {
+            c3 c(1, bad);
+        }
+        catch (const std::invalid_argument& e) {
+            thrown = e.what();
+        }
+        EXPECT_EQ(thrown, c3::validate(1, bad));
     }
 
 } // namespace

@@ -12,6 +12,8 @@
 #include <cmath>
 #include <cstdint>
 #include <numbers>
+#include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -455,6 +457,43 @@ namespace {
         EXPECT_NEAR(c.latency_input_frames(), 58.0 / 2.0, 0.51);
         EXPECT_EQ(c.channels(), 1u);
         EXPECT_THROW(conv<direction::down_to_44k1>(0), std::invalid_argument);
+    }
+
+    // The family's error model (A3): validate() is the constructor's rejection
+    // as a noexcept precheck — nullptr exactly where the converter constructs,
+    // else the text the constructor's exception carries. A build without
+    // exceptions calls it first; this build checks the two agree.
+    TEST(Converter, ValidateAgreesWithTheConstructor) {
+        using tap::sr::bridge::profile;
+        using down = conv<direction::down_to_44k1>;
+        using up   = conv<direction::up_to_48k>;
+        static_assert(noexcept(down::validate(1, profile::economy())));
+        for (const profile& p :
+             {profile::super_economy(), profile::economy(), profile::balanced(), profile::transparent()}) {
+            EXPECT_EQ(down::validate(1, p), nullptr);
+            EXPECT_EQ(up::validate(2, p), nullptr);
+            EXPECT_NO_THROW(down(1, p));
+        }
+        const auto rejection = [](auto make) -> std::string {
+            try {
+                make();
+                return {};
+            }
+            catch (const std::invalid_argument& e) {
+                return e.what();
+            }
+        };
+        EXPECT_STREQ(down::validate(0), "tap::sr::bridge::basic_converter: channels == 0");
+        EXPECT_EQ(rejection([] { down c(0); }), down::validate(0));
+        profile bad     = profile::economy();
+        bad.passband_hz = 23000.0; // above the down direction's stopband edge
+        EXPECT_STREQ(down::validate(1, bad), "tap::sr::bridge::design_prototype: bad profile");
+        EXPECT_EQ(rejection([&] { down c(1, bad); }), down::validate(1, bad));
+        EXPECT_EQ(up::validate(1, bad), nullptr) << "23 kHz is below the up direction's 24 kHz edge";
+        profile q           = profile::economy();
+        q.stopband_atten_db = -1.0;
+        EXPECT_EQ(rejection([&] { up c(1, q); }), up::validate(1, q));
+        EXPECT_NE(up::validate(1, q), nullptr);
     }
 
 } // namespace

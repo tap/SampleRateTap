@@ -269,6 +269,19 @@ namespace {
         // And the good ones do not.
         EXPECT_NO_THROW((design_stage<up_2>(profile::economy())));
         EXPECT_NO_THROW((design_stage<up_2>(profile::transparent())));
+        // validate() is the same verdict as a noexcept reason (A3): the text the
+        // throw carries, or nullptr.
+        static_assert(noexcept(validate(p)));
+        EXPECT_NE(validate(p), nullptr);
+        EXPECT_NE(validate(q), nullptr);
+        EXPECT_EQ(validate(profile::economy()), nullptr);
+        try {
+            design_stage<up_2>(q);
+            ADD_FAILURE() << "designed a NaN stopband";
+        }
+        catch (const std::invalid_argument& e) {
+            EXPECT_STREQ(e.what(), validate(q));
+        }
     }
 
     // A spec no length within the search bound meets (no pin: searched to
@@ -313,6 +326,12 @@ namespace {
     TEST(Design, UnmeetableSpecThrows) {
         const profile r = {.passband_frac = 0.4999, .stopband_atten_db = 160.0, .taps_per_branch = {0, 0, 0, 0, 0}};
         EXPECT_THROW((design_stage<up_2>(r)), std::runtime_error);
+        try {
+            design_stage<up_2>(r);
+        }
+        catch (const std::runtime_error& e) {
+            EXPECT_STREQ(e.what(), k_unmeetable_spec_reason);
+        }
     }
 
 } // namespace

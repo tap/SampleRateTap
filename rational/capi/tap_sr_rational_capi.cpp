@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "tap/dsp/detail/expects.h"
 #include "tap/sr/rational/rational.h"
 
 namespace {
@@ -139,9 +140,15 @@ namespace {
                         : rat::profile::super_economy();
     }
 
+    // Both factories run the chain's own precheck first: a rejection is a
+    // null engine (NULL at the C boundary), never a throw — and, built without
+    // exceptions, never a terminate.
     template <typename S, rat::rational_ratio... Rs>
     std::unique_ptr<engine> make_chain(const rat::profile& p, unsigned channels) {
         using chain = rat::basic_chain<S, Rs...>;
+        if (chain::validate(channels, p) != nullptr) {
+            return nullptr;
+        }
         return std::make_unique<chain_engine<chain>>(chain(channels, p));
     }
 
@@ -213,6 +220,9 @@ namespace {
     template <typename S, rat::rational_ratio R>
     std::unique_ptr<engine> make_stage(const rat::profile& p, exact_ratio divisor, unsigned ch) {
         using chain = tap::dsp::chain<rat::basic_stage<S, R>>;
+        if (rat::basic_stage<S, R>::validate(ch, p.relaxed(divisor)) != nullptr) {
+            return nullptr;
+        }
         return std::make_unique<chain_engine<chain>>(chain(ch, rat::basic_stage<S, R>(ch, p.relaxed(divisor))));
     }
 
@@ -293,15 +303,22 @@ tap_sr_rational_converter* tap_sr_rational_create_format(int chain, int profile,
     if (chain < 0 || chain >= TAP_SR_RATIONAL_CHAIN_COUNT || profile < 0 || profile > 3 || channels == 0) {
         return nullptr;
     }
-    try {
+    const auto construct = [&]() -> tap_sr_rational_converter* {
         auto c = std::make_unique<tap_sr_rational_converter>();
         c->e   = by_format(format,
                            [&](auto tag) { return make_named<decltype(tag)>(chain, profile_for(profile), channels); });
         return c->e ? c.release() : nullptr;
+    };
+#if TAP_DSP_HAS_EXCEPTIONS
+    try {
+        return construct();
     }
     catch (...) {
-        return nullptr;
+        return nullptr; // a refused allocation; the arguments were validated by the factory
     }
+#else
+    return construct();
+#endif
 }
 
 tap_sr_rational_converter* tap_sr_rational_create(int chain, int profile, unsigned channels) {
@@ -314,17 +331,24 @@ tap_sr_rational_converter* tap_sr_rational_create_stage_format(unsigned L, unsig
     if (L > 255 || M > 255 || profile < 0 || profile > 3 || channels == 0 || divisor_num == 0 || divisor_den == 0) {
         return nullptr;
     }
-    try {
+    const auto construct = [&]() -> tap_sr_rational_converter* {
         auto c = std::make_unique<tap_sr_rational_converter>();
         c->e   = by_format(format, [&](auto tag) {
             return make_single<decltype(tag)>(L, M, profile_for(profile), exact_ratio{divisor_num, divisor_den},
                                                 channels);
         });
         return c->e ? c.release() : nullptr;
+    };
+#if TAP_DSP_HAS_EXCEPTIONS
+    try {
+        return construct();
     }
     catch (...) {
-        return nullptr;
+        return nullptr; // a refused allocation; the arguments were validated by the factory
     }
+#else
+    return construct();
+#endif
 }
 
 tap_sr_rational_converter* tap_sr_rational_create_stage(unsigned L, unsigned M, int profile, uint32_t divisor_num,

@@ -85,7 +85,9 @@ In expected order; each item lands as its own PR with its measurements.
 5. **Hexagon exceptions.** The static-musl toolchain terminates on a
    constructor throw instead of propagating (`ConfigValidation` is excluded
    there); candidate fix `-unwindlib=libunwind` in
-   `cmake/hexagon-linux-musl.cmake`.
+   `cmake/hexagon-linux-musl.cmake`. *Deployments no longer depend on it:*
+   A3's `config::validate()` is the rejection as a `noexcept` reason, called
+   before constructing wherever a throw cannot propagate.
 6. **Housekeeping from the migration.** Bring `bench/icount/` under the
    clang-tidy gate (excluded by path in `style.yml`). *Done:* the Hexagon
    baselines, which the family migration left 47–87 instructions high per

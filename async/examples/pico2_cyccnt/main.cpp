@@ -31,6 +31,7 @@
 #include "RP2350.h"
 #include "hardware/clocks.h"
 #include "pico/stdlib.h"
+#include "tap/dsp/detail/expects.h"
 #include "tap/sr/async/converter.h"
 
 namespace {
@@ -87,10 +88,20 @@ namespace {
         cfg.filter   = spec;
 
         // Heap-constructed so allocation failure (e.g. 12ch + float on a tighter
-        // build) degrades to a printed SKIP row instead of a hard fault.
+        // build) degrades to a printed SKIP row instead of a hard fault, where
+        // the build has exceptions to catch it with.
         std::unique_ptr<tap::sr::async::basic_converter<S>> asrc;
         std::vector<S>                                      input;
         std::vector<S>                                      out;
+        // Built without exceptions (the SDK default; PICO_CXX_ENABLE_EXCEPTIONS
+        // below), the configuration is checked first — the constructor
+        // terminates on what validate() rejects — and a refused allocation
+        // is a hard fault, as every other allocation's is in such a build.
+        if (const char* why = tap::sr::async::config::validate(cfg)) {
+            std::printf("%-6s %-9s %3u  SKIP (%s)\n", typeName, profileName, static_cast<unsigned>(channels), why);
+            return;
+        }
+#if TAP_DSP_HAS_EXCEPTIONS
         try {
             asrc  = std::make_unique<tap::sr::async::basic_converter<S>>(cfg);
             input = sineBlock<S>(kInputFrames * channels, 997.0, 0.5);
@@ -100,6 +111,11 @@ namespace {
             std::printf("%-6s %-9s %3u  SKIP (%s)\n", typeName, profileName, static_cast<unsigned>(channels), e.what());
             return;
         }
+#else
+        asrc  = std::make_unique<tap::sr::async::basic_converter<S>>(cfg);
+        input = sineBlock<S>(kInputFrames * channels, 997.0, 0.5);
+        out.resize(kBlockFrames * channels);
+#endif
 
         // The sink defeats dead-code elimination, exactly as in the icount
         // workload; its soft-double add is inside the timed region there too.
