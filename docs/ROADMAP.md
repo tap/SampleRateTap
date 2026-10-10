@@ -69,7 +69,7 @@ is this checklist, not an opinion.
 Each item is one PR. Order the bench parts in week 1 (section 7, Q1) so Block B is not
 gated on shipping.
 
-- **A1. Re-record `rational`'s thirteen streaming baselines, with the reason.** The rows
+- **A1. Re-record `rational`'s thirteen streaming baselines, with the reason.** *Landed 2026-10-10 (`rational/PLAN.md` v0.15: every number below reproduced on a fresh toolchain install, the reason traced commit by commit on the M55; `bridge` and `async` exact, so re-recorded alone; `bridge/CLAUDE.md` aligned to the root's wording).* The rows
   are the 2026-10-02 record; the construct row was re-recorded 2026-10-10. CI and the local
   harness (which reproduces `bridge`'s and `async`'s M55 rows exactly) now read, per row:
   M55 +76…+196, the by-4 chain +926, `ratio23_q15_eco` +355,117 (+1.93 %); M33 +158…+545,

@@ -24,6 +24,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.12 | 2026-10-07 | The C ABI carries Q15 and Q31 beside float (`tap_sr_rational_create_format`, `_create_stage_format`, `_format`, `_process_q15` / `_q31`, `_flush_q15` / `_q31`; 23 exported symbols), each format pinned bit for bit against `basic_chain`; a call in another format than the converter's is refused |
 | v0.13 | 2026-10-08 | The host-vs-target table difference of v0.11 traced to its cause and fixed at the root (tap/DspTap#56): `nyquist.h`'s per-branch normalization summed mirror branches in opposite orders, so their gains could differ by an ulp (equal under glibc, unequal under newlib for the third-band m = 8 design) and a mirrored pair in one quantized row tied only by luck; the designer now copies its second half from the first, bit for bit. The 2^-34 snap of `stage.h` is removed; every Q15 pin holds, and two Q31 pins move on the host (↓6 `balanced`, 3/4 `economy`: one LSB between the members of a mirror pair, the two designs where glibc's gains differed), the tables now identical on the host and the Cortex-M legs |
 | v0.14 | 2026-10-08 | The siblings adopt this ABI's shape: `async`'s and `bridge`'s C ABIs carry Q15 and Q31 the same way (`create_format`, `_format`, the `_q15` / `_q31` entry points, hidden visibility, each format pinned bit for bit against the engine's `basic_converter`); the family keeps fixed point at every engine's C boundary rather than moving to a separate uniform ABI |
+| v0.15 | 2026-10-10 | The thirteen streaming ratchet rows re-recorded on all three targets with their reason (section 6: `ratio23_q15_eco` +1.93 % on the M55 is v0.11's stated move, the rest a sub-0.02 % construction-side residue from v0.13's designer and tap/DspTap#57), the first in-band re-record of this engine; `bridge` and `async` re-measure exact on every target |
 
 **Status.** This draft is the reviewed-plan deliverable that the family
 plan's "Next — `rational` (separate plan)" entry asks for
@@ -958,12 +959,12 @@ README carries the full table, the 2/3 workloads included):
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `down2_float_eco` | 366,459,676 | 24,433,741 | 72,735,414 |
-| `down2_q15_eco` | 47,494,140 | 19,807,000 | 18,558,545 |
-| `up2_float_eco` | 732,658,864 | 43,442,565 | 137,930,738 |
-| `up2_q15_eco` | 67,354,778 | 34,150,590 | 28,133,275 |
-| `up3_float_eco` | 1,407,620,075 | 75,330,937 | 254,903,952 |
-| `up3_q15_eco` | 92,695,694 | 51,156,121 | 39,793,932 |
+| `down2_float_eco` | 366,459,868 | 24,433,817 | 72,735,466 |
+| `down2_q15_eco` | 47,494,332 | 19,807,076 | 18,558,597 |
+| `up2_float_eco` | 732,659,056 | 43,442,641 | 137,930,790 |
+| `up2_q15_eco` | 67,354,970 | 34,150,666 | 28,133,327 |
+| `up3_float_eco` | 1,407,620,233 | 75,331,049 | 254,904,021 |
+| `up3_q15_eco` | 92,695,852 | 51,156,233 | 39,794,001 |
 | `construct_q15_eco` | 26,810,642 | 1,567,568 | 8,341,715 |
 
 The construct row is the 2026-10-10 re-record: the leg became the by-4
@@ -976,6 +977,33 @@ construction-only figures (777,433 / 34,522 / 193,048) say what the two
 designs and tables cost by themselves: under a million everywhere, which
 is why the comparison document's construction column for this engine is
 mostly fixture (`docs/COMPARISON.md`).
+
+The streaming rows are the 2026-10-10 re-record (v0.15), an in-band one:
+every count sat inside the ±3 % gate, and the rows were re-recorded so the
+gate measures from the tree it guards, as `bridge`'s M7e and `async`'s
+Hexagon-isolation entries did. The rows had been the 2026-10-02 record
+(v0.10), and three commits since had moved them without re-recording, each
+traced by rebuilding the M55 workloads at every commit in between
+(arm-none-eabi-gcc 13.2.1, CodeLinaro 19.1.5, qemu 8.2.2 with the tree's
+plugin — the toolchains that reproduce the committed rows to the
+instruction): v0.11's power-of-two row gain for the Q15 mixed ratios going
+down (ab8fea3) is the one visible move, `ratio23_q15_eco` +355,117 on the
+M55 (+1.93 %, stated in its commit as +1.9 %), +7,346 on the M33 (+0.014 %)
+and −224 on Hexagon; v0.13's mirror-exact designer with the `stage.h` snap
+removed (d4fff5c) added a constant per workload — on the M55 +76 to every
+by-2 row, +112 to every by-3 and 2/3 row, +196 to the two `transparent`
+rows and +128 to the by-4 chain, construction-side, since the construct
+leg (recorded after it) is exact — and the DspTap bump to tap/DspTap#57
+(82cd646, stages reset at construction) added +798 to the chain's
+construction. On the M33 the same residue reads +192 on the by-2 rows,
++158 on the by-3 and 2/3 rows, +545 on the `transparent` rows and +1,102 on
+the chain; on Hexagon +52, +69, +132 and +2,201; every other commit in the
+range re-measures identically on the M55 — the sweep also shows #72's S1
+(ff9fb5a) sitting +3.5 … +8.8 % on the interpolator and 2/3 rows until its
+`stage.h` commit (391145d) took them back to the instruction, the move the
+M55 ratchet caught on that PR and its commit records. `bridge`'s twelve and
+`async`'s eight rows re-measure exact (`--exact`) on all three targets, so
+only this engine is re-recorded. The construct row is unchanged.
 
 One finding, recorded for the codegen levers, and the first lever it
 pulled: at M6, Q15 on the M55 was no faster than float (↓2 25.07 M against
