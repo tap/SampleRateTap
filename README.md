@@ -129,7 +129,7 @@ tools/compare           the resampler comparisons' competitor tooling (fetch rec
 tests/                  the family's own tests: the dependency rule, the version macros, the exported symbols
 book/                   the family's book (published at https://tap.github.io/SampleRateTap/, the
                         print edition beside it as SampleRateTap.pdf; book/print builds it)
-docs/                   Doxyfile; the family comparison index (COMPARISON.md); the migration's run record; the 2026-10 audit and its response plan
+docs/                   Doxyfile; the family comparison index (COMPARISON.md); the migration's run record; the 2026-10 audit and its response plan; the production-readiness roadmap (ROADMAP.md)
 async/                  include/tap/sr/async  tests  bench  examples  capi  notebooks  docs  README  PLAN
 bridge/                 include/tap/sr/bridge tests  bench  examples  capi  notebooks  docs  README  PLAN
 rational/               include/tap/sr/rational tests bench examples capi notebooks tools README  PLAN
