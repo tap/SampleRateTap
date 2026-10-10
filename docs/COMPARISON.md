@@ -40,7 +40,11 @@ with their engine.
   2 is the one competitor setting that lands on `economy`'s 70 dB. At 3/2,
   the one ratio where a 997 Hz probe's image lands in band, `economy`
   measures −88 dB and `transparent` −140 dB; elsewhere every float row is at
-  the 24-bit ceiling. The cost tables are in the engine's document.
+  the 24-bit ceiling. Its Q15 stage is the cheapest row at every ratio on
+  every target (189–379 instructions per stereo frame on the M55, 291–575
+  on the M33), and in float the short Nyquist stage holds its own against
+  r8brain's FFT (0.8–2.5× at economy), which `bridge`'s longer polyphase
+  does not.
 
 ## The shared tooling
 

@@ -185,13 +185,51 @@ cross-compiled here.
 <!-- COMPARE:BEGIN -->
 <!-- COMPARE:END -->
 
-(reading pending)
+**The Q15 stage is the cheapest row at every ratio on every target.**
+Economy in Q15 costs 189–379 instructions per stereo output frame on the
+M55, 291–575 on the M33 and 103–214 on Hexagon: the half-band's structural
+zeros are never multiplied (23 MACs of its 43 taps going down) and the
+Helium dot takes the rest. Against it, SpeexDSP's fixed-point build at
+quality 3 — the one competitor that runs on the Q15 row's terms — costs
+1.4–2.6×, and the float libraries are a different order: r8brain's
+economy-matched setting 17–31× on the M33, libsamplerate `MEDIUM` 130–160×.
+
+**In float the Nyquist stage holds its own against r8brain's FFT, which
+`bridge`'s 58-tap polyphase did not.** r8brain's economy-matched setting
+costs 0.8–0.9× `economy` on the M55 at the by-2 pair, where its block
+convolution amortizes best, and 1.2–2.5× everywhere else: 1.2–1.4× on the
+soft-double M33 and Hexagon at by 2, 1.3–2.5× at the mixed pair on every
+target, where r8brain's two-stage structure for 3/2 and 2/3 costs it. At
+`transparent` r8brain is 0.5–0.8× at by 2 and 0.8–1.2× at the mixed pair;
+the short L-th-band designs (63–149 taps per branch at 120 dB) leave FFT
+convolution less to win. libsamplerate `MEDIUM` costs 6–14× `economy` and its
+`BEST` 9–16× `transparent`, consistently across targets. SpeexDSP's
+single-precision float build at quality 2 costs 0.8–1.3× `economy` on the
+M55 and, as in both sibling comparisons, undercuts the double-accumulating
+float row by an order of magnitude on the soft-double targets while still
+costing 1.4–2.6× the Q15 row; it is the one competitor row near `economy`
+in cost and in stopband (70–76 dB), at 1.5× the latency.
+
+**Construction is a wash here, and mostly fixture.** Every row's one-time
+figure is within a few hundred thousand instructions of the others at the
+same ratio (1.0–3.0 M on the M55, 16–53 M on the M33), because the workload
+synthesizes its 0.25 s input fixture with libm `sin()` at the input rate
+and that is most of the 2 × (2 s) − (4 s) difference; `rational`'s own
+design — one Kaiser prototype of 23–65 taps per branch — is the fraction of
+a million above libsamplerate's row. The sibling engines' construction
+columns carry the same fixture and are dominated by their designs instead
+(`bridge` 98–437 M on the M33); a chain of stages pays this once per stage.
 
 ³ r8brain guards its process-wide filter cache with `std::mutex` and has no
 hook to replace it; the thread-less arm-none-eabi newlib declares none, so
 the Cortex-M builds force-include `tools/compare/r8b_single_thread_mutex.h`
 (a no-op lock — exact for this single-threaded workload, and outside the
 per-sample path). Hexagon's musl build uses the real mutex.
+
+⁴ libsamplerate `BEST`'s construction cells are below the split's
+resolution and land negative (down to −16 M on the M33): that engine's
+per-frame cost drifts over the run by more than its construction, so
+2 × (2 s) − (4 s) measures the drift, not a design. Read them as ~0.
 
 ## Caveats, stated plainly
 
