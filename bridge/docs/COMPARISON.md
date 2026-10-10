@@ -202,8 +202,8 @@ cross-compiled here.
 
 <!-- COMPARE:BEGIN -->
 Measured in `compare.yml` run
-[37985746994](https://github.com/tap/SampleRateTap/actions/runs/37985746994)
-on `45f30a3` (DspTap `d7ebe4b`), 2026-10-09; arm-none-eabi-gcc 15:13.2.rel1-2,
+[38013347369](https://github.com/tap/SampleRateTap/actions/runs/38013347369)
+on `667934a` (DspTap `d7ebe4b`), 2026-10-10; arm-none-eabi-gcc 15:13.2.rel1-2,
 qemu-system-arm 1:8.2.2+ds-0ubuntu1.18 (ubuntu24 20261004.327.1),
 hexagon-clang 19.1.5 and qemu-hexagon 8.2.2 at the pinned digests.
 
