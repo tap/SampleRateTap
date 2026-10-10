@@ -158,9 +158,57 @@ is mono per instance with double I/O, so the harness runs one instance per
 channel and the float↔double (de)interleave is inside the timed loop — what
 any float-interleaved caller pays to use it.
 
-<!-- HOST:BEGIN -->
-(host table pending)
-<!-- HOST:END -->
+### Host wall-clock (x86, GCC 13.3 -O3 (CMake Release), shared Xeon @ 2.80 GHz, 2026-10-10)
+
+Million output frames/s, stereo, median of 5 — relative ratios are the
+meaningful figures on a shared machine (× = vs. the rational tier the row is
+matched to; all subjects ran in the same session). libsamplerate 0.2.2 and
+soxr 0.1.3 are the Ubuntu 24.04 packages; r8brain and SpeexDSP are the
+pinned commits (7.6 and 1.2.1), stock configurations.
+
+| Engine | ↑2 (48 → 96) | ↓2 (96 → 48) | 3/2 (32 → 48) | 2/3 (48 → 32) |
+|---|---:|---:|---:|---:|
+| **rational** `economy` | **51.0** | **26.2** | **42.7** | **21.2** |
+| **rational** `transparent` | **23.1** | **11.0** | **22.7** | **9.8** |
+| libsamplerate `FASTEST` (below the ladder) | 8.8 (0.2×) | 5.4 (0.2×) | 9.5 (0.2×) | 7.0 (0.3×) |
+| libsamplerate `MEDIUM` (economy-matched) | 4.4 (0.1×) | 2.5 (0.1×) | 4.7 (0.1×) | 3.1 (0.1×) |
+| soxr 16-bit @ 0.75 (economy-matched) | 167.8 (3.3×) | 85.3 (3.3×) | 101.2 (2.4×) | 55.9 (2.6×) |
+| r8brain 70 dB @ 16 % (economy-matched) | 88.2 (1.7×) | 47.8 (1.8×) | 40.5 (0.9×) | 24.3 (1.1×) |
+| SpeexDSP quality 2, float (economy-matched) | 43.5 (0.9×) | 21.7 (0.8×) | 48.7 (1.1×) | 29.8 (1.4×) |
+| libsamplerate `BEST` (transparent-matched, frontier) | 1.4 (0.1×) | 0.8 (0.1×) | 1.5 (0.1×) | 1.1 (0.1×) |
+| soxr 20-bit @ 0.80 (transparent-matched) | 149.1 (6.5×) | 82.2 (7.5×) | 91.3 (4.0×) | 52.9 (5.4×) |
+| soxr `VHQ` (frontier) | 116.4 (5.0×) | 55.3 (5.0×) | 49.6 (2.2×) | 33.2 (3.4×) |
+| r8brain 120 dB @ 10 % (transparent-matched) | 69.9 (3.0×) | 39.5 (3.6×) | 39.8 (1.8×) | 25.6 (2.6×) |
+| r8brain `CDSPResampler24` (frontier) | 57.9 (2.5×) | 29.7 (2.7×) | 29.9 (1.3×) | 18.6 (1.9×) |
+| SpeexDSP quality 9, float (transparent-matched) | 9.8 (0.4×) | 5.0 (0.5×) | 10.4 (0.5×) | 6.9 (0.7×) |
+| SpeexDSP quality 10, float (frontier) | 7.6 (0.3×) | 3.9 (0.4×) | 7.8 (0.3×) | 5.0 (0.5×) |
+
+| Fixed-point rows (Q15 I/O) | ↑2 (48 → 96) | ↓2 (96 → 48) | 3/2 (32 → 48) | 2/3 (48 → 32) |
+|---|---:|---:|---:|---:|
+| **rational** `economy` Q15 | **69.2** | **30.7** | **57.7** | **42.0** |
+| SpeexDSP quality 3, fixed-point (economy-matched) | 107.4 (1.6×) | 62.0 (2.0×) | 105.2 (1.8×) | 70.5 (1.7×) |
+| SpeexDSP quality 10, fixed-point (frontier) | 35.0 (0.5×) | 15.8 (0.5×) | 33.0 (0.6×) | 21.6 (0.5×) |
+
+Reading guide:
+
+- **The FFT engines win raw host throughput**, as in both sibling
+  comparisons, but by less: soxr at 2.4–3.3× `economy` and r8brain at
+  0.9–1.8× (r8brain's two-stage structure for the mixed pair costs it the
+  lead there), against 2–17× over `bridge`'s longer polyphase. The latency
+  column above is their price (6–40× for soxr's matched settings, 7–10× for
+  r8brain's).
+- **Against the other polyphase engines `rational` is the faster float
+  engine by 7–12×** over libsamplerate's matched rows and about even with
+  SpeexDSP's quality 2 (0.8–1.4×), the one competitor setting also on
+  `economy`'s 70 dB.
+- **On x86 SpeexDSP's fixed-point build out-runs `rational`'s Q15 stage by
+  1.6–2×.** Its 16-bit build multiplies in 32-bit integer arithmetic that
+  x86 vectorizes freely; `rational`'s Q15 dot accumulates in 64 bits by
+  contract (DspTap's traits), which the host compiler does not pack. The
+  embedded section is where that row's terms are decided, and there the Q15
+  stage is the cheapest row at every ratio on every target.
+- `economy` converts 51 M frames/s going up by 2 and 26 M going down; the
+  up stages' centre phase is a copy, so they cost roughly half.
 
 ### Embedded executed instructions per output frame (QEMU TCG plugin)
 
