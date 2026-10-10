@@ -36,8 +36,9 @@ cross-validation design).
   green, and does not also change `async`'s datapath.
 - **Outputs are bit-identical across codegen levers.** The ratchet (`scripts/icount.py --engine
   bridge`, `bench/baselines.json`, ten streaming workloads and two construct-only legs on
-  M33/M55/Hexagon) gates every change two-sided at ±3 %; a change that moves a count re-records
-  the baselines in the same PR, and an improvement beyond tolerance fails too, by design.
+  M33/M55/Hexagon) gates every change two-sided at ±3 %; a change that moves a count beyond
+  tolerance re-records the baselines in the same PR, and an improvement beyond tolerance fails
+  too, by design (the family rule, root `CLAUDE.md`).
   Remaining levers that change the output contract stay deferred until a consumer pulls them
   (PLAN.md section 7).
 
