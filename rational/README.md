@@ -101,6 +101,15 @@ message). `pull(out, n, pop_fn)` is the callback-driven shape and
 - `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.6.0 since the audit response; 0.5.0 from M6);
   the named ratios of the vocabulary (`up_2` … `ratio_3_8`) are `ratio.h`'s.
 
+Against the general-purpose resampler libraries at four ratios of the
+vocabulary — ↑2, ↓2, 3/2 and 2/3, against libsamplerate, soxr,
+r8brain-free-src and SpeexDSP at the settings each needs to reach `economy`
+and `transparent`, and at their best — quality, latency, host throughput and
+embedded instruction counts are measured in
+[docs/COMPARISON.md](docs/COMPARISON.md) (the notebook behind it:
+[notebooks/rational_comparison.ipynb](notebooks/rational_comparison.ipynb);
+the family index: [docs/COMPARISON.md](../docs/COMPARISON.md) at the root).
+
 ## The boundaries are identity, not policy
 
 - **Within a family only.** The 48 kHz family (8, 12, 16, 24, 32, 48, 96,

@@ -583,7 +583,7 @@ jobs:
       - name: Docs freshness
         run: |
           python3 scripts/update_compare_docs.py
-          git diff --exit-code async/docs/COMPARISON.md bridge/docs/COMPARISON.md || {
+          git diff --exit-code async/docs/COMPARISON.md bridge/docs/COMPARISON.md rational/docs/COMPARISON.md || {
             echo "::error::a docs/COMPARISON.md embedded table is stale; run scripts/update_compare_docs.py (after re-harvesting compare.yml if a pin moved)"; exit 1; }
 
   # Keeps the benchmarks compiling and runnable; never a performance gate
@@ -648,7 +648,7 @@ jobs:
           -DTAP_SR_BUILD_COMPARE_BENCH=ON
           -DTAP_SR_BUILD_COMPARE_SHIM=ON
           -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF
-          && cmake --build build-host -j 4 --target tap_sr_async_bench_compare tap_sr_bridge_bench_compare tap_sr_cmp_r8b_shim tap_sr_cmp_speex_shim tap_sr_cmp_soxr_shim
+          && cmake --build build-host -j 4 --target tap_sr_async_bench_compare tap_sr_bridge_bench_compare tap_sr_rational_bench_compare tap_sr_cmp_r8b_shim tap_sr_cmp_speex_shim tap_sr_cmp_soxr_shim
 
       - name: Build M55 comparison workload
         run: >
@@ -661,6 +661,8 @@ jobs:
           cmp_icount_srt_q15 cmp_icount_r8b_120
           cmp_bridge_icount_down_srt_eco_q15 cmp_bridge_icount_down_r8b_eco
           cmp_bridge_icount_down_speex_fixed_q3
+          cmp_rational_icount_down2_srt_eco_q15 cmp_rational_icount_r23_r8b_eco
+          cmp_rational_icount_up2_speex_fixed_q3
 
   # The Pico 2 firmware examples are standalone projects (Pico SDK fetched at
   # configure time), deliberately outside the root build. Build-only; running

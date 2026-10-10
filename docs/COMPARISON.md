@@ -14,7 +14,7 @@ with their engine.
 |---|---|---|---|
 | [`async`](../async/README.md) — absorbs the clock | What does clock recovery cost, at near-unity, against libraries that must be handed the ratio? | libsamplerate, soxr, r8brain, SpeexDSP (both builds); hardware ASRCs and OS engines in the landscape table | [`async/docs/COMPARISON.md`](../async/docs/COMPARISON.md), [`async/notebooks/asrc_comparison.ipynb`](../async/notebooks/asrc_comparison.ipynb) |
 | [`bridge`](../bridge/README.md) — converts the number | At exactly 44.1 ↔ 48 kHz on one clock, what does each library need to reach `economy` and `transparent`, and what does it pay for it? | the same four, at matched spec and at their frontier, both directions | [`bridge/docs/COMPARISON.md`](../bridge/docs/COMPARISON.md), [`bridge/notebooks/bridge_comparison.ipynb`](../bridge/notebooks/bridge_comparison.ipynb) |
-| [`rational`](../rational/README.md) — L/M inside a family | (planned: ↑2, ↓2, 3/2 and 2/3 against the same libraries) | | |
+| [`rational`](../rational/README.md) — L/M inside a family | At four ratios of its vocabulary (↑2, ↓2, 3/2, 2/3), what does each library need to reach `economy` and `transparent`, and what does it pay for it? | the same four, at matched spec and at their frontier, four ratios | [`rational/docs/COMPARISON.md`](../rational/docs/COMPARISON.md), [`rational/notebooks/rational_comparison.ipynb`](../rational/notebooks/rational_comparison.ipynb) |
 
 ## Headline numbers
 
@@ -34,6 +34,13 @@ with their engine.
   down), 3–34× under r8brain's matched setting; in float, r8brain's FFT
   convolution undercuts `bridge`'s polyphase at both tiers, at 4–15× the
   latency.
+- **rational.** One Nyquist stage per ratio at 0.22 ms (by 2) and 0.33 ms
+  (3/2, 2/3) of latency, the shortest in its table; the competitors' matched
+  settings sit one notch below their 44.1 ↔ 48 ones, and SpeexDSP's quality
+  2 is the one competitor setting that lands on `economy`'s 70 dB. At 3/2,
+  the one ratio where a 997 Hz probe's image lands in band, `economy`
+  measures −88 dB and `transparent` −140 dB; elsewhere every float row is at
+  the 24-bit ceiling. The cost tables are in the engine's document.
 
 ## The shared tooling
 
