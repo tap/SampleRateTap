@@ -837,10 +837,26 @@ namespace {
         bad.passband_frac = 0.5; // the lower rate's Nyquist: no transition band
         EXPECT_EQ(stage::validate(1, bad), validate(bad)) << "the designer's own text";
         EXPECT_EQ(rejection([&] { stage s(1, bad); }), stage::validate(1, bad));
+    }
+
+    // The same agreement where the designer finds no length: an unpinned
+    // profile searches every length on the design grid, twice here (validate,
+    // then the constructor), so the bare-metal legs exclude it by name with
+    // Design.UnmeetableSpecThrows (on the Cortex-M33's soft-float double the
+    // two searches outlast the job).
+    TEST(Stage, ValidateAgreesWithTheConstructorOnAnUnmeetableSpec) {
+        using stage              = basic_stage<float, up_2>;
         const profile unmeetable = {
             .passband_frac = 0.4999, .stopband_atten_db = 160.0, .taps_per_branch = {0, 0, 0, 0, 0}};
         EXPECT_STREQ(stage::validate(1, unmeetable), k_unmeetable_spec_reason);
-        EXPECT_EQ(rejection([&] { stage s(1, unmeetable); }), stage::validate(1, unmeetable));
+        std::string thrown;
+        try {
+            stage s(1, unmeetable);
+        }
+        catch (const std::runtime_error& e) {
+            thrown = e.what();
+        }
+        EXPECT_EQ(thrown, stage::validate(1, unmeetable));
     }
 
 } // namespace

@@ -22,6 +22,7 @@ int main() {
                                     "Design.TheCoarseGridWouldUnderPinTwoRows:"
                                     "Design.UnpinnedProfileIsSearchedOnTheDesignGrid:"
                                     "Design.UnmeetableSpecThrows:"
+                                    "Stage.ValidateAgreesWithTheConstructorOnAnUnmeetableSpec:"
                                     "Design.RelaxationTablesAreTheSearchAt70dB:"
                                     "Design.RelaxationTablesAreTheSearchAtTransparent:"
                                     "Matrix.*:"
