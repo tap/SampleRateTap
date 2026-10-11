@@ -484,8 +484,12 @@ sources directly — they are plain Markdown.
   (see `converter_status.ppm` vs. a few seconds of averaging), and ultra-quiet servo
   operation requires fine-grained transfer. A future version may accept
   per-block timestamps for sub-sample phase observation.
-- One producer thread and one consumer thread; construction/destruction must
-  not overlap either.
+- One producer thread and one consumer thread, `status()` from any thread;
+  construction/destruction must not overlap any of them. Pinned under
+  ThreadSanitizer with that call pattern on real threads (`Threads.*`,
+  `tests/test_converter_threads.cpp`: lock at +500 ppm, a consumer stall into a
+  hard resync, a `reset_from_consumer()`, a poller reading `status()`
+  throughout), on x86 in CI and on arm64 silicon weekly.
 
 ## Provenance and license
 

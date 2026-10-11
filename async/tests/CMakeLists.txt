@@ -58,7 +58,7 @@ if(TAP_SR_BUILD_CAPI)
 endif()
 
 if(Threads_FOUND)
-    target_sources(tap_sr_async_tests PRIVATE test_spsc_ring_threads.cpp)
+    target_sources(tap_sr_async_tests PRIVATE test_spsc_ring_threads.cpp test_converter_threads.cpp)
     target_link_libraries(tap_sr_async_tests PRIVATE Threads::Threads)
 endif()
 
