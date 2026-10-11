@@ -38,6 +38,10 @@ add_executable(tap_sr_rational_tests
 # overflow the M55 image's CODE region, so it is compiled out there.
 if(NOT TAP_SR_BARE_METAL)
     target_sources(tap_sr_rational_tests PRIVATE test_matrix.cpp)
+    # Under MSVC its 182 instantiations need more than COFF's 2^16 sections
+    # (C1128, first hit when A3 added validate() and raise to every stage).
+    set_source_files_properties(test_matrix.cpp PROPERTIES
+        COMPILE_OPTIONS "$<$<CXX_COMPILER_ID:MSVC>:/bigobj>")
 endif()
 # The C ABI, pinned against the shipped shared library wherever it is built
 # (the version probe, D13, and every enumerator against its named chain);
