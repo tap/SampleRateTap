@@ -180,7 +180,9 @@ jobs:
   #     float doubles. Excluded: the long quality/lock simulations and the
   #     thread stress (emulation neither speeds up nor measures them), and the
   #     EXPECT_THROW tests — this static-musl toolchain cannot unwind across
-  #     frames, so a correct throw terminates (Known debt, PERFORMANCE.md).
+  #     frames, so a correct throw terminates (Known debt, PERFORMANCE.md) —
+  #     among them each engine's ValidateAgreesWith*, which catches every
+  #     rejection to compare its text with validate()'s.
   #   Cortex-M55 (MPS3 AN547) and Cortex-M33 (MPS2+ AN505, Pico 2 class):
   #     bare metal, newlib + semihosting, no threads, no FP64; each engine's
   #     one-shot binary bakes in its emulation-sized filter.
@@ -201,7 +203,7 @@ jobs:
             jobs: 1
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation
+            exclude: AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation|ValidateAgrees
           - target: hexagon
             title: Hexagon cross
             engine: bridge
@@ -210,9 +212,9 @@ jobs:
             jobs: 4
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: BadProfilesThrow|LatencyAndValidation
-          # rational: every EXPECT_THROW test (named *Throw*) is excluded on
-          # Hexagon for the unwind reason above, with the host measurements
+            exclude: BadProfilesThrow|LatencyAndValidation|ValidateAgrees
+          # rational: every EXPECT_THROW test (named *Throw*, and the
+          # ValidateAgrees* pair) is excluded on Hexagon for the unwind reason above, with the host measurements
           # (the coverage matrix's tone batteries, 182 chains in double per
           # profile, and the relaxation tables' searches, which run every
           # candidate length through the design grid: the 70 dB tables alone
@@ -229,7 +231,7 @@ jobs:
             jobs: 4
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: Throw|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands|RelaxedQ15TablesStopbandsAreStated
+            exclude: Throw|ValidateAgrees|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands|RelaxedQ15TablesStopbandsAreStated
           - target: m55
             title: Cortex-M55 cross
             engine: rational

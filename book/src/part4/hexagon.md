@@ -358,9 +358,9 @@ cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
       -DTAP_SR_BUILD_EXAMPLES=OFF
 cmake --build build-hex -j
 ctest --test-dir build-hex --output-on-failure \
-      -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation'
+      -E 'AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation|ValidateAgrees'
 
-# The exception secret, demonstrated: remove ConfigValidation from the -E
+# The exception secret, demonstrated: remove ConfigValidation (or ValidateAgrees) from the -E
 # list above and watch libc++abi terminate instead of EXPECT_THROW passing.
 
 # The instruction counts (needs the plugin-enabled qemu-hexagon; the
