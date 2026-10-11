@@ -203,7 +203,7 @@ jobs:
             jobs: 1
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: AsrcQuality|AsrcLock|TwoThreadStress|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation|ValidateAgrees
+            exclude: AsrcQuality|AsrcLock|TwoThreadStress|Threads\.|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation|ValidateAgrees
           - target: hexagon
             title: Hexagon cross
             engine: bridge

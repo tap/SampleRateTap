@@ -52,7 +52,7 @@ is this checklist, not an opinion.
 |---|---|---|---|---|
 | P1 | Golden reference and independent leg, pinned in CI | ✓ | ✓ | ✓ (sim) |
 | P2 | RT contract (`noexcept`, allocation-free, lock-free) stated and tested | ✓ | ✓ | ✓ |
-| P3 | Thread contract stated and under TSan with the real call pattern | n/a | n/a | **open** (A4) |
+| P3 | Thread contract stated and under TSan with the real call pattern | n/a | n/a | ✓ (A4) |
 | P4 | Error model usable without exceptions; Hexagon throw documented | ✓ (A3) | ✓ (A3) | ✓ (A3) |
 | P5 | Memory footprint per instance and stack high-water per call, stated and gated | **open** (A5) | **open** (A5) | **open** (A5) |
 | P6 | Worst single-call cost gated (QEMU per-call max) | **open** (A6) | **open** (A6) | **open** (A6) |
@@ -95,7 +95,7 @@ gated on shipping.
   `-fno-exceptions`, and a CI leg that builds the Pico firmware and the three C ABIs with
   exceptions off. The C ABIs already return NULL on invalid config, so they route through
   the precheck. The shared error vocabulary, if any, lands in DspTap first.
-- **A4. The converter under TSan with its real call pattern.** `async.Threads.*`: a
+- **A4. The converter under TSan with its real call pattern.** *Landed 2026-10-11 (`async/tests/test_converter_threads.cpp`; in the TSan job through the async label, and in `ci-arm64.yml`'s TSan loop).* `async.Threads.*`: a
   producer thread pushing, a consumer thread pulling, a third thread polling `status()`,
   seconds of simulated drift including a stage promotion and a hard resync; run in the
   TSan job and in `ci-arm64.yml`. Today the only two-thread test is the ring's.

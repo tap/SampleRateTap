@@ -41,8 +41,10 @@ jobs:
       - name: Full test suite
         run: ctest --test-dir build --output-on-failure --no-tests=error -L '^async$'
 
-      # The ring stress under TSan on weakly-ordered silicon is the point
-      # of this workflow: run it several times for schedule diversity.
+      # The ring stress and the converter's real call pattern (Threads.*: a
+      # producer, a consumer and a status() poller on one converter, A4)
+      # under TSan on weakly-ordered silicon are the point of this workflow:
+      # run them several times for schedule diversity.
       - name: Configure (TSan)
         env:
           CC: clang
@@ -56,7 +58,7 @@ jobs:
       - name: Build (TSan)
         run: cmake --build build-tsan -j 4
 
-      - name: Ring stress under TSan
+      - name: Ring stress and the converter's threads under TSan
         env:
           TSAN_OPTIONS: halt_on_error=1
         run: |
@@ -64,7 +66,7 @@ jobs:
           # rename, when this filter silently started matching nothing);
           # --no-tests=error makes a stale filter fail instead of passing.
           for i in 1 2 3 4 5; do
-            ctest --test-dir build-tsan -R 'spsc_ring' --output-on-failure --no-tests=error
+            ctest --test-dir build-tsan -R 'spsc_ring|Threads\.' --output-on-failure --no-tests=error
           done
 
       # Scheduled runs have no PR or push audience; without this a weekly
