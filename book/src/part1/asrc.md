@@ -215,10 +215,13 @@ itself against a config it never sees whole.
 
 One postscript from the portability chapter belongs here too: on one
 supported toolchain (Hexagon's static-musl configuration), C++ exceptions
-cannot unwind at all, so even this careful `throw` terminates the process
-there. Validation still protects — a loud death beats NaN audio — but
-callers on that target are documented to validate before constructing.
-Contracts end where toolchains do.
+could not unwind at all until 2026-10, so even this careful `throw`
+terminated the process there; the static link was missing the
+`.eh_frame_hdr` the unwinder looks for (Part IV's Hexagon chapter tells
+it). Validation still protected — a loud death beats NaN audio — and since
+the family's error model every engine also states its rejection as a
+`noexcept` `validate()`, for the builds that cannot throw at all:
+`-fno-exceptions` firmware. Contracts end where toolchains do.
 
 ## Telemetry that cannot lie about being lock-free
 

@@ -242,8 +242,8 @@ Hexagon leg turned red in a way no other platform did. The constructor
 throws correctly. The `EXPECT_THROW` machinery is standing by to catch.
 And the exception never arrives: **this static-musl toolchain
 configuration cannot unwind the stack.** The throw reaches the runtime,
-the unwinder that should walk the frames is not part of the link, and
-`libc++abi` does the only honest thing left — terminate. Every other
+the unwinder finds no tables to walk the frames with, and `libc++abi`
+does the only honest thing left — terminate. Every other
 platform passed; main was red on exactly one leg, because that leg was
 the first place a C++ exception had ever actually been *thrown* in this
 project's CI history.
@@ -283,6 +283,18 @@ chapter's title: a target can keep a secret like this indefinitely, and
 the only way to surface it is to route every kind of behavior through the
 target. The first `EXPECT_THROW` to reach the leg was, in effect, the
 first test of a claim the toolchain had been silently making all along.
+
+The third move earned its caution. When the roadmap's A2 gave the
+candidate its time-boxed day (2026-10-12), `-unwindlib=libunwind` changed
+nothing: libunwind was already the unwinder in the link. What the static
+image lacked was the `.eh_frame_hdr` section and its `PT_GNU_EH_FRAME`
+segment, which libunwind uses to find the unwind tables at run time; the
+clang driver adds `--eh-frame-hdr` to dynamic links only. One linker flag,
+`-static -Wl,--eh-frame-hdr` in the toolchain file, and a throw is caught
+under `qemu-hexagon`. `ConfigValidation` and every other throwing test of
+the three engines run on the leg again, and the ratchet pays for the new
+segment once, at start-up: +36 packets on every row. Had "probably
+fixable" been written down as "fixed", the wrong fix would have shipped.
 
 ## The CI craft: trusting your emulator and your compiler
 
@@ -358,10 +370,11 @@ cmake -B build-hex -DCMAKE_BUILD_TYPE=Release \
       -DTAP_SR_BUILD_EXAMPLES=OFF
 cmake --build build-hex -j
 ctest --test-dir build-hex --output-on-failure \
-      -E 'AsrcQuality|AsrcLock|TwoThreadStress|Threads\.|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.|ConfigValidation|ValidateAgrees'
+      -E 'AsrcQuality|AsrcLock|TwoThreadStress|Threads\.|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.'
 
-# The exception secret, demonstrated: remove ConfigValidation (or ValidateAgrees) from the -E
-# list above and watch libc++abi terminate instead of EXPECT_THROW passing.
+# The exception secret, demonstrated: drop -Wl,--eh-frame-hdr from
+# cmake/hexagon-linux-musl.cmake, rebuild, and watch libc++abi terminate in
+# ConfigValidation instead of EXPECT_THROW passing.
 
 # The instruction counts (needs the plugin-enabled qemu-hexagon; the
 # icount-ratchet job in ci.yml shows the 4-minute from-source build):

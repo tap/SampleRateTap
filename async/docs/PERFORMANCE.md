@@ -220,20 +220,32 @@ table is already enforced by test thresholds.
   so the QEMU soft-double figure overstates real Pico 2 boot cost —
   pico2_cyccnt can measure the truth on hardware.
 
-- **MSVC /W4 triage outstanding**: the Windows CI leg builds with
-  `TAP_SR_ASYNC_WERROR=OFF` until the /W4 output has been triaged (ci.yml carries
-  the matching comment).
 - **Tail-latency benchmark not implemented**: the Metrics table promises
   p99/max per-call `pull(128)` timing; no benchmark measures it yet.
-- **Hexagon static-musl cannot catch exceptions**: a constructor throw
-  terminates via libc++abi instead of propagating (discovered when the
-  first EXPECT_THROW test reached that leg; ConfigValidation is excluded
-  there). Since A3 the deployment answer is the family's error model:
-  `config::validate(cfg)` is the constructor's rejection as a `noexcept`
-  reason, so a deployment on this toolchain (or any `-fno-exceptions`
-  build) validates first and never reaches the throw. The unwinder
-  (-unwindlib=libunwind in cmake/hexagon-linux-musl.cmake) stays a
-  candidate for the test leg itself (A2).
+
+### Resolved (the roadmap's A2, 2026-10-12)
+
+- **MSVC /W4 triage**: async's own targets raised one warning under /W4,
+  C4324 ("structure was padded due to alignment specifier"), 356 reports in
+  the test binary and `drifting_clocks`, all at `spsc_ring`'s deliberate
+  cache-line `alignas`. It is off for those targets with its reason
+  (`async/CMakeLists.txt`), and the Windows leg builds async with
+  `TAP_SR_ASYNC_WERROR=ON`.
+- **Hexagon exceptions**: a constructor throw terminated via libc++abi
+  instead of propagating (found when the first EXPECT_THROW test reached
+  the leg; `ConfigValidation` was excluded there from then on). The
+  recorded candidate, `-unwindlib=libunwind`, was not the cause: libunwind
+  was already the unwinder. The clang driver passes `--eh-frame-hdr` to
+  dynamic links only, so the static image carried no `PT_GNU_EH_FRAME`
+  segment and libunwind found no unwind tables. `cmake/hexagon-linux-musl.cmake`
+  now links with `-static -Wl,--eh-frame-hdr`: a minimal throw/catch under
+  qemu-hexagon terminates without the flag and is caught with it, and every
+  throwing test of the three engines passes on the leg (the two
+  unmeetable-spec searches stay excluded for budget, not for the throw).
+  Cost: +36 packets on every Hexagon ratchet row of every engine, a
+  one-time startup constant (0.0001 % of the smallest row), inside
+  tolerance and not re-recorded. A3's `validate()` remains the deployment
+  answer for `-fno-exceptions` builds.
 
 ## Sequencing & status
 

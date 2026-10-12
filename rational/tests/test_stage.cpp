@@ -841,9 +841,10 @@ namespace {
 
     // The same agreement where the designer finds no length: an unpinned
     // profile searches every length on the design grid, twice here (validate,
-    // then the constructor), so the bare-metal legs exclude it by name with
-    // Design.UnmeetableSpecThrows (on the Cortex-M33's soft-float double the
-    // two searches outlast the job).
+    // then the constructor), so the bare-metal and Hexagon legs exclude it by
+    // name with Design.UnmeetableSpecThrows (in soft-float double the two
+    // searches outlast the job on the Cortex-M33 and the per-test timeout
+    // under qemu-hexagon).
     TEST(Stage, ValidateAgreesWithTheConstructorOnAnUnmeetableSpec) {
         using stage              = basic_stage<float, up_2>;
         const profile unmeetable = {

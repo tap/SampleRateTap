@@ -83,7 +83,7 @@ gated on shipping.
   tolerance", `bridge/CLAUDE.md` says "a change that moves a count"; the root's is the
   intended rule unless Q3 says otherwise. Decide Q3 (whether to take the `run<S>()`
   out-of-line pin at the same time) before this PR.
-- **A2. Hygiene from `async/PLAN.md` §4.** Bring `async/bench/icount` under clang-tidy
+- **A2. Hygiene from `async/PLAN.md` §4.** *Landed 2026-10-12 (`async/bench/icount` tidy-clean and in the gate, at no instruction cost; MSVC's one `/W4` warning, C4324 on the ring's cache-line padding, off with its reason and async `WERROR` on the Windows leg; the unwinder was not the cause: the static Hexagon link lacked `--eh-frame-hdr`, and with it every throw propagates, so the Hexagon legs run every throwing test, at +36 packets of startup per ratchet row; `async/docs/PERFORMANCE.md`, "Resolved").* Bring `async/bench/icount` under clang-tidy
   (drop the `style.yml` path exclusion); triage async's MSVC `/W4` output and set
   `TAP_SR_ASYNC_WERROR=ON` on the Windows leg. Hours, not days. The Hexagon unwinder
   (`-unwindlib=libunwind`) is time-boxed to one day: land it if a constructor throw
@@ -190,7 +190,7 @@ writes the tooling and reads the results.
   random config in the charter set × random sequence of push/pull/process/flush/reset
   sizes; invariants: no sanitizer report, `outputs_for` accounting holds, returns ≤
   requested, chunking invariance against a reference run. Short in CI, long weekly.
-  Host-only (Hexagon's musl terminates on throw). A weekly 24-hour simulated run with a
+  Host-only. A weekly 24-hour simulated run with a
   temperature-like random-walk offset (about four minutes of host time) pins zero
   under/overruns, a bounded integrator and the counter and accumulator wraps.
 - **C3. 1.0 release engineering.** Reconcile the three C ABIs' NULL semantics (`async`
