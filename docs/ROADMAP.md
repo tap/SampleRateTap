@@ -2,8 +2,9 @@
 
 Status: **drafted 2026-10-10, adversarially audited the same day (two independent
 reviews: one against the trees' facts and settled decisions, one against engineering
-judgement); section 7 lists the decisions still open.** Execution starts once section 7
-is answered. This document sequences the open items the family's plans and ledgers
+judgement); section 7 records the maintainer's decisions (2026-10-12).** Execution
+started 2026-10-10 on the roadmap's recommendations (A1, A3 and A4 landed); the answers
+confirmed them. This document sequences the open items the family's plans and ledgers
 carry — `PLAN.md`, `async/PLAN.md` §4, `async/docs/PERFORMANCE.md` "Known debt",
 `async/docs/HARDWARE_TESTING.md`, `bridge/PLAN.md` §9, `docs/AUDIT_2026-10_PLAN.md` — into
 twelve weeks in three blocks, and says what "production-ready" means so the verdict can be
@@ -115,13 +116,14 @@ gated on shipping.
   README on denormals (float accumulates in double; output may carry denormals onward).
 - **A8. A host ratchet.** Deterministic `Ir` from callgrind (or `perf stat -e
   instructions:u` with pinned flags) over the multichannel float pipelines, ±3 %, the same
-  `icount.py` mechanics; Q6 decides whether it is a hard gate.
+  `icount.py` mechanics, a hard gate two-sided like the QEMU ratchet (Q6).
 - **A9. DspTap versioning.** Tag DspTap v0.1.0 at the tree this family pins (d7ebe4b or
   its successor), add one `tap/dsp/version.h` (one tree, one header; the D13 triplication
   exists only because the engines share no header), a `static_assert` in each engine
   umbrella header against the minimum DspTap it was tested with, a "tested pairs" table in
   the root README, and have each consumer's bump commit name the tag (a submodule gitlink
-  is a SHA; TapTools' and MuTap's pins are theirs to move).
+  is a SHA; TapTools' and MuTap's pins are theirs to move). DspTap is tagged on its own
+  cadence, never released in lockstep with this tree (Q4).
 - **A10. Stale prose sweep.** `PLAN.md:328` and `bridge/PLAN.md` §9 still call the book's
   bridge chapters follow-up work (Part VI landed in #68, 2026-10-08); `async/PLAN.md` §3
   says v0.4.0 and §4 lists the construction scenario as open (done 2026-10-09);
@@ -136,7 +138,10 @@ gated on shipping.
   `--csv` plot script does the regression slope and the ppm wobble/breathing statistics;
   the host CI job installs `libasound2-dev` so the bridge is CI-proven;
   `pico2_cyccnt` gains `bridge` (147/160 Q15 economy) and `rational` (↑2, ↓2, 2/3 Q15)
-  cases and a `copy_to_ram` option matched to the ratchet's flags.
+  cases and a `copy_to_ram` option matched to the ratchet's flags; and the Pico 2 gains a
+  USB audio firmware that enumerates as a UAC2 asynchronous-mode device (feedback
+  endpoint) on its own crystal, the bench's independent clock (Q1), which is not in the
+  tree today.
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 
@@ -161,8 +166,8 @@ writes the tooling and reads the results.
   `bridge` Q15 and `rational` Q15 — the rows P7 needs for every engine. A cycles-per-
   instruction ratio is stated only as a sanity figure measured with `copy_to_ram` and the
   ratchet's flags; it is not a calibration constant for future numbers.
-- **B3. The timestamp servo on paper, and if Q1 allows, on the same bench.** The two-sided
-  shape shipping converters use (zita-ajbridge, the JACK/PipeWire DLL): timestamps on both
+- **B3. The timestamp servo on paper, then on the same bench (Q1: it runs twice).** The
+  two-sided shape shipping converters use (zita-ajbridge, the JACK/PipeWire DLL): timestamps on both
   sides in one monotonic timebase, `push(frames, t_in)` and `pull(frames, t_out)` (or an
   `observe_*_clock(frame_index, t)` pair), a DLL estimating the ratio, FIFO fill kept for
   the latency setpoint only, `max_deviation_ppm` kept as the hard clamp so D12 holds. It
@@ -170,15 +175,16 @@ writes the tooling and reads the results.
   `noexcept` are preserved, which A4's tests must prove. A new noise model for the
   simulator (timestamp jitter, scheduler spikes). This is a servo extension, four to five
   weeks, not an overload. Designing it during Block B lets a second bench pass measure both
-  servos on the same clocks; if the bench is available once, the count-only servo is what
-  Block B proves and timestamps ship in 1.1 after their own pass.
+  servos on the same clocks, which Q1 confirms: the bench runs twice, count-only first,
+  then timestamps.
 - **B4. Setup 3 (UDP sender and receiver)** only if time allows; it proves deployment
   shape, not clock lock.
 
 ## 5. Block C (weeks 9–12): the 1.0 shape
 
-- **C1. Timestamp clock recovery lands** (B3's design) if the bench ran twice; otherwise
-  it is the first 1.1 item and the 1.0 freeze excludes it.
+- **C1. Timestamp clock recovery lands** (B3's design) in 1.0, measured on the bench's
+  second pass (Q1). If that pass slips, it becomes the first 1.1 item and the 1.0 freeze
+  excludes it; the plan does not assume the slip.
 - **C2. A sequence fuzzer, not a byte fuzzer.** The one real memory bug the audit found
   (F01) was a legal but unusual call sequence. A `FuzzedDataProvider`-driven harness:
   random config in the charter set × random sequence of push/pull/process/flush/reset
@@ -191,11 +197,11 @@ writes the tooling and reads the results.
   tolerates NULL handles; `bridge` and `rational` say UB); a stated extension rule (new
   symbols only; status through a size-tagged struct or `_v2`); `SOVERSION` on the three
   shared libraries; a compat test compiling a frozen copy of each 1.0 header and a C
-  caller against HEAD; the statement that MAJOR is the ABI or a separate
-  `tap_sr_<engine>_abi_version()` (Q2); a `CHANGELOG.md` back-filled from v0.4.0; a
+  caller against HEAD; the statement that MAJOR is the ABI (Q2: no separate ABI
+  version; the bit-packed `tap_sr_<engine>_version()` is the probe); a `CHANGELOG.md` back-filled from v0.4.0; a
   semver and deprecation statement reconciled with D7 (at 1.x every rename is a MAJOR,
-  written down); the consumption model stated (`add_subdirectory`/FetchContent as the
-  supported model, or `install()` + `SampleRateTapConfig.cmake` with DspTap first, Q2);
+  written down); the consumption model stated: `add_subdirectory`/FetchContent is the
+  only supported model at 1.0, and `install()`/`find_package` is deferred (Q2);
   `main` protected; a manual workflow that re-executes the notebooks and diffs the figure
   digests as part of the release checklist. The 1.0 freeze covers `bridge`, `rational` and
   the existing `async` surface; the `bridge` C ABI stays at K = 0 and may grow additively
@@ -207,34 +213,44 @@ writes the tooling and reads the results.
 closes P3–P6, P9, P10, P12; B2 closes P7; C3 closes P11 and P13. `async` additionally needs
 P8 from B1. On this sequencing, `bridge` and `rational` reach the bar at the end of Block C
 (not Block B: P11 and P13 are release engineering), and `async` reaches it at the same
-point with the count-only servo, provided B1's numbers are inside the README's claims; the
-timestamp servo is 1.1 unless the bench ran twice.
+point, provided B1's numbers are inside the README's claims; with the bench running twice
+(Q1), `async`'s 1.0 also carries the timestamp servo (C1), measured on the second pass.
 
-## 7. Decisions the maintainer takes before week 1
+## 7. Decisions the maintainer took (2026-10-12)
+
+Each question as it was asked, then the decision. Q3 and Q5 had been acted on, on the
+roadmap's recommendation, before the answers arrived (A1, #80; A3, #81), and the answers
+confirm them.
 
 - **Q1. The bench.** Which USB devices, and are they asynchronous-mode (feedback
   endpoint), or is an I2S HAT with its own oscillator available? Is the bench available
   once (count-only servo) or twice (count-only, then timestamp)? The answer decides
   whether timestamps are 1.0 or 1.1.
+  **Decided:** USB asynchronous mode, with the Pico 2 (RP2350) as the asynchronous-mode
+  device on its own crystal (its USB audio firmware is an A11 item); the bench runs
+  twice, so timestamps are 1.0 (B3, C1).
 - **Q2. What 1.0 promises.** Does any consumer outside these trees link a C ABI today (the
   audit's A5 was answered "none named")? Is MAJOR the ABI, or a separate ABI version? Is
   `add_subdirectory`/FetchContent the only supported consumption model at 1.0, or do you
-  want `install()`/`find_package`? Recommendation: MAJOR is the ABI; FetchContent only,
-  stated.
-- **Q3. A1's scope.** Re-record `rational` alone (recommended; `bridge` and `async` are
-  exact), or take the `run<S>()` out-of-line pin (`async/docs/PERFORMANCE.md`, "left for a
-  deliberate re-record") now and re-record all three engines' Arm baselines once? And is
-  the root's "beyond tolerance" the intended ratchet wording, so `bridge/CLAUDE.md` is
-  aligned to it?
+  want `install()`/`find_package`?
+  **Decided:** no consumer outside these trees links a C ABI; MAJOR is the ABI; FetchContent
+  (and `add_subdirectory`) only, stated (C3).
+- **Q3. A1's scope.** Re-record `rational` alone, or take the `run<S>()` out-of-line pin
+  (`async/docs/PERFORMANCE.md`, "left for a deliberate re-record") now and re-record all
+  three engines' Arm baselines once? And is the root's "beyond tolerance" the intended
+  ratchet wording, so `bridge/CLAUDE.md` is aligned to it?
+  **Decided, as landed in A1:** `rational` re-recorded alone; the pin stays for a later
+  deliberate re-record; "beyond tolerance" is the rule and `bridge/CLAUDE.md` says so.
 - **Q4. DspTap's release coupling.** Tagging DspTap and asserting a minimum in the engines
   is contained; releasing DspTap and SampleRateTap together couples TapTools' and MuTap's
-  cadence to this tree's. Recommendation: tag independently, assert the minimum, no
-  coupled cadence.
-- **Q5. `-fno-exceptions`.** Does any consumer build with it today? A3 is recommended
-  regardless; the answer sets its priority inside Block A.
+  cadence to this tree's.
+  **Decided:** tag DspTap independently, assert the minimum (A9), no coupled cadence.
+- **Q5. `-fno-exceptions`.** Does any consumer build with it today?
+  **Decided:** probably our own Pico 2 firmware, the SDK's default (the maintainer's best
+  recollection, not confirmed); A3 landed regardless (#81).
 - **Q6. The host ratchet.** A hard gate on callgrind `Ir` (deterministic enough on the
   runners), or an unguarded trend with the channel-parallel path documented as ungated?
-  Recommendation: hard gate, same ±3 %.
+  **Decided:** a hard gate, two-sided at ±3 % (A8).
 
 ## 8. Stays deferred, on purpose
 
