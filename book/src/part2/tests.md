@@ -380,14 +380,17 @@ short multichannel variants exist precisely because that claim would
 otherwise have left the N > 2 datapath uncovered on the machines it was
 written for.
 
-One exclusion is different in kind, and the CI file is honest about it:
-`ConfigValidation` is skipped on Hexagon not because it is slow but because
-that leg's static-musl toolchain cannot unwind — the constructor throws
-correctly, `EXPECT_THROW` never catches, and libc++abi terminates. The
-limitation is recorded in `docs/PERFORMANCE.md` under known debt, with the
-deployment guidance it implies (validate configs before constructing on that
-toolchain). A skipped test with a documented reason is a specification too:
-it specifies the boundary of what the platform supports.
+One exclusion was different in kind, and the CI file was honest about it:
+`ConfigValidation` was skipped on Hexagon not because it is slow but because
+that leg's static-musl toolchain could not unwind — the constructor threw
+correctly, `EXPECT_THROW` never caught, and libc++abi terminated. The
+limitation was recorded in `docs/PERFORMANCE.md` under known debt, with the
+deployment guidance it implied (validate configs before constructing on that
+toolchain), until the cause was found — a static link without
+`--eh-frame-hdr`, Part IV's Hexagon chapter — and the suite came back to the
+leg. A skipped test with a documented reason is a specification too: it
+specifies the boundary of what the platform supports, and says where to look
+when the boundary moves.
 
 ## Verify it yourself
 

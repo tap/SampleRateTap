@@ -237,17 +237,17 @@ reaches the boundary. `catch (...)` rather than `catch (const
 std::exception&)` because the boundary does not care *what* was thrown;
 everything becomes `NULL`.
 
-Now the hard lesson, recorded in `docs/PERFORMANCE.md` under *Known debt*.
-One of this library's supported toolchains — the Hexagon static-musl
-configuration from the Part IV DSP chapter — **cannot unwind at all**. Its
-runtime lacks the unwinder: when a constructor throws, the exception does
-not propagate to *any* catch block, anywhere; the process terminates via
-`libc++abi`. This was not discovered by reading toolchain documentation.
-It was discovered the day the first `EXPECT_THROW` test reached that CI
-leg and the test *runner* died — the `ConfigValidation` suite is excluded
-on Hexagon to this day, and the candidate fix
-(`-unwindlib=libunwind` in the toolchain file) sits unclaimed in the debt
-list.
+Now the hard lesson, recorded in `docs/PERFORMANCE.md` under
+*Known debt*. One of this library's supported toolchains — the Hexagon
+static-musl configuration from the Part IV DSP chapter — **could not
+unwind at all**. When a constructor threw, the exception did not propagate
+to *any* catch block, anywhere; the process terminated via `libc++abi`.
+This was not discovered by reading toolchain documentation. It was
+discovered the day the first `EXPECT_THROW` test reached that CI leg and
+the test *runner* died. (The cause, found in 2026-10, was a static link
+without `--eh-frame-hdr`; the Hexagon chapter has it. Every build compiled
+with `-fno-exceptions` is in the same position by design, so the lesson
+outlived the bug.)
 
 Think through what that does to this shim's design. The `catch (...)` in
 `tap_sr_async_create` is *necessary* — on normal targets it is the entire error
@@ -255,7 +255,7 @@ mechanism — but on a no-unwind target it is **unreachable**: the throw
 terminates the process before the catch can run. A caller on such a target
 cannot be saved by any code positioned *after* the throw. The only
 placement that works is *before* it: **validate, then construct.** The
-deployment guidance in the debt entry says exactly this: on that
+deployment guidance in the debt entry said exactly this: on that
 toolchain, treat an invalid `config` as fatal and validate inputs *before*
 constructing — check them against the constraints the constructor
 enforces (positive finite sample rate, nonzero channels, band edges that
@@ -310,7 +310,7 @@ push/pull sequence, and the refusal of a wrong-format call.
 | `impl()` overloads outside `extern "C"` | helpers inside the block | overloading is ill-formed with C linkage — the compiler enforced this one personally |
 | `NULL` return + null-tolerant entry points | "caller must check" | the convention otherwise concentrates crashes on exactly the caller who forgot, in a runtime with no useful stack trace |
 | `catch (...)` → `NULL` in `tap_sr_async_create` | let exceptions cross | UB across the C boundary; and see below |
-| Validate-before-construct guidance | rely on the `catch` | one supported toolchain cannot unwind at all — a throw terminates before any catch runs |
+| Validate-before-construct guidance | rely on the `catch` | a `-fno-exceptions` build (and, until 2026-10, one supported toolchain) cannot unwind — a throw terminates before any catch runs |
 | `tap_sr_async_version()` function | version macro | reports the loaded binary, not the caller's compile-time assumption |
 | Thread affinity + `size_t` width in the header | "see the C++ docs" | the header is the only artifact an FFI consumer reads |
 

@@ -82,14 +82,18 @@ In expected order; each item lands as its own PR with its measurements.
 3. **Tail latency.** The p99/max per-call `pull(128)` benchmark the
    metrics table promises.
 4. **MSVC `/W4` triage**, then `TAP_SR_ASYNC_WERROR=ON` on the Windows leg.
+   *Done* (the roadmap's A2): the one warning was C4324 on `spsc_ring`'s
+   cache-line padding, off for async's own targets with its reason.
 5. **Hexagon exceptions.** The static-musl toolchain terminates on a
    constructor throw instead of propagating (`ConfigValidation` is excluded
-   there); candidate fix `-unwindlib=libunwind` in
-   `cmake/hexagon-linux-musl.cmake`. *Deployments no longer depend on it:*
-   A3's `config::validate()` is the rejection as a `noexcept` reason, called
-   before constructing wherever a throw cannot propagate.
+   there). *Done* (the roadmap's A2): the static link lacked
+   `--eh-frame-hdr`, not an unwinder; with it in
+   `cmake/hexagon-linux-musl.cmake` throws propagate and `ConfigValidation`
+   runs on the leg (`docs/PERFORMANCE.md`, "Resolved"). A3's
+   `config::validate()` stays the answer wherever a throw cannot propagate.
 6. **Housekeeping from the migration.** Bring `bench/icount/` under the
-   clang-tidy gate (excluded by path in `style.yml`). *Done:* the Hexagon
+   clang-tidy gate (excluded by path in `style.yml`). *Done* (the roadmap's
+   A2): `icount_main.cpp` is tidy-clean and the exclusion is gone. *Also done:* the Hexagon
    baselines, which the family migration left 47–87 instructions high per
    pipeline workload (the renamed literals moved the marker's format
    string; `../PLAN.md` section 7), are re-recorded, and the marker

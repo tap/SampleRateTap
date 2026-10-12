@@ -203,11 +203,12 @@ considered — an unwind inside a device callback is a glitch at best — but
 the *strength* of the setup/hot-path split was reinforced from an
 unexpected direction. When the first `EXPECT_THROW` test reached the
 Hexagon CI leg, it discovered that the hexagon-linux-musl toolchain
-cannot catch exceptions at all: a constructor throw terminates via
-libc++abi instead of propagating. `docs/PERFORMANCE.md` records it under
+could not catch exceptions at all: a constructor throw terminated via
+libc++abi instead of propagating. `docs/PERFORMANCE.md` recorded it under
 Known debt, with the deployment note ("treat invalid config as fatal —
-validate inputs before constructing") and the candidate fix
-(`-unwindlib=libunwind`). The discovery cost one excluded test on one leg
+validate inputs before constructing") and a candidate fix that turned out
+not to be the cause (the static link lacked `--eh-frame-hdr`, fixed
+2026-10). The discovery cost one excluded test on one leg
 — because exceptions had been confined to a code region where "terminate
 instead of propagate" is survivable. Had the audio path thrown, the same
 toolchain quirk would have been a field failure.
@@ -695,7 +696,7 @@ forcing an inheritance shape onto builtin sample types or wrapper types
 onto raw buffers.
 
 **Exceptions on the audio path.** Section 4; reinforced by a toolchain
-that cannot unwind at all.
+that could not unwind at all, and by every `-fno-exceptions` build.
 
 **`std::jthread` (or any thread) in the library.** The library owns *no*
 threads. It is a passive object with a two-agent contract — "one producer
@@ -723,7 +724,7 @@ the measured |diff| ≤ 41 adjacent-phase delta of section 18.
 | `std::simd` | not in C++20; per-target measured intrinsics (kept or deleted by number) beat portable abstraction | `docs/PERFORMANCE.md` C4/C5 |
 | coroutines | hard-RT synchronous callbacks; no async model fits | `include/tap/sr/async/converter.h` thread contract |
 | CRTP mixins | concept + traits already give static dispatch without inheritance shape | `include/tap/sr/async/sample_traits.h` |
-| audio-path exceptions | RT contract; Hexagon cannot unwind | section 4 |
+| audio-path exceptions | RT contract; `-fno-exceptions` builds cannot unwind (nor, until 2026-10, Hexagon) | section 4 |
 | `std::jthread` in the library | passive two-agent object; caller owns the (callback) threads; bare metal has none | `include/tap/sr/async/converter.h`; `tests/CMakeLists.txt` Threads probe |
 | virtual pluggable filters | filter is a parameter space, not a plugin point; would cost kernel inlining and table invariants | `include/tap/sr/async/polyphase_filter.h` (`filter_spec`) |
 

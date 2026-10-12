@@ -315,8 +315,8 @@ samples and therefore triples in milliseconds (1.5 ms vs 0.5 ms).
 
 CI builds and tests every push on:
 
-- **Linux** (GCC, Clang) and **macOS** (AppleClang) with warnings as errors,
-  **Windows** (MSVC /W4)
+- **Linux** (GCC, Clang), **macOS** (AppleClang) and **Windows** (MSVC /W4),
+  all with warnings as errors
 - **AddressSanitizer + UBSan** and **ThreadSanitizer** over the full suite
 - **Qualcomm Hexagon** (hexagon-unknown-linux-musl, the open-source clang
   toolchain from [quic/toolchain_for_hexagon]) cross-compiled and executed
