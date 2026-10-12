@@ -26,32 +26,36 @@
 namespace {
 
     template <typename S>
-    S makeSample(double v) {
-        if constexpr (std::is_floating_point_v<S>)
+    S make_sample(double v) {
+        if constexpr (std::is_floating_point_v<S>) {
             return static_cast<S>(v);
-        else
+        }
+        else {
             return tap::sr::async::detail::round_sat<S>(v * static_cast<double>(std::numeric_limits<S>::max()));
+        }
     }
 
     template <typename S>
-    std::vector<S> sineBlock(std::size_t samples, double freqHz, double amp) {
+    std::vector<S> sine_block(std::size_t samples, double freq_hz, double amp) {
         std::vector<S> out(samples);
-        const double   w = 2.0 * std::numbers::pi * freqHz / 48000.0;
-        for (std::size_t i = 0; i < samples; ++i)
-            out[i] = makeSample<S>(amp * std::sin(w * static_cast<double>(i)));
+        const double   w = 2.0 * std::numbers::pi * freq_hz / 48000.0;
+        for (std::size_t i = 0; i < samples; ++i) {
+            out[i] = make_sample<S>(amp * std::sin(w * static_cast<double>(i)));
+        }
         return out;
     }
 
     template <typename S>
-    double runKernel() {
+    double run_kernel() {
         const tap::sr::async::polyphase_filter_bank<S> bank(tap::sr::async::filter_spec::balanced(), 48000.0);
-        const auto                                     hist = sineBlock<S>(bank.taps(), 997.0, 0.5);
+        const auto                                     hist = sine_block<S>(bank.taps(), 997.0, 0.5);
         double                                         sink = 0.0;
         double                                         mu   = 0.0;
         for (int i = 0; i < 200000; ++i) {
             mu += 0.6180339887498949;
-            if (mu >= 1.0)
+            if (mu >= 1.0) {
                 mu -= 1.0;
+            }
             sink += static_cast<double>(tap::sr::async::interpolate(bank, hist.data(), mu));
         }
         return sink;
@@ -70,29 +74,31 @@ namespace {
 #endif
 
     template <typename S>
-    double runPipeline() {
-        constexpr std::size_t  kCh    = TAP_SR_ASYNC_SC_CH;
-        constexpr std::size_t  kBlock = 32;
+    double run_pipeline() {
+        constexpr std::size_t  k_ch    = TAP_SR_ASYNC_SC_CH;
+        constexpr std::size_t  k_block = 32;
         tap::sr::async::config cfg;
-        cfg.channels = kCh;
+        cfg.channels = k_ch;
         tap::sr::async::basic_converter<S> asrc(cfg);
 
-        const auto     input = sineBlock<S>(12000 * kCh, 997.0, 0.5); // 0.25 s, cycled
-        std::vector<S> out(kBlock * kCh);
+        const auto     input = sine_block<S>(12000 * k_ch, 997.0, 0.5); // 0.25 s, cycled
+        std::vector<S> out(k_block * k_ch);
 
         double            sink   = 0.0;
         std::size_t       off    = 0;
-        const std::size_t blocks = TAP_SR_ASYNC_SC_SECONDS * 48000 / kBlock; // virtual audio
+        const std::size_t blocks = TAP_SR_ASYNC_SC_SECONDS * 48000 / k_block; // virtual audio
         for (std::size_t b = 0; b < blocks; ++b) {
-            asrc.push(input.data() + off, kBlock);
-            asrc.pull(out.data(), kBlock);
-            off += kBlock * kCh;
-            if (off + kBlock * kCh > input.size())
+            asrc.push(input.data() + off, k_block);
+            asrc.pull(out.data(), k_block);
+            off += k_block * k_ch;
+            if (off + k_block * k_ch > input.size()) {
                 off = 0;
+            }
             sink += static_cast<double>(out[0]);
         }
-        if (asrc.status().underruns != 0)
+        if (asrc.status().underruns != 0) {
             return std::numeric_limits<double>::quiet_NaN(); // poisons the checksum
+        }
         return sink;
     }
 
@@ -105,27 +111,27 @@ namespace {
     // not in the pipeline's difference: on soft-FP64 targets its libm sin()
     // calls are tens of millions of instructions.
     template <typename S>
-    double runConstruct() {
-        constexpr std::size_t  kCh    = TAP_SR_ASYNC_SC_CH;
-        constexpr std::size_t  kBlock = 32;
+    double run_construct() {
+        constexpr std::size_t  k_ch    = TAP_SR_ASYNC_SC_CH;
+        constexpr std::size_t  k_block = 32;
         tap::sr::async::config cfg;
-        cfg.channels = kCh;
+        cfg.channels = k_ch;
         tap::sr::async::basic_converter<S> asrc(cfg);
-        const auto                         input = sineBlock<S>(12000 * kCh, 997.0, 0.5); // as runPipeline
-        std::vector<S>                     out(kBlock * kCh);
-        asrc.push(input.data(), kBlock);
-        asrc.pull(out.data(), kBlock);
+        const auto                         input = sine_block<S>(12000 * k_ch, 997.0, 0.5); // as run_pipeline
+        std::vector<S>                     out(k_block * k_ch);
+        asrc.push(input.data(), k_block);
+        asrc.pull(out.data(), k_block);
         return static_cast<double>(out[0]) + asrc.designed_latency_seconds();
     }
 
     template <typename S>
     double run() {
 #if TAP_SR_ASYNC_SC_KIND == 0
-        return runKernel<S>();
+        return run_kernel<S>();
 #elif TAP_SR_ASYNC_SC_KIND == 1
-        return runPipeline<S>();
+        return run_pipeline<S>();
 #else
-        return runConstruct<S>();
+        return run_construct<S>();
 #endif
     }
 

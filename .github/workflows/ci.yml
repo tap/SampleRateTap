@@ -60,15 +60,16 @@ jobs:
             bridge_werror: ON
             rational_werror: ON
             capi: ON
-          # async's warnings stay non-fatal on MSVC until its /W4 output has
-          # been triaged (async/docs/PERFORMANCE.md "Known debt"); bridge keeps
-          # /WX, as its CI did before the merge. The C ABI is ON since the
+          # Every engine's warnings are fatal here too: async's /W4 output was
+          # one warning, C4324 on spsc_ring's deliberate cache-line padding,
+          # off for its own targets since the roadmap's A2 (async/CMakeLists.txt).
+          # The C ABI is ON since the
           # export macro (TAP_SR_<ENGINE>_API, dllexport while building): the
           # CApi suites gate the DLLs here too; the symbol-set test is an
           # nm test and runs on the ELF and Mach-O hosts only.
           - name: Windows MSVC
             os: windows-latest
-            async_werror: OFF
+            async_werror: ON
             bridge_werror: ON
             rational_werror: ON
             capi: ON
