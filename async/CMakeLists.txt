@@ -32,11 +32,16 @@ else()
 endif()
 
 # Warning flags for this project's own tests/examples; not propagated to consumers.
+# C4324 ("structure was padded due to alignment specifier") is the only /W4
+# warning MSVC raises here, and it reports the point of spsc_ring's alignas:
+# each index on its own cache line, so producer and consumer never share one.
+# The padding is the design, so the warning is off; bridge, which includes
+# these headers as SYSTEM, never sees it.
 option(TAP_SR_ASYNC_WERROR "Treat warnings as errors in SampleRateTap's own targets" OFF)
 add_library(tap_sr_async_warnings INTERFACE)
 target_compile_options(tap_sr_async_warnings INTERFACE
     $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra -Wpedantic -Wconversion -Wshadow>
-    $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->)
+    $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive- /wd4324>)
 if(TAP_SR_ASYNC_WERROR)
     target_compile_options(tap_sr_async_warnings INTERFACE
         $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Werror>
