@@ -185,6 +185,40 @@ Executed instructions per fixed workload (`bridge/bench/icount/`), measured unde
 | `up_q31_eco` | 184,954,171 | 72,647,042 | 36,007,820 |
 <!-- ICOUNT:END -->
 
+## Footprint
+
+One converter's heap, after construction, is a formula in its geometry (L phases,
+R = ceil(L / 2) stored rows, since the mirror half is not held; T taps from `taps()`;
+`c` the coefficient size, `s` the sample size, `ch` channels):
+
+```text
+held = R T c                  half phase table
+     + (T + 64) ch s          history, 64 frames of append slack
+     + 16 ch s                pull()'s pop scratch
+     + ch sizeof(std::vector)
+peak = max(held, R T c + 8 L T + 8 T + q 8 T)
+       the design: the table, the double prototype, one double row,
+       and the fixed-point quantizer's remainder (q = 1 for Q15 and Q31)
+```
+
+| profile | direction | T | f32 held | f32 peak | Q15 held | Q15 peak | Q31 held | Q31 peak |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `super_economy` | 44k1 → 48k | 28 | 9,872 | 45,024 | 4,960 | 40,768 | 9,872 | 45,248 |
+| `super_economy` | 48k → 44k1 | 40 | 12,848 | 59,200 | 6,448 | 53,600 | 12,848 | 59,520 |
+| `economy` | 44k1 → 48k | 38 | 13,152 | 61,104 | 6,600 | 55,328 | 13,152 | 61,408 |
+| `economy` | 48k → 44k1 | 58 | 18,320 | 85,840 | 9,184 | 77,720 | 18,320 | 86,304 |
+| `balanced` | 44k1 → 48k | 44 | 15,120 | 70,752 | 7,584 | 64,064 | 15,120 | 71,104 |
+| `balanced` | 48k → 44k1 | 78 | 24,400 | 115,440 | 12,224 | 104,520 | 24,400 | 116,064 |
+| `transparent` | 44k1 → 48k | 96 | 32,176 | 154,368 | 16,112 | 139,776 | 32,176 | 155,136 |
+| `transparent` | 48k → 44k1 | 184 | 56,624 | 272,320 | 28,336 | 246,560 | 56,624 | 273,792 |
+
+The doubled and quadrupled rates (K = 1, 2) are the same machine and hold the same
+bytes. The figures are bytes on a 64-bit host, stereo; a 32-bit target holds
+`sizeof(std::vector)` (12 instead of 24) less per history vector and nothing else
+changes. `tests/test_footprint.cpp` pins each formula against DspTap's heap meter
+(`tap/dsp/analysis/heap_meter.h`) exactly, on every hosted leg and on Hexagon
+(32-bit), and checks that processing allocates nothing.
+
 ## License
 
 MIT (see [LICENSE](../LICENSE)), consistent with the family. Style is the

@@ -311,6 +311,42 @@ within ~1 dB of the 48 kHz tones at the same f/fs. Interpolation noise
 depends only on f/fs; group delay at the same tap count stays ~24 input
 samples and therefore triples in milliseconds (1.5 ms vs 0.5 ms).
 
+## Footprint
+
+One converter's heap, after construction, is a formula in its geometry (L phases and
+T taps per phase from `filter_bank()`, `c` the coefficient size and `s` the sample
+size from `sample_traits`, `ch` channels, F the ring's frames: `fifo_frames`, or
+`max(1024, 4 (target_latency_frames + T))`):
+
+```text
+held = (L + 1) T c            polyphase table, one guard row
+     + bit_ceil(F ch) s       SPSC ring
+     + 16 ch s                pop scratch
+     + (T + 16) ch s          filter history
+     + T c                    blended row
+     + H sizeof(std::vector)  H = ch (1 when the channel-parallel path runs)
+```
+
+Construction needs more than the converter keeps: the filter is designed in double
+first. The plain Kaiser design (`fast`) peaks at the double prototype, the table and
+one row; the image-compensated design the other profiles run holds the prototype
+beside two more prototype-sized double buffers. **A deployment needs the peak free at
+construction**: `transparent` holds 174 KB and needs 985 KB while it is built, more
+than an RP2350's 520 KB of SRAM; `balanced` and `program` need 300 and 394 KB.
+
+| profile | L × T | f32 held | f32 peak | Q15 held | Q15 peak | Q31 held | Q31 peak |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `fast` | 128 × 32 | 25,392 | 49,536 | 12,720 | 41,536 | 25,392 | 49,792 |
+| `balanced` | 256 × 48 | 58,416 | 300,056 | 29,232 | 300,056 | 58,416 | 300,056 |
+| `program` | 512 × 32 | 74,544 | 393,784 | 37,296 | 393,784 | 74,544 | 393,784 |
+| `transparent` | 512 × 80 | 173,616 | 985,208 | 86,832 | 985,208 | 173,616 | 985,208 |
+
+The figures are bytes on a 64-bit host, stereo; a 32-bit target holds
+`sizeof(std::vector)` (12 instead of 24) less per history vector and nothing else
+changes. `tests/test_footprint.cpp` pins each formula against DspTap's heap meter
+(`tap/dsp/analysis/heap_meter.h`) exactly, on every hosted leg and on Hexagon
+(32-bit), and checks that processing allocates nothing.
+
 ## Platform support
 
 CI builds and tests every push on:

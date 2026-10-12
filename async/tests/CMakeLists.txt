@@ -87,3 +87,18 @@ else()
     gtest_discover_tests(tap_sr_async_tests TEST_PREFIX "async." DISCOVERY_TIMEOUT 120
                          PROPERTIES TIMEOUT 900 LABELS async)
 endif()
+
+# The footprint contract (test_footprint.cpp): an executable of its own,
+# because DspTap's heap meter replaces the global operator new for the whole
+# program. Hosted and on the Hexagon leg (where sizeof(std::vector) is 12, the
+# formula's one pointer-sized term); not on bare metal, whose one-shot runner
+# is the main battery's.
+if(NOT TAP_SR_BARE_METAL)
+    add_executable(tap_sr_async_footprint test_footprint.cpp)
+    target_link_libraries(tap_sr_async_footprint PRIVATE
+        tap::sr::async
+        tap_sr_async_warnings
+        GTest::gtest_main)
+    gtest_discover_tests(tap_sr_async_footprint TEST_PREFIX "async." DISCOVERY_TIMEOUT 120
+                         PROPERTIES TIMEOUT 900 LABELS async)
+endif()
