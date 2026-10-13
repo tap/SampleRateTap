@@ -253,3 +253,56 @@ Executed instructions per fixed workload (`rational/bench/icount/`), measured un
 | `up3_float_eco` | 1,407,620,233 | 75,331,049 | 254,904,021 |
 | `up3_q15_eco` | 92,695,852 | 51,156,233 | 39,794,001 |
 <!-- ICOUNT:END -->
+
+## Footprint
+
+One stage's heap, after construction, is a formula in its geometry (N = 2mB − 1 taps
+from `taps()`, T the row length from `row_length()`, R the stored rows `k_rows`, P the
+history lines per channel, which is M for a decimator and 1 otherwise; `c` the
+coefficient size, `s` the sample size, `ch` channels):
+
+```text
+held = R T c                      rows
+     + (T + 64) P ch s            history, 64 frames of append slack
+     + 16 ch s                    pull()'s pop scratch
+     + P ch sizeof(std::vector)
+peak = max(design, 8 N + held)    the double design lives to the end of the constructor
+```
+
+A chain holds its stages, a scratch between each pair (`cap_i ch s`, where `cap_i` is
+the most a 64-frame chunk can reach stage `i` with, `tap::dsp::chain`) and 64 `ch s`
+of zeros for its flush. Its peak depends on the order its stages are constructed in,
+which C++ leaves unspecified, so the test reports it and does not pin it. Stages at
+`economy`, stereo:
+
+| stage | N | f32 held | f32 peak | Q15 held | Q15 peak | Q31 held | Q31 peak |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `up_2` | 43 | 1,040 | 1,384 | 544 | 888 | 1,040 | 1,384 |
+| `down_2` | 43 | 1,776 | 2,120 | 936 | 1,280 | 1,776 | 2,120 |
+| `up_3` | 65 | 1,128 | 1,648 | 588 | 1,108 | 1,128 | 1,648 |
+| `down_3` | 65 | 2,600 | 3,120 | 1,372 | 1,892 | 2,600 | 3,120 |
+| `up_6` | 143 | 1,456 | 2,600 | 752 | 1,896 | 1,456 | 2,600 |
+| `down_6` | 143 | 5,216 | 6,360 | 2,752 | 3,896 | 5,216 | 6,360 |
+| `up_8` | 191 | 1,648 | 3,176 | 848 | 2,376 | 1,648 | 3,176 |
+| `down_8` | 191 | 6,912 | 8,440 | 3,648 | 5,176 | 6,912 | 8,440 |
+| `ratio_3_2` | 65 | 1,128 | 1,648 | 588 | 1,108 | 1,128 | 1,648 |
+| `ratio_2_3` | 65 | 1,216 | 1,736 | 632 | 1,246 | 1,216 | 1,736 |
+| `ratio_4_3` | 87 | 1,216 | 1,912 | 632 | 1,328 | 1,216 | 1,912 |
+| `ratio_3_4` | 87 | 1,268 | 1,964 | 658 | 1,392 | 1,268 | 1,964 |
+| `ratio_8_3` | 191 | 1,648 | 3,176 | 848 | 2,376 | 1,648 | 3,176 |
+| `ratio_3_8` | 191 | 1,968 | 3,496 | 1,008 | 3,064 | 1,968 | 3,576 |
+
+Across the profiles a stage grows with its pins: `up_2` f32 stereo holds 976 / 1,040 /
+1,104 / 1,680 bytes at `super_economy` / `economy` / `balanced` / `transparent`, and
+`down_2` 1,680 / 1,776 / 1,872 / 2,736. The named chains hold 3.5 KB (`up_2_up_3`) to
+12.8 KB (`up_2_up_8_up_3`) at `economy`, f32 stereo, and up to 14.3 KB at
+`transparent`.
+
+The figures are bytes on a 64-bit host; a 32-bit target holds `sizeof(std::vector)`
+(12 instead of 24) less per history vector and nothing else changes.
+`tests/test_footprint.cpp` pins the stage formulas, held and peak, for all 14 ratios
+of the vocabulary, every profile and format, and every named chain's held bytes,
+against DspTap's heap meter (`tap/dsp/analysis/heap_meter.h`) exactly, on the hosted legs
+(not under ASan or TSan, whose runtime owns the allocator) and on Hexagon (32-bit), and checks that processing allocates nothing. On Windows x64 the allocator asks for more than the formula: MSVC's `std::allocator` pads every
+request of 4096 bytes or more by 39 bytes to align it to 32 bytes, and the test counts each
+allocation through DspTap's model of that (`heap_meter::allocator_request`).

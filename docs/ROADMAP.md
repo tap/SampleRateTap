@@ -100,7 +100,7 @@ gated on shipping.
   producer thread pushing, a consumer thread pulling, a third thread polling `status()`,
   seconds of simulated drift including a stage promotion and a hard resync; run in the
   TSan job and in `ci-arm64.yml`. Today the only two-thread test is the ring's.
-- **A5. Footprint and stack.** A footprint formula per engine in each README (`async`:
+- **A5. Footprint and stack.** *Footprint landed 2026-10-12 (each engine's README states held and construction-peak bytes as formulas with a measured table per profile and format, `<engine>/tests/test_footprint.cpp` pins every formula exactly against DspTap's `heap_meter` on the hosted legs and on Hexagon; `async` `transparent` needs 985 KB free at construction to hold 174 KB). The stack high-water and section ceilings are the second PR.* A footprint formula per engine in each README (`async`:
   `(L+1)·T·sizeof(coeff) + bit_ceil(fifo·channels)·sizeof(S) + scratch`; `bridge` and
   `rational` from their tables), a measured table per profile and format, and
   `-fstack-usage` high-water for `push`/`pull`/`process` on the M33 leg, pinned as
