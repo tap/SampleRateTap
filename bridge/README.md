@@ -216,7 +216,7 @@ The doubled and quadrupled rates (K = 1, 2) are the same machine and hold the sa
 bytes. The figures are bytes on a 64-bit host, stereo; a 32-bit target holds
 `sizeof(std::vector)` (12 instead of 24) less per history vector and nothing else
 changes. `tests/test_footprint.cpp` pins each formula against DspTap's heap meter
-(`tap/dsp/analysis/heap_meter.h`) exactly, on every hosted leg and on Hexagon
+(`tap/dsp/analysis/heap_meter.h`) exactly, on the hosted legs (not under ASan or TSan, whose runtime owns the allocator) and on Hexagon
 (32-bit), and checks that processing allocates nothing.
 
 ## License

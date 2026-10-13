@@ -302,5 +302,5 @@ The figures are bytes on a 64-bit host; a 32-bit target holds `sizeof(std::vecto
 (12 instead of 24) less per history vector and nothing else changes.
 `tests/test_footprint.cpp` pins the stage formulas, held and peak, for all 14 ratios
 of the vocabulary, every profile and format, and every named chain's held bytes,
-against DspTap's heap meter (`tap/dsp/analysis/heap_meter.h`) exactly, on every hosted
-leg and on Hexagon (32-bit), and checks that processing allocates nothing.
+against DspTap's heap meter (`tap/dsp/analysis/heap_meter.h`) exactly, on the hosted legs
+(not under ASan or TSan, whose runtime owns the allocator) and on Hexagon (32-bit), and checks that processing allocates nothing.
