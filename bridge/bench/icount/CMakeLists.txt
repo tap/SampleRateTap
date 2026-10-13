@@ -43,6 +43,11 @@ foreach(_sc IN LISTS _ratio_icount_scenarios)
         tap::sr::bridge tap_sr_bridge_warnings)
 endforeach()
 
+# The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
+# them against bench/ceilings.json).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)
+tap_sr_add_probes(bridge probe_main.cpp tap::sr::bridge tap_sr_bridge_warnings)
+
 # Cross-resampler comparison workloads (docs/COMPARISON.md): the same fixed
 # task through bridge and through libsamplerate, r8brain and SpeexDSP, built
 # for the same target, in both directions. Named cmp_bridge_icount_* so the

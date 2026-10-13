@@ -55,7 +55,7 @@ is this checklist, not an opinion.
 | P2 | RT contract (`noexcept`, allocation-free, lock-free) stated and tested | ✓ | ✓ | ✓ |
 | P3 | Thread contract stated and under TSan with the real call pattern | n/a | n/a | ✓ (A4) |
 | P4 | Error model usable without exceptions; Hexagon throw documented | ✓ (A3) | ✓ (A3) | ✓ (A3) |
-| P5 | Memory footprint per instance and stack high-water per call, stated and gated | **open** (A5) | **open** (A5) | **open** (A5) |
+| P5 | Memory footprint per instance and stack high-water per call, stated and gated | ✓ (A5) | ✓ (A5) | ✓ (A5) |
 | P6 | Worst single-call cost gated (QEMU per-call max) | **open** (A6) | **open** (A6) | **open** (A6) |
 | P7 | Measured on silicon: cycles, `%core@48k`, construction time | **open** (B2) | **open** (B2) | **open** (B1, B2) |
 | P8 | Clock recovery proven on independent crystals, hours, zero underruns | n/a | n/a | **open** (B1) |
@@ -100,7 +100,7 @@ gated on shipping.
   producer thread pushing, a consumer thread pulling, a third thread polling `status()`,
   seconds of simulated drift including a stage promotion and a hard resync; run in the
   TSan job and in `ci-arm64.yml`. Today the only two-thread test is the ring's.
-- **A5. Footprint and stack.** *Footprint landed 2026-10-12 (each engine's README states held and construction-peak bytes as formulas with a measured table per profile and format, `<engine>/tests/test_footprint.cpp` pins every formula exactly against DspTap's `heap_meter` on the hosted legs and on Hexagon; `async` `transparent` needs 985 KB free at construction to hold 174 KB). The stack high-water and section ceilings are the second PR.* A footprint formula per engine in each README (`async`:
+- **A5. Footprint and stack.** *Footprint landed 2026-10-12 (each engine's README states held and construction-peak bytes as formulas with a measured table per profile and format, `<engine>/tests/test_footprint.cpp` pins every formula exactly against DspTap's `heap_meter` on the hosted legs and on Hexagon; `async` `transparent` needs 985 KB free at construction to hold 174 KB). The size and stack ceilings landed 2026-10-13: `scripts/ceilings.py` gates each engine's probes against its `bench/ceilings.json`, one-sided at the recorded figure + 3 %, in the ratchet job. On M33, M55 and Hexagon it gates the engine's own `.text` and `.rodata` (the probe's translation unit, from the link map) and the whole image. On M33 it also gates each call's static worst path, which is GCC's frames from `-fstack-usage -fcallgraph-info=su` plus the runtime routines' frames from the disassembly, and the high-water painted under QEMU; the script fails if the painted figure exceeds the bound. The per-profile ceilings are per format: the quality profiles are runtime values over one instantiation, so they share code.* A footprint formula per engine in each README (`async`:
   `(L+1)·T·sizeof(coeff) + bit_ceil(fifo·channels)·sizeof(S) + scratch`; `bridge` and
   `rational` from their tables), a measured table per profile and format, and
   `-fstack-usage` high-water for `push`/`pull`/`process` on the M33 leg, pinned as
