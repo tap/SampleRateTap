@@ -345,7 +345,9 @@ The figures are bytes on a 64-bit host, stereo; a 32-bit target holds
 `sizeof(std::vector)` (12 instead of 24) less per history vector and nothing else
 changes. `tests/test_footprint.cpp` pins each formula against DspTap's heap meter
 (`tap/dsp/analysis/heap_meter.h`) exactly, on the hosted legs (not under ASan or TSan, whose runtime owns the allocator) and on Hexagon
-(32-bit), and checks that processing allocates nothing.
+(32-bit), and checks that processing allocates nothing. On Windows x64 the allocator asks for more than the formula: MSVC's `std::allocator` pads every
+request of 4096 bytes or more by 39 bytes to align it to 32 bytes, and the test counts each
+allocation through DspTap's model of that (`heap_meter::allocator_request`).
 
 ## Platform support
 

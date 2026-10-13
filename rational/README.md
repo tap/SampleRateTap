@@ -303,4 +303,6 @@ The figures are bytes on a 64-bit host; a 32-bit target holds `sizeof(std::vecto
 `tests/test_footprint.cpp` pins the stage formulas, held and peak, for all 14 ratios
 of the vocabulary, every profile and format, and every named chain's held bytes,
 against DspTap's heap meter (`tap/dsp/analysis/heap_meter.h`) exactly, on the hosted legs
-(not under ASan or TSan, whose runtime owns the allocator) and on Hexagon (32-bit), and checks that processing allocates nothing.
+(not under ASan or TSan, whose runtime owns the allocator) and on Hexagon (32-bit), and checks that processing allocates nothing. On Windows x64 the allocator asks for more than the formula: MSVC's `std::allocator` pads every
+request of 4096 bytes or more by 39 bytes to align it to 32 bytes, and the test counts each
+allocation through DspTap's model of that (`heap_meter::allocator_request`).

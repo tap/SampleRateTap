@@ -23,6 +23,12 @@
 // s of zeros for its flush. A chain's peak depends on the order its
 // stages are constructed in (unspecified for function arguments), so it is
 // printed, not pinned.
+//
+// Each term is one allocation (the history one of (T + 64) s per line), and
+// the test counts it as the request std::allocator makes for it
+// (heap_meter::allocator_request: MSVC's on x86 and x64 pads a request of 4096
+// bytes or more by 39 bytes), so the pins hold on every host; the README's
+// formulas are the stored bytes.
 #define TAP_DSP_HEAP_METER_REPLACE_GLOBAL_NEW
 #include <algorithm>
 #include <cstddef>
@@ -50,6 +56,11 @@ namespace {
     constexpr std::size_t k_pop_chunk    = 16; // and its pull() granularity
     constexpr std::size_t k_double_bytes = sizeof(double);
 
+    // One allocation of n stored bytes, as std::allocator requests it.
+    constexpr std::size_t request(std::size_t n) {
+        return heap_meter::allocator_request(n);
+    }
+
     template <typename Stage>
     std::size_t stage_held(const Stage& st) {
         using sample         = typename Stage::sample;
@@ -59,8 +70,8 @@ namespace {
         const std::size_t c  = sizeof(coeff);
         const std::size_t s  = sizeof(sample);
         const std::size_t ch = st.channels();
-        return Stage::k_rows * T * c + (T + k_hist_slack) * P * ch * s + k_pop_chunk * ch * s
-               + P * ch * sizeof(std::vector<sample>);
+        return request(Stage::k_rows * T * c) + P * ch * request((T + k_hist_slack) * s) + request(k_pop_chunk * ch * s)
+               + request(P * ch * sizeof(std::vector<sample>));
     }
 
     // The design's own peak, inside build_table (stage.h), for a pinned profile
@@ -73,24 +84,26 @@ namespace {
         const std::size_t T = st.row_length();
         const std::size_t c = sizeof(coeff);
         const std::size_t d = k_double_bytes;
-        const std::size_t h = d * N;
+        const std::size_t h = request(d * N);
         if constexpr (!Stage::k_is_decimator) {
             // rows, then a double row and its quantized copy (and the
             // fixed-point quantizer's remainder) per phase
             const std::size_t q = std::is_integral_v<sample> ? 1 : 0;
-            return h + Stage::k_rows * T * c + d * T + T * c + q * d * T;
+            return h + request(Stage::k_rows * T * c) + request(d * T) + request(T * c) + q * request(d * T);
         }
         else if constexpr (Stage::k_branch_quantized) {
             // Q15 decimator: the quantized taps, then per branch a double branch,
             // its Q15 copy and the quantizer's remainder; the rows after
             const std::size_t m = (N + 1) / (2 * Stage::k_band);
-            return std::max(h + c * N + d * 2 * m + c * 2 * m + d * 2 * m, h + c * N + c * (N + 1));
+            return std::max(h + request(c * N) + request(d * 2 * m) + request(c * 2 * m) + request(d * 2 * m),
+                            h + request(c * N) + request(c * (N + 1)));
         }
         else {
             // other decimators: the quantized taps and their scaled doubles
             // (and Q31's remainder), then the rows beside the taps
             const std::size_t q = std::is_same_v<sample, std::int32_t> ? 1 : 0;
-            return std::max(h + c * N + d * N + q * d * N, h + c * N + c * (N + 1));
+            return std::max(h + request(c * N) + request(d * N) + q * request(d * N),
+                            h + request(c * N) + request(c * (N + 1)));
         }
     }
 
@@ -128,7 +141,7 @@ namespace {
                 const auto               m    = measure_owned(st, ch, np.p);
                 const std::size_t        held = stage_held(*st);
                 EXPECT_EQ(m.live_bytes, held) << fmt << ' ' << ratio_name << ' ' << np.name << ' ' << ch;
-                EXPECT_EQ(m.peak_bytes, std::max(stage_design_peak(*st), k_double_bytes * st->taps() + held))
+                EXPECT_EQ(m.peak_bytes, std::max(stage_design_peak(*st), request(k_double_bytes * st->taps()) + held))
                     << fmt << ' ' << ratio_name << ' ' << np.name << ' ' << ch;
                 if (ch == 2) {
                     std::printf("[ measured ] rational stage %-3s %-9s %-13s 2 ch: N %3zu T %2zu, %6zu B held, %6zu "
@@ -189,9 +202,9 @@ namespace {
             }
         }(std::make_index_sequence<k>{});
         for (std::size_t i = 0; i + 1 < k; ++i) {
-            held += cap[i] * c.channels() * sizeof(sample);
+            held += request(cap[i] * c.channels() * sizeof(sample));
         }
-        return held + Chain::k_block * c.channels() * sizeof(sample);
+        return held + request(Chain::k_block * c.channels() * sizeof(sample));
     }
 
     template <typename Chain>

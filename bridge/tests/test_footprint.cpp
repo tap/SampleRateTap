@@ -17,6 +17,12 @@
 //   peak  = max(held, R T c + 8 L T + 8 T + q 8 T)
 //           the design: the table, the double prototype, the row being
 //           quantized, and (q = 1 for Q15 and Q31) the quantizer's remainder
+//
+// Each term is one allocation (the history one of (T + 64) s per channel), and
+// the test counts it as the request std::allocator makes for it
+// (heap_meter::allocator_request: MSVC's on x86 and x64 pads a request of 4096
+// bytes or more by 39 bytes), so the pins hold on every host; the README's
+// formulas are the stored bytes.
 #define TAP_DSP_HEAP_METER_REPLACE_GLOBAL_NEW
 #include <algorithm>
 #include <cstddef>
@@ -40,6 +46,11 @@ namespace {
     constexpr std::size_t k_hist_slack = 64; // basic_converter's append slack
     constexpr std::size_t k_pop_chunk  = 16; // and its pull() granularity
 
+    // One allocation of n stored bytes, as std::allocator requests it.
+    constexpr std::size_t request(std::size_t n) {
+        return heap_meter::allocator_request(n);
+    }
+
     template <typename S, direction D, unsigned K>
     struct formula {
         std::size_t held = 0;
@@ -58,8 +69,9 @@ namespace {
         const std::size_t ch = conv.channels();
         const std::size_t q  = std::is_integral_v<S> ? 1 : 0;
         formula<S, D, K>  f;
-        f.held = R * T * c + (T + k_hist_slack) * ch * s + k_pop_chunk * ch * s + ch * sizeof(std::vector<S>);
-        f.peak = std::max(f.held, R * T * c + 8 * L * T + 8 * T + q * 8 * T);
+        f.held = request(R * T * c) + ch * request((T + k_hist_slack) * s) + request(k_pop_chunk * ch * s)
+                 + request(ch * sizeof(std::vector<S>));
+        f.peak = std::max(f.held, request(R * T * c) + request(8 * L * T) + request(8 * T) + q * request(8 * T));
         return f;
     }
 

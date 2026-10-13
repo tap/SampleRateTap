@@ -26,6 +26,12 @@
 // prototype beside its own working set W, two more n-double buffers and its
 // grids, pinned below as measured (8 n + W). W is DspTap's: a bump that moves
 // it moves these pins and re-records them with the reason.
+//
+// Each term is one allocation, and the test counts it as the request
+// std::allocator makes for it (heap_meter::allocator_request: MSVC's on x86 and
+// x64 pads a request of 4096 bytes or more by 39 bytes), so the pins hold on
+// every host; the README's formulas are the stored bytes. The history is one
+// allocation of (T + 16) ch s frame-major, else one of (T + 16) s per channel.
 #define TAP_DSP_HEAP_METER_REPLACE_GLOBAL_NEW
 #include <algorithm>
 #include <bit>
@@ -49,17 +55,24 @@ namespace {
 
     constexpr std::size_t k_chunk_frames = 16; // basic_converter's pop chunk
 
+    // One allocation of n stored bytes, as std::allocator requests it.
+    constexpr std::size_t request(std::size_t n) {
+        return heap_meter::allocator_request(n);
+    }
+
     // The compensated designer's working set beyond the prototype, measured
-    // (bytes): balanced (L 256, T 48), program (512, 32), transparent (512, 80).
+    // (bytes): balanced (L 256, T 48), program (512, 32), transparent (512, 80);
+    // three of its allocations are of 4096 bytes or more in each.
     std::size_t compensated_working_set(const filter_spec& f) {
+        constexpr std::size_t big = 3 * heap_meter::k_big_allocation_padding;
         if (f.num_phases == 256 && f.taps_per_phase == 48) {
-            return 201752;
+            return 201752 + big;
         }
         if (f.num_phases == 512 && f.taps_per_phase == 32) {
-            return 262712;
+            return 262712 + big;
         }
         if (f.num_phases == 512 && f.taps_per_phase == 80) {
-            return 657528;
+            return 657528 + big;
         }
         ADD_FAILURE() << "no pinned working set for L " << f.num_phases << " T " << f.taps_per_phase;
         return 0;
@@ -67,13 +80,15 @@ namespace {
 
     template <typename S>
     std::size_t peak_formula(std::size_t held, const config& cfg) {
-        using coeff                    = typename sample_traits<S>::coeff;
-        const std::size_t L            = cfg.filter.num_phases;
-        const std::size_t T            = cfg.filter.taps_per_phase;
-        const std::size_t n            = L * T;
-        const std::size_t q            = std::is_integral_v<S> ? 1 : 0;
-        const std::size_t table_phase  = 8 * n + (L + 1) * T * sizeof(coeff) + 8 * T + q * 8 * T;
-        const std::size_t design_phase = cfg.filter.image_zeros ? 8 * n + compensated_working_set(cfg.filter) : 0;
+        using coeff         = typename sample_traits<S>::coeff;
+        const std::size_t L = cfg.filter.num_phases;
+        const std::size_t T = cfg.filter.taps_per_phase;
+        const std::size_t n = L * T;
+        const std::size_t q = std::is_integral_v<S> ? 1 : 0;
+        const std::size_t table_phase =
+            request(8 * n) + request((L + 1) * T * sizeof(coeff)) + request(8 * T) + q * request(8 * T);
+        const std::size_t design_phase =
+            cfg.filter.image_zeros ? request(8 * n) + compensated_working_set(cfg.filter) : 0;
         return std::max({held, table_phase, design_phase});
     }
 
@@ -89,8 +104,10 @@ namespace {
             cfg.fifo_frames != 0 ? cfg.fifo_frames : std::max<std::size_t>(1024, 4 * (cfg.target_latency_frames + T));
         const bool frame_major = fractional_resampler<S>::k_channel_parallel && ch >= TAP_SR_ASYNC_CP_MIN_CHANNELS;
         const std::size_t H    = frame_major ? 1 : ch;
-        return (L + 1) * T * c + std::bit_ceil(F * ch) * s + k_chunk_frames * ch * s + (T + k_chunk_frames) * ch * s
-               + T * c + H * sizeof(std::vector<S>);
+        const std::size_t history =
+            frame_major ? request((T + k_chunk_frames) * ch * s) : ch * request((T + k_chunk_frames) * s);
+        return request((L + 1) * T * c) + request(std::bit_ceil(F * ch) * s) + request(k_chunk_frames * ch * s)
+               + history + request(T * c) + request(H * sizeof(std::vector<S>));
     }
 
     struct measured {
