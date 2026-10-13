@@ -34,6 +34,11 @@ foreach(_sc IN LISTS _rational_icount_scenarios)
     target_link_libraries(tap_sr_rational_icount_${_name} PRIVATE tap::sr::rational tap_sr_rational_warnings)
 endforeach()
 
+# The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
+# them against bench/ceilings.json).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)
+tap_sr_add_probes(rational probe_main.cpp tap::sr::rational tap_sr_rational_warnings)
+
 # Cross-resampler comparison workloads (docs/COMPARISON.md): the same fixed
 # task through rational and through libsamplerate, r8brain and SpeexDSP,
 # built for the same target, at four ratios of the vocabulary. Named

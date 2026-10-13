@@ -221,6 +221,55 @@ changes. `tests/test_footprint.cpp` pins each formula against DspTap's heap mete
 request of 4096 bytes or more by 39 bytes to align it to 32 bytes, and the test counts each
 allocation through DspTap's model of that (`heap_meter::allocator_request`).
 
+
+### Code size and stack
+
+The code a deployment links and the stack each call needs are gated beside the
+instruction counts, by `scripts/ceilings.py` against `bench/ceilings.json`, on one
+probe per format (`bench/icount/probe_main.cpp`): the duplex pair at the default
+profile, stereo, a 44.1 → 48 kHz converter and a 48 → 44.1 kHz one each streaming
+32-frame blocks through `process()` (the `up` and `down` calls), built Release in the
+ratchet's tree.
+
+- **Engine `.text` and `.rodata`** are the probe's own translation unit, from its
+  link map: the two converters as instantiated.
+- **Image** is the whole linked probe's `.text` + `.rodata`. That includes the runtime
+  it pulls in (newlib or musl, the C++ library, libgcc's soft double, libm) and the
+  startup.
+- **Static worst path** (M33) is the deepest chain of frames from the call. It takes
+  GCC's frames (`-fstack-usage -fcallgraph-info=su`) for the compiled code and the
+  disassembly's for the precompiled runtime routines the call reaches, so it bounds
+  every path.
+- **Measured high-water** (M33) is what the call used, painted and read under QEMU
+  over a second of blocks. It is never above the bound; the script fails if it is.
+
+Each ceiling is the recorded figure plus 3 %, rounded up to 64 bytes for sizes or 8
+for stack. A change that moves a figure past its ceiling re-records the file in the
+same PR, with the reason.
+
+<!-- ceilings:begin (scripts/ceilings.py docs; do not edit by hand) -->
+| target | format | engine `.text` (bytes) | ceiling | engine `.rodata` (bytes) | ceiling | image (bytes) | ceiling |
+|---|---|--:|--:|--:|--:|--:|--:|
+| m33 | f32 | 31,080 | 32,064 | 1,544 | 1,600 | 65,097 | 67,072 |
+| m33 | q15 | 32,688 | 33,728 | 1,544 | 1,600 | 66,897 | 68,928 |
+| m33 | q31 | 31,876 | 32,896 | 1,544 | 1,600 | 66,089 | 68,096 |
+| m55 | f32 | 28,136 | 28,992 | 1,544 | 1,600 | 61,689 | 63,552 |
+| m55 | q15 | 36,840 | 37,952 | 1,544 | 1,600 | 70,705 | 72,832 |
+| m55 | q31 | 31,520 | 32,512 | 1,544 | 1,600 | 65,377 | 67,392 |
+| hexagon | f32 | 93,212 | 96,064 | 1,228 | 1,280 | 369,520 | 380,608 |
+| hexagon | q15 | 97,712 | 100,672 | 1,228 | 1,280 | 374,608 | 385,856 |
+| hexagon | q31 | 97,284 | 100,224 | 1,228 | 1,280 | 374,192 | 385,472 |
+
+| M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
+|---|---|--:|--:|--:|--:|
+| `up` | f32 | 320 | 336 | 216 | 224 |
+| `up` | q15 | 288 | 304 | 268 | 280 |
+| `up` | q31 | 272 | 288 | 172 | 184 |
+| `down` | f32 | 328 | 344 | 216 | 224 |
+| `down` | q15 | 288 | 304 | 268 | 280 |
+| `down` | q31 | 272 | 288 | 172 | 184 |
+<!-- ceilings:end -->
+
 ## License
 
 MIT (see [LICENSE](../LICENSE)), consistent with the family. Style is the

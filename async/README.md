@@ -349,6 +349,54 @@ changes. `tests/test_footprint.cpp` pins each formula against DspTap's heap mete
 request of 4096 bytes or more by 39 bytes to align it to 32 bytes, and the test counts each
 allocation through DspTap's model of that (`heap_meter::allocator_request`).
 
+
+### Code size and stack
+
+The code a deployment links and the stack each call needs are gated beside the
+instruction counts, by `scripts/ceilings.py` against `bench/ceilings.json`, on one
+probe per format (`bench/icount/probe_main.cpp`): one stereo converter at the default
+profile streaming 32-frame blocks through `push()` and `pull()`, built Release in the
+ratchet's tree.
+
+- **Engine `.text` and `.rodata`** are the probe's own translation unit, from its
+  link map: the converter as instantiated.
+- **Image** is the whole linked probe's `.text` + `.rodata`. That includes the runtime
+  it pulls in (newlib or musl, the C++ library, libgcc's soft double, libm) and the
+  startup.
+- **Static worst path** (M33) is the deepest chain of frames from the call. It takes
+  GCC's frames (`-fstack-usage -fcallgraph-info=su`) for the compiled code and the
+  disassembly's for the precompiled runtime routines the call reaches, so it bounds
+  every path.
+- **Measured high-water** (M33) is what the call used, painted and read under QEMU
+  over a second of blocks. It is never above the bound; the script fails if it is.
+
+Each ceiling is the recorded figure plus 3 %, rounded up to 64 bytes for sizes or 8
+for stack. A change that moves a figure past its ceiling re-records the file in the
+same PR, with the reason.
+
+<!-- ceilings:begin (scripts/ceilings.py docs; do not edit by hand) -->
+| target | format | engine `.text` (bytes) | ceiling | engine `.rodata` (bytes) | ceiling | image (bytes) | ceiling |
+|---|---|--:|--:|--:|--:|--:|--:|
+| m33 | f32 | 15,172 | 15,680 | 1,359 | 1,408 | 49,161 | 50,688 |
+| m33 | q15 | 15,956 | 16,448 | 1,359 | 1,408 | 50,137 | 51,648 |
+| m33 | q31 | 16,068 | 16,576 | 1,359 | 1,408 | 50,249 | 51,776 |
+| m55 | f32 | 12,220 | 12,608 | 1,359 | 1,408 | 45,921 | 47,360 |
+| m55 | q15 | 12,872 | 13,312 | 1,359 | 1,408 | 46,769 | 48,192 |
+| m55 | q31 | 13,024 | 13,440 | 1,359 | 1,408 | 46,929 | 48,384 |
+| hexagon | f32 | 30,396 | 31,360 | 0 | 0 | 308,128 | 317,376 |
+| hexagon | q15 | 31,760 | 32,768 | 0 | 0 | 310,112 | 319,424 |
+| hexagon | q31 | 31,772 | 32,768 | 0 | 0 | 310,080 | 319,424 |
+
+| M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
+|---|---|--:|--:|--:|--:|
+| `push` | f32 | 40 | 48 | 40 | 48 |
+| `push` | q15 | 40 | 48 | 40 | 48 |
+| `push` | q31 | 40 | 48 | 40 | 48 |
+| `pull` | f32 | 276 | 288 | 256 | 264 |
+| `pull` | q15 | 260 | 272 | 240 | 248 |
+| `pull` | q31 | 228 | 240 | 208 | 216 |
+<!-- ceilings:end -->
+
 ## Platform support
 
 CI builds and tests every push on:

@@ -306,3 +306,50 @@ against DspTap's heap meter (`tap/dsp/analysis/heap_meter.h`) exactly, on the ho
 (not under ASan or TSan, whose runtime owns the allocator) and on Hexagon (32-bit), and checks that processing allocates nothing. On Windows x64 the allocator asks for more than the formula: MSVC's `std::allocator` pads every
 request of 4096 bytes or more by 39 bytes to align it to 32 bytes, and the test counts each
 allocation through DspTap's model of that (`heap_meter::allocator_request`).
+
+### Code size and stack
+
+The code a deployment links and the stack each call needs are gated beside the
+instruction counts, by `scripts/ceilings.py` against `bench/ceilings.json`, on one
+probe per format (`bench/icount/probe_main.cpp`): the by-2 pair at the default
+profile, stereo, an `up_2` stage and a `down_2` stage each streaming 32-frame blocks
+through `process()` (the `up` and `down` calls), built Release in the ratchet's tree.
+
+- **Engine `.text` and `.rodata`** are the probe's own translation unit, from its
+  link map: the two stages as instantiated.
+- **Image** is the whole linked probe's `.text` + `.rodata`. That includes the runtime
+  it pulls in (newlib or musl, the C++ library, libgcc's soft double, libm) and the
+  startup.
+- **Static worst path** (M33) is the deepest chain of frames from the call. It takes
+  GCC's frames (`-fstack-usage -fcallgraph-info=su`) for the compiled code and the
+  disassembly's for the precompiled runtime routines the call reaches, so it bounds
+  every path.
+- **Measured high-water** (M33) is what the call used, painted and read under QEMU
+  over a second of blocks. It is never above the bound; the script fails if it is.
+
+Each ceiling is the recorded figure plus 3 %, rounded up to 64 bytes for sizes or 8
+for stack. A change that moves a figure past its ceiling re-records the file in the
+same PR, with the reason.
+
+<!-- ceilings:begin (scripts/ceilings.py docs; do not edit by hand) -->
+| target | format | engine `.text` (bytes) | ceiling | engine `.rodata` (bytes) | ceiling | image (bytes) | ceiling |
+|---|---|--:|--:|--:|--:|--:|--:|
+| m33 | f32 | 8,964 | 9,280 | 996 | 1,088 | 43,497 | 44,864 |
+| m33 | q15 | 11,044 | 11,392 | 996 | 1,088 | 45,777 | 47,168 |
+| m33 | q31 | 10,520 | 10,880 | 996 | 1,088 | 45,249 | 46,656 |
+| m55 | f32 | 7,900 | 8,192 | 996 | 1,088 | 43,657 | 44,992 |
+| m55 | q15 | 9,708 | 10,048 | 996 | 1,088 | 45,769 | 47,168 |
+| m55 | q31 | 9,456 | 9,792 | 996 | 1,088 | 45,521 | 46,912 |
+| hexagon | f32 | 19,384 | 19,968 | 428 | 448 | 296,776 | 305,728 |
+| hexagon | q15 | 21,304 | 21,952 | 428 | 448 | 299,304 | 308,288 |
+| hexagon | q31 | 20,096 | 20,736 | 428 | 448 | 298,152 | 307,136 |
+
+| M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
+|---|---|--:|--:|--:|--:|
+| `up` | f32 | 128 | 136 | 128 | 136 |
+| `up` | q15 | 128 | 136 | 112 | 120 |
+| `up` | q31 | 96 | 104 | 96 | 104 |
+| `down` | f32 | 104 | 112 | 104 | 112 |
+| `down` | q15 | 104 | 112 | 88 | 96 |
+| `down` | q31 | 88 | 96 | 88 | 96 |
+<!-- ceilings:end -->

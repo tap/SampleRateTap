@@ -28,6 +28,11 @@ foreach(_sc IN LISTS _srt_icount_scenarios)
         tap::sr::async tap_sr_async_warnings)
 endforeach()
 
+# The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
+# them against bench/ceilings.json).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)
+tap_sr_add_probes(async probe_main.cpp tap::sr::async tap_sr_async_warnings)
+
 # Cross-resampler comparison workloads (docs/COMPARISON.md): same fixed
 # workload through our datapath and through libsamplerate and r8brain, built for the
 # same target. Named cmp_icount_* so the ratchet's tap_sr_async_icount_* glob never

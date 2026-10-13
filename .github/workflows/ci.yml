@@ -585,8 +585,26 @@ jobs:
           python3 scripts/icount.py --engine rational --target ${{ matrix.target }}
           --build-dir build --plugin /tmp/libinsncount.so
 
+      # The size and stack ceilings (scripts/ceilings.py, <engine>/bench/
+      # ceilings.json): each engine's probes, built above in the same tree,
+      # gated one-sided; on m33 also each call's static worst path and
+      # painted high-water. Independent of the counts, so they run whatever
+      # the ratchet steps did.
+      - name: Ceilings async
+        if: ${{ !cancelled() }}
+        run: python3 scripts/ceilings.py measure --engine async --target ${{ matrix.target }} --build-dir build
+
+      - name: Ceilings bridge
+        if: ${{ !cancelled() }}
+        run: python3 scripts/ceilings.py measure --engine bridge --target ${{ matrix.target }} --build-dir build
+
+      - name: Ceilings rational
+        if: ${{ !cancelled() }}
+        run: python3 scripts/ceilings.py measure --engine rational --target ${{ matrix.target }} --build-dir build
+
   # Each engine README's instruction-count table derives 1:1 from its
-  # committed baselines; regenerating it must produce no diff.
+  # committed baselines, and its ceilings tables from bench/ceilings.json;
+  # regenerating them must produce no diff.
   icount-docs:
     name: Icount docs freshness (${{ matrix.engine }})
     runs-on: ubuntu-latest
@@ -602,6 +620,8 @@ jobs:
           python3 scripts/update_icount_docs.py --engine ${{ matrix.engine }}
           git diff --exit-code ${{ matrix.engine }}/README.md || {
             echo "::error::${{ matrix.engine }}/README.md icount table is stale; run scripts/update_icount_docs.py --engine ${{ matrix.engine }}"; exit 1; }
+          python3 scripts/ceilings.py docs --engine ${{ matrix.engine }} --check || {
+            echo "::error::${{ matrix.engine }}/README.md ceilings table is stale; run scripts/ceilings.py docs --engine ${{ matrix.engine }}"; exit 1; }
 
   # The embedded tables in each engine's docs/COMPARISON.md derive 1:1 from
   # its committed compare.yml record; regenerating them must produce no diff.
