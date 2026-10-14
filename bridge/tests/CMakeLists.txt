@@ -32,6 +32,7 @@ add_executable(tap_sr_bridge_tests
     test_converter.cpp
     test_converter_fixed_point.cpp
     test_cross_validation.cpp
+    test_non_finite.cpp
     test_design.cpp
     test_phase_table.cpp
     test_schedule.cpp

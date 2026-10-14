@@ -578,6 +578,17 @@ sources directly — they are plain Markdown.
   `tests/test_converter_threads.cpp`: lock at +500 ppm, a consumer stall into a
   hard resync, a `reset_from_consumer()`, a poller reading `status()`
   throughout), on x86 in CI and on arm64 silicon weekly.
+- Non-finite input is bounded, not repaired. A NaN or ±Inf sample corrupts
+  only the outputs whose window covers it, on its own channel (a burst of n
+  frames reaches at most n + taps + 1 outputs), and it never reaches the
+  clock recovery, which reads counts only: a converter that took a burst and
+  a twin that did not report the same `status()` bit for bit at every pull
+  and agree on every later output (`NonFinite.*`,
+  `tests/test_non_finite.cpp`: 71 outputs for a 24-frame burst at 48 taps,
+  locked at +500 ppm). The float path accumulates in double, where every
+  float denormal is a normal number, so no denormal arises inside a dot
+  product; the output, rounded back to float, may carry denormals onward,
+  and the converter does not flush them. Q15 and Q31 have neither.
 
 ## Provenance and license
 

@@ -357,3 +357,14 @@ same PR, with the reason.
 | `down` | q15 | 104 | 112 | 88 | 96 |
 | `down` | q31 | 88 | 96 | 88 | 96 |
 <!-- ceilings:end -->
+
+## Non-finite input and denormals
+
+A NaN or ±Inf input sample corrupts only the outputs whose windows, stage by stage, cover it, on
+its own channel, and every output after them is bit-identical to a chain's that never saw it,
+because each stage is a pure FIR with nothing computed from a sample's value
+(`non_finite_test.*`, `tests/test_non_finite.cpp`, in float and double: a 24-frame burst reaches
+114 outputs through ↑3, 33 through ↓2 and 401 through the 8/1 chain). The float datapath accumulates in double, where every float denormal is a normal number, so no
+denormal arises inside a dot product; the output, rounded back to float, may carry denormals onward
+(a decaying tail, a denormal input passed through), and the converter does not flush them. Q15 and Q31
+have neither.
