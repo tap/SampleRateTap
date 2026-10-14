@@ -59,7 +59,7 @@ is this checklist, not an opinion.
 | P6 | Worst single-call cost gated (QEMU per-call max) | ✓ (A6) | ✓ (A6) | ✓ (A6) |
 | P7 | Measured on silicon: cycles, `%core@48k`, construction time | **open** (B2) | **open** (B2) | **open** (B1, B2) |
 | P8 | Clock recovery proven on independent crystals, hours, zero underruns | n/a | n/a | **open** (B1) |
-| P9 | Non-finite input behaviour pinned | **open** (A7) | **open** (A7) | **open** (A7) |
+| P9 | Non-finite input behaviour pinned | ✓ (A7) | ✓ (A7) | ✓ (A7) |
 | P10 | Host hot path gated | **open** (A8) | **open** (A8) | **open** (A8) |
 | P11 | C ABI: one error model, extension rule, compat test, version probe | **open** (C3) | **open** (C3) | **open** (C3) |
 | P12 | Versioned substrate pin asserted at compile time | **open** (A9) | **open** (A9) | **open** (A9) |
@@ -111,7 +111,7 @@ gated on shipping.
   carries a whole-sample slip, a ring wrap, a servo promotion, the fade, a hard resync),
   gated two-sided. The host p99/max `pull(128)` row of the metrics table is measured on the
   Setup 1 Pi under `SCHED_FIFO` in Block B and recorded as a trend, never gated on CI.
-- **A7. Non-finite and denormal input.** One test per engine that a NaN/Inf burst clears
+- **A7. Non-finite and denormal input.** *Landed 2026-10-14: `<engine>/tests/test_non_finite.cpp` streams two copies of each engine side by side, one with a 24-frame NaN/±Inf burst on one channel. Outside the outputs whose windows cover the burst, the two agree bit for bit, the other channel throughout, and every output that differs is non-finite. The span is bounded by the window mapped through the ratio: async 71 outputs at 48 taps, bridge 67 up and 75 down, rational 114 through ↑3, 33 through ↓2 and 401 through the 8/1 chain, in float and double. async's twins also report the same `status()` bit for bit at every pull, locked at +500 ppm, so the burst never reaches the servo. Each README states the bound and the denormal sentences.* One test per engine that a NaN/Inf burst clears
   after one window and does not poison the servo (it reads counts only), two sentences per
   README on denormals (float accumulates in double; output may carry denormals onward).
 - **A8. A host ratchet.** Deterministic `Ir` from callgrind (or `perf stat -e

@@ -42,6 +42,7 @@ add_executable(tap_sr_async_tests
     test_hardening.cpp
     test_latency.cpp
     test_multichannel.cpp
+    test_non_finite.cpp
     test_output_hash.cpp)
 target_link_libraries(tap_sr_async_tests PRIVATE
     tap::sr::async
