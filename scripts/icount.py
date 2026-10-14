@@ -11,6 +11,20 @@ compares against that engine's committed baselines
   icount.py --target {hexagon,m55,m33} --build-dir DIR --plugin LIB
             [--engine {async,bridge,rational}] [--baselines FILE] [--tolerance 0.03]
             [--exact] [--update] [--json-out FILE] [--compare-json FILE]
+  icount.py --target host --build-dir DIR [--engine ...] [the same options]
+
+--target host is the host ratchet (the roadmap's A8): the engine's
+tap_sr_<engine>_hostcount_* workloads (<engine>/bench/icount/host_main.cpp),
+built natively, run under valgrind's callgrind, which counts the executed
+instructions (Ir) of the one function each workload names
+tap_sr_host_counted (--toggle-collect): the streaming loop, with the
+construction, the fixture and process start-up outside it. The run is
+pinned so the count is a function of the binary and the C library alone:
+an empty environment, eager binding (no lazy PLT resolution inside the
+window), and glibc's CPU-dispatched routines (memcpy, libm) held to their
+baseline x86-64 variants through GLIBC_TUNABLES, so a runner whose CPU has
+other extensions counts the same code. The baselines sit under the "host"
+key of the same file, gated the same way.
 
 A callmax_* scenario is the worst single call (the roadmap's A6): its
 workload brackets each pull() or process() with tools/probe/call_marker.h's
@@ -51,9 +65,12 @@ import sys
 # repositories' originals on purpose (rational's from its first baseline):
 # they are part of what the counted binaries execute.
 ENGINES = {
-    "async": {"prefix": "tap_sr_async_icount_", "done": "SRT_ICOUNT_DONE"},
-    "bridge": {"prefix": "tap_sr_bridge_icount_", "done": "RATIO_ICOUNT_DONE"},
-    "rational": {"prefix": "tap_sr_rational_icount_", "done": "RATIONAL_ICOUNT_DONE"},
+    "async": {"prefix": "tap_sr_async_icount_", "host_prefix": "tap_sr_async_hostcount_",
+              "done": "SRT_ICOUNT_DONE"},
+    "bridge": {"prefix": "tap_sr_bridge_icount_", "host_prefix": "tap_sr_bridge_hostcount_",
+               "done": "RATIO_ICOUNT_DONE"},
+    "rational": {"prefix": "tap_sr_rational_icount_", "host_prefix": "tap_sr_rational_hostcount_",
+                 "done": "RATIONAL_ICOUNT_DONE"},
 }
 # Printed by the host-side plugin; never affects the guest's count.
 COUNT_MARKER = "TAP_SR_INSN_COUNT"
@@ -71,6 +88,28 @@ CALL_MAX_PREFIX = "callmax_"
 # (main(0, NULL) under -nostartfiles).
 HEXAGON_RUN_DIR = "/tmp/tap-icount"
 HEXAGON_ARGV0 = "w"
+
+# The host target (callgrind). The counted function every host workload
+# defines, callgrind's summary line, and the pinned environment: eager
+# binding, and glibc's CPU dispatch held to the x86-64 baseline (a runner
+# with AVX-512 would otherwise count a different memcpy). Unknown feature
+# names are ignored by glibc, so the list names every extension its x86
+# dispatch consults.
+HOST_COUNTED = "tap_sr_host_counted"
+HOST_COLLECTED = re.compile(r"Collected : (\d+)")
+HOST_ENV = {
+    "LD_BIND_NOW": "1",
+    "GLIBC_TUNABLES": "glibc.cpu.hwcaps=" + ",".join(
+        "-" + f for f in ("AVX", "AVX2", "AVX512F", "AVX512VL", "AVX512BW", "AVX512DQ",
+                          "ERMS", "FSRM", "FMA", "FMA4", "BMI1", "BMI2", "LZCNT", "MOVBE",
+                          "POPCNT", "SSE4_1", "SSE4_2", "SSSE3", "AVX_Fast_Unaligned_Load",
+                          "Prefer_No_VZEROUPPER", "Fast_Unaligned_Copy"))
+    # The copy strategies' size thresholds, which glibc otherwise derives
+    # from the CPU's cache sizes.
+    + ":glibc.cpu.x86_non_temporal_threshold=0x100000"
+    + ":glibc.cpu.x86_rep_movsb_threshold=0x800"
+    + ":glibc.cpu.x86_rep_stosb_threshold=0x800",
+}
 
 
 def qemu_cmd(target: str, plugin: str, binary: str) -> list[str]:
@@ -94,8 +133,32 @@ def qemu_cmd(target: str, plugin: str, binary: str) -> list[str]:
     raise SystemExit(f"unknown target {target}")
 
 
+def measure_host(binary: str, done_marker: str) -> tuple[int, str]:
+    valgrind = shutil.which("valgrind")
+    if valgrind is None:
+        raise SystemExit("valgrind not found on PATH")
+    cmd = [valgrind, "--tool=callgrind", f"--toggle-collect={HOST_COUNTED}",
+           "--callgrind-out-file=/dev/null", binary]
+    try:
+        proc = subprocess.run(cmd, timeout=900, capture_output=True, text=True, env=HOST_ENV)
+    except subprocess.TimeoutExpired:
+        raise SystemExit(f"{binary}: timed out after 900 s under callgrind")
+    out = proc.stdout + proc.stderr
+    done = re.search(done_marker + r" ok=1 checksum=(\S+)", out)
+    if proc.returncode != 0 or not done:
+        print(out, file=sys.stderr)
+        raise SystemExit(f"{binary}: workload did not complete cleanly")
+    m = HOST_COLLECTED.search(out)
+    if not m or int(m.group(1)) == 0:
+        print(out, file=sys.stderr)
+        raise SystemExit(f"{binary}: callgrind collected nothing (no {HOST_COUNTED}?)")
+    return int(m.group(1)), done.group(1)
+
+
 def measure(target: str, plugin: str, binary: str, done_marker: str,
             call_max: bool = False) -> tuple[int, str]:
+    if target == "host":
+        return measure_host(binary, done_marker)
     env = None
     label = os.path.basename(binary)  # before Hexagon's fixed-path copy renames it
     if target == "hexagon":
@@ -133,9 +196,9 @@ def measure(target: str, plugin: str, binary: str, done_marker: str,
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--target", required=True, choices=["hexagon", "m55", "m33"])
+    ap.add_argument("--target", required=True, choices=["hexagon", "m55", "m33", "host"])
     ap.add_argument("--build-dir", required=True)
-    ap.add_argument("--plugin", required=True)
+    ap.add_argument("--plugin", help="the QEMU counting plugin (not used by --target host)")
     ap.add_argument("--engine", choices=sorted(ENGINES), default="async")
     ap.add_argument("--baselines", help="default: <engine>/bench/baselines.json")
     ap.add_argument("--tolerance", type=float, default=0.03)
@@ -150,8 +213,10 @@ def main() -> int:
         raise SystemExit("--update and --compare-json are mutually exclusive")
     tolerance = 0.0 if (args.exact or args.compare_json) else args.tolerance
 
+    if args.target != "host" and not args.plugin:
+        raise SystemExit(f"--plugin is required for --target {args.target}")
     engine = ENGINES[args.engine]
-    prefix = engine["prefix"]
+    prefix = engine["host_prefix"] if args.target == "host" else engine["prefix"]
     if args.baselines is None:
         args.baselines = f"{args.engine}/bench/baselines.json"
     binaries = sorted(glob.glob(os.path.join(args.build_dir, "**", prefix + "*"),

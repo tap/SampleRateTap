@@ -11,6 +11,10 @@
     "pipeline_q15": 204476476,
     "pipeline_q31": 205223931
   },
+  "host": {
+    "pipeline_float_12ch": 362078536,
+    "pipeline_float_2ch": 109526808
+  },
   "m33": {
     "callmax_pull_float": 259294,
     "callmax_pull_q15": 32878,

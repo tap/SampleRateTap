@@ -40,6 +40,19 @@ def table(baselines: dict, engine: str) -> str:
         cells = " | ".join(f"{baselines[t][s]:,}" if s in baselines[t] else "—"
                            for t in targets)
         lines.append(f"| `{s}` | {cells} |")
+    host = baselines.get("host")
+    if host:
+        lines += [
+            "",
+            "On the host, the float converter in 128-frame blocks at 2 and 12 channels "
+            f"(`{engine}/bench/icount/host_main.cpp`): instructions executed by the "
+            "streaming loop alone, counted under callgrind on x86-64 with GCC 13 "
+            "(`scripts/icount.py --target host`), gated the same way:",
+            "",
+            "| Workload | x86-64 |",
+            "|---|---:|",
+        ]
+        lines += [f"| `{s}` | {host[s]:,} |" for s in sorted(host)]
     return "\n".join(lines)
 
 

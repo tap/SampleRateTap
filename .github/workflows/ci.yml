@@ -602,6 +602,58 @@ jobs:
         if: ${{ !cancelled() }}
         run: python3 scripts/ceilings.py measure --engine rational --target ${{ matrix.target }} --build-dir build
 
+  # The host ratchet (the roadmap's A8): each engine's float converter in
+  # 128-frame blocks at 2 and 12 channels, built natively and counted under
+  # callgrind (<engine>/bench/icount/host_main.cpp, scripts/icount.py
+  # --target host), gated two-sided at ±3% against the "host" key of each
+  # engine's bench/baselines.json. Only the streaming loop is counted, and
+  # glibc's CPU dispatch is pinned to the x86-64 baseline, so the count is a
+  # function of the compiler, the C library and the code, not the runner's
+  # CPU. The 12-channel async rows are the channel-parallel path, which no
+  # QEMU leg executes.
+  host-ratchet:
+    name: Instruction-count ratchet (host)
+    # Pinned image: the counts move with the image's GCC and glibc.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          submodules: recursive
+
+      - name: Install valgrind
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q valgrind ninja-build
+
+      # What produced the counts: the image, the compiler and the C library.
+      - name: Record image and toolchain versions
+        run: |
+          echo "image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          dpkg-query -W g++-13 libc6 valgrind
+          g++-13 --version | head -1
+
+      # Release (CMake's -O3 -DNDEBUG), no -march: the code is the
+      # x86-64 baseline whatever the runner's CPU.
+      - name: Build the host workloads
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-13 \
+            -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF -DTAP_SR_BUILD_ICOUNT_BENCH=ON
+          targets=$(cmake --build build --target help | sed -n 's/^\(tap_sr_[a-z]*_hostcount_[a-z0-9_]*\):.*/\1/p')
+          test -n "$targets"
+          cmake --build build -j 4 --target $targets
+
+      - name: Ratchet async
+        run: python3 scripts/icount.py --engine async --target host --build-dir build
+
+      - name: Ratchet bridge
+        if: ${{ !cancelled() }}
+        run: python3 scripts/icount.py --engine bridge --target host --build-dir build
+
+      - name: Ratchet rational
+        if: ${{ !cancelled() }}
+        run: python3 scripts/icount.py --engine rational --target host --build-dir build
+
   # Each engine README's instruction-count table derives 1:1 from its
   # committed baselines, and its ceilings tables from bench/ceilings.json;
   # regenerating them must produce no diff.

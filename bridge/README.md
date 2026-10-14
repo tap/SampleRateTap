@@ -187,6 +187,15 @@ Executed instructions per fixed workload (`bridge/bench/icount/`), measured unde
 | `up_q15_eco` | 133,914,472 | 19,095,905 | 35,990,378 |
 | `up_q15_se` | 103,390,933 | 17,493,186 | 27,424,077 |
 | `up_q31_eco` | 184,954,171 | 72,647,042 | 36,007,820 |
+
+On the host, the float converter in 128-frame blocks at 2 and 12 channels (`bridge/bench/icount/host_main.cpp`): instructions executed by the streaming loop alone, counted under callgrind on x86-64 with GCC 13 (`scripts/icount.py --target host`), gated the same way:
+
+| Workload | x86-64 |
+|---|---:|
+| `down_float_12ch` | 593,181,679 |
+| `down_float_2ch` | 99,664,796 |
+| `up_float_12ch` | 470,621,528 |
+| `up_float_2ch` | 79,352,295 |
 <!-- ICOUNT:END -->
 
 ## Footprint

@@ -49,6 +49,24 @@ foreach(_sc IN ITEMS callmax_up2_float:0 callmax_down2_float:1 callmax_up2_q15:2
     target_link_libraries(tap_sr_rational_icount_${_name} PRIVATE tap::sr::rational tap_sr_rational_warnings)
 endforeach()
 
+# The host ratchet's workloads (host_main.cpp, the roadmap's A8): the float stage in 128-frame blocks, up and down by 2,
+# stereo and 12 channels, counted under callgrind by scripts/icount.py
+# --target host. Named tap_sr_rational_hostcount_*, apart from the QEMU glob;
+# host builds only.
+if(NOT CMAKE_CROSSCOMPILING)
+    foreach(_sc IN ITEMS up2:0 down2:1)
+        string(REPLACE ":" ";" _parts "${_sc}")
+        list(GET _parts 0 _name)
+        list(GET _parts 1 _dir)
+        foreach(_ch IN ITEMS 2 12)
+            set(_t tap_sr_rational_hostcount_${_name}_float_${_ch}ch)
+            add_executable(${_t} host_main.cpp)
+            target_compile_definitions(${_t} PRIVATE TAP_SR_RATIONAL_HC_DIR=${_dir} TAP_SR_RATIONAL_HC_CH=${_ch})
+            target_link_libraries(${_t} PRIVATE tap::sr::rational tap_sr_rational_warnings)
+        endforeach()
+    endforeach()
+endif()
+
 # The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
 # them against bench/ceilings.json).
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)
