@@ -31,6 +31,7 @@
 // instruction-count ratchet (bench/).
 #pragma once
 
+#include "tap/dsp/version.h"
 #include "tap/sr/rational/chain.h"     // IWYU pragma: export
 #include "tap/sr/rational/converter.h" // IWYU pragma: export
 #include "tap/sr/rational/design.h"    // IWYU pragma: export
@@ -40,3 +41,11 @@
 #define TAP_SR_VERSION_MAJOR 0
 #define TAP_SR_VERSION_MINOR 6
 #define TAP_SR_VERSION_PATCH 0
+
+// The oldest DspTap this family was tested with (the roadmap's A9; the root
+// README's tested pairs), defined token-identically in each engine's
+// umbrella header like the family version (D13) and checked against the
+// pinned substrate's tap/dsp/version.h.
+#define TAP_SR_DSPTAP_MINIMUM TAP_DSP_VERSION_ENCODE(0, 1, 0)
+static_assert(TAP_DSP_VERSION >= TAP_SR_DSPTAP_MINIMUM,
+              "tap::sr::rational needs DspTap 0.1.0 or newer (submodules/dsptap)");
