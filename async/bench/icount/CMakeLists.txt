@@ -28,6 +28,21 @@ foreach(_sc IN LISTS _srt_icount_scenarios)
         tap::sr::async tap_sr_async_warnings)
 endforeach()
 
+# The worst single call (callmax_main.cpp, the roadmap's A6): the most
+# instructions one pull() executes over a stream that carries the fill, the
+# servo's promotions, slips, ring wraps and a hard resync. Named
+# tap_sr_async_icount_callmax_*, so the ratchet gates them; scripts/icount.py
+# reads the plugin's per-call maximum for these instead of the total.
+foreach(_sc IN ITEMS callmax_pull_float:0 callmax_pull_q15:1)
+    string(REPLACE ":" ";" _parts "${_sc}")
+    list(GET _parts 0 _name)
+    list(GET _parts 1 _type)
+    add_executable(tap_sr_async_icount_${_name} callmax_main.cpp)
+    target_compile_definitions(tap_sr_async_icount_${_name} PRIVATE TAP_SR_ASYNC_SC_TYPE=${_type})
+    target_include_directories(tap_sr_async_icount_${_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe)
+    target_link_libraries(tap_sr_async_icount_${_name} PRIVATE tap::sr::async tap_sr_async_warnings)
+endforeach()
+
 # The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
 # them against bench/ceilings.json).
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)

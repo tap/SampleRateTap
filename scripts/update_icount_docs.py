@@ -29,7 +29,9 @@ def table(baselines: dict, engine: str) -> str:
     lines = [
         f"Executed instructions per fixed workload (`{engine}/bench/icount/`), "
         "measured under QEMU with a counting plugin — deterministic, and gated "
-        f"in CI at ±3% against `{engine}/bench/baselines.json`:",
+        f"in CI at ±3% against `{engine}/bench/baselines.json`. A `callmax_` row "
+        "is the worst single call instead of a total: the most instructions one "
+        "call executes over that stream (`bench/icount/callmax_main.cpp`):",
         "",
         "| Workload | " + " | ".join(TARGET_NAMES[t] for t in targets) + " |",
         "|---|" + "---:|" * len(targets),

@@ -43,6 +43,23 @@ foreach(_sc IN LISTS _ratio_icount_scenarios)
         tap::sr::bridge tap_sr_bridge_warnings)
 endforeach()
 
+# The worst single call (callmax_main.cpp, the roadmap's A6): the most
+# instructions one process() executes over the economy stream, both
+# directions. Named tap_sr_bridge_icount_callmax_*, so the ratchet gates them;
+# scripts/icount.py reads the plugin's per-call maximum for these instead of
+# the total.
+foreach(_sc IN ITEMS callmax_up_float:0:0 callmax_down_float:1:0 callmax_up_q15:0:1 callmax_down_q15:1:1)
+    string(REPLACE ":" ";" _parts "${_sc}")
+    list(GET _parts 0 _name)
+    list(GET _parts 1 _dir)
+    list(GET _parts 2 _type)
+    add_executable(tap_sr_bridge_icount_${_name} callmax_main.cpp)
+    target_compile_definitions(tap_sr_bridge_icount_${_name} PRIVATE
+        TAP_SR_BRIDGE_SC_DIR=${_dir} TAP_SR_BRIDGE_SC_TYPE=${_type})
+    target_include_directories(tap_sr_bridge_icount_${_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe)
+    target_link_libraries(tap_sr_bridge_icount_${_name} PRIVATE tap::sr::bridge tap_sr_bridge_warnings)
+endforeach()
+
 # The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
 # them against bench/ceilings.json).
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)

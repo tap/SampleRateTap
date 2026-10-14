@@ -234,10 +234,14 @@ python3 scripts/icount.py --engine rational --target m55 --build-dir build-m55 \
 ```
 
 <!-- ICOUNT:BEGIN -->
-Executed instructions per fixed workload (`rational/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `rational/bench/baselines.json`:
+Executed instructions per fixed workload (`rational/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `rational/bench/baselines.json`. A `callmax_` row is the worst single call instead of a total: the most instructions one call executes over that stream (`bench/icount/callmax_main.cpp`):
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
+| `callmax_down2_float` | 116,628 | 8,428 | 23,891 |
+| `callmax_down2_q15` | 7,383 | 6,198 | 4,427 |
+| `callmax_up2_float` | 231,692 | 15,287 | 45,911 |
+| `callmax_up2_q15` | 14,798 | 11,208 | 6,941 |
 | `construct_q15_eco` | 26,810,642 | 1,567,568 | 8,341,715 |
 | `down2_down2_q15_eco` | 62,511,767 | 28,181,134 | 22,263,063 |
 | `down2_float_eco` | 366,459,868 | 24,433,817 | 72,735,466 |

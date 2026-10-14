@@ -167,10 +167,14 @@ python3 scripts/icount.py --engine bridge --target m55 --build-dir build-m55 \
 ```
 
 <!-- ICOUNT:BEGIN -->
-Executed instructions per fixed workload (`bridge/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bridge/bench/baselines.json`:
+Executed instructions per fixed workload (`bridge/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bridge/bench/baselines.json`. A `callmax_` row is the worst single call instead of a total: the most instructions one call executes over that stream (`bench/icount/callmax_main.cpp`):
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
+| `callmax_down_float` | 544,727 | 23,948 | 108,885 |
+| `callmax_down_q15` | 12,984 | 6,616 | 7,629 |
+| `callmax_up_float` | 416,124 | 19,183 | 81,626 |
+| `callmax_up_q15` | 11,011 | 6,037 | 6,209 |
 | `construct_down_q15_eco` | 136,279,322 | 4,260,534 | 24,941,141 |
 | `construct_up_q15_eco` | 104,011,630 | 3,470,962 | 20,108,264 |
 | `down_float_eco` | 1,720,707,553 | 73,794,800 | 304,636,182 |

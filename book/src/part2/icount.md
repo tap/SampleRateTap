@@ -39,13 +39,15 @@ embedded targets run, well correlated with real cost. The metrics table in
 `docs/PERFORMANCE.md` is careful about that last clause, and so is the end
 of this chapter; but first, the machinery.
 
-## Forty lines of plugin
+## A page of plugin
 
 QEMU's TCG (Tiny Code Generator) translates guest instructions into host
 code one *translation block* at a time, and since QEMU 4.2 it exposes a
 plugin API that lets you hook that translation. The project's entire
 counting instrument is `tools/qemu_insn_plugin/insn_count.c` — small enough
-that its two working functions fit here:
+that its two working functions fit here (the marker lookups in `tb_trans` and
+the second line `at_exit` can print are the worst-single-call extension,
+below):
 
 ```c
 {{#include ../../../tools/qemu_insn_plugin/insn_count.c:pf_hooks}}
@@ -89,6 +91,35 @@ line. The comment in `scripts/icount.py` preserves the discovery so nobody
 re-makes it, and the script's parser treats a missing count line as a hard
 failure ("plugin not loaded?") rather than a zero, so the silent-drop
 failure mode cannot masquerade as a measurement.
+
+## The worst single call
+
+A total is a mean in disguise: a workload's count divided by its calls says
+nothing about the one `pull()` that carries a fade-in or a resync, and a
+real-time budget is spent by that one call, not by the average. So each
+engine also has `callmax_*` workloads (`bench/icount/callmax_main.cpp`) that
+bracket every `pull()` or `process()` between two tiny functions,
+`tap_sr_call_begin()` and `tap_sr_call_end()` (`tools/probe/call_marker.h`).
+The plugin finds them by name, through `qemu_plugin_insn_symbol`, while it
+translates: the first instruction of each marker gets an ordinary execution
+callback, and nothing else does, so every other workload counts exactly as
+it did before. The callbacks snapshot the inline counter at each begin and
+take the difference at the next end, and at exit the plugin prints the
+largest difference, which call it was, how many there were and their sum:
+
+```text
+TAP_SR_CALL_MAX 32878 call=8 calls=12000 total=279725008
+```
+
+`scripts/icount.py` gates that maximum, not the total, for any scenario named
+`callmax_*`, two-sided at ±3 % like every other count. The workloads are built
+to meet the expensive events: `async`'s stream paces two virtual clocks 500
+ppm apart through the fill, the servo's promotions, whole-sample slips, ring
+wraps and a hard resync; `bridge`'s and `rational`'s streams visit every phase
+of their schedules and every history compaction. The line above is `async`'s
+Q15 stream on the M33, and call 8 is not the resync: it is the fade-in after
+the fill, whose double-precision gain ramp runs in software on that core and
+costs 41 % more than a steady-state call.
 
 ## One binary per scenario
 

@@ -1,5 +1,9 @@
 {
   "hexagon": {
+    "callmax_down_float": 108885,
+    "callmax_down_q15": 7629,
+    "callmax_up_float": 81626,
+    "callmax_up_q15": 6209,
     "construct_down_q15_eco": 24941141,
     "construct_up_q15_eco": 20108264,
     "down_float_eco": 304636182,
@@ -14,6 +18,10 @@
     "up_q31_eco": 36007820
   },
   "m33": {
+    "callmax_down_float": 544727,
+    "callmax_down_q15": 12984,
+    "callmax_up_float": 416124,
+    "callmax_up_q15": 11011,
     "construct_down_q15_eco": 136279322,
     "construct_up_q15_eco": 104011630,
     "down_float_eco": 1720707553,
@@ -28,6 +36,10 @@
     "up_q31_eco": 184954171
   },
   "m55": {
+    "callmax_down_float": 23948,
+    "callmax_down_q15": 6616,
+    "callmax_up_float": 19183,
+    "callmax_up_q15": 6037,
     "construct_down_q15_eco": 4260534,
     "construct_up_q15_eco": 3470962,
     "down_float_eco": 73794800,

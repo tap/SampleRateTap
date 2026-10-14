@@ -56,7 +56,7 @@ is this checklist, not an opinion.
 | P3 | Thread contract stated and under TSan with the real call pattern | n/a | n/a | ✓ (A4) |
 | P4 | Error model usable without exceptions; Hexagon throw documented | ✓ (A3) | ✓ (A3) | ✓ (A3) |
 | P5 | Memory footprint per instance and stack high-water per call, stated and gated | ✓ (A5) | ✓ (A5) | ✓ (A5) |
-| P6 | Worst single-call cost gated (QEMU per-call max) | **open** (A6) | **open** (A6) | **open** (A6) |
+| P6 | Worst single-call cost gated (QEMU per-call max) | ✓ (A6) | ✓ (A6) | ✓ (A6) |
 | P7 | Measured on silicon: cycles, `%core@48k`, construction time | **open** (B2) | **open** (B2) | **open** (B1, B2) |
 | P8 | Clock recovery proven on independent crystals, hours, zero underruns | n/a | n/a | **open** (B1) |
 | P9 | Non-finite input behaviour pinned | **open** (A7) | **open** (A7) | **open** (A7) |
@@ -106,7 +106,7 @@ gated on shipping.
   `-fstack-usage` high-water for `push`/`pull`/`process` on the M33 leg, pinned as
   ceilings beside the instruction counts, with per-engine, per-profile `.text` and `.rodata`
   ceilings on the DspTap pattern (`bench.yml` `text_ceiling_*`).
-- **A6. Worst single call.** A per-call maximum-instructions scenario in the QEMU ratchet
+- **A6. Worst single call.** *Landed 2026-10-14: each engine's `callmax_*` workloads (`bench/icount/callmax_main.cpp`) bracket every `pull()` or `process()` with `tools/probe/call_marker.h`'s markers; the counting plugin finds them by symbol and reports the most instructions in one call, which `scripts/icount.py` gates two-sided at ±3 % beside the totals on M33, M55 and Hexagon. async's stream paces two clocks 500 ppm apart through the fill, the promotions, slips, ring wraps and a hard resync. Its worst call is the fade-in after the fill on the Arm cores (Q15 on M33: 32,878 instructions, 41 % above the mean pull) and the resync's on Hexagon in float; bridge's and rational's come in the first calls, as the history first fills, except in float on M33, where they fall mid-stream within 3 % of the mean.* A per-call maximum-instructions scenario in the QEMU ratchet
   (the plugin counts between two guest markers per `pull()`/`process()`; the block that
   carries a whole-sample slip, a ring wrap, a servo promotion, the fade, a hard resync),
   gated two-sided. The host p99/max `pull(128)` row of the metrics table is measured on the
