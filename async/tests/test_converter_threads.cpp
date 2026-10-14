@@ -15,11 +15,20 @@
 // is the simulator's (a looser window — one block of lead on each side —
 // randomizes the order, and the servo reads that as block-beat noise and
 // never holds the 1-frame lock threshold: measured, four of four runs). The
-// pacing counters are relaxed atomics on purpose: a release/acquire pair
-// would order every push before the pull that follows it in
+// pacing counters are relaxed atomics on purpose: a release/acquire pair on
+// them would order every push before the pull that follows it in
 // ThreadSanitizer's happens-before model and hide a missing fence inside
 // the ring, whose own acquire/release is the synchronization under test.
-// The poller is unpaced and runs concurrently throughout.
+// Each turn is instead handed over through a fence pair (a release fence
+// before a side bumps its counter, an acquire fence once the other side has
+// read it). On weakly-ordered silicon the relaxed counter alone can be seen
+// before the ring's own index: the consumer then took its turn a block
+// early, the servo read the short fill as block-beat noise and never
+// locked, in both arm64 runs since it landed (ci-arm64.yml, issue #84). The
+// fences make the hand-off ordered in the C++ model, so the sequence is the
+// simulator's on every target, and ThreadSanitizer, which does not model
+// standalone fences, still sees no edge but the ring's. The poller is
+// unpaced and runs concurrently throughout.
 //
 // The scenario is the lock test's, with threads: ten virtual seconds at
 // +500 ppm (acquire -> track -> quiet: locked), a consumer stall while the
@@ -65,7 +74,7 @@ namespace {
 
     enum class mode : int { gated, burst, stop };
 
-    // Relaxed throughout (the file comment): pacing, never synchronization.
+    // Relaxed throughout (the file comment): each hand-off is a fence pair.
     struct shared_state {
         std::atomic<std::uint64_t> pushed{0}; // frames pushed on the clock (the burst is not)
         std::atomic<std::uint64_t> pulled{0}; // frames pulled by the consumer
@@ -99,6 +108,7 @@ namespace {
                         asrc.push(burst.data(), k_burst_chunk);
                     }
                     bursted = true; // not virtual time: the stall is the consumer's, not the clock's
+                    std::atomic_thread_fence(std::memory_order_release); // the hand-off (file comment)
                     st.burst_done.store(true, std::memory_order_relaxed);
                 }
                 std::this_thread::yield();
@@ -111,6 +121,7 @@ namespace {
                 std::this_thread::yield();
                 continue;
             }
+            std::atomic_thread_fence(std::memory_order_acquire); // the consumer's last pull, seen whole
             for (std::size_t f = 0; f < k_block; ++f) {
                 const auto v = static_cast<float>(0.5 * std::sin(w * static_cast<double>(idx++)));
                 for (std::size_t c = 0; c < k_channels; ++c) {
@@ -118,6 +129,7 @@ namespace {
                 }
             }
             asrc.push(block.data(), k_block);
+            std::atomic_thread_fence(std::memory_order_release); // this push, before the turn passes
             st.pushed.fetch_add(k_block, std::memory_order_relaxed);
         }
     }
@@ -176,9 +188,11 @@ namespace {
                 std::this_thread::yield();
                 continue;
             }
+            std::atomic_thread_fence(std::memory_order_acquire); // the producer's last push, seen whole
             const std::size_t got = asrc.pull(out.data(), k_block);
             EXPECT_LE(got, k_block);
             r.made += got;
+            std::atomic_thread_fence(std::memory_order_release); // this pull, before the turn passes
             const std::uint64_t pulled = st.pulled.fetch_add(k_block, std::memory_order_relaxed) + k_block;
             if (pulled > tail) {
                 ppm_sum += asrc.status().ppm;
@@ -214,6 +228,7 @@ namespace {
         while (!st.burst_done.load(std::memory_order_relaxed)) {
             std::this_thread::yield();
         }
+        std::atomic_thread_fence(std::memory_order_acquire); // the whole burst, seen
         s = asrc.status();
         EXPECT_GT(s.overruns, 0u) << "3000 frames into a ring that holds fewer";
         const std::uint64_t underruns_before = s.underruns;
