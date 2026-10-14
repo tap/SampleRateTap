@@ -41,6 +41,13 @@ jobs:
       - name: Full test suite
         run: ctest --test-dir build --output-on-failure --no-tests=error -L '^async$'
 
+      # The converter's threads (Threads.*, A4) hand each turn over through a
+      # fence pair whose point is weakly-ordered silicon, and one run is one
+      # sample of the scheduler: repeat them here, in Release, where a missed
+      # hand-off shows as a servo that never locks.
+      - name: The converter's threads, repeated (Release)
+        run: ctest --test-dir build -R 'Threads\.' --repeat until-fail:20 --output-on-failure --no-tests=error
+
       # The ring stress and the converter's real call pattern (Threads.*: a
       # producer, a consumer and a status() poller on one converter, A4)
       # under TSan on weakly-ordered silicon are the point of this workflow:
