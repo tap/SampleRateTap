@@ -11,7 +11,6 @@
 // sees it. Q15 and Q31 have no non-finite values, so this is the floating
 // formats' contract.
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -58,6 +57,56 @@ namespace {
         return std::memcmp(&a, &b, sizeof(S)) == 0;
     }
 
+    /// The comparison, made block by block as the outputs arrive (the
+    /// embedded legs' heap holds no whole stream): channel 0 carries the
+    /// burst, every other channel must match its twin throughout.
+    template <typename S>
+    struct burst_tally {
+        static constexpr std::size_t k_none = ~std::size_t{0};
+
+        std::size_t outputs      = 0;
+        std::size_t hits         = 0;      ///< channel-0 outputs that differ from the twin's
+        std::size_t first        = k_none; ///< the first of them
+        std::size_t last         = 0;      ///< the last of them
+        std::size_t other_moved  = k_none; ///< first output where another channel differs
+        std::size_t finite_moved = k_none; ///< first differing output that is finite
+        std::size_t nonfinite_ok = k_none; ///< first matching output that is non-finite
+
+        void observe(const S* hit, const S* twin, std::size_t frames, std::size_t channels) {
+            for (std::size_t n = 0; n < frames; ++n, ++outputs) {
+                for (std::size_t c = 1; c < channels; ++c) {
+                    if (!same_bits(hit[n * channels + c], twin[n * channels + c]) && other_moved == k_none) {
+                        other_moved = outputs;
+                    }
+                }
+                const S y = hit[n * channels];
+                if (!same_bits(y, twin[n * channels])) {
+                    if (std::isfinite(y) && finite_moved == k_none) {
+                        finite_moved = outputs;
+                    }
+                    first = first == k_none ? outputs : first;
+                    last  = outputs;
+                    ++hits;
+                }
+                else if (!std::isfinite(y) && nonfinite_ok == k_none) {
+                    nonfinite_ok = outputs;
+                }
+            }
+        }
+
+        /// The contract: the burst reached channel 0 only, as non-finite
+        /// outputs within `bound` of each other, and the stream went on clean
+        /// for `clean_after` outputs after them.
+        void expect(std::size_t bound, std::size_t clean_after) const {
+            EXPECT_EQ(other_moved, k_none) << "the burst reached another channel";
+            EXPECT_EQ(finite_moved, k_none) << "a finite output moved";
+            EXPECT_EQ(nonfinite_ok, k_none) << "a non-finite output outside the burst's reach";
+            ASSERT_GT(hits, 0U) << "the burst never reached the output";
+            EXPECT_LE(last - first + 1, bound);
+            EXPECT_GT(outputs - last, clean_after) << "the stream goes on, clean, long after the burst";
+        }
+    };
+
     /// Streams two copies of `Engine` side by side, the first with a burst of
     /// `burst_len` non-finite samples on channel 0, and checks the contract;
     /// `bound` is the most outputs the burst may reach.
@@ -72,8 +121,7 @@ namespace {
         std::vector<S> in_twin(k_block * k_ch);
         std::vector<S> out_hit(hit.outputs_for(k_block) * k_ch + 64 * k_ch);
         std::vector<S> out_twin(out_hit.size());
-        std::vector<S> y_hit[k_ch];
-        std::vector<S> y_twin[k_ch];
+        burst_tally<S> tally;
 
         for (std::size_t b = 0; b < k_blocks; ++b) {
             for (std::size_t f = 0; f < k_block; ++f) {
@@ -90,35 +138,9 @@ namespace {
             ASSERT_LE(hit.outputs_for(k_block) * k_ch, out_hit.size());
             const std::size_t made = hit.process(in_hit.data(), k_block, out_hit.data());
             ASSERT_EQ(twin.process(in_twin.data(), k_block, out_twin.data()), made);
-            for (std::size_t n = 0; n < made; ++n) {
-                for (std::size_t c = 0; c < k_ch; ++c) {
-                    y_hit[c].push_back(out_hit[n * k_ch + c]);
-                    y_twin[c].push_back(out_twin[n * k_ch + c]);
-                }
-            }
+            tally.observe(out_hit.data(), out_twin.data(), made, k_ch);
         }
-
-        for (std::size_t n = 0; n < y_hit[1].size(); ++n) {
-            ASSERT_TRUE(same_bits(y_hit[1][n], y_twin[1][n])) << "the burst reached the other channel at output " << n;
-        }
-
-        std::size_t first = y_hit[0].size();
-        std::size_t last  = 0;
-        std::size_t hits  = 0;
-        for (std::size_t n = 0; n < y_hit[0].size(); ++n) {
-            if (!same_bits(y_hit[0][n], y_twin[0][n])) {
-                EXPECT_FALSE(std::isfinite(y_hit[0][n])) << "a finite output moved at " << n;
-                first = std::min(first, n);
-                last  = n;
-                ++hits;
-            }
-            else {
-                EXPECT_TRUE(std::isfinite(y_hit[0][n])) << "output " << n;
-            }
-        }
-        ASSERT_GT(hits, 0U) << "the burst never reached the output";
-        EXPECT_LE(last - first + 1, bound);
-        EXPECT_GT(y_hit[0].size() - last, 4 * bound) << "the stream goes on, clean, long after the burst";
+        tally.expect(bound, 4 * bound);
     }
 
     // Measured (clang 19, x86-64, Release, economy; float and double alike):

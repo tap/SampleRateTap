@@ -10,11 +10,10 @@
 // agree bit for bit outside that span, and the other channel never sees it.
 // Q15 and Q31 have no non-finite values, so this is float's contract.
 
-#include <algorithm>
-#include <bit>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <numbers>
 #include <vector>
@@ -39,6 +38,61 @@ namespace {
         }
     }
 
+    template <typename S>
+    bool same_bits(S a, S b) {
+        return std::memcmp(&a, &b, sizeof(S)) == 0;
+    }
+
+    /// The comparison, made block by block as the outputs arrive (the
+    /// embedded legs' heap holds no whole stream): channel 0 carries the
+    /// burst, every other channel must match its twin throughout.
+    template <typename S>
+    struct burst_tally {
+        static constexpr std::size_t k_none = ~std::size_t{0};
+
+        std::size_t outputs      = 0;
+        std::size_t hits         = 0;      ///< channel-0 outputs that differ from the twin's
+        std::size_t first        = k_none; ///< the first of them
+        std::size_t last         = 0;      ///< the last of them
+        std::size_t other_moved  = k_none; ///< first output where another channel differs
+        std::size_t finite_moved = k_none; ///< first differing output that is finite
+        std::size_t nonfinite_ok = k_none; ///< first matching output that is non-finite
+
+        void observe(const S* hit, const S* twin, std::size_t frames, std::size_t channels) {
+            for (std::size_t n = 0; n < frames; ++n, ++outputs) {
+                for (std::size_t c = 1; c < channels; ++c) {
+                    if (!same_bits(hit[n * channels + c], twin[n * channels + c]) && other_moved == k_none) {
+                        other_moved = outputs;
+                    }
+                }
+                const S y = hit[n * channels];
+                if (!same_bits(y, twin[n * channels])) {
+                    if (std::isfinite(y) && finite_moved == k_none) {
+                        finite_moved = outputs;
+                    }
+                    first = first == k_none ? outputs : first;
+                    last  = outputs;
+                    ++hits;
+                }
+                else if (!std::isfinite(y) && nonfinite_ok == k_none) {
+                    nonfinite_ok = outputs;
+                }
+            }
+        }
+
+        /// The contract: the burst reached channel 0 only, as non-finite
+        /// outputs within `bound` of each other, and the stream went on clean
+        /// for `clean_after` outputs after them.
+        void expect(std::size_t bound, std::size_t clean_after) const {
+            EXPECT_EQ(other_moved, k_none) << "the burst reached another channel";
+            EXPECT_EQ(finite_moved, k_none) << "a finite output moved";
+            EXPECT_EQ(nonfinite_ok, k_none) << "a non-finite output outside the burst's reach";
+            ASSERT_GT(hits, 0U) << "the burst never reached the output";
+            EXPECT_LE(last - first + 1, bound);
+            EXPECT_GT(outputs - last, clean_after) << "the stream goes on, clean, long after the burst";
+        }
+    };
+
     template <direction D>
     void burst_clears_after_one_window() {
         using converter                   = tap::sr::bridge::basic_converter<float, D, 0>;
@@ -57,8 +111,7 @@ namespace {
         std::vector<float> in_twin(k_block * k_ch);
         std::vector<float> out_hit(2 * k_block * k_ch);
         std::vector<float> out_twin(2 * k_block * k_ch);
-        std::vector<float> y_hit[k_ch];
-        std::vector<float> y_twin[k_ch];
+        burst_tally<float> tally;
 
         for (std::size_t b = 0; b < k_blocks; ++b) {
             for (std::size_t f = 0; f < k_block; ++f) {
@@ -74,47 +127,17 @@ namespace {
             }
             const std::size_t made = hit.process(in_hit.data(), k_block, out_hit.data());
             ASSERT_EQ(twin.process(in_twin.data(), k_block, out_twin.data()), made);
-            for (std::size_t n = 0; n < made; ++n) {
-                for (std::size_t c = 0; c < k_ch; ++c) {
-                    y_hit[c].push_back(out_hit[n * k_ch + c]);
-                    y_twin[c].push_back(out_twin[n * k_ch + c]);
-                }
-            }
+            tally.observe(out_hit.data(), out_twin.data(), made, k_ch);
         }
 
-        // The other channel: bit-identical throughout.
-        for (std::size_t n = 0; n < y_hit[1].size(); ++n) {
-            ASSERT_EQ(std::bit_cast<std::uint32_t>(y_hit[1][n]), std::bit_cast<std::uint32_t>(y_twin[1][n]))
-                << "the burst reached the other channel at output " << n;
-        }
-
-        // The burst's channel: every output that differs from the twin's is
-        // non-finite (it multiplied a burst sample), and they all lie within
-        // one window of the burst, mapped through the ratio.
-        std::size_t first = y_hit[0].size();
-        std::size_t last  = 0;
-        std::size_t hits  = 0;
-        for (std::size_t n = 0; n < y_hit[0].size(); ++n) {
-            if (std::bit_cast<std::uint32_t>(y_hit[0][n]) != std::bit_cast<std::uint32_t>(y_twin[0][n])) {
-                EXPECT_FALSE(std::isfinite(y_hit[0][n])) << "a finite output moved at " << n;
-                first = std::min(first, n);
-                last  = n;
-                ++hits;
-            }
-            else {
-                EXPECT_TRUE(std::isfinite(y_hit[0][n])) << "output " << n;
-            }
-        }
-        ASSERT_GT(hits, 0U) << "the burst never reached the output";
-        // Measured (clang 19, x86-64, Release, economy): up 67 outputs over a
-        // span of 67 against a bound of 69 (38 taps), down 75 over 75 against
-        // 77 (58 taps).
-        const std::size_t span  = last - first + 1;
+        // Every output that differs from the twin's is non-finite (it
+        // multiplied a burst sample), and they all lie within one window of
+        // the burst, mapped through the ratio. Measured (clang 19, x86-64,
+        // Release, economy): up 67 outputs over a span of 67 against a bound
+        // of 69 (38 taps), down 75 over 75 against 77 (58 taps).
         const std::size_t bound = ((k_burst_len + taps) * k_up + k_down - 1) / k_down + 1;
-        EXPECT_GE(hits, k_burst_len * k_up / k_down);
-        EXPECT_LE(span, bound) << "taps " << taps;
-        // And the stream goes on long after it, clean.
-        EXPECT_GT(y_hit[0].size() - last, 8 * taps);
+        tally.expect(bound, 8 * taps);
+        EXPECT_GE(tally.hits, k_burst_len * k_up / k_down);
     }
 
     TEST(NonFinite, BurstClearsAfterOneWindowUp) {

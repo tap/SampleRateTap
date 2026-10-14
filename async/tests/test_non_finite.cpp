@@ -12,11 +12,11 @@
 // the other channel never sees it. Q15 and Q31 have no non-finite values,
 // so this is float's contract.
 
-#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <numbers>
 #include <vector>
@@ -40,6 +40,61 @@ namespace {
             return -std::numeric_limits<float>::infinity();
         }
     }
+
+    template <typename S>
+    bool same_bits(S a, S b) {
+        return std::memcmp(&a, &b, sizeof(S)) == 0;
+    }
+
+    /// The comparison, made block by block as the outputs arrive (the
+    /// embedded legs' heap holds no whole stream): channel 0 carries the
+    /// burst, every other channel must match its twin throughout.
+    template <typename S>
+    struct burst_tally {
+        static constexpr std::size_t k_none = ~std::size_t{0};
+
+        std::size_t outputs      = 0;
+        std::size_t hits         = 0;      ///< channel-0 outputs that differ from the twin's
+        std::size_t first        = k_none; ///< the first of them
+        std::size_t last         = 0;      ///< the last of them
+        std::size_t other_moved  = k_none; ///< first output where another channel differs
+        std::size_t finite_moved = k_none; ///< first differing output that is finite
+        std::size_t nonfinite_ok = k_none; ///< first matching output that is non-finite
+
+        void observe(const S* hit, const S* twin, std::size_t frames, std::size_t channels) {
+            for (std::size_t n = 0; n < frames; ++n, ++outputs) {
+                for (std::size_t c = 1; c < channels; ++c) {
+                    if (!same_bits(hit[n * channels + c], twin[n * channels + c]) && other_moved == k_none) {
+                        other_moved = outputs;
+                    }
+                }
+                const S y = hit[n * channels];
+                if (!same_bits(y, twin[n * channels])) {
+                    if (std::isfinite(y) && finite_moved == k_none) {
+                        finite_moved = outputs;
+                    }
+                    first = first == k_none ? outputs : first;
+                    last  = outputs;
+                    ++hits;
+                }
+                else if (!std::isfinite(y) && nonfinite_ok == k_none) {
+                    nonfinite_ok = outputs;
+                }
+            }
+        }
+
+        /// The contract: the burst reached channel 0 only, as non-finite
+        /// outputs within `bound` of each other, and the stream went on clean
+        /// for `clean_after` outputs after them.
+        void expect(std::size_t bound, std::size_t clean_after) const {
+            EXPECT_EQ(other_moved, k_none) << "the burst reached another channel";
+            EXPECT_EQ(finite_moved, k_none) << "a finite output moved";
+            EXPECT_EQ(nonfinite_ok, k_none) << "a non-finite output outside the burst's reach";
+            ASSERT_GT(hits, 0U) << "the burst never reached the output";
+            EXPECT_LE(last - first + 1, bound);
+            EXPECT_GT(outputs - last, clean_after) << "the stream goes on, clean, long after the burst";
+        }
+    };
 
     bool same_status(const tap::sr::async::converter_status& a, const tap::sr::async::converter_status& b) {
         return a.state == b.state && std::bit_cast<std::uint64_t>(a.ppm) == std::bit_cast<std::uint64_t>(b.ppm)
@@ -71,8 +126,7 @@ namespace {
         std::vector<float> in_twin(k_block * k_ch);
         std::vector<float> out_hit(k_block * k_ch);
         std::vector<float> out_twin(k_block * k_ch);
-        std::vector<float> y_hit[k_ch];
-        std::vector<float> y_twin[k_ch];
+        burst_tally<float> tally;
 
         double      t_in            = 0.0;
         double      t_out           = 0.0;
@@ -108,12 +162,7 @@ namespace {
                     ppm_sum += hit.status().ppm;
                     ++ppm_n;
                 }
-                for (std::size_t n = 0; n < k_block; ++n) {
-                    for (std::size_t c = 0; c < k_ch; ++c) {
-                        y_hit[c].push_back(out_hit[n * k_ch + c]);
-                        y_twin[c].push_back(out_twin[n * k_ch + c]);
-                    }
-                }
+                tally.observe(out_hit.data(), out_twin.data(), k_block, k_ch);
                 t_out += static_cast<double>(k_block) / k_fs;
             }
         }
@@ -129,33 +178,12 @@ namespace {
         EXPECT_NEAR(ppm_sum / static_cast<double>(ppm_n), 500.0, 50.0);
         EXPECT_GT(status_checks, 8000U);
 
-        for (std::size_t n = 0; n < y_hit[1].size(); ++n) {
-            ASSERT_EQ(std::bit_cast<std::uint32_t>(y_hit[1][n]), std::bit_cast<std::uint32_t>(y_twin[1][n]))
-                << "the burst reached the other channel at output " << n;
-        }
-
-        std::size_t first = y_hit[0].size();
-        std::size_t last  = 0;
-        std::size_t hits  = 0;
-        for (std::size_t n = 0; n < y_hit[0].size(); ++n) {
-            if (std::bit_cast<std::uint32_t>(y_hit[0][n]) != std::bit_cast<std::uint32_t>(y_twin[0][n])) {
-                EXPECT_FALSE(std::isfinite(y_hit[0][n])) << "a finite output moved at " << n;
-                first = std::min(first, n);
-                last  = n;
-                ++hits;
-            }
-            else {
-                EXPECT_TRUE(std::isfinite(y_hit[0][n])) << "output " << n;
-            }
-        }
-        ASSERT_GT(hits, 0U) << "the burst never reached the output";
         // Near unity, one output per input frame, give or take the one slip
         // the 500 ppm drift may land inside the window. Measured (clang 19,
         // x86-64, Release): 71 outputs, all non-finite, over a span of 71 =
         // 24 + 48 - 1, the burst plus the default bank's 48 taps.
-        EXPECT_GE(hits, k_burst_len);
-        EXPECT_LE(last - first + 1, k_burst_len + taps + 1) << "taps " << taps;
-        EXPECT_GT(y_hit[0].size() - last, 48000U) << "the stream goes on, clean, long after the burst";
+        tally.expect(k_burst_len + taps + 1, 48000);
+        EXPECT_GE(tally.hits, k_burst_len);
     }
 
 } // namespace
