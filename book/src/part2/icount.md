@@ -121,6 +121,40 @@ Q15 stream on the M33, and call 8 is not the resync: it is the fade-in after
 the fill, whose double-precision gain ramp runs in software on that core and
 costs 41 % more than a steady-state call.
 
+## The host, under callgrind
+
+QEMU counts the embedded cores, but a host runs code no embedded leg
+compiles: `TAP_DSP_CHANNEL_PARALLEL` turns on only where neither Helium, the
+M33's dual MAC nor Hexagon is present, and from four channels up `async`
+then interpolates every channel of a frame in one frame-major pass. So each
+engine also has host workloads (`bench/icount/host_main.cpp`, binaries named
+`tap_sr_<engine>_hostcount_*`): the float converter in 128-frame blocks at 2
+and 12 channels, built natively and run under valgrind's callgrind, which
+counts executed instructions the way the plugin does. `scripts/icount.py
+--target host` runs them and gates the counts against the `host` key of the
+same baselines file, two-sided at ±3 %.
+
+Three things would make a host count drift that a bare-metal count never
+sees, and the harness closes each one. Process start-up, the dynamic loader
+and the environment's size are kept out by counting one function only:
+every workload passes its stream to `tap_sr_host_counted()`, and callgrind's
+`--toggle-collect` counts nothing outside it, so construction and the
+fixture's `sin()` calls run before the window opens. Lazy symbol binding
+would charge the first `memcpy` call its PLT resolution, so the run sets
+`LD_BIND_NOW`. And glibc chooses `memcpy` and its libm routines by the CPU it
+finds, so a runner with AVX-512 would count different code; `GLIBC_TUNABLES`
+holds that choice to the x86-64 baseline and pins the copy thresholds glibc
+otherwise derives from the cache sizes. What remains is the code, the
+compiler and the C library: two builds count identically, and the CI job
+records the image's GCC and glibc beside its counts, as the Arm legs record
+their toolchain packages.
+
+The counts say what the channel-parallel path buys. `async` at 12 channels
+executes 362,078,536 instructions over the two-second stream, about 30
+million per channel; at 2 channels, 109,526,808, about 55 million per
+channel. `bridge`, which has no frame-major path, costs the same per
+channel at 12 as at 2.
+
 ## One binary per scenario
 
 What gets counted matters as much as how. The counted workloads live in
@@ -367,6 +401,12 @@ qemu-system-arm -M mps3-an547 -nographic -semihosting -d plugin \
 
 # See the two-sided gate work: re-run icount.py with --tolerance 0.0001
 # and watch benign recompilation deltas fail in *both* directions.
+
+# The host ratchet: native workloads under callgrind (valgrind on PATH).
+cmake -B build-host -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-13 \
+      -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF -DTAP_SR_BUILD_ICOUNT_BENCH=ON
+cmake --build build-host -j
+python3 scripts/icount.py --engine async --target host --build-dir build-host
 
 # The docs-freshness gate:
 python3 scripts/update_icount_docs.py && git diff --exit-code README.md

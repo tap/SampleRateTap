@@ -60,7 +60,7 @@ is this checklist, not an opinion.
 | P7 | Measured on silicon: cycles, `%core@48k`, construction time | **open** (B2) | **open** (B2) | **open** (B1, B2) |
 | P8 | Clock recovery proven on independent crystals, hours, zero underruns | n/a | n/a | **open** (B1) |
 | P9 | Non-finite input behaviour pinned | ✓ (A7) | ✓ (A7) | ✓ (A7) |
-| P10 | Host hot path gated | **open** (A8) | **open** (A8) | **open** (A8) |
+| P10 | Host hot path gated | ✓ (A8) | ✓ (A8) | ✓ (A8) |
 | P11 | C ABI: one error model, extension rule, compat test, version probe | **open** (C3) | **open** (C3) | **open** (C3) |
 | P12 | Versioned substrate pin asserted at compile time | **open** (A9) | **open** (A9) | **open** (A9) |
 | P13 | Changelog, semver and deprecation statement reconciled with D7 | **open** (C3) | **open** (C3) | **open** (C3) |
@@ -114,7 +114,7 @@ gated on shipping.
 - **A7. Non-finite and denormal input.** *Landed 2026-10-14: `<engine>/tests/test_non_finite.cpp` streams two copies of each engine side by side, one with a 24-frame NaN/±Inf burst on one channel. Outside the outputs whose windows cover the burst, the two agree bit for bit, the other channel throughout, and every output that differs is non-finite. The span is bounded by the window mapped through the ratio: async 71 outputs at 48 taps, bridge 67 up and 75 down, rational 114 through ↑3, 33 through ↓2 and 401 through the 8/1 chain, in float and double. async's twins also report the same `status()` bit for bit at every pull, locked at +500 ppm, so the burst never reaches the servo. Each README states the bound and the denormal sentences.* One test per engine that a NaN/Inf burst clears
   after one window and does not poison the servo (it reads counts only), two sentences per
   README on denormals (float accumulates in double; output may carry denormals onward).
-- **A8. A host ratchet.** Deterministic `Ir` from callgrind (or `perf stat -e
+- **A8. A host ratchet.** *Landed 2026-10-14: `scripts/icount.py --target host` runs each engine's `tap_sr_<engine>_hostcount_*` workloads (`bench/icount/host_main.cpp`: the float converter in 128-frame blocks at 2 and 12 channels, `async`'s 12 on the channel-parallel path) under callgrind, counting only `tap_sr_host_counted()`, with eager binding and glibc's CPU dispatch and copy thresholds pinned. The counts are gated two-sided at ±3 % against the `host` key of each `bench/baselines.json` in the `host-ratchet` job (ubuntu-24.04, GCC 13). Two builds count identically. `async` at 12 channels runs about 30 M instructions per channel over the two-second stream, against 55 M at 2.* Deterministic `Ir` from callgrind (or `perf stat -e
   instructions:u` with pinned flags) over the multichannel float pipelines, ±3 %, the same
   `icount.py` mechanics, a hard gate two-sided like the QEMU ratchet (Q6).
 - **A9. DspTap versioning.** Tag DspTap v0.1.0 at the tree this family pins (d7ebe4b or

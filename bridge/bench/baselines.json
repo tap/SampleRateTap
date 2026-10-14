@@ -17,6 +17,12 @@
     "up_q15_se": 27424077,
     "up_q31_eco": 36007820
   },
+  "host": {
+    "down_float_12ch": 593181679,
+    "down_float_2ch": 99664796,
+    "up_float_12ch": 470621528,
+    "up_float_2ch": 79352295
+  },
   "m33": {
     "callmax_down_float": 544727,
     "callmax_down_q15": 12984,

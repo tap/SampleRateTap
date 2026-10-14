@@ -494,6 +494,13 @@ Executed instructions per fixed workload (`async/bench/icount/`), measured under
 | `pipeline_float` | 2,391,686,215 | 102,590,477 | 419,186,490 |
 | `pipeline_q15` | 1,020,281,310 | 109,235,651 | 204,476,476 |
 | `pipeline_q31` | 1,102,554,828 | 173,088,119 | 205,223,931 |
+
+On the host, the float converter in 128-frame blocks at 2 and 12 channels (`async/bench/icount/host_main.cpp`): instructions executed by the streaming loop alone, counted under callgrind on x86-64 with GCC 13 (`scripts/icount.py --target host`), gated the same way:
+
+| Workload | x86-64 |
+|---|---:|
+| `pipeline_float_12ch` | 362,078,536 |
+| `pipeline_float_2ch` | 109,526,808 |
 <!-- ICOUNT:END -->
 
 <!-- PERF:BEGIN -->

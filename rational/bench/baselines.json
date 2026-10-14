@@ -19,6 +19,12 @@
     "up3_float_eco": 254904021,
     "up3_q15_eco": 39794001
   },
+  "host": {
+    "down2_float_12ch": 161054642,
+    "down2_float_2ch": 29983981,
+    "up2_float_12ch": 288223796,
+    "up2_float_2ch": 57296876
+  },
   "m33": {
     "callmax_down2_float": 116628,
     "callmax_down2_q15": 7383,

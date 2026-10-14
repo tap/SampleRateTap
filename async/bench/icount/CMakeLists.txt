@@ -43,6 +43,19 @@ foreach(_sc IN ITEMS callmax_pull_float:0 callmax_pull_q15:1)
     target_link_libraries(tap_sr_async_icount_${_name} PRIVATE tap::sr::async tap_sr_async_warnings)
 endforeach()
 
+# The host ratchet's workloads (host_main.cpp, the roadmap's A8): the float
+# pipeline in 128-frame blocks, stereo and 12 channels (the channel-parallel
+# path), counted under callgrind by scripts/icount.py --target host. Named
+# tap_sr_async_hostcount_*, apart from the QEMU glob; host builds only.
+if(NOT CMAKE_CROSSCOMPILING)
+    foreach(_ch IN ITEMS 2 12)
+        add_executable(tap_sr_async_hostcount_pipeline_float_${_ch}ch host_main.cpp)
+        target_compile_definitions(tap_sr_async_hostcount_pipeline_float_${_ch}ch PRIVATE TAP_SR_ASYNC_HC_CH=${_ch})
+        target_link_libraries(tap_sr_async_hostcount_pipeline_float_${_ch}ch PRIVATE
+            tap::sr::async tap_sr_async_warnings)
+    endforeach()
+endif()
+
 # The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
 # them against bench/ceilings.json).
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)
