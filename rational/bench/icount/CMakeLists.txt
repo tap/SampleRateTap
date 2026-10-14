@@ -34,6 +34,21 @@ foreach(_sc IN LISTS _rational_icount_scenarios)
     target_link_libraries(tap_sr_rational_icount_${_name} PRIVATE tap::sr::rational tap_sr_rational_warnings)
 endforeach()
 
+# The worst single call (callmax_main.cpp, the roadmap's A6): the most
+# instructions one process() executes over the by-2 stages' economy streams.
+# Named tap_sr_rational_icount_callmax_*, so the ratchet gates them;
+# scripts/icount.py reads the plugin's per-call maximum for these instead of
+# the total.
+foreach(_sc IN ITEMS callmax_up2_float:0 callmax_down2_float:1 callmax_up2_q15:2 callmax_down2_q15:3)
+    string(REPLACE ":" ";" _parts "${_sc}")
+    list(GET _parts 0 _name)
+    list(GET _parts 1 _id)
+    add_executable(tap_sr_rational_icount_${_name} callmax_main.cpp)
+    target_compile_definitions(tap_sr_rational_icount_${_name} PRIVATE TAP_SR_RATIONAL_SC=${_id})
+    target_include_directories(tap_sr_rational_icount_${_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe)
+    target_link_libraries(tap_sr_rational_icount_${_name} PRIVATE tap::sr::rational tap_sr_rational_warnings)
+endforeach()
+
 # The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
 # them against bench/ceilings.json).
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)

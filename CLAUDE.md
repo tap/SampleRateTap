@@ -82,7 +82,9 @@ at ±3 % (`scripts/icount.py --engine async|bridge|rational --target m33|m55|hex
 `<engine>/bench/baselines.json`). A change that moves a count beyond tolerance re-records the
 baseline in the same PR; an improvement beyond tolerance fails too, by design. Guest markers
 (`SRT_ICOUNT_DONE`, `RATIO_ICOUNT_DONE`, `RATIONAL_ICOUNT_DONE`) are part of the counted binaries
-and never change. The same job gates each engine's size and stack ceilings, one-sided
+and never change. A `callmax_*` scenario is the worst single call instead of a total
+(`<engine>/bench/icount/callmax_main.cpp`, markers in `tools/probe/call_marker.h`, the plugin's
+`TAP_SR_CALL_MAX` line), gated the same way. The same job gates each engine's size and stack ceilings, one-sided
 (`scripts/ceilings.py measure`, ceilings in `<engine>/bench/ceilings.json`, the README tables from
 `scripts/ceilings.py docs`). The ceilings cover the probes' engine `.text` and `.rodata` and their
 whole image on every target, and, on M33, each call's static worst path and painted high-water. A

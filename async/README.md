@@ -480,10 +480,12 @@ and construction
 [docs/COMPARISON.md](docs/COMPARISON.md).
 
 <!-- ICOUNT:BEGIN -->
-Executed instructions per fixed workload (`async/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `async/bench/baselines.json`:
+Executed instructions per fixed workload (`async/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `async/bench/baselines.json`. A `callmax_` row is the worst single call instead of a total: the most instructions one call executes over that stream (`bench/icount/callmax_main.cpp`):
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
+| `callmax_pull_float` | 259,294 | 16,624 | 51,238 |
+| `callmax_pull_q15` | 32,878 | 17,354 | 12,629 |
 | `construct_q15` | 906,236,511 | 19,577,382 | 143,511,094 |
 | `kernel_float` | 2,427,595,993 | 109,298,076 | 422,160,541 |
 | `kernel_q15` | 1,123,119,218 | 192,431,957 | 187,429,187 |

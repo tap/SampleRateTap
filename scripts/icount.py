@@ -12,6 +12,11 @@ compares against that engine's committed baselines
             [--engine {async,bridge,rational}] [--baselines FILE] [--tolerance 0.03]
             [--exact] [--update] [--json-out FILE] [--compare-json FILE]
 
+A callmax_* scenario is the worst single call (the roadmap's A6): its
+workload brackets each pull() or process() with tools/probe/call_marker.h's
+markers, the plugin prints the most instructions between one pair, and that
+figure is the scenario's count, gated exactly as a total is.
+
 --engine (default async) selects the workload binaries, the guest's
 completion marker and the default baselines file (<engine>/bench/
 baselines.json). A build directory may hold both engines' workloads; each
@@ -52,6 +57,11 @@ ENGINES = {
 }
 # Printed by the host-side plugin; never affects the guest's count.
 COUNT_MARKER = "TAP_SR_INSN_COUNT"
+# The worst single call (the roadmap's A6): a callmax_* workload brackets
+# each call with tools/probe/call_marker.h's markers, and the plugin prints
+# the largest bracketed count. That, not the total, is the gated figure.
+CALL_MAX_MARKER = "TAP_SR_CALL_MAX"
+CALL_MAX_PREFIX = "callmax_"
 
 # qemu-hexagon is a user-mode emulator: the guest's argv[0], its exec path
 # (AT_EXECFN) and the host environment are copied onto the guest stack, and
@@ -84,8 +94,10 @@ def qemu_cmd(target: str, plugin: str, binary: str) -> list[str]:
     raise SystemExit(f"unknown target {target}")
 
 
-def measure(target: str, plugin: str, binary: str, done_marker: str) -> tuple[int, str]:
+def measure(target: str, plugin: str, binary: str, done_marker: str,
+            call_max: bool = False) -> tuple[int, str]:
     env = None
+    label = os.path.basename(binary)  # before Hexagon's fixed-path copy renames it
     if target == "hexagon":
         os.makedirs(HEXAGON_RUN_DIR, exist_ok=True)
         fixed = os.path.join(HEXAGON_RUN_DIR, HEXAGON_ARGV0)
@@ -106,6 +118,16 @@ def measure(target: str, plugin: str, binary: str, done_marker: str) -> tuple[in
     if not m:
         print(out, file=sys.stderr)
         raise SystemExit(f"{binary}: no {COUNT_MARKER} (plugin not loaded?)")
+    if call_max:
+        c = re.search(CALL_MAX_MARKER + r" (\d+) call=(\d+) calls=(\d+) total=(\d+)", out)
+        if not c:
+            print(out, file=sys.stderr)
+            raise SystemExit(f"{binary}: no {CALL_MAX_MARKER} (markers not found, or a plugin "
+                             "without the per-call maximum)")
+        worst, at, calls, total = (int(g) for g in c.groups())
+        print(f"{label}: worst call {at} of {calls}: {worst} insns "
+              f"(mean {total / calls:.0f}, whole run {m.group(1)})")
+        return worst, done.group(1)
     return int(m.group(1)), done.group(1)
 
 
@@ -160,7 +182,8 @@ def main() -> int:
     checksums = {}
     for binary in binaries:
         scenario = os.path.basename(binary).removeprefix(prefix)
-        count, checksum = measure(args.target, args.plugin, binary, engine["done"])
+        count, checksum = measure(args.target, args.plugin, binary, engine["done"],
+                                  call_max=scenario.startswith(CALL_MAX_PREFIX))
         measured[scenario] = count
         checksums[scenario] = checksum
         print(f"{scenario}: checksum={checksum}")
