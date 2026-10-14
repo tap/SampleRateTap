@@ -27,8 +27,14 @@
 // locked, in both arm64 runs since it landed (ci-arm64.yml, issue #84). The
 // fences make the hand-off ordered in the C++ model, so the sequence is the
 // simulator's on every target, and ThreadSanitizer, which does not model
-// standalone fences, still sees no edge but the ring's. The poller is
-// unpaced and runs concurrently throughout.
+// standalone fences, still sees no edge but the ring's. Two hand-offs are
+// not turns: the consumer waits out the producer's turn before the burst and
+// before the reset, which would otherwise meet a producer part-way through
+// it, and after the reset waits for the poller to report the filling state,
+// which nothing leaves before the next pull and which the poller would
+// otherwise sample only by chance (with the fences alone: 2 failures in 1500
+// runs on x86, both the poller missing it). The poller is unpaced and runs
+// concurrently throughout.
 //
 // The scenario is the lock test's, with threads: ten virtual seconds at
 // +500 ppm (acquire -> track -> quiet: locked), a consumer stall while the
@@ -81,6 +87,8 @@ namespace {
         std::atomic<int>           run{static_cast<int>(mode::gated)};
         std::atomic<bool>          burst_done{false};
         std::atomic<bool>          poller_stop{false};
+        std::atomic<std::uint64_t> filling_entries{
+            0}; // the poller's snapshots that found filling, after one that did not
     };
 
     tap::sr::async::config threads_config() {
@@ -145,7 +153,7 @@ namespace {
 
     // Poller thread: status() from a third thread, as a UI or a watchdog would
     // call it, checking each snapshot against the last.
-    void poll(const tap::sr::async::converter& asrc, const shared_state& st, poll_result& out,
+    void poll(const tap::sr::async::converter& asrc, shared_state& st, poll_result& out,
               std::size_t configured_target) {
         tap::sr::async::converter_status prev = asrc.status();
         while (!st.poller_stop.load(std::memory_order_relaxed)) {
@@ -158,8 +166,11 @@ namespace {
                            && s.ratio_estimate == 1.0 + s.ppm * 1e-6 && s.underruns >= prev.underruns
                            && s.overruns >= prev.overruns && s.resyncs >= prev.resyncs
                            && s.effective_target_latency_frames >= configured_target;
-            out.saw_locked    = out.saw_locked || s.state == converter_state::locked;
-            out.saw_filling   = out.saw_filling || s.state == converter_state::filling;
+            out.saw_locked  = out.saw_locked || s.state == converter_state::locked;
+            out.saw_filling = out.saw_filling || s.state == converter_state::filling;
+            if (s.state == converter_state::filling && prev.state != converter_state::filling) {
+                st.filling_entries.fetch_add(1, std::memory_order_relaxed);
+            }
             out.max_underruns = std::max(out.max_underruns, s.underruns);
             out.max_resyncs   = std::max(out.max_resyncs, s.resyncs);
             prev              = s;
@@ -203,6 +214,22 @@ namespace {
         return r;
     }
 
+    // Waits out the producer's turn: once its virtual time has passed the
+    // consumer's it pushes nothing until the next pull, so what follows on
+    // this thread (the burst, the reset) meets an idle producer, as in the
+    // simulator, not one part-way through its turn.
+    void await_producer_turn_end(const shared_state& st) {
+        for (;;) {
+            const double t_out = static_cast<double>(st.pulled.load(std::memory_order_relaxed)) / k_fs_out;
+            const double t_in  = static_cast<double>(st.pushed.load(std::memory_order_relaxed)) / k_fs_in;
+            if (t_in > t_out) {
+                std::atomic_thread_fence(std::memory_order_acquire); // its last push, seen whole
+                return;
+            }
+            std::this_thread::yield();
+        }
+    }
+
     TEST(Threads, ProducerConsumerAndPollerShareOneConverter) {
         const auto                cfg = threads_config();
         tap::sr::async::converter asrc(cfg);
@@ -223,7 +250,9 @@ namespace {
         EXPECT_EQ(s.resyncs, 0u);
         EXPECT_GT(c1.made, 9 * static_cast<std::uint64_t>(k_fs_out)) << "the fill is the only silence";
 
-        // 2. The consumer stalls; the producer bursts past the ring.
+        // 2. The consumer stalls; the producer bursts past the ring (after the
+        //    turn it is in, which the mode change would otherwise cut short).
+        await_producer_turn_end(st);
         st.run.store(static_cast<int>(mode::burst), std::memory_order_relaxed);
         while (!st.burst_done.load(std::memory_order_relaxed)) {
             std::this_thread::yield();
@@ -245,8 +274,17 @@ namespace {
 
         // 4. A full restart from the consumer thread, then relock from nothing
         //    (the simulator: 486 ppm over seconds 8 to 10 after the reset).
+        const std::uint64_t entries = st.filling_entries.load(std::memory_order_relaxed);
+        await_producer_turn_end(st);
         asrc.reset_from_consumer();
         EXPECT_EQ(asrc.status().state, converter_state::filling);
+        // The poller sees the restart from its own thread. Only a pull leaves
+        // filling, so the state holds until it does: the wait is bounded by
+        // the poller's next snapshot, and its saw_filling below is no longer a
+        // matter of whether it sampled a brief window.
+        while (st.filling_entries.load(std::memory_order_relaxed) == entries) {
+            std::this_thread::yield();
+        }
         const consumed c4 = consume(asrc, st, 10.0, out);
         s                 = asrc.status();
         EXPECT_EQ(s.state, converter_state::locked) << "ppm " << s.ppm;
