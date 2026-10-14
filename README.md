@@ -169,6 +169,19 @@ directory on the path, no public header names `srt/`, a sibling's
 code (design math, traits, kernels, quantization, instruments) lands in
 DspTap first; this tree bumps the submodule pin.
 
+### Tested pairs
+
+DspTap is versioned on its own cadence (`tap/dsp/version.h`, tags `vX.Y.Z`),
+never in lockstep with this tree. Each engine's umbrella header states the
+oldest DspTap the family was tested with, `TAP_SR_DSPTAP_MINIMUM`, and a
+`static_assert` against the substrate's `TAP_DSP_VERSION` rejects an older
+one at compile time (`family.VersionMacrosAgree` holds the three definitions
+equal). A commit that moves `submodules/dsptap` names the DspTap tag it pins.
+
+| SampleRateTap | DspTap floor | DspTap pinned |
+|---|---|---|
+| 0.6.0 | 0.1.0 | v0.1.0 |
+
 ## Provenance and license
 
 MIT (`LICENSE`: Timothy Place and the SampleRateTap contributors). The tree

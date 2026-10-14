@@ -48,6 +48,11 @@ made this tree (sections 5–6). Do not re-derive what it settles.
   three headers and the root `project()` together (0.5.0 came with `rational`'s M6, 0.6.0 with the
   audit response's async vocabulary pass: `preset` retired for `profile`, `economy()` to `program()`,
   the async C ABI in the siblings' shape).
+- **The DspTap floor (A9).** Each umbrella header also defines `TAP_SR_DSPTAP_MINIMUM` (0.1.0)
+  token-identically and `static_assert`s it against DspTap's `TAP_DSP_VERSION`
+  (`tap/dsp/version.h`); `family.VersionMacrosAgree` checks the three agree. DspTap is tagged on its
+  own cadence (Q4): a commit that moves `submodules/dsptap` names the tag it pins, and raising the
+  floor updates the root README's tested pairs in the same PR.
 - **Clean renames, no aliases (D7).** Retired options fail the configure
   (`cmake/retired_options.cmake`); retired override macros hit an `#error`; retired words fail
   the style job (`scripts/retired_words.txt`, `scripts/check_retired_words.py`). Do not add aliases.

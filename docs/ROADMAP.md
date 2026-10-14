@@ -62,7 +62,7 @@ is this checklist, not an opinion.
 | P9 | Non-finite input behaviour pinned | ✓ (A7) | ✓ (A7) | ✓ (A7) |
 | P10 | Host hot path gated | ✓ (A8) | ✓ (A8) | ✓ (A8) |
 | P11 | C ABI: one error model, extension rule, compat test, version probe | **open** (C3) | **open** (C3) | **open** (C3) |
-| P12 | Versioned substrate pin asserted at compile time | **open** (A9) | **open** (A9) | **open** (A9) |
+| P12 | Versioned substrate pin asserted at compile time | ✓ (A9) | ✓ (A9) | ✓ (A9) |
 | P13 | Changelog, semver and deprecation statement reconciled with D7 | **open** (C3) | **open** (C3) | **open** (C3) |
 
 ## 3. Block A (weeks 1–2): contracts and hygiene
@@ -117,7 +117,7 @@ gated on shipping.
 - **A8. A host ratchet.** *Landed 2026-10-14: `scripts/icount.py --target host` runs each engine's `tap_sr_<engine>_hostcount_*` workloads (`bench/icount/host_main.cpp`: the float converter in 128-frame blocks at 2 and 12 channels, `async`'s 12 on the channel-parallel path) under callgrind, counting only `tap_sr_host_counted()`, with eager binding and glibc's CPU dispatch and copy thresholds pinned. The counts are gated two-sided at ±3 % against the `host` key of each `bench/baselines.json` in the `host-ratchet` job (ubuntu-24.04, GCC 13). Two builds count identically. `async` at 12 channels runs about 30 M instructions per channel over the two-second stream, against 55 M at 2.* Deterministic `Ir` from callgrind (or `perf stat -e
   instructions:u` with pinned flags) over the multichannel float pipelines, ±3 %, the same
   `icount.py` mechanics, a hard gate two-sided like the QEMU ratchet (Q6).
-- **A9. DspTap versioning.** Tag DspTap v0.1.0 at the tree this family pins (d7ebe4b or
+- **A9. DspTap versioning.** *Landed 2026-10-14: DspTap's `tap/dsp/version.h` (tap/DspTap#62, `TAP_DSP_VERSION`, packed like the family's C ABI probes and pinned to its `project()` version by test) and its first tag, v0.1.0; each umbrella header here defines `TAP_SR_DSPTAP_MINIMUM` (0.1.0) token-identically and `static_assert`s it against the pinned substrate, `family.VersionMacrosAgree` holds the three equal, and the root README states the tested pairs.* Tag DspTap v0.1.0 at the tree this family pins (d7ebe4b or
   its successor), add one `tap/dsp/version.h` (one tree, one header; the D13 triplication
   exists only because the engines share no header), a `static_assert` in each engine
   umbrella header against the minimum DspTap it was tested with, a "tested pairs" table in
