@@ -416,6 +416,11 @@ per-frame cost drifts over the run by more than its construction, so
 
 ## Caveats, stated plainly
 
+- **The competitors are frozen at their 2026-10-09 pins.** libsamplerate
+  0.2.2, r8brain-free-src 7.6 and SpeexDSP 1.2.1 as `tools/compare/` pins
+  them; a newer release of any of them is not tracked. Moving a pin re-runs
+  `compare.yml` and the notebook and re-dates every table here
+  ([the family comparison](../../docs/COMPARISON.md#the-shared-tooling)).
 - **The matching rule is ours**, the same two numbers as the bridge
   comparison's (0.1 dB at the edge, stopband at least the tier's), applied
   across four ratios at once: a setting that passes three and fails one is

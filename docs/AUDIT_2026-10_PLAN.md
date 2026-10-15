@@ -1,6 +1,6 @@
 # Audit response plan (v0.2)
 
-Status: **decisions taken 2026-10-09** (section 6 records them); execution in progress; ✓ in the disposition table marks a closed row (S0 to S5 landed on the branch; ↗ marks a row referred outside this tree: F25 is a taphouse PR). Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
+Status: **executed 2026-10-09** (section 6 records the decisions); every row of the disposition table is closed, ✓ marking a row closed here (S0 to S5 are on `main`; ↗ marks a row referred outside this tree: F25 is a taphouse PR). Answers [`AUDIT_2026-10.md`](AUDIT_2026-10.md) (35 findings:
 4 major, 14 minor, 1 disputed, 16 nits) and the cohesion assessment that followed it: the
 family reads as one mind at the level of the plans and one vocabulary at the level of
 `bridge` and `rational`, while `async`, the oldest stratum, still speaks the dialect it was

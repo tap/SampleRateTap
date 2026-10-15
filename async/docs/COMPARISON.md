@@ -319,6 +319,13 @@ cost for devices that construct at boot.
 
 ## Caveats, stated plainly
 
+- **The competitors are frozen at their 2026-10-09 pins.** libsamplerate
+  0.2.2, r8brain-free-src 7.6 and SpeexDSP 1.2.1 as `tools/compare/` pins
+  them (the host wall-clock rows also use soxr 0.1.3 and libsamplerate as
+  the Ubuntu 24.04 packages); a newer release of any of them is not tracked.
+  Moving a pin re-runs `compare.yml` and the notebook and re-dates every
+  table here
+  ([the family comparison](../../docs/COMPARISON.md#the-shared-tooling)).
 - **Hardware rows are datasheet values, not our measurement.** Silicon is
   characterized through an analog test loop with its own converters and a
   wider notch than the ±20 Hz used here; both differences flatter a number.

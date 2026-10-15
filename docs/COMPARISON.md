@@ -58,3 +58,8 @@ its tests. The embedded counts come from one manual workflow,
 per engine (`<engine>/bench/compare_counts.json`) that
 `scripts/update_compare_docs.py` derives the tables from and the
 `compare-docs` CI job gates.
+
+The pins are frozen by policy: every record here measures the family against
+libsamplerate 0.2.2, r8brain-free-src 7.6 and SpeexDSP 1.2.1 as pinned on
+2026-10-09, and a newer competitor release is not tracked. Moving a pin
+re-runs `compare.yml` and every engine's notebook, and re-dates every table.

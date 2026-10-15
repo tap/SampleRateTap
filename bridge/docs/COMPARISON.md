@@ -324,6 +324,11 @@ construction, so 2 × (2 s) − (4 s) lands just below zero. Read it as ~0.
 
 ## Caveats, stated plainly
 
+- **The competitors are frozen at their 2026-10-09 pins.** libsamplerate
+  0.2.2, r8brain-free-src 7.6 and SpeexDSP 1.2.1 as `tools/compare/` pins
+  them; a newer release of any of them is not tracked. Moving a pin re-runs
+  `compare.yml` and the notebook and re-dates every table here
+  ([the family comparison](../../docs/COMPARISON.md#the-shared-tooling)).
 - **The matching rule is ours.** 0.1 dB at the tier's edge and "stopband at
   least the tier's" are the two numbers that decide every matched row; the
   notebook prints the whole sweep so a different rule can be read off it.
