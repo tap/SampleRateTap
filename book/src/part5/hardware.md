@@ -268,6 +268,21 @@ Per-block work is unchanged; the deviation is documented because an
 unexplained difference between two "identical" workloads is how
 calibration constants go quietly wrong.
 
+Two more matches to the ratchet came with the roadmap's A11. The firmware
+builds `Release` by default, as the workloads are built, and runs the whole
+image from SRAM (the SDK's `copy_to_ram`, the `PICO2_COPY_TO_RAM` option,
+on by default): QEMU's memory has no wait states and the RP2350's flash
+does, behind a cache, so a ratio measured from flash would fold the cache's
+misses into the constant. Turning the option off measures the layout a
+deployment ships, and the difference between the two runs is what the cache
+costs. And the calibration is no longer one engine's: a second table times
+`bridge` in both directions and `rational` at ↑2, ↓2 and 2/3, all Q15
+`economy` stereo, per `process()` of 32 input frames and per output frame.
+`bridge`'s M33 steady states, its baselines less its construct-only legs,
+are 424.9 instructions per output frame going down and 311.5 going up, so
+its rows give the same ratio read off a different datapath — the check
+that one constant serves the family.
+
 ## `pico2_dualcore`: one clock domain per core
 
 The README's platform guidance ends with a suggestion: on Pico-class

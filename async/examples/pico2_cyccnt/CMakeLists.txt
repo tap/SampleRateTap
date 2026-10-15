@@ -12,6 +12,12 @@
 # (lwip/btstack/mbedtls/cyw43 are not used here).
 cmake_minimum_required(VERSION 3.24)
 
+# Release unless asked otherwise: the M33 ratchet's workloads are Release
+# (cmake/arm-cortex-m33-mps2.cmake), and the cycles here calibrate them.
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 set(PICO_BOARD pico2 CACHE STRING "Pico SDK board")
 set(PICO_PLATFORM rp2350-arm-s CACHE STRING "Pico SDK platform (secure Arm)")
 
@@ -49,14 +55,27 @@ pico_sdk_init()
 # ~3.8x the Q15 instruction count (1,856.7M vs 484.1M baselines) — slow
 # but a real number is still valuable.
 option(PICO2_MEASURE_FLOAT "Measure the float (soft FP64) datapath too" ON)
+# The whole image runs from SRAM (the SDK's copy_to_ram binary type), as the
+# ratchet's QEMU M33 runs from zero-wait-state memory: the cycles then
+# measure the code, not the flash's XIP cache. OFF measures the default
+# execute-in-place layout a deployment would ship.
+option(PICO2_COPY_TO_RAM "Run the image from SRAM, matched to the ratchet (OFF: execute in place from flash)" ON)
 
 add_executable(pico2_cyccnt main.cpp)
 # Self-contained except for the header-only library itself.
+# The family's three engines (bridge and rational for the synchronous cases;
+# an engine's examples may reach a sibling, PLAN.md 4.2).
 target_include_directories(pico2_cyccnt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../bridge/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../rational/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/dsptap/include)
 target_link_libraries(pico2_cyccnt PRIVATE pico_stdlib cmsis_core)
 if(PICO2_MEASURE_FLOAT)
     target_compile_definitions(pico2_cyccnt PRIVATE PICO2_MEASURE_FLOAT=1)
+endif()
+
+if(PICO2_COPY_TO_RAM)
+    pico_set_binary_type(pico2_cyccnt copy_to_ram)
 endif()
 
 pico_enable_stdio_usb(pico2_cyccnt 1)
