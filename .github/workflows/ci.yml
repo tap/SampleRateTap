@@ -78,6 +78,12 @@ jobs:
         with:
           submodules: recursive
 
+      # The ALSA headers, so the Linux legs build async's hardware bridge
+      # (examples/alsa_bridge.cpp, the roadmap's A11) and run its checks.
+      - name: Install ALSA headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q libasound2-dev
+
       - name: Configure
         env:
           CC: ${{ matrix.cc }}

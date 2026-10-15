@@ -47,8 +47,9 @@ jobs:
         with:
           submodules: recursive
       - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y clang-tidy-18 cmake python3
-      # Every engine with its tests and examples, plus every engine's icount
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy-18 cmake python3 libasound2-dev
+      # Every engine with its tests and examples (libasound2-dev brings async's
+      # ALSA bridge in, the roadmap's A11), plus every engine's icount
       # workloads (the one family option builds them all). The async workloads
       # joined the gate with the roadmap's A2; the comparison workloads
       # (cmp_main.cpp, TAP_SR_ICOUNT_COMPARE) are not configured here.

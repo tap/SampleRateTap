@@ -44,11 +44,42 @@ stream to a file and analyze it offline with the notebook tooling
 machinery) — the clocks are real even if the signal never goes analog.
 
 [`examples/alsa_bridge.cpp`](../examples/alsa_bridge.cpp) (built as
-`tap_sr_async_alsa_bridge` when ALSA is found) implements this harness: `--csv` logs
-the per-second `status()` telemetry for plotting the ppm trace, `--dump`
-captures the post-ASRC float stream for the offline analysis above, and
-`--tone <hz>` substitutes a synthetic sine paced by the input device's real
-clock when the analog path is not trusted.
+`tap_sr_async_alsa_bridge` when ALSA is found) implements this harness:
+
+- **`hw:` devices only.** `--in` and `--out` are required and must name
+  `hw:` devices; the bridge refuses `default`, `plughw:` and every other
+  plugin device before opening anything. On a Pi, `default` routes through
+  PipeWire and its own resampler, and the bridge would measure that
+  converter's clock instead of the dongle's crystal.
+- **`--csv <path>`** writes the per-second record:
+  - the converter's `status()`;
+  - `CLOCK_MONOTONIC_RAW`;
+  - each device's cumulative frame count, from its thread;
+  - each device's ALSA xrun count (`-EPIPE`), kept apart from its other
+    recoveries;
+  - where the driver provides one, each device's last hardware pointer
+    update with its own timestamp (`snd_pcm_htimestamp`, on the same raw
+    clock), which carries no scheduling jitter.
+- **[`examples/alsa_bridge_report.py`](../examples/alsa_bridge_report.py)
+  analyses that record.** It regresses each device's frames against time
+  to get the two crystals' rates and their true offset in ppm, from the
+  thread counts and from the hardware timestamps. It compares that offset
+  with the servo's mean while locked, and states the ppm wobble and the
+  FIFO's breathing (standard deviation and peak to peak) and the final
+  discontinuity counts. `--plot` draws the ppm and fill traces (matplotlib).
+  Its `--self-test` checks the arithmetic on a synthetic hour, as
+  `async.Examples.AlsaBridgeReportSelfTest`.
+- **`--rt`** runs both audio threads `SCHED_FIFO` with every page locked
+  (`mlockall`), and fails rather than measuring without them.
+- **`--dump`** captures the post-ASRC float stream for the offline analysis
+  above.
+- **`--tone <hz>`** substitutes a synthetic sine paced by the input
+  device's real clock when the analog path is not trusted.
+
+The Linux CI legs install `libasound2-dev`, so the bridge is built,
+clang-tidy-clean and checked to refuse a plugin device
+(`async.Examples.AlsaBridgeRefusesPluginDevices`) on every PR. It still
+needs two dongles to run.
 
 ## Setup 2 — Pi (Cortex-A) + Raspberry Pi Pico 2: the M33 target on real silicon
 
@@ -101,9 +132,9 @@ emulation work predicted.
 
 What exists and what remains:
 
-- **Setup 1**: shipped — `examples/alsa_bridge.cpp` (see above). Still
-  missing: a small script to plot the `--csv` ppm trace and run the
-  notebook analysis over a `--dump` capture.
+- **Setup 1**: shipped. `examples/alsa_bridge.cpp` and
+  `examples/alsa_bridge_report.py` are described above. Still missing: a
+  script that runs the notebook analysis over a `--dump` capture.
 - **Setup 2**: shipped — `examples/pico2_cyccnt/` (cycle measurement) and
   `examples/pico2_dualcore/` (dual-core deployment), both building
   flashable UF2s; the measured numbers await a physical Pico 2.
