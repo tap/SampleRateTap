@@ -77,7 +77,7 @@ each one is the library's documented rules applied under witness.
 
 ## The ALSA bridge: two blocking threads, on purpose
 
-The bridge is ~370 lines and structurally almost insolently simple: open a
+The bridge is ~590 lines and structurally almost insolently simple: open a
 capture device and a playback device, start two threads, and let each
 thread block on its device.
 
@@ -156,8 +156,16 @@ three scaling axes.)
 **The telemetry switches are the experiment design.** Three flags turn the
 bridge from a demo into an instrument:
 
-- `--csv <path>` appends the once-per-second `status()` snapshot — state,
-  ppm, smoothed fill, underrun/overrun/resync counters — as a CSV row.
+- `--csv <path>` writes the once-per-second `status()` snapshot (state,
+  ppm, smoothed fill, underrun/overrun/resync counters) as a CSV row. Beside
+  it go the instruments that check the servo instead of trusting it:
+  `CLOCK_MONOTONIC_RAW`, each device's cumulative frame count, and its ALSA
+  xruns. Where the driver provides it, the row also carries each device's
+  last hardware pointer update with its own timestamp. A least-squares line
+  through each device's frames against time is that crystal's rate, and the
+  ratio of the two is the offset the servo is supposed to be estimating.
+  `examples/alsa_bridge_report.py` does that regression and reports the
+  servo's agreement with it, the ppm wobble and the fill's breathing.
   This is the soak's evidence: the ppm trace over hours *is* the thermal-
   drift measurement, and the counters' final values *are* the
   zero-discontinuity claim. Point a hair dryer at one dongle and the trace
@@ -180,6 +188,14 @@ bridge from a demo into an instrument:
   `--tone 997 --dump out.raw --csv trace.csv` is Setup 1's full
   measurement: a 997 Hz tone through two real crystals into the AES17
   notebook.
+
+Two refusals keep the instrument honest. The bridge opens `hw:` devices
+only, and turns `default` or `plughw:` away before touching the hardware: a
+plugin device may resample (on a Pi, `default` is PipeWire), and a bridge
+measuring PipeWire's converter would report that converter's clock with a
+straight face. And `--rt`, which runs both audio threads `SCHED_FIFO` with
+memory locked, fails outright if the system refuses either, rather than
+quietly measuring without it.
 
 ## `pico2_cyccnt`: buying cycles with instructions
 
@@ -397,8 +413,9 @@ the ledger as it stands:
   the real `%core@48k` figures, the hour-scale zero-discontinuity claim,
   and the thermal-drift trace are all, today, well-instrumented empty
   columns.
-- **Not yet written:** the small script that plots a `--csv` ppm trace and
-  runs the notebook analysis over a `--dump` capture, and both Setup 3
+- **Not yet written:** the script that runs the notebook analysis over a
+  `--dump` capture (the `--csv` report, `alsa_bridge_report.py`, shipped
+  with the roadmap's A11), and both Setup 3
   programs (UDP sender, receiver-with-ASRC — the plan is to reuse the
   bridge's output half).
 
@@ -418,9 +435,12 @@ cmake -B build -DTAP_SR_BUILD_EXAMPLES=ON && cmake --build build -j
 # Setup 1 (Linux + two audio devices; tap_sr_async_alsa_bridge builds when ALSA
 # is found). Real clocks, synthetic tone, telemetry + capture:
 ./build/async/examples/tap_sr_async_alsa_bridge --in hw:1,0 --out hw:2,0 \
-    --tone 997 --csv trace.csv --dump post_asrc.f32 --seconds 3600
-# Then: ppm column of trace.csv is the thermal-drift instrument; analyze
-# post_asrc.f32 with the AES17 machinery in notebooks/asrc_comparison.ipynb.
+    --rt --tone 997 --csv trace.csv --dump post_asrc.f32 --seconds 3600
+# Then: the crystals' measured offset against the servo, the wobble and the
+# breathing (--self-test checks the arithmetic without hardware):
+python3 async/examples/alsa_bridge_report.py trace.csv --plot trace.png
+# and analyze post_asrc.f32 with the AES17 machinery in
+# notebooks/asrc_comparison.ipynb.
 
 # Setup 2 firmware (standalone builds; arm-none-eabi-gcc + network for
 # the Pico SDK fetch):
