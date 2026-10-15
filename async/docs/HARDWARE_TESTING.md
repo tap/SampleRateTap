@@ -20,6 +20,16 @@ Each dongle clocks its own 48 kHz from its own crystal:
   `pull()`
 - A loopback wire (or a tone generator into A's input) provides signal.
 
+The test is only as good as the two clocks' independence. Many cheap
+dongles are adaptive or synchronous endpoints locked to the host's USB
+frame clock, and two of them share one effective clock. Check
+`/proc/asound/cardN/stream0` for an asynchronous endpoint before
+trusting a run. [`examples/pico2_uac2/`](../examples/pico2_uac2/) is a
+known-good side: a Raspberry Pi Pico 2 as a USB Audio Class 2.0
+asynchronous-mode device on its own crystal, with a feedback endpoint for
+playback and a tone for capture. Its `PICO2_UAC2_PPM` option adds a known
+offset, so two runs check the bench's fit against an exact difference.
+
 This is the library's use case running on real clocks. Log `status()` once
 per second and check:
 
@@ -136,8 +146,10 @@ emulation work predicted.
 What exists and what remains:
 
 - **Setup 1**: shipped. `examples/alsa_bridge.cpp` and
-  `examples/alsa_bridge_report.py` are described above. Still missing: a
-  script that runs the notebook analysis over a `--dump` capture.
+  `examples/alsa_bridge_report.py` are described above, and
+  `examples/pico2_uac2/` is the independent clock for one side (built in
+  CI; never yet enumerated by a host). Still missing: a script that runs
+  the notebook analysis over a `--dump` capture.
 - **Setup 2**: shipped — `examples/pico2_cyccnt/` (cycle measurement) and
   `examples/pico2_dualcore/` (dual-core deployment), both building
   flashable UF2s; the measured numbers await a physical Pico 2.

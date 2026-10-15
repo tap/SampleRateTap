@@ -74,10 +74,12 @@ verifies the quantitative design feedback from the June 2026 music-dsp
 thread (image-S/N vs phase count, tap budgets, zeros-at-k·fs) against the
 shipped filters, with every result assertion-pinned.
 
-For real hardware there are three more entry points:
+For real hardware there are four more entry points:
 `examples/alsa_bridge.cpp` (two ALSA devices on their real crystals — the
 [hardware testing](docs/HARDWARE_TESTING.md) Setup 1 harness, with CSV
-telemetry and post-ASRC capture), `examples/pico2_cyccnt/` (flashable
+telemetry and post-ASRC capture), `examples/pico2_uac2/` (an RP2350 as a
+USB Audio Class 2.0 asynchronous-mode device on its own crystal, the
+bench's independent clock), `examples/pico2_cyccnt/` (flashable
 RP2350 firmware measuring real cycles per block against the QEMU
 instruction baselines), and `examples/pico2_dualcore/` (the
 one-clock-domain-per-core RP2350 deployment, self-validating).
