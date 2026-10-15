@@ -460,10 +460,11 @@ still holds on the new default, re-measured in the same test batteries.*
   `_format`, `_process_q15` / `_q31`, `_flush_q15` / `_q31`; 17 exported
   symbols, hidden visibility), the shape `rational`'s ABI set, since the
   family decided to keep fixed point at every engine's C boundary.
-- **Book/white-paper chapter** ("the degenerate case"): explicitly deferred
-  past v0.1. Code is written anchor-friendly (`ANCHOR:` comments on the
-  load-bearing excerpts) from day one so the chapter can be added without
-  touching the code.
+- ~~**Book/white-paper chapter** ("the degenerate case")~~: deferred past
+  v0.1, then written: the book's Part VI, the bridge engine (#68,
+  2026-10-08), from "The degenerate case: 44.1 ↔ 48 as a type" to "Three
+  legs, and the bridge to the ASRC", its excerpts included live from the
+  `ANCHOR:` comments the code carried from day one.
 - **AmbiTap/HOA channel-count validation** (the HVX 16-channel story):
   deferred to the M7+ embedded campaign.
 

@@ -326,7 +326,7 @@ SampleRateTap/
 │                           the bare-metal mutex stub), hoisted from async/ by the bridge comparison
 ├── scripts/                icount.py, tidy.sh, fetch_hexagon_toolchain.sh,
 │                           update_icount_docs.py, update_perf_docs.py, book_figures*
-├── book/                   (bridge chapters are follow-up work)
+├── book/                   Part VI is the bridge engine (#68), Part VII the rational engine
 ├── docs/                   Doxyfile (both engines); migration/ (removed at step 4)
 ├── async/
 │   ├── CMakeLists.txt  README.md (+ icount table)  PLAN.md
@@ -618,7 +618,8 @@ run first in CI. Choices the plan left open:
 
 - clang-tidy keeps each repository's old coverage: both engines' tests and
   examples, and bridge's icount workloads. async's workloads were never
-  under the gate and fail it; bringing them in is follow-up work.
+  under the gate and fail it; bringing them in is follow-up work (since
+  done: the roadmap's A2, 2026-10-12).
 - ci-arm64 runs `-L '^async$'` (its old scope). TSan builds both engines and
   runs async only.
 - The ratchet is one matrix job per engine, each with its own plugin marker

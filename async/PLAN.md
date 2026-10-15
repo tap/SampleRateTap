@@ -58,7 +58,7 @@ The boundaries are identity, not policy:
 
 ## 3. Status
 
-**v0.4.0** — the family version (D13), in the SampleRateTap tree since the
+**v0.6.0** — the family version (D13), in the SampleRateTap tree since the
 2026 migration; before it, SampleRateTap v0.1.0 (the campaign's PR A–C6 in
 `docs/PERFORMANCE.md` "Sequencing & status"). The DspTap adoption
 (`bridge/PLAN.md` Appendix B) moved the FIR substrate out; the
@@ -75,12 +75,19 @@ In expected order; each item lands as its own PR with its measurements.
    the two-length differencing the comparison workloads already use — so
    the ±3 % gate regains per-frame sensitivity on M33 and construction
    becomes a first-class number (`docs/PERFORMANCE.md`, "Known debt").
+   *Done* (2026-10-09, 43f3e29): `construct_q15` is a gated scenario
+   beside the pipelines, so `pipeline_q15 − construct_q15` is the streaming
+   loop alone (`docs/PERFORMANCE.md`, "`construct_q15` — construction as a
+   gated scenario").
 2. **Timestamp clock recovery.** Accept per-block timestamps for sub-sample
    phase observation, so the servo no longer depends on FIFO counts alone
    and block-quantized transfer stops wobbling the ppm estimate (README,
    "Limitations").
 3. **Tail latency.** The p99/max per-call `pull(128)` benchmark the
-   metrics table promises.
+   metrics table promises. *In part* (the roadmap's A6): the worst single
+   `pull()` is gated in the QEMU ratchet (`callmax_pull_float`,
+   `callmax_pull_q15`); the host p99/max is measured on the bench in the
+   roadmap's Block B and recorded as a trend, never gated on CI.
 4. **MSVC `/W4` triage**, then `TAP_SR_ASYNC_WERROR=ON` on the Windows leg.
    *Done* (the roadmap's A2): the one warning was C4324 on `spsc_ring`'s
    cache-line padding, off for async's own targets with its reason.

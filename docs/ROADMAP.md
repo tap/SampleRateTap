@@ -124,7 +124,7 @@ gated on shipping.
   the root README, and have each consumer's bump commit name the tag (a submodule gitlink
   is a SHA; TapTools' and MuTap's pins are theirs to move). DspTap is tagged on its own
   cadence, never released in lockstep with this tree (Q4).
-- **A10. Stale prose sweep.** `PLAN.md:328` and `bridge/PLAN.md` §9 still call the book's
+- **A10. Stale prose sweep.** *Landed 2026-10-15: the root `PLAN.md` layout and `bridge/PLAN.md` §9 name the book's Part VI (#68) as written, and the migration record notes A2 closed its tidy exclusion; `async/PLAN.md` states v0.6.0 and marks the construction scenario done (43f3e29) and tail latency done in part (A6); `docs/AUDIT_2026-10_PLAN.md` reads executed; the family comparison and each engine's `COMPARISON.md` state the competitor pins frozen at 2026-10-09.* `PLAN.md:328` and `bridge/PLAN.md` §9 still call the book's
   bridge chapters follow-up work (Part VI landed in #68, 2026-10-08); `async/PLAN.md` §3
   says v0.4.0 and §4 lists the construction scenario as open (done 2026-10-09);
   `docs/AUDIT_2026-10_PLAN.md` still says "execution in progress"; the comparison records'
