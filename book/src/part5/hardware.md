@@ -412,6 +412,49 @@ that is what makes +200.0 an exact, assertable truth — so this firmware
 It proves the deployment shape: two cores, two clock domains, lock-free
 handoff, real cycle headroom.
 
+## `pico2_uac2`: a clock the host does not own
+
+Setup 1 assumes its two devices run on two clocks. A cheap USB dongle often
+does not: an adaptive or synchronous endpoint locks its sample clock to the
+host's USB frames, and two such dongles share one clock. The servo then
+locks, flawlessly, to an offset of zero, and a hair dryer changes nothing.
+`examples/pico2_uac2/` is the side that cannot fail that way: a Pico 2 that
+enumerates as a USB Audio Class 2.0 device in asynchronous mode, with its
+sample clock taken from its own crystal.
+
+The clock is one line of integer arithmetic over the RP2350's microsecond
+timer, which counts the 12 MHz crystal:
+
+```cpp
+std::uint64_t device_frames(std::uint64_t us) {
+    return static_cast<std::uint64_t>(static_cast<std::int64_t>(us) * 6 * (1'000'000 + kPpm) / 125'000'000);
+}
+```
+
+That is 48,000 frames a second, times (1 + ppm / 10⁶), and it sets both
+directions:
+
+- **Playback.** The firmware drains the endpoint's FIFO at that rate, and
+  the feedback endpoint tells the host how fast to send. TinyUSB derives
+  the feedback from the FIFO's level and holds it half full, so the host
+  follows the crystal.
+- **Capture.** Each packet carries the frames the clock produced since the
+  last one: 47, 48 or 49 a millisecond. The packet callback runs late by
+  whatever the main loop was doing, so its times pass through the
+  delay-locked loop JACK and PipeWire use (Adriaensen, 2005) before
+  they become a frame count. Modelled over 600 s of packets with up to
+  0.4 ms of lateness and a 3 ms stall every ten seconds, every packet
+  was 47, 48 or 49 frames. The count ran a constant 58 frames behind the
+  clock, the filter's lag at start-up, so the rate is exact.
+
+The `kPpm` in that line is the trick `pico2_dualcore` used, turned
+around. There, an offset synthesized from one shared timebase gave an
+exact truth but proved nothing about two crystals. Here the crystal is
+real and unknown, and `PICO2_UAC2_PPM` adds a *known* offset on top. Two
+runs at different settings must differ by exactly that much in the
+report's fit, which checks the bench's own arithmetic against an exact
+number without knowing either crystal.
+
 ## What is measured, and what is not yet
 
 The project's culture is that numbers are measured or absent, so here is
@@ -420,8 +463,8 @@ the ledger as it stands:
 - **Shipped and measured on real clocks: nothing yet.** All quality and
   performance figures in this book so far come from deterministic
   simulation, host benchmarks, and QEMU instruction counting.
-- **Shipped and awaiting hardware:** all three harnesses build — the ALSA
-  bridge wherever ALSA exists, both Pico 2 firmwares as flashable UF2s —
+- **Shipped and awaiting hardware:** all four harnesses build — the ALSA
+  bridge wherever ALSA exists, the three Pico 2 firmwares as flashable UF2s —
   but `docs/HARDWARE_TESTING.md` says it plainly: *the measured numbers
   await a physical Pico 2*, and the multi-hour dongle soak awaits an
   afternoon with a Pi. The cycles-per-instruction calibration constant,
@@ -461,6 +504,8 @@ python3 async/examples/alsa_bridge_report.py trace.csv --plot trace.png
 # the Pico SDK fetch):
 cd examples/pico2_cyccnt   && cmake -B build -DPICO_BOARD=pico2 && cmake --build build -j
 cd examples/pico2_dualcore && cmake -B build -DPICO_BOARD=pico2 && cmake --build build -j
+# Setup 1's independent clock (a UAC2 asynchronous-mode device; status on UART0):
+cd examples/pico2_uac2     && cmake -B build -DPICO_BOARD=pico2 && cmake --build build -j
 # Flash the UF2s, open the USB serial port, and wait for the sentinel
 # lines: TAP_SR_PICO2_DONE / TAP_SR_PICO2_DUALCORE_DONE with per-phase PASS/FAIL.
 ```

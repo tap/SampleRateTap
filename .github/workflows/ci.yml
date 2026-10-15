@@ -809,6 +809,17 @@ jobs:
           cmake -S async/examples/pico2_cyccnt -B build-cyccnt -DPICO_BOARD=pico2
           && cmake --build build-cyccnt -j 4
 
+      # The bench's independent clock (A11c): the UAC2 asynchronous-mode
+      # device, at the default and at a nonzero injected offset.
+      - name: Build pico2_uac2
+        run: >
+          cmake -S async/examples/pico2_uac2 -B build-uac2 -DPICO_BOARD=pico2
+          -DFETCHCONTENT_SOURCE_DIR_PICO_SDK=build-cyccnt/_deps/pico_sdk-src
+          && cmake --build build-uac2 -j 4
+          && cmake -S async/examples/pico2_uac2 -B build-uac2-ppm -DPICO_BOARD=pico2 -DPICO2_UAC2_PPM=-250
+          -DFETCHCONTENT_SOURCE_DIR_PICO_SDK=build-cyccnt/_deps/pico_sdk-src
+          && cmake --build build-uac2-ppm -j 4
+
       - name: Build pico2_dualcore
         run: >
           cmake -S async/examples/pico2_dualcore -B build-dualcore -DPICO_BOARD=pico2
