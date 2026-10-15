@@ -104,7 +104,10 @@ Two things this proves that emulation cannot:
   core (~1,140 steady-state instructions per frame against 3,125 cycles).
   Correlating CYCCNT against the QEMU steady-state instruction counts
   also calibrates the ratchet ("1 QEMU instruction ≈ N RP2350
-  cycles") for all future M33 numbers.
+  cycles") for all future M33 numbers. The firmware times `bridge` (both
+  directions) and `rational` (↑2, ↓2, 2/3) at Q15 too, so the ratio is read
+  off every engine's datapath, and runs from SRAM by default
+  (`PICO2_COPY_TO_RAM`), as QEMU's memory has no wait states.
 - **Dual-core deployment** (harness shipped:
   [`examples/pico2_dualcore/`](../examples/pico2_dualcore/), self-validating
   PASS/FAIL phases). The README suggests dedicating the RP2350's second

@@ -17,6 +17,21 @@
 //
 // yields the "1 QEMU instruction ~= N RP2350 cycles" ratio that converts
 // every M33 instruction baseline into a real cycle budget.
+//
+// The family's synchronous engines are measured beside it (the roadmap's
+// A11): bridge in both directions (147/160 and 160/147) and rational up 2,
+// down 2 and 2/3, all Q15 at the default profile (economy), stereo, timing
+// each process() of 32 input frames. Their QEMU M33 steady states, from the
+// committed baselines less their construct-only legs (2 s of stereo):
+//
+//   bridge down_q15_eco (48 -> 44.1)  (173,755,176 - 136,279,322) / 88,200
+//                                     = 424.9 insns per output frame
+//   bridge up_q15_eco   (44.1 -> 48)  (133,914,472 - 104,011,630) / 96,000
+//                                     = 311.5 insns per output frame
+//
+// rational's construct leg is its chain's (down2_down2_q15_eco), so its
+// single-stage totals still carry their own construction; the firmware's
+// cycles are the measurement there.
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -33,6 +48,8 @@
 #include "pico/stdlib.h"
 #include "tap/dsp/detail/expects.h"
 #include "tap/sr/async/converter.h"
+#include "tap/sr/bridge/converter.h"
+#include "tap/sr/rational/converter.h"
 
 namespace {
 
@@ -156,6 +173,74 @@ namespace {
                     (st.underruns != 0 || st.overruns != 0 || sink != sink) ? "  WARN: not steady-state" : "");
     }
 
+    /// One synchronous engine (bridge or rational) streaming 32-frame input
+    /// blocks through process(), timed per call. The cost is stated per output
+    /// frame and as one stream's share of the core at the engine's output rate.
+    template <typename Engine>
+    void runSyncCase(const char* engineName, const char* caseName, std::size_t channels, double outRateHz) {
+        if (const char* why = Engine::validate(channels)) {
+            std::printf("%-8s %-8s %3u  SKIP (%s)\n", engineName, caseName, static_cast<unsigned>(channels), why);
+            return;
+        }
+        std::unique_ptr<Engine>   conv;
+        std::vector<std::int16_t> input;
+        std::vector<std::int16_t> out;
+        // Room for any ratio here: up 2 makes at most 2 * 32 + 1 frames a call.
+        const std::size_t outCap = (3 * kBlockFrames + 8) * channels;
+#if TAP_DSP_HAS_EXCEPTIONS
+        try {
+            conv  = std::make_unique<Engine>(channels);
+            input = sineBlock<std::int16_t>(kInputFrames * channels, 997.0, 0.5);
+            out.resize(outCap);
+        }
+        catch (const std::exception& e) {
+            std::printf("%-8s %-8s %3u  SKIP (%s)\n", engineName, caseName, static_cast<unsigned>(channels), e.what());
+            return;
+        }
+#else
+        conv  = std::make_unique<Engine>(channels);
+        input = sineBlock<std::int16_t>(kInputFrames * channels, 997.0, 0.5);
+        out.resize(outCap);
+#endif
+
+        double        sink    = 0.0;
+        std::size_t   off     = 0;
+        std::uint64_t outputs = 0;
+        const auto    step    = [&]() {
+            const std::size_t made = conv->process(input.data() + off, kBlockFrames, out.data());
+            off += kBlockFrames * channels;
+            if (off + kBlockFrames * channels > input.size()) {
+                off = 0;
+            }
+            sink += static_cast<double>(out[0]);
+            return made;
+        };
+
+        for (std::size_t i = 0; i < kWarmupIters; ++i) {
+            step();
+        }
+        for (std::size_t i = 0; i < kMeasureIters; ++i) {
+            const std::uint32_t t0 = DWT->CYCCNT;
+            outputs += step();
+            gCycles[i] = DWT->CYCCNT - t0;
+        }
+
+        std::uint64_t sum = 0;
+        for (const std::uint32_t c : gCycles) {
+            sum += c;
+        }
+        std::sort(gCycles, gCycles + kMeasureIters);
+        const double        mean     = static_cast<double>(sum) / static_cast<double>(kMeasureIters);
+        const std::uint32_t p99      = gCycles[kMeasureIters * 99 / 100 - 1];
+        const std::uint32_t mx       = gCycles[kMeasureIters - 1];
+        const double        perFrame = static_cast<double>(sum) / static_cast<double>(outputs);
+        const double        pctCore  = perFrame * outRateHz / static_cast<double>(clock_get_hz(clk_sys)) * 100.0;
+        std::printf("%-8s %-8s %3u  %10.0f %10lu %10lu %10.1f %8.2f%% @ %5.1f kHz%s\n", engineName, caseName,
+                    static_cast<unsigned>(channels), mean, static_cast<unsigned long>(p99),
+                    static_cast<unsigned long>(mx), perFrame, pctCore, outRateHz / 1000.0,
+                    sink != sink ? "  WARN: non-finite output" : "");
+    }
+
 } // namespace
 
 int main() {
@@ -171,7 +256,7 @@ int main() {
                 static_cast<unsigned>(kWarmupIters), static_cast<unsigned>(kMeasureIters));
 
     if (!enableCycleCounter()) {
-        std::printf("ERROR: DWT cycle counter not implemented\nSRT_PICO2_DONE\n");
+        std::printf("ERROR: DWT cycle counter not implemented\nTAP_SR_PICO2_DONE\n");
         while (true)
             sleep_ms(1000);
     }
@@ -189,6 +274,19 @@ int main() {
     runCase<float>("float", "fast", tap::sr::async::filter_spec::fast(), 1);
     runCase<float>("float", "balanced", tap::sr::async::filter_spec::balanced(), 1);
 #endif
+
+    // The synchronous engines, Q15 economy, stereo: cycles per output frame
+    // and one stream's share of the core at the engine's output rate.
+    std::printf("\n%-8s %-8s %3s  %10s %10s %10s %10s %9s\n", "engine", "case", "ch", "mean/call", "p99/call",
+                "max/call", "cyc/out", "%core");
+    using tap::sr::bridge::direction;
+    runSyncCase<tap::sr::bridge::basic_converter<std::int16_t, direction::down_to_44k1, 0>>("bridge", "48>44.1", 2,
+                                                                                            44100.0);
+    runSyncCase<tap::sr::bridge::basic_converter<std::int16_t, direction::up_to_48k, 0>>("bridge", "44.1>48", 2,
+                                                                                         48000.0);
+    runSyncCase<tap::sr::rational::converter_q15<tap::sr::rational::up_2>>("rational", "up2", 2, 48000.0);
+    runSyncCase<tap::sr::rational::converter_q15<tap::sr::rational::down_2>>("rational", "down2", 2, 24000.0);
+    runSyncCase<tap::sr::rational::converter_q15<tap::sr::rational::ratio_2_3>>("rational", "2/3", 2, 32000.0);
 
     std::printf("TAP_SR_PICO2_DONE\n");
     while (true)

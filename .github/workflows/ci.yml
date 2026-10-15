@@ -818,10 +818,13 @@ jobs:
       # (the family's error model, A3: config::validate() before constructing,
       # the library's rejections terminate instead of throwing). The SDK is
       # already fetched into the first trees; the second configure reuses it.
+      # pico2_cyccnt's second build also takes the flash (XIP) layout, so
+      # both of PICO2_COPY_TO_RAM's settings link.
       - name: Build pico2_cyccnt without exceptions
         run: >
           cmake -S async/examples/pico2_cyccnt -B build-cyccnt-noexc -DPICO_BOARD=pico2
-          -DPICO_CXX_ENABLE_EXCEPTIONS=0 -DFETCHCONTENT_SOURCE_DIR_PICO_SDK=build-cyccnt/_deps/pico_sdk-src
+          -DPICO_CXX_ENABLE_EXCEPTIONS=0 -DPICO2_COPY_TO_RAM=OFF
+          -DFETCHCONTENT_SOURCE_DIR_PICO_SDK=build-cyccnt/_deps/pico_sdk-src
           && cmake --build build-cyccnt-noexc -j 4
 
       - name: Build pico2_dualcore without exceptions
