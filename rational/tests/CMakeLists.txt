@@ -54,7 +54,10 @@ if(TAP_SR_BUILD_CAPI)
 endif()
 # The tests' own headers (the committed reference vectors, the generated
 # matrix rows, the bridge adapter) resolve relative to this directory.
-target_include_directories(tap_sr_rational_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# The family's test support (tests/support/tap_sr_test/: the rejection
+# assertions, with and without exceptions; the roadmap's A12).
+target_include_directories(tap_sr_rational_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+    ${SampleRateTap_SOURCE_DIR}/tests/support)
 target_link_libraries(tap_sr_rational_tests PRIVATE
     tap::sr::rational
     tap_sr_bridge_headers

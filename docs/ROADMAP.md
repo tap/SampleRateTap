@@ -64,6 +64,7 @@ is this checklist, not an opinion.
 | P11 | C ABI: one error model, extension rule, compat test, version probe | **open** (C3) | **open** (C3) | **open** (C3) |
 | P12 | Versioned substrate pin asserted at compile time | ✓ (A9) | ✓ (A9) | ✓ (A9) |
 | P13 | Changelog, semver and deprecation statement reconciled with D7 | **open** (C3) | **open** (C3) | **open** (C3) |
+| P14 | Every battery passes under `-fno-exceptions -fno-rtti` on M33, M55 and Hexagon, gated | ✓ (A12) | ✓ (A12) | ✓ (A12) |
 
 ## 3. Block A (weeks 1–2): contracts and hygiene
 
@@ -142,6 +143,17 @@ gated on shipping.
   USB audio firmware that enumerates as a UAC2 asynchronous-mode device (feedback
   endpoint) on its own crystal, the bench's independent clock (Q1), which is not in the
   tree today.
+- **A12. Every battery without exceptions or RTTI** (added 2026-11-04, Q5's answer: a
+  current project builds all three engines with `-fno-exceptions -fno-rtti` on the M33, M55
+  and Hexagon). A3 made the engines and C ABIs build that way, but no test ran there and
+  nothing was built with `-fno-rtti`. In two PRs. *The substrate (tap/DspTap#63):
+  `TAP_DSP_NO_EXCEPTIONS_RTTI`, DspTap's whole battery so on Linux, the M33 and the M55.
+  This tree: `TAP_SR_NO_EXCEPTIONS_RTTI` builds every target so (an option, since
+  `CMAKE_CXX_FLAGS` would replace the cross toolchains' flags); the rejection tests go
+  through `tests/support/tap_sr_test/expect_rejected.h` (`EXPECT_THROW` with exceptions,
+  a death test on `std::terminate()` without, `validate()`'s text pinned either way); the
+  hosted no-exceptions job runs every battery, examples and C ABIs; the nine QEMU legs
+  run again in that configuration.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 
@@ -205,12 +217,14 @@ writes the tooling and reads the results.
   `main` protected; a manual workflow that re-executes the notebooks and diffs the figure
   digests as part of the release checklist. The 1.0 freeze covers `bridge`, `rational` and
   the existing `async` surface; the `bridge` C ABI stays at K = 0 and may grow additively
-  as already promised.
+  as already promised. The 1.0 freeze also covers the configuration
+  `-fno-exceptions -fno-rtti` (P14, A12): every battery passes under it on the M33, M55 and
+  Hexagon, gated in CI, and a change that needs either feature in a header is a break.
 
 ## 6. Verdict rule
 
-`bridge` and `rational` are production-ready when P1–P7 and P9–P13 are green: Block A
-closes P3–P6, P9, P10, P12; B2 closes P7; C3 closes P11 and P13. `async` additionally needs
+`bridge` and `rational` are production-ready when P1–P7 and P9–P14 are green: Block A
+closes P3–P6, P9, P10, P12, P14; B2 closes P7; C3 closes P11 and P13. `async` additionally needs
 P8 from B1. On this sequencing, `bridge` and `rational` reach the bar at the end of Block C
 (not Block B: P11 and P13 are release engineering), and `async` reaches it at the same
 point, provided B1's numbers are inside the README's claims; with the bench running twice
@@ -248,6 +262,10 @@ confirm them.
 - **Q5. `-fno-exceptions`.** Does any consumer build with it today?
   **Decided:** probably our own Pico 2 firmware, the SDK's default (the maintainer's best
   recollection, not confirmed); A3 landed regardless (#81).
+  **Confirmed 2026-11-04:** no consumer builds so today, and the Pico firmwares force
+  exceptions on; but a current project has a hard requirement for `-fno-exceptions
+  -fno-rtti` on the M33, M55 and Hexagon, with all three engines. A12 makes that a gated
+  configuration and C3 freezes it (P14).
 - **Q6. The host ratchet.** A hard gate on callgrind `Ir` (deterministic enough on the
   runners), or an unguarded trend with the channel-parallel path documented as ungated?
   **Decided:** a hard gate, two-sided at ±3 % (A8).

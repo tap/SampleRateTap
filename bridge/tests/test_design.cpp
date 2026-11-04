@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "tap/sr/bridge/design.h"
+#include "tap_sr_test/expect_rejected.h"
 
 namespace {
 
@@ -121,14 +122,14 @@ namespace {
     TEST(Design, BadProfilesThrow) {
         profile p     = profile::economy();
         p.passband_hz = 23000.0; // above the down direction's stopband edge
-        EXPECT_THROW((design_prototype<direction::down_to_44k1>(p)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((design_prototype<direction::down_to_44k1>(p)), std::invalid_argument);
         profile q           = profile::economy();
         q.stopband_atten_db = -1.0;
-        EXPECT_THROW((design_prototype<direction::up_to_48k>(q)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((design_prototype<direction::up_to_48k>(q)), std::invalid_argument);
         // The edge scales with the pair, so the same profile is bad at every
         // rate scale (23 kHz at K = 0 is 46 kHz at K = 1, still above 44.1).
-        EXPECT_THROW((design_prototype<direction::down_to_44k1, 1>(p)), std::invalid_argument);
-        EXPECT_THROW((design_prototype<direction::down_to_44k1, 2>(p)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((design_prototype<direction::down_to_44k1, 1>(p)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((design_prototype<direction::down_to_44k1, 2>(p)), std::invalid_argument);
         // The same verdicts as the noexcept precheck the converter composes (A3).
         using tap::sr::bridge::validate_profile;
         static_assert(noexcept(validate_profile<direction::down_to_44k1>(p)));

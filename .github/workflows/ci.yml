@@ -147,17 +147,16 @@ jobs:
           UBSAN_OPTIONS: print_stacktrace=1
         run: ctest --test-dir build ${{ env.CTEST_COMMON }} ${{ matrix.labels }}
 
-  # The family's error model, A3: every engine's headers and the three C
-  # ABIs build with exceptions off (clang, -fno-exceptions, warnings fatal).
-  # Tests and examples are off: gtest's EXPECT_THROW and the examples' catch
-  # blocks need exceptions, and the headers' own exceptions-off compile is
-  # the hosted legs' <engine>.Family.HeadersCompileWithoutExceptions. What
-  # this job adds is the C boundary: the create paths validate first and
-  # carry no try/catch in such a build.
+  # The family's error model, A3, as a consumer that forbids both exceptions
+  # and RTTI builds it (the roadmap's Q5 and A12): every engine's battery,
+  # examples and C ABI under -fno-exceptions -fno-rtti (TAP_SR_NO_EXCEPTIONS_RTTI),
+  # warnings fatal. Rejections are death tests here (tests/support/tap_sr_test/
+  # expect_rejected.h) and the C ABIs' create paths validate first and carry
+  # no try/catch. The job keeps its A3 name so its check stays the same.
   no-exceptions:
     name: Linux Clang, -fno-exceptions (engines + C ABIs)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -170,12 +169,15 @@ jobs:
         run: >
           cmake -B build
           -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_CXX_FLAGS=-fno-exceptions
-          -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF -DTAP_SR_BUILD_CAPI=ON
+          -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+          -DTAP_SR_BUILD_TESTS=ON -DTAP_SR_BUILD_EXAMPLES=ON -DTAP_SR_BUILD_CAPI=ON
           -DTAP_SR_ASYNC_WERROR=ON -DTAP_SR_BRIDGE_WERROR=ON -DTAP_SR_RATIONAL_WERROR=ON
 
       - name: Build
         run: cmake --build build -j 4
+
+      - name: Test
+        run: ctest --test-dir build ${{ env.CTEST_COMMON }} -j 4
 
   # Cross-compiled correctness under emulation, one job per (target, engine):
   # every engine is built in one tree and each job runs one engine's label
@@ -292,6 +294,120 @@ jobs:
             build_type: MinSizeRel
             toolchain: cmake/arm-cortex-m33-mps2.cmake
             exclude: ""
+          # The same nine legs as a consumer that forbids exceptions and RTTI
+          # builds them (the roadmap's Q5 and A12: a current one ships every
+          # engine this way on these three targets), with each leg's own
+          # exclusions and budget.
+          - target: hexagon
+            title: Hexagon cross, no exceptions/RTTI
+            engine: async
+            label: async
+            timeout: 45
+            jobs: 1
+            build_type: Release
+            toolchain: cmake/hexagon-linux-musl.cmake
+            exclude: AsrcQuality|AsrcLock|TwoThreadStress|Threads\.|TransparentPrototypeMeetsSpec|MultiChannel\.|Feasibility|Reset\.
+            cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+            suffix: -no-exceptions-rtti
+          - target: hexagon
+            title: Hexagon cross, no exceptions/RTTI
+            engine: bridge
+            label: bridge
+            timeout: 30
+            jobs: 4
+            build_type: Release
+            toolchain: cmake/hexagon-linux-musl.cmake
+            exclude: ""
+          # rational: the host measurements are excluded on Hexagon (the two
+          # unmeetable-spec tests, which search every length on the design
+          # grid in soft double and outlast the per-test timeout; the coverage matrix's tone batteries, 182 chains in double per
+          # profile, and the relaxation tables' searches, which run every
+          # candidate length through the design grid: the 70 dB tables alone
+          # exceed the job's budget under qemu-hexagon, and the quantized and
+          # relaxed Q15 tables' stopbands through a 16384-point DFT); on the Arm legs
+          # bare_metal_main.cpp bakes in its own
+          # filter (the fine-grid sweeps of the long designs and the
+          # matrix suite).
+            cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+            suffix: -no-exceptions-rtti
+          - target: hexagon
+            title: Hexagon cross, no exceptions/RTTI
+            engine: rational
+            label: rational
+            timeout: 20
+            jobs: 4
+            build_type: Release
+            toolchain: cmake/hexagon-linux-musl.cmake
+            exclude: UnmeetableSpec|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands|RelaxedQ15TablesStopbandsAreStated
+            cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+            suffix: -no-exceptions-rtti
+          - target: m55
+            title: Cortex-M55 cross, no exceptions/RTTI
+            engine: rational
+            label: rational
+            timeout: 20
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m55-mps3.cmake
+            exclude: ""
+            cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+            suffix: -no-exceptions-rtti
+          - target: m33
+            title: Cortex-M33 cross, no exceptions/RTTI
+            engine: rational
+            label: rational
+            timeout: 20
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m33-mps2.cmake
+            exclude: ""
+            cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+            suffix: -no-exceptions-rtti
+          - target: m55
+            title: Cortex-M55 cross, no exceptions/RTTI
+            engine: async
+            label: async
+            timeout: 30
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m55-mps3.cmake
+            exclude: ""
+            cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+            suffix: -no-exceptions-rtti
+          - target: m55
+            title: Cortex-M55 cross, no exceptions/RTTI
+            engine: bridge
+            label: bridge
+            timeout: 20
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m55-mps3.cmake
+            exclude: ""
+          # ~23 min of emulated suite against a 40-minute budget.
+            cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+            suffix: -no-exceptions-rtti
+          - target: m33
+            title: Cortex-M33 cross, no exceptions/RTTI
+            engine: async
+            label: async
+            timeout: 40
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m33-mps2.cmake
+            exclude: ""
+            cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+            suffix: -no-exceptions-rtti
+          - target: m33
+            title: Cortex-M33 cross, no exceptions/RTTI
+            engine: bridge
+            label: bridge
+            timeout: 20
+            jobs: 1
+            build_type: MinSizeRel
+            toolchain: cmake/arm-cortex-m33-mps2.cmake
+            exclude: ""
+            cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+            suffix: -no-exceptions-rtti
     env:
       # Prebuilt open-source toolchain (BSD-3) published by Qualcomm/Quicinc;
       # binary artifacts are hosted on CodeLinaro and linked from the
@@ -372,6 +488,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}
           -DTAP_SR_BUILD_EXAMPLES=OFF
+          ${{ matrix.cmake_extra }}
 
       - name: Build
         run: cmake --build build -j 4
@@ -380,7 +497,7 @@ jobs:
         shell: bash
         run: |
           args=(--test-dir build ${{ env.CTEST_COMMON }} -L '^${{ matrix.label }}$'
-                -j ${{ matrix.jobs }} -V --output-log ctest-${{ matrix.target }}-${{ matrix.engine }}.log)
+                -j ${{ matrix.jobs }} -V --output-log ctest-${{ matrix.target }}-${{ matrix.engine }}${{ matrix.suffix }}.log)
           if [ -n '${{ matrix.exclude }}' ]; then args+=(-E '${{ matrix.exclude }}'); fi
           ctest "${args[@]}"
 
@@ -388,8 +505,8 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ctest-${{ matrix.target }}-${{ matrix.engine }}
-          path: ctest-${{ matrix.target }}-${{ matrix.engine }}.log
+          name: ctest-${{ matrix.target }}-${{ matrix.engine }}${{ matrix.suffix }}
+          path: ctest-${{ matrix.target }}-${{ matrix.engine }}${{ matrix.suffix }}.log
 
   # ------------------------------------------------------------------------
   # Template: genuine Tensilica HiFi4/HiFi5 coverage. The HiFi audio ISA,

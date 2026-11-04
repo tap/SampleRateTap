@@ -25,6 +25,7 @@
 #include "reference/reference_vectors.h"
 #include "tap/dsp/decimate.h"
 #include "tap/sr/rational/rational.h"
+#include "tap_sr_test/expect_rejected.h"
 
 namespace {
 
@@ -806,7 +807,7 @@ namespace {
     }
 
     TEST(Stage, ZeroChannelsThrows) {
-        EXPECT_THROW((converter<up_2>(0)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((converter<up_2>(0)), std::invalid_argument);
     }
 
     // The family's error model (A3): validate() is the constructor's rejection
@@ -822,21 +823,12 @@ namespace {
             EXPECT_EQ((basic_stage<std::int16_t, ratio_2_3>::validate(2, p)), nullptr);
             EXPECT_EQ((basic_stage<double, down_8>::validate(4, p.relaxed({3, 2}))), nullptr);
         }
-        const auto rejection = [](auto make) -> std::string {
-            try {
-                make();
-                return {};
-            }
-            catch (const std::exception& e) {
-                return e.what();
-            }
-        };
         EXPECT_STREQ(stage::validate(0), "tap::sr::rational::basic_stage: channels == 0");
-        EXPECT_EQ(rejection([] { stage s(0); }), stage::validate(0));
+        TAP_SR_EXPECT_REJECTED_WITH(stage(0), std::invalid_argument, stage::validate(0));
         profile bad       = profile::economy();
         bad.passband_frac = 0.5; // the lower rate's Nyquist: no transition band
         EXPECT_EQ(stage::validate(1, bad), validate(bad)) << "the designer's own text";
-        EXPECT_EQ(rejection([&] { stage s(1, bad); }), stage::validate(1, bad));
+        TAP_SR_EXPECT_REJECTED_WITH(stage(1, bad), std::invalid_argument, stage::validate(1, bad));
     }
 
     // The same agreement where the designer finds no length: an unpinned
@@ -850,14 +842,7 @@ namespace {
         const profile unmeetable = {
             .passband_frac = 0.4999, .stopband_atten_db = 160.0, .taps_per_branch = {0, 0, 0, 0, 0}};
         EXPECT_STREQ(stage::validate(1, unmeetable), k_unmeetable_spec_reason);
-        std::string thrown;
-        try {
-            stage s(1, unmeetable);
-        }
-        catch (const std::runtime_error& e) {
-            thrown = e.what();
-        }
-        EXPECT_EQ(thrown, stage::validate(1, unmeetable));
+        TAP_SR_EXPECT_REJECTED_WITH(stage(1, unmeetable), std::runtime_error, stage::validate(1, unmeetable));
     }
 
 } // namespace

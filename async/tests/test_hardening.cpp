@@ -20,6 +20,7 @@
 #include "support/sine_analysis.h"
 #include "support/two_clock_sim.h"
 #include "tap/sr/async/converter.h"
+#include "tap_sr_test/expect_rejected.h"
 
 namespace {
 
@@ -95,33 +96,33 @@ namespace {
         {
             tap::sr::async::config c;
             c.sample_rate_hz = std::numeric_limits<double>::quiet_NaN();
-            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
         }
         {
             tap::sr::async::config c; // anti-image cutoff above input Nyquist
             c.filter.passband_hz = 23000.0;
             c.filter.stopband_hz = 47000.0;
-            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
         }
         {
             tap::sr::async::config c; // eps * 2^64 would overflow int64 in the phase path
             c.servo.max_deviation_ppm = 400000.0;
-            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
         }
         {
             tap::sr::async::config c;
             c.servo.quiet_bandwidth_hz = std::numeric_limits<double>::infinity();
-            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
         }
         {
             tap::sr::async::config c;
             c.fifo_frames = 64; // below the high-watermark capacity requirement
-            EXPECT_THROW(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
         }
         // The rate-scaling factory sits exactly on the band-edge sum boundary
         // (passband + stopband == fs up to rounding); it must keep constructing.
-        EXPECT_NO_THROW(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(16000.0)});
-        EXPECT_NO_THROW(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(44100.0)});
+        TAP_SR_EXPECT_ACCEPTED(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(16000.0)});
+        TAP_SR_EXPECT_ACCEPTED(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(44100.0)});
     }
 
     // The family's error model (A3): config::validate is the constructor's
@@ -130,17 +131,6 @@ namespace {
     // A build without exceptions calls it first; this build checks that the
     // two agree on every rejection the constructor makes.
     namespace validate_support {
-        // The constructor's verdict on a config: nullptr, or its exception's text.
-        template <typename S = float>
-        std::string construction_reason(const tap::sr::async::config& c) {
-            try {
-                tap::sr::async::basic_converter<S> asrc{c};
-                return {};
-            }
-            catch (const std::invalid_argument& e) {
-                return e.what();
-            }
-        }
         std::string reason(const char* why) {
             return why == nullptr ? std::string{} : std::string{why};
         }
@@ -233,8 +223,17 @@ namespace {
         std::size_t rejected = 0;
         for (std::size_t i = 0; i < cases.size(); ++i) {
             const std::string by_validate = reason(config::validate(cases[i]));
-            EXPECT_EQ(by_validate, construction_reason<float>(cases[i])) << "case " << i;
-            EXPECT_EQ(by_validate, construction_reason<std::int16_t>(cases[i])) << "case " << i << " (Q15)";
+            SCOPED_TRACE("case " + std::to_string(i));
+            if (by_validate.empty()) {
+                TAP_SR_EXPECT_ACCEPTED(tap::sr::async::basic_converter<float>{cases[i]});
+                TAP_SR_EXPECT_ACCEPTED(tap::sr::async::basic_converter<std::int16_t>{cases[i]});
+            }
+            else {
+                TAP_SR_EXPECT_REJECTED_WITH(tap::sr::async::basic_converter<float>{cases[i]}, std::invalid_argument,
+                                            by_validate.c_str());
+                TAP_SR_EXPECT_REJECTED_WITH(tap::sr::async::basic_converter<std::int16_t>{cases[i]},
+                                            std::invalid_argument, by_validate.c_str());
+            }
             rejected += by_validate.empty() ? 0 : 1;
         }
         EXPECT_EQ(rejected, 16u) << "every rejection family is exercised";
