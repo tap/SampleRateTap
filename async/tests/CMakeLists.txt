@@ -47,7 +47,10 @@ add_executable(tap_sr_async_tests
 target_link_libraries(tap_sr_async_tests PRIVATE
     tap::sr::async
     tap_sr_async_warnings)
-target_include_directories(tap_sr_async_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# The family's test support (tests/support/tap_sr_test/: the rejection
+# assertions, with and without exceptions; the roadmap's A12).
+target_include_directories(tap_sr_async_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+    ${SampleRateTap_SOURCE_DIR}/tests/support)
 
 # D13: the C ABI's version probe, pinned against the shipped shared library
 # wherever it is built. The test declares the probe itself, so the C header

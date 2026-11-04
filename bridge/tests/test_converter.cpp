@@ -22,6 +22,7 @@
 #include "reference/reference_vectors.h"
 #include "tap/dsp/analysis/sine_analysis.h"
 #include "tap/sr/bridge/converter.h"
+#include "tap_sr_test/expect_rejected.h"
 
 namespace {
 
@@ -456,7 +457,7 @@ namespace {
         conv<direction::down_to_44k1> c(1);
         EXPECT_NEAR(c.latency_input_frames(), 58.0 / 2.0, 0.51);
         EXPECT_EQ(c.channels(), 1u);
-        EXPECT_THROW(conv<direction::down_to_44k1>(0), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED(conv<direction::down_to_44k1>(0), std::invalid_argument);
     }
 
     // The family's error model (A3): validate() is the constructor's rejection
@@ -472,28 +473,19 @@ namespace {
              {profile::super_economy(), profile::economy(), profile::balanced(), profile::transparent()}) {
             EXPECT_EQ(down::validate(1, p), nullptr);
             EXPECT_EQ(up::validate(2, p), nullptr);
-            EXPECT_NO_THROW(down(1, p));
+            TAP_SR_EXPECT_ACCEPTED(down(1, p));
         }
-        const auto rejection = [](auto make) -> std::string {
-            try {
-                make();
-                return {};
-            }
-            catch (const std::invalid_argument& e) {
-                return e.what();
-            }
-        };
         EXPECT_STREQ(down::validate(0), "tap::sr::bridge::basic_converter: channels == 0");
-        EXPECT_EQ(rejection([] { down c(0); }), down::validate(0));
+        TAP_SR_EXPECT_REJECTED_WITH(down(0), std::invalid_argument, down::validate(0));
         profile bad     = profile::economy();
         bad.passband_hz = 23000.0; // above the down direction's stopband edge
         EXPECT_STREQ(down::validate(1, bad), "tap::sr::bridge::design_prototype: bad profile");
-        EXPECT_EQ(rejection([&] { down c(1, bad); }), down::validate(1, bad));
+        TAP_SR_EXPECT_REJECTED_WITH(down(1, bad), std::invalid_argument, down::validate(1, bad));
         EXPECT_EQ(up::validate(1, bad), nullptr) << "23 kHz is below the up direction's 24 kHz edge";
         profile q           = profile::economy();
         q.stopband_atten_db = -1.0;
-        EXPECT_EQ(rejection([&] { up c(1, q); }), up::validate(1, q));
         EXPECT_NE(up::validate(1, q), nullptr);
+        TAP_SR_EXPECT_REJECTED_WITH(up(1, q), std::invalid_argument, up::validate(1, q));
     }
 
 } // namespace

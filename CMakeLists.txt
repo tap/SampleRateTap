@@ -28,6 +28,23 @@ option(TAP_SR_BUILD_COMPARE_SHIM "Build the comparison notebooks' competitor shi
 option(TAP_SR_ASYNC_WERROR "Treat warnings as errors in the async engine's own targets" OFF)
 option(TAP_SR_BRIDGE_WERROR "Treat warnings as errors in the bridge engine's own targets" OFF)
 option(TAP_SR_RATIONAL_WERROR "Treat warnings as errors in the rational engine's own targets" OFF)
+# The configuration a consumer that forbids both builds every engine in (the
+# roadmap's Q5 and A12: a current one does, on the M33, M55 and Hexagon):
+# every target this tree adds from here on, GoogleTest and every engine's
+# battery, examples, C ABI and ratchet workloads, compiles C++ with
+# -fno-exceptions -fno-rtti. The engines need nothing for it (A3: validate()
+# before constructing, rejections terminate through tap::dsp::raise; no
+# header uses RTTI); the option builds the evidence. An option rather than
+# CMAKE_CXX_FLAGS, which would replace the cross toolchains' _INIT flags.
+# Directory scope; GCC and Clang only.
+option(TAP_SR_NO_EXCEPTIONS_RTTI "Build every target with -fno-exceptions -fno-rtti" OFF)
+if(TAP_SR_NO_EXCEPTIONS_RTTI)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$"
+       OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        message(FATAL_ERROR "TAP_SR_NO_EXCEPTIONS_RTTI needs GCC or Clang (got ${CMAKE_CXX_COMPILER_ID})")
+    endif()
+    add_compile_options(-fno-exceptions -fno-rtti)
+endif()
 
 # GoogleTest is fetched once, by whichever engine's tests/ is configured
 # first; the other engines' FetchContent_MakeAvailable is then a no-op. Its

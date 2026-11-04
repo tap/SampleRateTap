@@ -56,6 +56,14 @@ made this tree (sections 5–6). Do not re-derive what it settles.
 - **Clean renames, no aliases (D7).** Retired options fail the configure
   (`cmake/retired_options.cmake`); retired override macros hit an `#error`; retired words fail
   the style job (`scripts/retired_words.txt`, `scripts/check_retired_words.py`). Do not add aliases.
+- **Exceptions and RTTI stay optional (A12, Q5).** A current consumer builds all three engines
+  with `-fno-exceptions -fno-rtti` on the M33, M55 and Hexagon, and the 1.0 freeze covers that
+  configuration (P14). No header may use RTTI or rely on exceptions beyond `tap::dsp::raise`. A
+  test that rejects or accepts a configuration goes through `TAP_SR_EXPECT_REJECTED`,
+  `TAP_SR_EXPECT_REJECTED_WITH` or `TAP_SR_EXPECT_ACCEPTED`
+  (`tests/support/tap_sr_test/expect_rejected.h`), never `EXPECT_THROW` or a `try` of its own;
+  `-DTAP_SR_NO_EXCEPTIONS_RTTI=ON` reproduces the gated build, and CI runs it hosted and on the
+  nine QEMU legs.
 - **One meaning per profile name (A4, the 2026-10 audit response).** Each engine's quality tiers
   are its own ladder, stated with its numbers in the root README's profile table, and a profile
   name means one thing across the family: `bridge` and `rational` share four names at the same

@@ -85,9 +85,17 @@ under which every header here compiles) the constructor's rejection
 nullptr. A refused allocation stays `std::bad_alloc` where exceptions exist
 and a termination where they do not, as the standard library's is. The C ABIs
 validate before constructing and return NULL, so they never unwind and never
-terminate on a bad argument. CI builds every engine and the three C ABIs with
-exceptions off (`no-exceptions` in `ci.yml`) and compiles every header that
-way on the hosted legs (`<engine>.Family.HeadersCompileWithoutExceptions`).
+terminate on a bad argument. No header uses RTTI. Every battery runs as a
+consumer that forbids both builds it (`-DTAP_SR_NO_EXCEPTIONS_RTTI=ON`:
+`-fno-exceptions -fno-rtti` on every target, GoogleTest included): on the
+hosted `no-exceptions` job in `ci.yml` (every battery, the examples and the
+C ABIs) and on the M33, M55 and Hexagon, every engine, in nine QEMU legs
+beside the nine that keep exceptions. Every header also compiles with
+exceptions off on the hosted legs
+(`<engine>.Family.HeadersCompileWithoutExceptions`). Built that way, a test
+that rejects a configuration is a death test on `std::terminate()` where
+GoogleTest has death tests, and `validate()`'s text is pinned in both builds
+(`tests/support/tap_sr_test/expect_rejected.h`).
 
 Every configure builds every engine. CI selects an engine only when it runs
 tests, by ctest label. The family options are `TAP_SR_*`:
@@ -100,6 +108,7 @@ tests, by ctest label. The family options are `TAP_SR_*`:
 | `TAP_SR_BUILD_ICOUNT_BENCH` | OFF | every engine's instruction-count ratchet workloads |
 | `TAP_SR_BUILD_BENCHMARKS`, `TAP_SR_BUILD_COMPARE_BENCH`, `TAP_SR_BUILD_COMPARE_SHIM` | OFF | the async engine's host-only benchmarks; the engines' resampler comparison benchmarks; the comparison notebooks' competitor shims (`tools/compare/`) |
 | `TAP_SR_ASYNC_WERROR`, `TAP_SR_BRIDGE_WERROR`, `TAP_SR_RATIONAL_WERROR` | OFF | warnings as errors, per engine |
+| `TAP_SR_NO_EXCEPTIONS_RTTI` | OFF | every target with `-fno-exceptions -fno-rtti` (GCC and Clang), as a consumer that forbids both builds the engines |
 
 A retired pre-family option (`SRT_*`, `TAP_RATIO_*`) fails the configure
 loudly (`cmake/retired_options.cmake`) rather than dropping a gate silently.
