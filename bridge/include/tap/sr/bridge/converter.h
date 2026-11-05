@@ -32,6 +32,16 @@
 #else
 #define TAP_SR_BRIDGE_MIRRORED_DOT_ATTR __attribute__((noinline))
 #endif
+// The per-block entry points (process, pull, flush) stay out of line on every
+// target: the walk is then register-allocated in the engine's own frame, so
+// its instruction count is a property of the engine, not of what the caller
+// has live around it (measured both ways on the M33, M55 and Hexagon; the
+// family roadmap's A12, PLAN.md section 6).
+#if defined(_MSC_VER)
+#define TAP_SR_BRIDGE_NOINLINE __declspec(noinline)
+#else
+#define TAP_SR_BRIDGE_NOINLINE __attribute__((noinline))
+#endif
 
 namespace tap::sr::bridge {
 
@@ -138,7 +148,7 @@ namespace tap::sr::bridge {
         /// inlined kernels unroll and vectorize against it instead of a
         /// runtime bound. A custom-taps profile takes the runtime-length
         /// instantiation (pinned by the custom-profile parity test).
-        std::size_t process(const S* in, std::size_t in_frames, S* out) noexcept {
+        TAP_SR_BRIDGE_NOINLINE std::size_t process(const S* in, std::size_t in_frames, S* out) noexcept {
             const std::size_t taps = m_table.taps();
             if (taps == k_taps_economy) {
                 return process_taps<k_taps_economy>(in, in_frames, out);
@@ -166,7 +176,7 @@ namespace tap::sr::bridge {
         /// PopFn must be noexcept (enforced at compile time: pull() is
         /// noexcept, so a throwing callback could only terminate).
         template <typename PopFn>
-        std::size_t pull(S* out, std::size_t out_frames, PopFn&& pop) noexcept {
+        TAP_SR_BRIDGE_NOINLINE std::size_t pull(S* out, std::size_t out_frames, PopFn&& pop) noexcept {
             static_assert(std::is_nothrow_invocable_r_v<std::size_t, PopFn&, S*, std::size_t>,
                           "pull() requires a noexcept PopFn: std::size_t(S*, std::size_t) noexcept");
             for (std::size_t n = 0; n < out_frames; ++n) {
@@ -220,7 +230,7 @@ namespace tap::sr::bridge {
         /// become ready — every output influenced by real input. Returns the
         /// frames written (== outputs_for(taps()) beforehand). The engine is
         /// left mid-stream in the zero-fed state; reset() before reuse.
-        std::size_t flush(S* out) noexcept {
+        TAP_SR_BRIDGE_NOINLINE std::size_t flush(S* out) noexcept {
             const std::size_t zeros    = m_table.taps();
             std::size_t       fed      = 0;
             std::size_t       produced = 0;

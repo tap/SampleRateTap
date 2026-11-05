@@ -9,12 +9,12 @@
 // A stage, with N = 2 m B - 1 taps (taps()), T the row length (row_length()),
 // R the stored rows (k_rows: L, or M decimating), P the history lines per
 // channel (M decimating, else 1), c the coefficient size, s the sample size,
-// ch channels and V = sizeof(std::vector<S>):
+// ch channels:
 //
 //   held  = R T c                     the rows
-//         + (T + 64) P ch s           the history, 64 frames of append slack
+//         + (T + 64) P ch s           the history: one planar allocation of
+//                                     P x ch lines, 64 frames of append slack
 //         + 16 ch s                   pull()'s pop scratch
-//         + P ch V                    the history's vectors
 //   peak  = max(design, 8 N + held)   the double design h lives to the end of
 //                                     the constructor (design: below)
 //
@@ -70,8 +70,9 @@ namespace {
         const std::size_t c  = sizeof(coeff);
         const std::size_t s  = sizeof(sample);
         const std::size_t ch = st.channels();
-        return request(Stage::k_rows * T * c) + P * ch * request((T + k_hist_slack) * s) + request(k_pop_chunk * ch * s)
-               + request(P * ch * sizeof(std::vector<sample>));
+        // rows; the history, one planar allocation of P x ch lines; pull()'s scratch
+        return request(Stage::k_rows * T * c) + request(P * ch * (T + k_hist_slack) * s)
+               + request(k_pop_chunk * ch * s);
     }
 
     // The design's own peak, inside build_table (stage.h), for a pinned profile
@@ -145,9 +146,8 @@ namespace {
                     << fmt << ' ' << ratio_name << ' ' << np.name << ' ' << ch;
                 if (ch == 2) {
                     std::printf("[ measured ] rational stage %-3s %-9s %-13s 2 ch: N %3zu T %2zu, %6zu B held, %6zu "
-                                "B peak in construction (sizeof(std::vector) %zu)\n",
-                                fmt, ratio_name, np.name, st->taps(), st->row_length(), m.live_bytes, m.peak_bytes,
-                                sizeof(std::vector<S>));
+                                "B peak in construction\n",
+                                fmt, ratio_name, np.name, st->taps(), st->row_length(), m.live_bytes, m.peak_bytes);
                 }
             }
         }

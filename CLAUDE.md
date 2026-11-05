@@ -92,7 +92,9 @@ over statistical sampling, and measured numbers stated with their provenance.
 (`cmake/arm-cortex-*.cmake`, one-shot `bare_metal_main.cpp` per engine) and on Hexagon under
 `qemu-hexagon`, and the instruction-count ratchet gates every workload of every engine two-sided
 at ±3 % (`scripts/icount.py --engine async|bridge|rational --target m33|m55|hexagon`, baselines in
-`<engine>/bench/baselines.json`). A change that moves a count beyond tolerance re-records the
+`<engine>/bench/baselines.json`), built with exceptions and again without them or RTTI
+(`TAP_SR_NO_EXCEPTIONS_RTTI`) against the same baselines: the engines' hot paths are their own
+(A12), so the two builds count the same. A change that moves a count beyond tolerance re-records the
 baseline in the same PR; an improvement beyond tolerance fails too, by design. Guest markers
 (`SRT_ICOUNT_DONE`, `RATIO_ICOUNT_DONE`, `RATIONAL_ICOUNT_DONE`) are part of the counted binaries
 and never change. A `callmax_*` scenario is the worst single call instead of a total

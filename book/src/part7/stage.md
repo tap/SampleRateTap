@@ -86,7 +86,31 @@ which is `dot_row` without the finalize — and finalized once:
 ```
 
 A Q15 output is therefore rounded exactly once, whether it came from one
-row or from M of them. Had each branch been dotted and finalized
+row or from M of them.
+
+The `b` those loops read is not the stage. It is a *cursor*: the stream
+state and the hot constants, copied into locals when a block begins and
+stored back once when it ends.
+
+```cpp
+{{#include ../../../rational/include/tap/sr/rational/stage.h:rational_cursor}}
+```
+
+Why a header-only engine would copy its own fields into a struct deserves
+a paragraph, because the reason is the one most compiler intuitions get
+wrong. `process()` is out of line (`TAP_SR_RATIONAL_NOINLINE`), so inside
+it `this` is a parameter, and a parameter is memory the compiler must
+assume anyone can reach — including `memmove`, which `compact()` calls to
+slide a full history line. Every field the frame loop read through `this`
+was therefore written back before each possible call and reloaded after
+it, around every frame. Measured on the Cortex-M55, that bookkeeping was
++5 … +11 % on the float interpolators. Locals have no such problem: the
+compiler owns them, and after inlining the helpers they live in registers.
+The decimator's row spans travel in the cursor because its row loop
+unrolls and reads them as scalars; the interpolator indexes them by a
+runtime phase and reads the members instead, which measured cheaper for
+it. Part II's ratchet chapter has the whole story of why the entries are
+out of line in the first place. Had each branch been dotted and finalized
 separately and the results added, a decimator would carry M rounding
 points and the "DC gain exactly 1 in every format" promise would be off by
 up to M − 1 LSB. The single rounding point is also what makes the

@@ -78,6 +78,15 @@ symmetry-halved table were declined on their numbers.
   interpolator's centre phase is one tap, a copy); a decimator runs the M-branch commutator,
   its nonzero branches summed under one finalize (`tap::dsp::accumulate_row`). MACs per output
   are the design's nonzero counts; the structural zeros are never multiplied (R4).
+- **The hot path belongs to the engine, not its caller (A12).** `process`, `pull` and `flush`
+  are out of line (`TAP_SR_RATIONAL_NOINLINE`), each runs its block against a `cursor` (the
+  stream state and the hot constants as locals, `open()` / `close()`), and dispatches the
+  channel count as a compile-time constant for one and two channels. Inside the block loops a
+  member read is a reload per frame — an out-of-line `this` is reachable from `compact()`'s
+  `memmove` — so the state and the decimator's row spans travel in the cursor; the
+  interpolator's spans, indexed by a runtime phase, stay member reads because that measured
+  cheaper (PLAN.md section 6, the A12 lever). The instruction counts are identical with and
+  without exceptions; the ratchet runs both configurations against one set of baselines.
 - **Correctness before optimization.** Scipy golden vectors, exhaustive phase sweeps,
   `decimate.h` as a second golden at ↓2 / ↓3 / ↓6, and the 182-row coverage matrix test gate
   every optimization that follows (PLAN.md section 5). Regenerate the vectors only when the
