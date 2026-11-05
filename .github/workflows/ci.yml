@@ -725,6 +725,43 @@ jobs:
         if: ${{ !cancelled() }}
         run: python3 scripts/ceilings.py measure --engine rational --target ${{ matrix.target }} --build-dir build
 
+      # The same workloads as the family's exceptions-off consumer builds
+      # them (TAP_SR_NO_EXCEPTIONS_RTTI, the roadmap's A12), counted against
+      # the SAME baselines: the engines' hot paths are their own (out-of-line
+      # entries, rational's cursor), so the two configurations are identical
+      # to the instruction, and this is what pins that. The ceilings are
+      # recorded for the exceptions build only.
+      - name: Build workloads without exceptions or RTTI
+        if: ${{ !cancelled() }}
+        run: |
+          case "${{ matrix.target }}" in
+            m55) tc=cmake/arm-cortex-m55-mps3.cmake ;;
+            m33) tc=cmake/arm-cortex-m33-mps2.cmake ;;
+            hexagon) tc=cmake/hexagon-linux-musl.cmake ;;
+          esac
+          cmake -B build-noexc -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$tc \
+            -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF \
+            -DTAP_SR_BUILD_ICOUNT_BENCH=ON -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+          cmake --build build-noexc -j 4
+
+      - name: Ratchet async (no exceptions, no RTTI)
+        if: ${{ !cancelled() }}
+        run: >
+          python3 scripts/icount.py --engine async --target ${{ matrix.target }}
+          --build-dir build-noexc --plugin /tmp/libinsncount.so
+
+      - name: Ratchet bridge (no exceptions, no RTTI)
+        if: ${{ !cancelled() }}
+        run: >
+          python3 scripts/icount.py --engine bridge --target ${{ matrix.target }}
+          --build-dir build-noexc --plugin /tmp/libinsncount.so
+
+      - name: Ratchet rational (no exceptions, no RTTI)
+        if: ${{ !cancelled() }}
+        run: >
+          python3 scripts/icount.py --engine rational --target ${{ matrix.target }}
+          --build-dir build-noexc --plugin /tmp/libinsncount.so
+
   # The host ratchet (the roadmap's A8): each engine's float converter in
   # 128-frame blocks at 2 and 12 channels, built natively and counted under
   # callgrind (<engine>/bench/icount/host_main.cpp, scripts/icount.py
@@ -776,6 +813,29 @@ jobs:
       - name: Ratchet rational
         if: ${{ !cancelled() }}
         run: python3 scripts/icount.py --engine rational --target host --build-dir build
+
+      # The exceptions-off configuration (A12), against the same baselines.
+      - name: Build the host workloads without exceptions or RTTI
+        if: ${{ !cancelled() }}
+        run: |
+          cmake -B build-noexc -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-13 \
+            -DTAP_SR_BUILD_TESTS=OFF -DTAP_SR_BUILD_EXAMPLES=OFF -DTAP_SR_BUILD_ICOUNT_BENCH=ON \
+            -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
+          targets=$(cmake --build build-noexc --target help | sed -n 's/^\(tap_sr_[a-z]*_hostcount_[a-z0-9_]*\):.*/\1/p')
+          test -n "$targets"
+          cmake --build build-noexc -j 4 --target $targets
+
+      - name: Ratchet async (no exceptions, no RTTI)
+        if: ${{ !cancelled() }}
+        run: python3 scripts/icount.py --engine async --target host --build-dir build-noexc
+
+      - name: Ratchet bridge (no exceptions, no RTTI)
+        if: ${{ !cancelled() }}
+        run: python3 scripts/icount.py --engine bridge --target host --build-dir build-noexc
+
+      - name: Ratchet rational (no exceptions, no RTTI)
+        if: ${{ !cancelled() }}
+        run: python3 scripts/icount.py --engine rational --target host --build-dir build-noexc
 
   # Each engine README's instruction-count table derives 1:1 from its
   # committed baselines, and its ceilings tables from bench/ceilings.json;

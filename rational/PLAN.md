@@ -1057,6 +1057,48 @@ against `bridge`'s 147 / 160 phases, while on the M55 the reversed Q15 dot
 reads its row through a gather, slower than the contiguous load. A
 memory-bound consumer can reopen it with these numbers.
 
+**The caller-independent hot path (A12, 2026-11-05): the lever the A3
+finding names, pulled.** It surfaced in the family's exceptions-off
+configuration (`TAP_SR_NO_EXCEPTIONS_RTTI`, the roadmap's A12). With the
+engine inlined into the ratchet's `main` as before, `-fno-exceptions
+-fno-rtti` moved the M55 float interpolators +39 … +53 % and the M33 Q15
+rows up to +26 %, the output bits identical (the checksums). Read from the
+disassembly: DspTap's dot kernel compiles to the same instructions either
+way (the kernel alone, both ways, differs in nothing but unwind-table
+directives); inlined into a 2 KB `main` whose control flow differed only
+by its EH landing pads, GCC's register allocator left the inner MAC loop's
+two pointers on the stack, 6 instructions a tap becoming 10, the four extra
+being the pointers' load and store. Outlining the per-block entries alone
+(`process`, `pull`, `flush` behind `TAP_SR_RATIONAL_NOINLINE`) made the two
+configurations identical to the instruction but cost the M55 float
+interpolators +5 … +11 %, for two further reasons an out-of-line `this`
+creates: every field the loops read was written back and reloaded around
+each frame, since `this` is reachable from `compact()`'s `memmove`; and
+GCC's `-fversion-loops-for-strides`, on at `-O3`, versioned the
+per-channel append for a stride of one. The shape that holds is in
+`stage.h`: each block runs against a `cursor` (the stream state and the
+hot constants as locals, loaded by `open()`, stored once by `close()`; the
+decimator's row spans travel in it, the interpolator reads its spans by
+phase from the members — each the cheaper, measured), the history is one
+planar allocation (`m_hist`, channels × `k_lines` lines of `m_hist_cap`),
+and the entries dispatch the channel count as a compile-time constant for
+one and two channels (`process_block<Ch>`, as `bridge`'s `process()` does
+for its tap count). Against the baselines before it, M55 Release: every
+row within the gate and 17 of 18 improved — Q15 −9.5 … −17.8 %, the
+down2·down2 chain −12.9 %, the float interpolators within +0.65 %, ↓3
+float −8.4 %, ↓2 float +1.8 % (the one row up; its `transparent` row
++0.9 %) — and identical to the instruction with and without exceptions.
+The M33, Hexagon and host rows are the baselines re-recorded with this
+change. The footprint lost its `P ch sizeof(std::vector)` term (the
+README's table). Measured and declined on the way, on the M55: `emit()`
+out of line per output (the configurations identical, the float
+interpolators +4.8 %); the cursor with the entries inlined (floats
+−1.5 … −2.8 %, but the chain +13.4 % without exceptions and the two
+configurations apart again: the caller's register pressure); and
+`-fno-version-loops-for-strides` on the outlined entries (1.5 points: the
+versioning was not the bulk). The engine's cost is now a property of the
+engine; the ratchet's `main` no longer measures its own register allocation.
+
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2
 follow-up landed before M4, so nothing waits for it. Every milestone's PR

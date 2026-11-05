@@ -109,6 +109,18 @@
 #include "tap/sr/rational/design.h"
 #include "tap/sr/rational/ratio.h"
 
+// The per-block entry points (process, pull, flush) stay out of line: the
+// hot loop is then register-allocated in the engine's own frame, so its
+// instruction count is a property of the engine and not of whatever the
+// caller happens to have live around it (measured both ways on the M33, M55
+// and Hexagon, the ratchet's record in PLAN.md section 6: inlined into a
+// large caller the inner MAC loop lost its two pointers to the stack).
+#if defined(_MSC_VER)
+#define TAP_SR_RATIONAL_NOINLINE __declspec(noinline)
+#else
+#define TAP_SR_RATIONAL_NOINLINE __attribute__((noinline))
+#endif
+
 namespace tap::sr::rational {
 
     // ANCHOR: rational_schedule
@@ -250,45 +262,65 @@ namespace tap::sr::rational {
             m_taps                      = h.size();
             build_table(h);
             m_hist_cap = m_row_len + k_hist_slack;
-            m_hist.resize(channels * k_lines);
-            for (auto& line : m_hist) {
-                line.assign(m_hist_cap, tap::dsp::sample_traits<S>::silence());
-            }
+            m_hist.assign(channels * k_lines * m_hist_cap, tap::dsp::sample_traits<S>::silence());
             m_scratch.resize(k_pop_chunk * channels);
             reset();
         }
 
         /// Push-transform: consumes all in_frames interleaved frames, writes
         /// outputs_for(in_frames) frames (out must hold them); returns that.
-        std::size_t process(const S* in, std::size_t in_frames, S* out) noexcept {
+        TAP_SR_RATIONAL_NOINLINE std::size_t process(const S* in, std::size_t in_frames, S* out) noexcept {
+            // The channel count as a compile-time constant for the common
+            // counts (bridge's process() does the same for its tap count): the
+            // channel loops unroll, and the block runs with two fewer live
+            // values in the engine's own frame.
+            switch (m_channels) {
+            case 1:
+                return process_block<1>(in, in_frames, out);
+            case 2:
+                return process_block<2>(in, in_frames, out);
+            default:
+                return process_block<0>(in, in_frames, out);
+            }
+        }
+
+        /// process() for a channel count known at compile time (Ch), or at
+        /// run time (Ch == 0).
+        template <std::size_t Ch>
+        std::size_t process_block(const S* in, std::size_t in_frames, S* out) noexcept {
             std::size_t produced = 0;
+            cursor      b        = open();
+            if constexpr (Ch != 0) {
+                b.channels = Ch;
+            }
             if constexpr (k_is_decimator) {
                 for (std::size_t i = 0; i < in_frames; ++i) {
-                    append_frame(in + i * m_channels);
-                    if (m_dphase == 0) {
-                        emit(out + produced * m_channels);
+                    append_frame(b, in + i * b.channels);
+                    if (b.dphase == 0) {
+                        emit(b, out + produced * b.channels);
                         ++produced;
                     }
-                    m_dphase = m_dphase + 1 == k_down ? 0 : m_dphase + 1;
+                    b.dphase = b.dphase + 1 == k_down ? 0 : b.dphase + 1;
                 }
             }
             else {
                 const std::size_t total = outputs_for(in_frames);
                 std::size_t       fed   = 0;
                 for (; produced < total; ++produced) {
-                    while (m_pending != 0) { // never outruns in_frames: total is exact
-                        append_frame(in + fed * m_channels);
+                    while (b.pending != 0) { // never outruns in_frames: total is exact
+                        append_frame(b, in + fed * b.channels);
                         ++fed;
-                        --m_pending;
+                        --b.pending;
                     }
-                    emit(out + produced * m_channels);
+                    emit(b, out + produced * b.channels);
                 }
                 while (fed < in_frames) { // leftover input smaller than the next gap
-                    append_frame(in + fed * m_channels);
+                    append_frame(b, in + fed * b.channels);
                     ++fed;
-                    --m_pending;
+                    --b.pending;
                 }
             }
+            close(b);
             return produced;
         }
 
@@ -297,29 +329,47 @@ namespace tap::sr::rational {
         /// the source ran dry and the call returns short, resumable). Bit-
         /// identical to process() on the same stream. PopFn must be noexcept.
         template <typename PopFn>
-        std::size_t pull(S* out, std::size_t out_frames, PopFn&& pop) noexcept {
+        TAP_SR_RATIONAL_NOINLINE std::size_t pull(S* out, std::size_t out_frames, PopFn&& pop) noexcept {
             static_assert(std::is_nothrow_invocable_r_v<std::size_t, PopFn&, S*, std::size_t>,
                           "pull() requires a noexcept PopFn: std::size_t(S*, std::size_t) noexcept");
+            switch (m_channels) { // the channel count as a constant, as process()
+            case 1:
+                return pull_block<1>(out, out_frames, pop);
+            case 2:
+                return pull_block<2>(out, out_frames, pop);
+            default:
+                return pull_block<0>(out, out_frames, pop);
+            }
+        }
+
+        template <std::size_t Ch, typename PopFn>
+        std::size_t pull_block(S* out, std::size_t out_frames, PopFn& pop) noexcept {
+            cursor b = open();
+            if constexpr (Ch != 0) {
+                b.channels = Ch;
+            }
             for (std::size_t n = 0; n < out_frames; ++n) {
                 // The inputs the next output needs: the schedule's pending
                 // gap, or for a decimator the pushes up to and including the
                 // one at phase 0 (whose frame emits). Consumed one by one,
                 // so a dry source leaves the exact partial state behind.
-                std::size_t need = pending_inputs();
+                std::size_t need = pending_inputs(b);
                 while (need != 0) {
                     const std::size_t want = need < k_pop_chunk ? need : k_pop_chunk;
                     const std::size_t got  = pop(m_scratch.data(), want);
                     if (got == 0) {
+                        close(b);
                         return n; // dry
                     }
                     for (std::size_t i = 0; i < got && i < want; ++i) {
-                        append_frame(m_scratch.data() + i * m_channels);
-                        consume_one();
+                        append_frame(b, m_scratch.data() + i * b.channels);
+                        consume_one(b);
                         --need;
                     }
                 }
-                emit(out + n * m_channels);
+                emit(b, out + n * b.channels);
             }
+            close(b);
             return out_frames;
         }
 
@@ -358,35 +408,52 @@ namespace tap::sr::rational {
         /// End of stream: feeds window_frames() zeros and writes the outputs
         /// that become ready — flush_output_frames() of them. The stage is
         /// left mid-stream in the zero-fed state; reset() before reuse.
-        std::size_t flush(S* out) noexcept {
+        TAP_SR_RATIONAL_NOINLINE std::size_t flush(S* out) noexcept {
+            switch (m_channels) { // the channel count as a constant, as process()
+            case 1:
+                return flush_block<1>(out);
+            case 2:
+                return flush_block<2>(out);
+            default:
+                return flush_block<0>(out);
+            }
+        }
+
+        template <std::size_t Ch>
+        std::size_t flush_block(S* out) noexcept {
             const std::size_t zeros = window_frames();
             std::size_t       fed   = 0;
             std::size_t       made  = 0;
+            cursor            b     = open();
+            if constexpr (Ch != 0) {
+                b.channels = Ch;
+            }
             if constexpr (k_is_decimator) {
                 for (; fed < zeros; ++fed) {
-                    append_silence();
-                    if (m_dphase == 0) {
-                        emit(out + made * m_channels);
+                    append_silence(b);
+                    if (b.dphase == 0) {
+                        emit(b, out + made * b.channels);
                         ++made;
                     }
-                    m_dphase = m_dphase + 1 == k_down ? 0 : m_dphase + 1;
+                    b.dphase = b.dphase + 1 == k_down ? 0 : b.dphase + 1;
                 }
-                return made;
             }
             else {
                 for (;;) {
-                    while (m_pending != 0 && fed < zeros) {
-                        append_silence();
+                    while (b.pending != 0 && fed < zeros) {
+                        append_silence(b);
                         ++fed;
-                        --m_pending;
+                        --b.pending;
                     }
-                    if (m_pending != 0) {
-                        return made;
+                    if (b.pending != 0) {
+                        break;
                     }
-                    emit(out + made * m_channels);
+                    emit(b, out + made * b.channels);
                     ++made;
                 }
             }
+            close(b);
+            return made;
         }
 
         /// Frames flush() will write from the current position.
@@ -394,10 +461,8 @@ namespace tap::sr::rational {
 
         /// Return to the zero-primed initial state.
         void reset() noexcept {
-            for (auto& line : m_hist) {
-                for (auto& v : line) {
-                    v = tap::dsp::sample_traits<S>::silence();
-                }
+            for (auto& v : m_hist) {
+                v = tap::dsp::sample_traits<S>::silence();
             }
             for (auto& e : m_end) {
                 e = m_row_len;
@@ -549,6 +614,61 @@ namespace tap::sr::rational {
             m_count[r] = last - first;
         }
 
+        // ANCHOR: rational_cursor
+        /// The hot loops' view of the stage for one call: the stream state
+        /// (where each sub-line ends, the schedule position, the pending gap,
+        /// the decimator's phase) and the constants they index with, as
+        /// locals. open() loads it, the block runs against it, close() stores
+        /// the state back. The members stay authoritative between calls;
+        /// inside one, this is what lets the compiler keep the loop's state
+        /// in registers: with the entry out of line, `this` is reachable from
+        /// compact()'s memmove, so every field the loop carried would be
+        /// written back and reloaded around each frame.
+        struct cursor {
+            S*           hist;
+            const coeff* rows;
+            std::size_t  channels;
+            std::size_t  row_len;
+            std::size_t  cap;
+            /// The decimator's rows' nonzero spans (m_first / m_count), which
+            /// its unrolled emit reads as scalars; the interpolator indexes
+            /// them by a runtime phase and reads the members (measured: the
+            /// copy cost its Q15 rows 4 % on the M55, and saved the
+            /// decimator's float rows 3 %).
+            std::array<std::size_t, k_is_decimator ? k_rows : 0> first;
+            std::array<std::size_t, k_is_decimator ? k_rows : 0> count;
+            std::array<std::size_t, k_lines>                     end;
+            std::uint32_t                                        pos;
+            std::uint32_t                                        pending;
+            std::uint32_t                                        dphase;
+        };
+
+        cursor open() noexcept {
+            cursor b{};
+            b.hist     = m_hist.data();
+            b.rows     = m_rows.data();
+            b.channels = m_channels;
+            b.row_len  = m_row_len;
+            b.cap      = m_hist_cap;
+            if constexpr (k_is_decimator) {
+                b.first = m_first;
+                b.count = m_count;
+            }
+            b.end     = m_end;
+            b.pos     = m_pos;
+            b.pending = m_pending;
+            b.dphase  = m_dphase;
+            return b;
+        }
+
+        void close(const cursor& b) noexcept {
+            m_end     = b.end;
+            m_pos     = b.pos;
+            m_pending = b.pending;
+            m_dphase  = b.dphase;
+        }
+        // ANCHOR_END: rational_cursor
+
         /// Inputs to push before the next output: the schedule's pending gap,
         /// or for a decimator the pushes through the one at phase 0 (which
         /// emits): 1 + (M - phase) mod M.
@@ -561,85 +681,96 @@ namespace tap::sr::rational {
             }
         }
 
-        void consume_one() noexcept {
+        static std::size_t pending_inputs(const cursor& b) noexcept {
             if constexpr (k_is_decimator) {
-                m_dphase = m_dphase + 1 == k_down ? 0 : m_dphase + 1;
+                return 1 + (k_down - b.dphase) % k_down;
             }
             else {
-                --m_pending;
+                return b.pending;
             }
         }
 
-        S*       line(std::size_t c, std::size_t sub) noexcept { return m_hist[c * k_lines + sub].data(); }
-        const S* line(std::size_t c, std::size_t sub) const noexcept { return m_hist[c * k_lines + sub].data(); }
+        static void consume_one(cursor& b) noexcept {
+            if constexpr (k_is_decimator) {
+                b.dphase = b.dphase + 1 == k_down ? 0 : b.dphase + 1;
+            }
+            else {
+                --b.pending;
+            }
+        }
+
+        /// Channel c's sub-line sub: the history is one planar buffer,
+        /// channels x k_lines lines of cap samples each.
+        static S* line(const cursor& b, std::size_t c, std::size_t sub) noexcept {
+            return b.hist + (c * k_lines + sub) * b.cap;
+        }
 
         /// Appends one interleaved frame to the history (the decimator's
         /// current sub-line); compacts a full line first.
-        void append_frame(const S* frame) noexcept {
-            const std::size_t sub = k_is_decimator ? m_dphase : 0;
-            if (m_end[sub] == m_hist_cap) {
-                compact(sub);
+        static void append_frame(cursor& b, const S* frame) noexcept {
+            const std::size_t sub = k_is_decimator ? b.dphase : 0;
+            if (b.end[sub] == b.cap) {
+                compact(b, sub);
             }
-            for (std::size_t c = 0; c < m_channels; ++c) {
-                line(c, sub)[m_end[sub]] = frame[c];
+            for (std::size_t c = 0; c < b.channels; ++c) {
+                line(b, c, sub)[b.end[sub]] = frame[c];
             }
-            ++m_end[sub];
+            ++b.end[sub];
         }
 
-        void append_silence() noexcept {
-            const std::size_t sub = k_is_decimator ? m_dphase : 0;
-            if (m_end[sub] == m_hist_cap) {
-                compact(sub);
+        static void append_silence(cursor& b) noexcept {
+            const std::size_t sub = k_is_decimator ? b.dphase : 0;
+            if (b.end[sub] == b.cap) {
+                compact(b, sub);
             }
-            for (std::size_t c = 0; c < m_channels; ++c) {
-                line(c, sub)[m_end[sub]] = tap::dsp::sample_traits<S>::silence();
+            for (std::size_t c = 0; c < b.channels; ++c) {
+                line(b, c, sub)[b.end[sub]] = tap::dsp::sample_traits<S>::silence();
             }
-            ++m_end[sub];
+            ++b.end[sub];
         }
 
         /// Slides the newest row_len - 1 samples of sub-line sub to the front
         /// of every channel's line (in place).
-        void compact(std::size_t sub) noexcept {
-            const std::size_t keep = m_row_len - 1;
-            for (std::size_t c = 0; c < m_channels; ++c) {
-                S* l = line(c, sub);
-                std::memmove(l, l + (m_end[sub] - keep), keep * sizeof(S));
+        static void compact(cursor& b, std::size_t sub) noexcept {
+            const std::size_t keep = b.row_len - 1;
+            for (std::size_t c = 0; c < b.channels; ++c) {
+                S* l = line(b, c, sub);
+                std::memmove(l, l + (b.end[sub] - keep), keep * sizeof(S));
             }
-            m_end[sub] = keep;
+            b.end[sub] = keep;
         }
 
         // ANCHOR: rational_emit
         /// One output frame at the current position; advances the schedule
         /// (the decimator's phase advances in process / pull / flush).
-        void emit(S* out) noexcept {
+        void emit(cursor& b, S* out) const noexcept {
             using tr = tap::dsp::sample_traits<S>;
             if constexpr (k_is_decimator) {
-                for (std::size_t c = 0; c < m_channels; ++c) {
+                for (std::size_t c = 0; c < b.channels; ++c) {
                     typename tr::accum acc{};
                     for (std::size_t j = 0; j < k_rows; ++j) {
                         const std::size_t sub    = (k_down - j) % k_down;
-                        const S*          window = line(c, sub) + m_end[sub] - m_row_len + m_first[j];
-                        acc = tap::dsp::accumulate_row<S>(acc, m_rows.data() + j * m_row_len + m_first[j], window,
-                                                          m_count[j]);
+                        const S*          window = line(b, c, sub) + b.end[sub] - b.row_len + b.first[j];
+                        acc = tap::dsp::accumulate_row<S>(acc, b.rows + j * b.row_len + b.first[j], window, b.count[j]);
                     }
                     out[c] = finalize_output(acc);
                 }
             }
             else {
-                const schedule_entry<R> step = k_schedule<R>[m_pos];
-                const coeff*            row  = m_rows.data() + step.phase * m_row_len + m_first[step.phase];
-                for (std::size_t c = 0; c < m_channels; ++c) {
-                    const S* window = line(c, 0) + m_end[0] - m_row_len + m_first[step.phase];
+                const schedule_entry<R> step   = k_schedule<R>[b.pos];
+                const coeff*            row    = b.rows + step.phase * b.row_len + m_first[step.phase];
+                const std::size_t       count  = m_count[step.phase];
+                const S*                window = line(b, 0, 0) + b.end[0] - b.row_len + m_first[step.phase];
+                for (std::size_t c = 0; c < b.channels; ++c, window += b.cap) {
                     if constexpr (k_table_gain != 1) {
-                        out[c] = finalize_output(tap::dsp::accumulate_row<S>(
-                            typename tap::dsp::sample_traits<S>::accum{}, row, window, m_count[step.phase]));
+                        out[c] = finalize_output(tap::dsp::accumulate_row<S>(typename tr::accum{}, row, window, count));
                     }
                     else {
-                        out[c] = tap::dsp::dot_row<S>(row, window, m_count[step.phase]);
+                        out[c] = tap::dsp::dot_row<S>(row, window, count);
                     }
                 }
-                m_pending = step.advance;
-                m_pos     = m_pos + 1 == k_up ? 0 : m_pos + 1;
+                b.pending = step.advance;
+                b.pos     = b.pos + 1 == k_up ? 0 : b.pos + 1;
             }
         }
         // ANCHOR_END: rational_emit
@@ -651,7 +782,7 @@ namespace tap::sr::rational {
         std::vector<coeff>               m_rows;        ///< k_rows x T, tap-reversed
         std::array<std::size_t, k_rows>  m_first{};     ///< nonzero span start per row
         std::array<std::size_t, k_rows>  m_count{};     ///< nonzero span length per row
-        std::vector<std::vector<S>>      m_hist;        ///< channels x k_lines planar delay lines
+        std::vector<S>                   m_hist;        ///< channels x k_lines planar lines of m_hist_cap each
         std::array<std::size_t, k_lines> m_end{};       ///< newest sample index + 1 per sub-line
         std::vector<S>                   m_scratch;     ///< interleaved staging for pull()
         std::uint32_t                    m_pos     = 0; ///< superblock position in [0, L)

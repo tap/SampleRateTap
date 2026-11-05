@@ -238,33 +238,33 @@ Executed instructions per fixed workload (`rational/bench/icount/`), measured un
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `callmax_down2_float` | 116,628 | 8,428 | 23,891 |
-| `callmax_down2_q15` | 7,383 | 6,198 | 4,427 |
-| `callmax_up2_float` | 231,692 | 15,287 | 45,911 |
-| `callmax_up2_q15` | 14,798 | 11,208 | 6,941 |
-| `construct_q15_eco` | 26,810,642 | 1,567,568 | 8,341,715 |
-| `down2_down2_q15_eco` | 62,511,767 | 28,181,134 | 22,263,063 |
-| `down2_float_eco` | 366,459,868 | 24,433,817 | 72,735,466 |
-| `down2_float_tr` | 955,279,507 | 47,853,721 | 174,664,587 |
-| `down2_q15_eco` | 47,494,332 | 19,807,076 | 18,558,597 |
-| `down3_float_eco` | 476,578,411 | 31,908,807 | 90,346,064 |
-| `down3_q15_eco` | 51,981,049 | 21,247,202 | 19,802,949 |
-| `ratio23_float_eco` | 611,616,073 | 33,245,961 | 127,126,391 |
-| `ratio23_q15_eco` | 52,786,483 | 18,797,362 | 20,006,732 |
-| `up2_float_eco` | 732,659,056 | 43,442,641 | 137,930,790 |
-| `up2_float_tr` | 1,961,674,664 | 89,902,184 | 340,655,838 |
-| `up2_q15_eco` | 67,354,970 | 34,150,666 | 28,133,327 |
-| `up3_float_eco` | 1,407,620,233 | 75,331,049 | 254,904,021 |
-| `up3_q15_eco` | 92,695,852 | 51,156,233 | 39,794,001 |
+| `callmax_down2_float` | 118,191 | 8,131 | 23,943 |
+| `callmax_down2_q15` | 7,224 | 5,735 | 4,268 |
+| `callmax_up2_float` | 231,726 | 14,175 | 44,683 |
+| `callmax_up2_q15` | 12,391 | 9,607 | 6,304 |
+| `construct_q15_eco` | 26,795,397 | 1,563,967 | 8,330,417 |
+| `down2_down2_q15_eco` | 55,160,639 | 24,552,975 | 22,071,551 |
+| `down2_float_eco` | 373,681,206 | 24,882,828 | 72,885,988 |
+| `down2_float_tr` | 970,180,513 | 48,302,560 | 174,817,755 |
+| `down2_q15_eco` | 47,081,268 | 17,059,962 | 18,048,480 |
+| `down3_float_eco` | 467,685,055 | 29,237,795 | 90,250,094 |
+| `down3_q15_eco` | 49,852,601 | 18,116,226 | 19,549,385 |
+| `ratio23_float_eco` | 591,237,741 | 33,460,544 | 125,408,437 |
+| `ratio23_q15_eco` | 49,645,786 | 15,451,527 | 18,689,641 |
+| `up2_float_eco` | 712,003,791 | 43,649,236 | 134,224,931 |
+| `up2_float_tr` | 1,902,619,470 | 90,108,510 | 336,949,711 |
+| `up2_q15_eco` | 63,617,031 | 29,508,255 | 26,236,602 |
+| `up3_float_eco` | 1,366,708,994 | 75,348,550 | 249,845,161 |
+| `up3_q15_eco` | 87,322,867 | 44,313,203 | 38,272,880 |
 
 On the host, the float converter in 128-frame blocks at 2 and 12 channels (`rational/bench/icount/host_main.cpp`): instructions executed by the streaming loop alone, counted under callgrind on x86-64 with GCC 13 (`scripts/icount.py --target host`), gated the same way:
 
 | Workload | x86-64 |
 |---|---:|
-| `down2_float_12ch` | 161,054,642 |
-| `down2_float_2ch` | 29,983,981 |
-| `up2_float_12ch` | 288,223,796 |
-| `up2_float_2ch` | 57,296,876 |
+| `down2_float_12ch` | 161,390,269 |
+| `down2_float_2ch` | 28,551,355 |
+| `up2_float_12ch` | 282,912,211 |
+| `up2_float_2ch` | 54,413,191 |
 <!-- ICOUNT:END -->
 
 ## Footprint
@@ -276,9 +276,8 @@ coefficient size, `s` the sample size, `ch` channels):
 
 ```text
 held = R T c                      rows
-     + (T + 64) P ch s            history, 64 frames of append slack
+     + (T + 64) P ch s            history: one planar allocation, P x ch lines, 64 frames of append slack
      + 16 ch s                    pull()'s pop scratch
-     + P ch sizeof(std::vector)
 peak = max(design, 8 N + held)    the double design lives to the end of the constructor
 ```
 
@@ -290,29 +289,30 @@ which C++ leaves unspecified, so the test reports it and does not pin it. Stages
 
 | stage | N | f32 held | f32 peak | Q15 held | Q15 peak | Q31 held | Q31 peak |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `up_2` | 43 | 1,040 | 1,384 | 544 | 888 | 1,040 | 1,384 |
-| `down_2` | 43 | 1,776 | 2,120 | 936 | 1,280 | 1,776 | 2,120 |
-| `up_3` | 65 | 1,128 | 1,648 | 588 | 1,108 | 1,128 | 1,648 |
-| `down_3` | 65 | 2,600 | 3,120 | 1,372 | 1,892 | 2,600 | 3,120 |
-| `up_6` | 143 | 1,456 | 2,600 | 752 | 1,896 | 1,456 | 2,600 |
-| `down_6` | 143 | 5,216 | 6,360 | 2,752 | 3,896 | 5,216 | 6,360 |
-| `up_8` | 191 | 1,648 | 3,176 | 848 | 2,376 | 1,648 | 3,176 |
-| `down_8` | 191 | 6,912 | 8,440 | 3,648 | 5,176 | 6,912 | 8,440 |
-| `ratio_3_2` | 65 | 1,128 | 1,648 | 588 | 1,108 | 1,128 | 1,648 |
-| `ratio_2_3` | 65 | 1,216 | 1,736 | 632 | 1,246 | 1,216 | 1,736 |
-| `ratio_4_3` | 87 | 1,216 | 1,912 | 632 | 1,328 | 1,216 | 1,912 |
-| `ratio_3_4` | 87 | 1,268 | 1,964 | 658 | 1,392 | 1,268 | 1,964 |
-| `ratio_8_3` | 191 | 1,648 | 3,176 | 848 | 2,376 | 1,648 | 3,176 |
-| `ratio_3_8` | 191 | 1,968 | 3,496 | 1,008 | 3,064 | 1,968 | 3,576 |
+| `up_2` | 43 | 992 | 1,336 | 496 | 840 | 992 | 1,336 |
+| `down_2` | 43 | 1,680 | 2,024 | 840 | 1,184 | 1,680 | 2,024 |
+| `up_3` | 65 | 1,080 | 1,600 | 540 | 1,060 | 1,080 | 1,600 |
+| `down_3` | 65 | 2,456 | 2,976 | 1,228 | 1,748 | 2,456 | 2,976 |
+| `up_6` | 143 | 1,408 | 2,552 | 704 | 1,864 | 1,408 | 2,552 |
+| `down_6` | 143 | 4,928 | 6,072 | 2,464 | 3,608 | 4,928 | 6,072 |
+| `up_8` | 191 | 1,600 | 3,128 | 800 | 2,344 | 1,600 | 3,128 |
+| `down_8` | 191 | 6,528 | 8,056 | 3,264 | 4,792 | 6,528 | 8,056 |
+| `ratio_3_2` | 65 | 1,080 | 1,600 | 540 | 1,060 | 1,080 | 1,600 |
+| `ratio_2_3` | 65 | 1,168 | 1,688 | 584 | 1,246 | 1,168 | 1,688 |
+| `ratio_4_3` | 87 | 1,168 | 1,864 | 584 | 1,280 | 1,168 | 1,864 |
+| `ratio_3_4` | 87 | 1,220 | 1,916 | 610 | 1,392 | 1,220 | 1,916 |
+| `ratio_8_3` | 191 | 1,600 | 3,128 | 800 | 2,344 | 1,600 | 3,128 |
+| `ratio_3_8` | 191 | 1,920 | 3,448 | 960 | 3,064 | 1,920 | 3,576 |
 
-Across the profiles a stage grows with its pins: `up_2` f32 stereo holds 976 / 1,040 /
-1,104 / 1,680 bytes at `super_economy` / `economy` / `balanced` / `transparent`, and
-`down_2` 1,680 / 1,776 / 1,872 / 2,736. The named chains hold 3.5 KB (`up_2_up_3`) to
-12.8 KB (`up_2_up_8_up_3`) at `economy`, f32 stereo, and up to 14.3 KB at
+Across the profiles a stage grows with its pins: `up_2` f32 stereo holds 928 / 992 /
+1,056 / 1,632 bytes at `super_economy` / `economy` / `balanced` / `transparent`, and
+`down_2` 1,584 / 1,680 / 1,776 / 2,640. The named chains hold 3.4 KB (`up_2_up_3`) to
+12.7 KB (`up_2_up_8_up_3`) at `economy`, f32 stereo, and up to 14.1 KB at
 `transparent`.
 
-The figures are bytes on a 64-bit host; a 32-bit target holds `sizeof(std::vector)`
-(12 instead of 24) less per history vector and nothing else changes.
+The figures are bytes, and the formula has no pointer-sized term (the history is one
+allocation since the roadmap's A12; before it, each channel's each line was a vector of
+its own, `P ch sizeof(std::vector)` more), so a 32-bit target holds the same.
 `tests/test_footprint.cpp` pins the stage formulas, held and peak, for all 14 ratios
 of the vocabulary, every profile and format, and every named chain's held bytes,
 against DspTap's heap meter (`tap/dsp/analysis/heap_meter.h`) exactly, on the hosted legs
@@ -347,24 +347,24 @@ same PR, with the reason.
 <!-- ceilings:begin (scripts/ceilings.py docs; do not edit by hand) -->
 | target | format | engine `.text` (bytes) | ceiling | engine `.rodata` (bytes) | ceiling | image (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|--:|--:|
-| m33 | f32 | 8,964 | 9,280 | 996 | 1,088 | 43,497 | 44,864 |
-| m33 | q15 | 11,044 | 11,392 | 996 | 1,088 | 45,777 | 47,168 |
-| m33 | q31 | 10,520 | 10,880 | 996 | 1,088 | 45,249 | 46,656 |
-| m55 | f32 | 7,900 | 8,192 | 996 | 1,088 | 43,657 | 44,992 |
-| m55 | q15 | 9,708 | 10,048 | 996 | 1,088 | 45,769 | 47,168 |
-| m55 | q31 | 9,456 | 9,792 | 996 | 1,088 | 45,521 | 46,912 |
-| hexagon | f32 | 19,384 | 19,968 | 428 | 448 | 296,776 | 305,728 |
-| hexagon | q15 | 21,304 | 21,952 | 428 | 448 | 299,304 | 308,288 |
-| hexagon | q31 | 20,096 | 20,736 | 428 | 448 | 298,152 | 307,136 |
+| m33 | f32 | 10,948 | 11,328 | 996 | 1,088 | 45,481 | 46,848 |
+| m33 | q15 | 13,152 | 13,568 | 996 | 1,088 | 47,897 | 49,344 |
+| m33 | q31 | 12,680 | 13,120 | 996 | 1,088 | 47,417 | 48,896 |
+| m55 | f32 | 10,088 | 10,432 | 996 | 1,088 | 45,833 | 47,232 |
+| m55 | q15 | 12,292 | 12,672 | 996 | 1,088 | 48,345 | 49,856 |
+| m55 | q31 | 11,664 | 12,032 | 996 | 1,088 | 47,721 | 49,216 |
+| hexagon | f32 | 25,704 | 26,496 | 428 | 448 | 303,144 | 312,256 |
+| hexagon | q15 | 32,496 | 33,472 | 428 | 448 | 310,600 | 319,936 |
+| hexagon | q31 | 31,596 | 32,576 | 428 | 448 | 309,704 | 319,040 |
 
 | M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|
-| `up` | f32 | 128 | 136 | 128 | 136 |
-| `up` | q15 | 128 | 136 | 112 | 120 |
-| `up` | q31 | 96 | 104 | 96 | 104 |
-| `down` | f32 | 104 | 112 | 104 | 112 |
-| `down` | q15 | 104 | 112 | 88 | 96 |
-| `down` | q31 | 88 | 96 | 88 | 96 |
+| `up` | f32 | 192 | 200 | 192 | 200 |
+| `up` | q15 | 192 | 200 | 176 | 184 |
+| `up` | q31 | 200 | 208 | 200 | 208 |
+| `down` | f32 | 208 | 216 | 208 | 216 |
+| `down` | q15 | 200 | 208 | 184 | 192 |
+| `down` | q31 | 184 | 192 | 184 | 192 |
 <!-- ceilings:end -->
 
 ## Non-finite input and denormals

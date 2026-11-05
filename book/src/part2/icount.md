@@ -308,6 +308,40 @@ plugin-capable `qemu-hexagon` from the pinned QEMU source (linux-user
 target only, cached thereafter). A measurement gate whose instruments are
 unpinned is a gate whose meaning can change without a diff.
 
+## Baselines are caller-dependent, unless the engine refuses to be
+
+The compiler-dependence above has a quieter cousin that the no-exceptions
+configuration (the roadmap's A12) dragged into the light. Building the
+`rational` workloads with `-fno-exceptions -fno-rtti` moved the M55 float
+interpolators +39 % and +53 % and the M33 Q15 rows up to +26 %, with every
+checksum unchanged. Nothing in the engine's arithmetic knows about
+exceptions, so what moved?
+
+The disassembly answered. DspTap's dot kernel, compiled alone both ways,
+differs in nothing but unwind-table directives. But the ratchet's `main`
+inlined the whole engine, and a 2 KB `main` without its EH landing pads
+has a different control-flow graph; GCC's register allocator, working over
+that graph, left the inner MAC loop's two pointers on the stack. The loop
+went from six instructions a tap to ten, the four extra being a load and a
+store of each pointer. The engine had not changed. Its *caller* had, and
+the baselines had been measuring the caller's register allocation all
+along — which is also what rational's PLAN.md had recorded a month earlier
+about the channel count: the workloads constructed with a literal, GCC
+folded it through the inlined constructor, and a consumer constructing
+behind a boundary would pay numbers the ratchet never saw.
+
+The fix is to make the engine's cost a property of the engine. Its
+per-block entries are out of line, so the hot loops are allocated in the
+engine's own frame whatever the caller has live; each block runs against a
+cursor of locals, so an out-of-line `this` costs nothing per frame; and
+the channel count is dispatched to a compile-time constant for the common
+counts, as `bridge` already did for its tap count, so the loops that
+needed the literal still get it. With exceptions and without, the counts
+are now identical to the instruction on every target, and against the old
+baselines 17 of 18 M55 rows improved — Q15 by 9 … 18 % — with the one
+regression at +1.8 %. The two-sided ratchet caught every step of this,
+including the three variants that were measured and declined.
+
 ## What instructions do and do not predict
 
 Time to honor the caveat. An instruction count is not a cycle count, and

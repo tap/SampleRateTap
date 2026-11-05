@@ -153,7 +153,25 @@ gated on shipping.
   through `tests/support/tap_sr_test/expect_rejected.h` (`EXPECT_THROW` with exceptions,
   a death test on `std::terminate()` without, `validate()`'s text pinned either way); the
   hosted no-exceptions job runs every battery, examples and C ABIs; the nine QEMU legs
-  run again in that configuration.*
+  run again in that configuration. The measurement found the ratchet's counts were not
+  the engines': built the new way with the engines inlined into the workloads' `main` as
+  before, `rational`'s M55 float interpolators read +39 … +53 % and `bridge`'s M55 Q31
+  row +15 % with every checksum unchanged — GCC's register allocation of a `main` whose
+  control flow had lost its EH landing pads (the inner MAC loop's two pointers went to
+  the stack, 6 instructions a tap becoming 10), not the engines. So the same PR makes the
+  hot path the engine's own: `bridge`'s and `rational`'s per-block entries are out of
+  line (`TAP_SR_BRIDGE_NOINLINE`, `TAP_SR_RATIONAL_NOINLINE`), `rational` runs each
+  block against a cursor of locals over one planar history and dispatches the channel
+  count to a compile-time constant for one and two channels (the lever its PLAN.md
+  section 6 had named). Measured on the M33, M55, Hexagon and host in both
+  configurations: the counts identical to the instruction with and without exceptions
+  on every row of every engine; against the previous baselines `bridge` and `async`
+  unchanged (within ±0.7 %), `rational` 17 of 18 M55 rows improved (Q15 −9.5 … −17.8 %,
+  the chain −12.9 %, the one row up +1.8 %), the M33 to −16 %, Hexagon to −9 %, the host
+  stereo rows −5 %; `rational`'s baselines re-recorded on every target and its ceilings
+  on the three (engine `.text` +25 … +50 % for the three channel instantiations, the M33
+  call stacks +64 … +104 B for the out-of-line frame), with the reason in
+  `rational/PLAN.md` section 6.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 

@@ -342,6 +342,23 @@ executed (it measures the shipping C++, not a Python re-implementation).
     not there — deliberately, so the difference is the loop and nothing
     else. Every existing baseline stayed identical to the instruction.
 
+  - **M7f — the per-block entries out of line (A12, 2026-11-05).**
+    `process`, `pull` and `flush` carry `TAP_SR_BRIDGE_NOINLINE` on every
+    target, so the walk is register-allocated in the engine's own frame
+    rather than in whatever the caller has live around it. The family's
+    exceptions-off configuration (`TAP_SR_NO_EXCEPTIONS_RTTI`, the roadmap's
+    A12) found the need: with the entries inlined into the ratchet's
+    `main`, `-fno-exceptions -fno-rtti` read M55 `up_q31_eco` +15.2 % with
+    the output bits identical — GCC's allocation of a `main` without its
+    EH landing pads, not the engine (rational's PLAN.md section 6 has the
+    disassembly-level account; its inner loop lost its pointers to the
+    stack). Out of line, measured on the M33, M55 and Hexagon in both
+    configurations: every bridge row within ±0.7 % of its baseline, the two
+    configurations identical to the instruction (Hexagon's clang had never
+    inlined them: +0.000 % there, the attribute a no-op). The ceilings did
+    not move. Unlike the mirrored arm (M7d), this attribute is not gated per
+    target: it changes nothing where the compiler already kept the entry
+    out of line and removes a caller dependence everywhere else.
   - **Hexagon harness isolation (monorepo migration step P.2; re-record,
     not a lever).** `scripts/icount.py` now runs every Hexagon workload
     from one fixed path with a fixed `argv[0]` and an empty environment:
