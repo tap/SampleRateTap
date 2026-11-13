@@ -172,6 +172,14 @@ gated on shipping.
   on the three (engine `.text` +25 … +50 % for the three channel instantiations, the M33
   call stacks +64 … +104 B for the out-of-line frame), with the reason in
   `rational/PLAN.md` section 6.*
+- **A13. Channel counts at compile time** (added 2026-11-13, the maintainer's decision:
+  every channel count is known at compile time, never at run time). The count moves into
+  every engine's type, so each converter compiles one channel shape instead of
+  dispatching among three; on the host that cuts the hot-path code by roughly two thirds
+  and `rational`'s call frame by about a third, with every output unchanged. Planned in
+  [`CHANNELS_PLAN.md`](CHANNELS_PLAN.md): a measurement on the M33, M55 and Hexagon that
+  gates the work, then four PRs (DspTap's `chain`, then `rational`, `bridge` and `async`,
+  the last bumping the family to 0.7.0). *Under the maintainer's review; not started.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 
