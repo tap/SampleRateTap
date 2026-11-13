@@ -1,6 +1,10 @@
 # Channel counts at compile time (A13): plan
 
-Status: **draft for the maintainer's review, 2026-11-13. Nothing here is executed.** The
+Status: **draft for the maintainer's review, 2026-11-13. Nothing here is executed.
+Adversarially audited the same day ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md)):
+52 of 53 findings survived, including that the code-size gain holds only for one count
+per converter type in an image; the revision waits on the maintainer's answers to the
+audit's section 2.** The
 maintainer decided on 2026-11-13 that every channel count is known at compile time and
 never at run time. This plan turns that into work: what the decision buys (measured on the
 host, section 1), the decisions that shape the API (section 2, three of them the

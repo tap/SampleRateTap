@@ -169,17 +169,20 @@ gated on shipping.
   unchanged (within ±0.7 %), `rational` 17 of 18 M55 rows improved (Q15 −9.5 … −17.8 %,
   the chain −12.9 %, the one row up +1.8 %), the M33 to −16 %, Hexagon to −9 %, the host
   stereo rows −5 %; `rational`'s baselines re-recorded on every target and its ceilings
-  on the three (engine `.text` +25 … +50 % for the three channel instantiations, the M33
+  on the three (engine `.text` +19 … +57 % for the three channel instantiations, the M33
   call stacks +64 … +104 B for the out-of-line frame), with the reason in
   `rational/PLAN.md` section 6.*
 - **A13. Channel counts at compile time** (added 2026-11-13, the maintainer's decision:
   every channel count is known at compile time, never at run time). The count moves into
   every engine's type, so each converter compiles one channel shape instead of
-  dispatching among three; on the host that cuts the hot-path code by roughly two thirds
-  and `rational`'s call frame by about a third, with every output unchanged. Planned in
+  dispatching among three, with every output unchanged. Planned in
   [`CHANNELS_PLAN.md`](CHANNELS_PLAN.md): a measurement on the M33, M55 and Hexagon that
   gates the work, then four PRs (DspTap's `chain`, then `rational`, `bridge` and `async`,
-  the last bumping the family to 0.7.0). *Under the maintainer's review; not started.*
+  the last bumping the family to 0.7.0). The plan's adversarial audit
+  ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md)) found that the code-size gain holds
+  only for an image with one count per converter type: on the host, one count shrinks a
+  stage pair's code by 14 to 28 % and three counts grow it by 39 to 59 %. *Under the
+  maintainer's review; the plan's revision waits on the audit's section 2; not started.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 
