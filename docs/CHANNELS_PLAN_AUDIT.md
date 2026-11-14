@@ -1,6 +1,7 @@
 # Audit of the channel-count plan (A13)
 
-Status: **run 2026-11-13 against [`CHANNELS_PLAN.md`](CHANNELS_PLAN.md) at 45a22a0.** Four
+Status: **run 2026-11-13 against [`CHANNELS_PLAN.md`](CHANNELS_PLAN.md) at 45a22a0;
+answered by the plan's v2 (2026-11-14), which cites these ids where it changes.** Four
 independent reviewers each attacked the plan from one angle: its facts and inventory,
 the family's settled decisions and rules, its engineering design, and its evidence,
 gates and sequencing. Each reviewer's findings then went to a separate skeptic, who
@@ -17,8 +18,9 @@ the trees and re-ran the plan's host measurements; nothing was edited.
 
 Many findings are the same problem found independently from different angles; they are
 grouped below by problem, with the finding ids in brackets. Severities are the skeptics'.
-The plan is not yet revised: three of the groups below need the maintainer's answer first
-(section 2).
+Section 2's first question was answered on 2026-11-14 (one converter type can appear at
+more than one count in an image); the plan's v2 adds the shared base (its K12), with a
+host prototype measured against these numbers.
 
 ## 1. The premise needs qualifying
 

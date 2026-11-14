@@ -180,9 +180,12 @@ gated on shipping.
   gates the work, then four PRs (DspTap's `chain`, then `rational`, `bridge` and `async`,
   the last bumping the family to 0.7.0). The plan's adversarial audit
   ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md)) found that the code-size gain holds
-  only for an image with one count per converter type: on the host, one count shrinks a
-  stage pair's code by 14 to 28 % and three counts grow it by 39 to 59 %. *Under the
-  maintainer's review; the plan's revision waits on the audit's section 2; not started.*
+  only for an image with one count per converter type; one type can appear at several
+  counts in the maintainer's firmware, so v2 of the plan builds each engine's
+  count-independent code once per format and rate (its K12). On the host, a stage pair's
+  code then falls 6 to 25 % at one count and holds within about 1 % at three counts in
+  `-O2`/`-O3` builds, and grows 8 to 29 % at two or three counts in `-Os` builds.
+  *Plan v2 under the maintainer's review (K1, K2, K8, K10, K11 are theirs); not started.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 
