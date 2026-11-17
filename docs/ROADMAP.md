@@ -185,7 +185,8 @@ gated on shipping.
   count-independent code once per format and rate (its K12). On the host, a stage pair's
   code then falls 6 to 25 % at one count and holds within about 1 % at three counts in
   `-O2`/`-O3` builds, and grows 8 to 29 % at two or three counts in `-Os` builds.
-  *Plan v2 under the maintainer's review (K1, K2, K8, K10, K11 are theirs); not started.*
+  *The maintainer's decisions recorded 2026-11-17 (section 7, Q7); not started: gate 0
+  is the first step.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 
@@ -301,6 +302,15 @@ confirm them.
 - **Q6. The host ratchet.** A hard gate on callgrind `Ir` (deterministic enough on the
   runners), or an unguarded trend with the channel-parallel path documented as ungated?
   **Decided:** a hard gate, two-sided at ±3 % (A8).
+- **Q7. A13's shape** (2026-11-17, after the plan's audit): where the channel count sits
+  in each type, whether it has a default, what the C ABIs do with a count, how the work
+  is split, and whether the RP2350 times it before 0.7.0.
+  **Decided:** the count is the second template parameter, after the sample format
+  (`CHANNELS_PLAN.md` K1); no default, every count explicit (K2); the C ABIs of `bridge`
+  and `rational` serve one and two channels natively and other counts as that many mono
+  converters behind one handle, `async`'s one and two natively (K8, option (b)); four PRs,
+  DspTap first (K10); the hardware confirmation deferred, the gain stated in instructions
+  (K11).
 
 ## 8. Stays deferred, on purpose
 

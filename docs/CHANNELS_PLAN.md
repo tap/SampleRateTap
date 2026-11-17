@@ -1,13 +1,15 @@
 # Channel counts at compile time (A13): plan
 
-Status: **v2, revised 2026-11-14 for the maintainer's review. Nothing here is executed.**
+Status: **v2, revised 2026-11-14; the maintainer's decisions recorded 2026-11-17 (K1 as
+recommended, K2 no default, K8 option (b), K10 four PRs, K11 deferred). Not started:
+gate 0 (section 3) is the first step.**
 v1 (2026-11-13, 45a22a0) was adversarially audited the same day
 ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md): four independent reviewers, a
 skeptic per reviewer, 52 of 53 findings surviving). This version answers every surviving
 finding; the audit's ids appear in brackets where a change answers one. The maintainer
 has answered the audit's first question: one converter type can appear at more than one
 channel count in a firmware image. That makes K12, the shared base, part of the plan.
-Two questions remain the maintainer's (K1, K8), with K2, K10 and K11.
+The maintainer then decided K1, K2, K8, K10 and K11 (section 2).
 
 The maintainer decided on 2026-11-13 that every channel count is known at compile time
 and never at run time. This plan turns that into work: what the decision buys, measured
@@ -85,9 +87,9 @@ runtime dispatch [gate-2, evid-1]:
 | `bridge` 44.1 → 48, 12 channels | 470,747,117 | 464,012,693 (−1.43 %) |
 | `bridge` 48 → 44.1, 12 channels | 593,269,419 | 586,773,702 (−1.10 %) |
 
-For `rational`, K12 changes none of these: the prototype's counts equal the
-count-in-type column to the instruction (K12 is prototyped for `rational` only; gate 0
-builds it for all three engines). Every checksum is unchanged, and every coefficient of the 14 ratios in all
+For `rational`, K12 changes none of these: the prototype's counts equal the count-in-type
+column to the instruction (K12 is prototyped for `rational` only; gate 0 builds it for all
+three engines). Every checksum is unchanged, and every coefficient of the 14 ratios in all
 three formats hashes the same. With clang 18 the stereo rows do not move (`rational` ↑2:
 −0.003 %) and the 12-channel rows gain 0.4 to 1.8 % [evid-1]. The "Today" column is the
 code at 2ed199a: `rational`'s and `async`'s host baselines equal it, `bridge`'s do not
@@ -107,13 +109,14 @@ compile error, and removes the dispatch and the generic loops.
 
 ## 2. Decisions
 
-Each states the recommendation, the alternative, and what hangs on it. **Maintainer**
-marks the five whose cost falls outside the code: K1, K2, K8, K10 and K11 [rules-6].
+Each states the decision, the alternative, and what hangs on it. The five whose cost
+falls outside the code, K1, K2, K8, K10 and K11, were the maintainer's [rules-6], and are
+marked with the decision taken on 2026-11-17.
 
-- **K1. Where the count lives.** **Maintainer**: this is the public type shape the 1.0
-  freeze will hold, and the family keeps public names with the maintainer (D4, D5, D15)
-  [rules-6]. Recommended: a `std::size_t Ch` template parameter, second on every engine
-  type, after the sample format, so `(S, Ch)` reads as the frame:
+- **K1. Where the count lives.** **Decided by the maintainer, as recommended**: this is
+  the public type shape the 1.0 freeze will hold, and the family keeps public names with
+  the maintainer (D4, D5, D15) [rules-6]. A `std::size_t Ch` template parameter, second
+  on every engine type, after the sample format, so `(S, Ch)` reads as the frame:
   `rational::basic_stage<S, Ch, R>`, `basic_chain<S, Ch, Rs...>`,
   `basic_converter<S, Ch, R>`; `bridge::basic_converter<S, Ch, D, K = 0>`;
   `async::basic_converter<S, Ch>` and `async::fractional_resampler<S, Ch>` [facts-4]. The
@@ -125,11 +128,11 @@ marks the five whose cost falls outside the code: K1, K2, K8, K10 and K11 [rules
   every sample trait. *Hangs on it:* 139 constructor calls and 31 `validate(channels, …)`
   calls in `bridge`'s and `rational`'s trees, 60 `config.channels` assignments in
   `async`'s, and the book [facts-8].
-- **K2. No default count.** **Maintainer.** Today's defaults are one channel for
-  `bridge` and `rational` and two for `async`, so `Ch = 2` on the aliases would change
-  two engines' defaults, not only save edits [rules-6]. *Alternative:* a default; the
-  family's habit is that the caller declares the topology by choosing a type (D12's
-  spirit).
+- **K2. No default count.** **Decided by the maintainer: every count is explicit**, on
+  the `basic_` templates and on every alias. Today's defaults are one channel for
+  `bridge` and `rational` and two for `async`; each call site that relied on one states
+  it [rules-6]. *Alternative, declined:* a default; the family's habit is that the caller
+  declares the topology by choosing a type (D12's spirit).
 - **K3. The rule and the accessor.** `Ch >= 1` by `static_assert` with a message, pinned
   by a compile-fail project (as `rational`'s charter is, `rational/tests/compile_fail/`);
   no upper bound (`async` serves any count today; its tests run 16). `channels()` stays,
@@ -175,32 +178,35 @@ marks the five whose cost falls outside the code: K1, K2, K8, K10 and K11 [rules
   [design-6]. Only `rational` uses `tap::dsp::chain` in this tree and TapTools; MuTap was
   not checked here and reaches DspTap through its C ABI, which does not expose `chain`
   [rules-3]. DspTap 0.2.0, tagged `v0.2.0` after A13a merges.
-- **K8. What the C ABIs do.** **Maintainer.** C has no templates, so the C ABIs are the
-  one place a count stays a run-time value; the question is whether that is acceptable
-  and in what form [rules-4]. Nothing calls them with more than two channels: every C ABI
-  test, notebook and binding uses one or two [facts-3, capi-1]. Measured on the host
-  before K12 [design-1]: `rational`'s C ABI is 924,120 B of `.text` today; serving one and
-  two channels natively makes it 1,629,191 B (+76 %) and compiles about 1.7 times slower;
-  serving mono natively makes it 818,703 B (−11 %) before a fan-out wrapper. K12 moves
-  the cold code out of the per-count instantiations, so gate 0 re-measures every option.
-  The options:
-  - **(a) Mono native, other counts fanned out** (recommended for `bridge` and
-    `rational`): every count served by that many mono converters behind one handle,
-    de- and re-interleaved through a scratch buffer. Exact because these engines' channels
-    are independent; pinned by a finite set, 3, 6 and 12 channels in float, Q15 and Q31,
-    against the native `basic_converter<S, N, …>` and `basic_chain<S, N, …>`, through
-    `process`, `flush`, `outputs_for`, `frames_needed`, latency and `reset`, with one call
-    longer than the scratch [capi-1].
-  - **(b) One and two native, the rest fanned out:** the deployment shapes measured
-    natively, at the size above.
-  - **(c) One create entry point per count:** the count in the symbol, as the decision
-    reads, with the symbol sets growing.
+- **K8. What the C ABIs do.** **Decided by the maintainer: option (b)** below, for
+  `bridge` and `rational`; for `async`, one and two channels natively and NULL for any
+  other count. C has no templates, so the C ABIs are the one place a count stays a
+  run-time value, and the maintainer accepted that in this form [rules-4]. Nothing calls
+  them with more than two channels: every C ABI test, notebook and binding uses one or two
+  [facts-3, capi-1]. Measured on the host before K12 [design-1]: `rational`'s C ABI is
+  924,120 B of `.text` today; serving one and two channels natively makes it 1,629,191 B
+  (+76 %) and compiles about 1.7 times slower; serving mono natively makes it 818,703 B
+  (−11 %) before a fan-out wrapper. K12 moves the cold code out of the per-count
+  instantiations, so gate 0 re-measures every option. The options:
+  - **(a) Mono native, other counts fanned out:** every count above one served by that
+    many mono converters behind one handle, de- and re-interleaved through a scratch
+    buffer. Declined.
+  - **(b) One and two native, the rest fanned out (decided):** one and two channels run
+    the native `Ch = 1` and `Ch = 2` instantiations, the deployment shapes the ratchet
+    counts; any other count runs that many native mono converters behind one handle,
+    de- and re-interleaved through a scratch buffer. The fan-out is exact because these
+    engines' channels are independent, and pinned by a finite set: 3, 6 and 12 channels
+    in float, Q15 and Q31, against the native `basic_converter<S, N, …>` and
+    `basic_chain<S, N, …>`, through `process`, `flush`, `outputs_for`, `frames_needed`,
+    latency and `reset`, with one call longer than the scratch [capi-1]. Its size is
+    re-measured with K12 in gate 0 and recorded there; the +76 % above is before K12.
+  - **(c) One create entry point per count:** the count in the symbol, with the symbol
+    sets growing. Declined.
   - **For `async`:** fanning out would be wrong (each mono converter would run its own
-    clock servo), so it serves a native menu and returns NULL otherwise. Recommended
-    menu: one and two channels, the counts its callers use, growing when a caller needs
-    more; a seven-count menu would multiply its per-format code about five times.
-  The signatures and symbol sets stay (`rational`'s 23 pinned) under (a), (b) and the
-  `async` menu.
+    clock servo), so it serves one and two channels natively, as (b) does, and returns
+    NULL for any other count; counts are added when a caller needs them (a seven-count
+    menu would multiply its per-format code about five times).
+  The signatures and symbol sets stay (`rational`'s 23 pinned).
 - **K9. Programs that learn the count at run time switch over it themselves.** The
   switch lives in the program, never in an engine [facts-6]:
   `async/examples/alsa_bridge.cpp`'s `--channels` dispatches over a stated list and says
@@ -209,24 +215,25 @@ marks the five whose cost falls outside the code: K1, K2, K8, K10 and K11 [rules
   as template arguments for all three engines, so A13b, A13c and A13d each edit it; the
   `async` benches' runtime-channel helpers (`bench_converter.cpp`, `bench_compare.cpp`)
   move in A13d.
-- **K10. Sequencing and version.** **Maintainer: the split.** Four PRs (section 4), as A11
-  was three. `PLAN.md` records the decision as D18 in A13b, the first PR in this tree, and
-  each engine's plan updates its "runtime count" row in the PR that changes that engine
-  [rules-7]. Each PR updates the root README and every engine README that states the call
-  shape it changes (A4) [rules-1, facts-5, design-11, seq-2]. A13b raises
-  `TAP_SR_DSPTAP_MINIMUM` to 0.2.0 in all three umbrella headers (they are
+- **K10. Sequencing and version.** **Decided by the maintainer, as recommended: four PRs**
+  (section 4), as A11 was three. `PLAN.md` records the decision as D18 in A13b, the first
+  PR in this tree, and each engine's plan updates its "runtime count" row in the PR that
+  changes that engine [rules-7]. Each PR updates the root README and every engine README
+  that states the call shape it changes (A4) [rules-1, facts-5, design-11, seq-2]. A13b
+  raises `TAP_SR_DSPTAP_MINIMUM` to 0.2.0 in all three umbrella headers (they are
   token-identical) and adds a "main (0.7.0 in progress) | 0.2.0" row to the tested pairs
-  beside the unchanged v0.6.0 row [rules-8, facts-9]. The version moves once, to 0.7.0,
-  in A13d, where the in-progress row becomes the 0.7.0 row (D13). *Alternative:* the three
-  engines in one PR, one review and a #97-sized diff.
-- **K11. Hardware confirmation.** **Maintainer**, with Block B's bench. Before the 0.7.0
-  tag, at A13d's head against 2ed199a, `pico2_cyccnt` times every case it runs on the
+  beside the unchanged v0.6.0 row [rules-8, facts-9]. The version moves once, to 0.7.0, in
+  A13d, where the in-progress row becomes the 0.7.0 row (D13). *Alternative, declined:*
+  the three engines in one PR, one review and a #97-sized diff.
+- **K11. Hardware confirmation.** **Decided by the maintainer: deferred.** A13 lands on
+  instruction counts, and the README states that its gain is measured in instructions
+  only. B2's P7 figures for `bridge` and `rational` are taken at or after 0.7.0
+  [rules-11]. When the bench runs, the confirmation is: at A13d's head against 2ed199a,
+  `pico2_cyccnt` times every case it runs on the
   RP2350 (Cortex-M33), `async` at 2 and 12 channels included, with and without
   exceptions. Pass: cycles per output frame no higher in any case, within the run-to-run
   spread measured by repeating each case at both commits; an exception goes to the
-  maintainer [k11-1]. B2's P7
-  figures for `bridge` and `rational` are taken at or after 0.7.0 [rules-11]. Without the
-  bench, the README states the gain is measured in instructions only.
+  maintainer [k11-1].
 - **K12. Count-independent code is built once per format and rate.** Each engine splits
   into a base, templated on the format and the rate parameters only, that holds the
   state and the cold code (the table or bank and its building, the design, `validate()`,
@@ -346,7 +353,7 @@ figure falls, so a gain is gated and not just observed.
 - The C ABIs' signatures and symbol sets follow K8; each header states the counts it
   serves.
 - The README's tested pairs name DspTap `v0.2.0`; SampleRateTap is tagged `v0.7.0`;
-  K11's measurement is recorded, or the README says there is none.
+  the README says A13's gain is measured in instructions only (K11 deferred).
 
 ## 6. Risks, and where each is watched
 
