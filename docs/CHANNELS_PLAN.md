@@ -3,8 +3,9 @@
 Status: **v2, revised 2026-11-14; the maintainer's decisions recorded 2026-11-17 (K1 as
 recommended, K2 no default, K8 option (b), K10 four PRs, K11 deferred). Gate 0 ran
 2026-11-17 (section 3, "The result"): `async` passes, `bridge` passes with its walk out
-of line, `rational` does not pass on the M55 and M33 in any placement measured. The next
-step is the maintainer's choice among the options listed there.**
+of line, `rational` does not pass on the M55 and M33 in any placement measured. The
+maintainer chose option 3 the same day: `rational`'s per-count blocks out of line in
+every stage, its three rises accepted (section 3, "Decided"). A13a (DspTap) is next.**
 v1 (2026-11-13, 45a22a0) was adversarially audited the same day
 ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md): four independent reviewers, a
 skeptic per reviewer, 52 of 53 findings surviving). This version answers every surviving
@@ -388,6 +389,20 @@ states it.
 3. **`rational` with one placement and its rises accepted.** Out of line everywhere: the
    M55's ↑2 and ↑3 Q15 rows +1.28 and +0.63 %, the M33's ↓3 float row +1.37 %.
 4. **Stop A13** where it stands.
+
+**Decided by the maintainer (2026-11-17): option 3.** What it fixes for the PRs:
+
+- **K5's placements.** `bridge`'s `process_walk` is out of line
+  (`TAP_SR_BRIDGE_NOINLINE`); `rational`'s per-count block (`process_block<Ch>`) is out of
+  line in every stage (`TAP_SR_RATIONAL_NOINLINE`), so `process()`, `pull()` and `flush()`
+  each call one out-of-line body for their count.
+- **Three rows accepted above the rule.** `rational`'s ↑2 Q15 economy row on the M55
+  (+1.28 % at gate 0), its ↑3 Q15 economy row on the M55 (+0.63 %) and its ↓3 float
+  economy row on the M33 (+1.37 %) may rise up to their gate-0 figures plus 0.1 percentage
+  points; every other row stays under item 4's rule, in every PR's gate. The README states
+  the three with their figures beside K11's note that the gain is measured in
+  instructions.
+- **The order stands** (K10): DspTap, `rational`, `bridge`, `async`, 0.7.0 at the end.
 
 ## 4. The pull requests, in order
 

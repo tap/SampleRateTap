@@ -192,8 +192,10 @@ gated on shipping.
   day (`CHANNELS_PLAN.md` section 3): `async` passes on every target, `bridge` passes with
   its walk kept out of line, and `rational` fails on the M55 and M33 in every placement of
   its per-count block measured (the M55's ↓3 Q15 row +8.6 %, the M33's Q15 rows up to
-  +23 % as GCC places it; +1.3 % at best on both). Waiting on the maintainer's choice
-  among the plan's options; no API change made.*
+  +23 % as GCC places it; +1.3 % at best on both). The maintainer chose the plan's option
+  3 the same day: `rational`'s per-count blocks out of line in every stage, with three rows
+  accepted above the gate's rule (two M55 Q15 interpolators, +1.28 and +0.63 %, and the
+  M33's ↓3 float row, +1.37 %). A13a (DspTap) is next.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 
@@ -317,7 +319,9 @@ confirm them.
   and `rational` serve one and two channels natively and other counts as that many mono
   converters behind one handle, `async`'s one and two natively (K8, option (b)); four PRs,
   DspTap first (K10); the hardware confirmation deferred, the gain stated in instructions
-  (K11).
+  (K11). After gate 0 (same day), option 3 of `CHANNELS_PLAN.md` section 3: `rational`'s
+  per-count blocks out of line in every stage, its three rises over the gate's rule
+  accepted at their measured figures.
 
 ## 8. Stays deferred, on purpose
 
