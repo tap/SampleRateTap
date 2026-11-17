@@ -85,8 +85,9 @@ symmetry-halved table were declined on their numbers.
   member read is a reload per frame — an out-of-line `this` is reachable from `compact()`'s
   `memmove` — so the state and the decimator's row spans travel in the cursor; the
   interpolator's spans, indexed by a runtime phase, stay member reads because that measured
-  cheaper (PLAN.md section 6, the A12 lever). The instruction counts are identical with and
-  without exceptions; the ratchet runs both configurations against one set of baselines.
+  cheaper (PLAN.md section 6, the A12 lever). The instruction counts with and without
+  exceptions are within 0.3 % of each other (A13's gate 0: 0.003 % on the M55, 0.26 % on the
+  M33); the ratchet runs both configurations against one set of baselines.
 - **Correctness before optimization.** Scipy golden vectors, exhaustive phase sweeps,
   `decimate.h` as a second golden at ↓2 / ↓3 / ↓6, and the 182-row coverage matrix test gate
   every optimization that follows (PLAN.md section 5). Regenerate the vectors only when the

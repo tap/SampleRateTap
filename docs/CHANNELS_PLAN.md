@@ -1,8 +1,10 @@
 # Channel counts at compile time (A13): plan
 
 Status: **v2, revised 2026-11-14; the maintainer's decisions recorded 2026-11-17 (K1 as
-recommended, K2 no default, K8 option (b), K10 four PRs, K11 deferred). Not started:
-gate 0 (section 3) is the first step.**
+recommended, K2 no default, K8 option (b), K10 four PRs, K11 deferred). Gate 0 ran
+2026-11-17 (section 3, "The result"): `async` passes, `bridge` passes with its walk out
+of line, `rational` does not pass on the M55 and M33 in any placement measured. The next
+step is the maintainer's choice among the options listed there.**
 v1 (2026-11-13, 45a22a0) was adversarially audited the same day
 ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md): four independent reviewers, a
 skeptic per reviewer, 52 of 53 findings surviving). This version answers every surviving
@@ -274,8 +276,11 @@ committed to the engines.
    - no streaming row's count rises more than 0.5 % against the reference, on any target,
      in either configuration; every rise above 0.1 % is traced and explained in the
      record; each engine's summed streaming count does not rise;
-   - the no-exceptions build's counts and checksums equal the exceptions build's exactly
-     (`icount.py --compare-json` against the exceptions build's file) [gate-5];
+   - the no-exceptions build's checksums equal the exceptions build's, and its gap from the
+     exceptions build on each row is no wider than the reference's gap by more than 0.1
+     percentage points [gate-5]. (v2 asked for exact equality; the reference itself does
+     not count identically in the two configurations on the QEMU targets, so gate 0
+     applied this form; see the result.)
    - every single-count probe's engine `.text` and image fall on every target, and no M33
      per-call stack rises;
    - the multi-count probe's figures are recorded at Release and MinSizeRel and brought
@@ -290,6 +295,99 @@ committed to the engines.
 The gate measures a model of the change; each PR re-applies the rule to the real code
 (section 4) [seq-1]. `pull()` and `flush()` are pinned for outputs only: no workload
 measures their cost or size, today or after [gate-6].
+
+### The result (2026-11-17)
+
+**What ran.** The reference is this branch's engines, byte-identical to 2ed199a; the
+variant is [`channels/make_variant.py`](channels/make_variant.py) with its defaults (each
+count a compile-time constant pinned to the count every workload runs, K12's base for
+`rational`, the blocks placed as the reference places them); both measured in the same
+job, with and without exceptions and RTTI, on the M55 and M33 (arm-none-eabi-gcc 13.2.1,
+qemu-system-arm 8.2.2), Hexagon (CodeLinaro clang 19.1.5, qemu-hexagon 8.2.2 built with
+plugins) and the host (GCC 13 under callgrind), plus the multi-count probe and two
+placements of the per-count blocks for `bridge` and `rational`. The driver, the variant
+script, the probe project and the analysis are in [`channels/`](channels/), every count,
+checksum and ceiling in
+[`channels/gate0_measurements.json`](channels/gate0_measurements.json). Every workload's
+checksum equals the reference's, in every tree, configuration and target.
+
+**`async`: passes.** No row rises on any target. The streaming sums fall 0.2 % (M33) to
+2.3 % (host); the 12-channel Q15 pipeline falls 4.7 % on the M55 and the worst
+`pull()` call 2.9 to 9.9 %. Engine `.text` falls 1.4 to 3.2 % on the three targets, the
+M33 `pull()` stack 32 to 40 B for float and Q15. One configuration gap widens: the M55 Q31
+pipeline counts 0.21 % fewer instructions without exceptions, where the reference's two
+builds are 0.01 % apart.
+
+**`bridge`: passes with its walk out of line.** As the reference places it, the M55 fails:
+the Q15 rows rise 1.9 % (44.1 → 48) and 3.0 % (48 → 44.1), their worst calls 2.1 and 3.4
+%, the float 44.1 → 48 economy row and its worst call 0.6 %, and the streaming sum 0.35 %.
+The 58-tap walk is the cause: identical to the instruction in both builds, but out of line
+in the reference and inlined into `process()` once it is the only shape left. With
+`process_walk` out of line (`TAP_SR_BRIDGE_NOINLINE`), the M55's worst rows are the Q31
+economy rows, +0.39 and +0.28 % (traced: within the rule), the Q15 rows fall 0.24 and 0.25
+%, and the M33 and Hexagon do not move. As measured without the placement, engine `.text`
+falls 49 to 55 % and the image 14 to 27 % on the three targets, and the M33 per-call
+stacks fall 16 to 136 B; the placement's own size, and its gap between the configurations
+(the unplaced variant's Q31 rows on the M55 widened it to +0.5 and +0.6 %), are A13c's
+gate to record.
+
+**`rational`: does not pass.** As the reference places its blocks, the M55's ↓3 Q15 row
+rises 8.6 % and the M33's Q15 rows 9 to 23 % (↓3 +23.3 %, the worst ↑2 call +18.5 %, ↑3
++14.7 %, 2/3 +12.3 %, ↑2 +9.4 %), with ↓3 float +1.7 % and the M33's streaming sum
++0.22 %; Hexagon and the host pass. The M55 case is the register allocation of the
+per-count block: its 64-bit Q15 accumulator is loaded and stored around every iteration
+of the Helium multiply-accumulate loop, seven instructions where the reference has five.
+Placing the block differently moves the failure rather than removing it (worst streaming
+row per target, against the reference):
+
+| `rational`'s per-count block | M55 | M33 | Hexagon |
+|---|---|---|---|
+| placed by GCC (as the reference) | ↓3 Q15 +8.58 % | ↓3 Q15 +23.31 % | −0.00 % |
+| out of line, every stage | ↑2 Q15 +1.28 % | ↓3 float +1.37 % | −0.00 % |
+| out of line for decimators only | ↓3 float +0.06 % (passes) | ↑2 Q15 call +18.50 % | −0.00 % |
+
+No placement measured passes on both the M55 and the M33, and the M33's ↓3 float row
+rises in every one (its cause not established). Engine `.text` falls 12 to 33 % and the
+image 2 to 5 %, `.rodata` rises 15 % on the Arm targets (996 → 1,146 B), and the M33
+per-call stacks fall 8 to 56 B.
+
+**The multi-count probe** (K12's prototype, object `.text`, change against today's
+headers; one count, two counts, three counts):
+
+| Target | Build | float: 1 / 1, 2 / 1, 2, 6 | Q15: 1 / 1, 2 / 1, 2, 6 |
+|---|---|---|---|
+| M33 | Release | −15.2 / −8.1 / +5.9 % | −19.0 / −9.8 / +2.3 % |
+| M33 | MinSizeRel | −4.8 / +8.9 / +21.7 % | −3.8 / +6.1 / +18.5 % |
+| M55 | Release | −20.6 / −13.0 / +0.8 % | −23.4 / −12.6 / +1.0 % |
+| M55 | MinSizeRel | −5.4 / +8.2 / +23.2 % | −5.2 / +6.1 / +19.8 % |
+| Hexagon | Release | −27.2 / −10.0 / +14.7 % | −34.4 / −17.4 / +7.1 % |
+| Hexagon | MinSizeRel | −7.7 / +7.2 / +21.1 % | −7.3 / +6.3 / +18.9 % |
+
+**The configurations.** The reference does not count identically with and without
+exceptions on the QEMU targets: program start-up differs by a near-constant amount (for
+example 183 thousand instructions on every M33 `async` row), and a few rows' code
+differs, `bridge`'s 48 → 44.1 Q15 super-economy row on the M55 by 2.5 % (17,740,374
+instructions with exceptions, 17,300,159 without, the checksum the same; re-run to
+confirm). A12's record of identical configurations does not reproduce for `bridge` on the
+M55; the host is exact. Gate 0 therefore applied the configuration rule as item 4 now
+states it.
+
+**Options for the maintainer:**
+
+1. **Proceed with DspTap's chain, `bridge` and `async`; hold `rational` until its hot loop
+   is placement-independent** (recommended). `bridge` takes K5 with its walk out of line,
+   `async` as modelled. `rational`'s change waits for a lever measured on its own, a
+   block whose multiply-accumulate state the register allocator keeps in registers on
+   both Arm targets, gated by this rule before its PR; until then `rational` alone still
+   takes its count at run time. K10's order becomes DspTap, `bridge`, `async`, then
+   `rational`, with 0.7.0 at the end.
+2. **`rational` with a placement chosen per target.** Out of line for decimators on the
+   M55, out of line everywhere on the M33, which still leaves the M33's ↓3 float row at
+   +1.37 %; the engine then carries target-specific attributes, and the next compiler
+   can flip either.
+3. **`rational` with one placement and its rises accepted.** Out of line everywhere: the
+   M55's ↑2 and ↑3 Q15 rows +1.28 and +0.63 %, the M33's ↓3 float row +1.37 %.
+4. **Stop A13** where it stands.
 
 ## 4. The pull requests, in order
 
@@ -348,8 +446,8 @@ figure falls, so a gain is gated and not just observed.
 - Every output pin is unchanged: scipy vectors, matrix rows, output hashes, the C ABIs'
   bit-for-bit tests, and every workload's checksum against the 2ed199a reference.
 - Gate 0's rule holds at A13d's head against the reference, on every target, in both
-  configurations, and the two configurations are identical; the ratchet's baselines and
-  the size and stack ceilings re-recorded.
+  configurations, the gap between the configurations included; the ratchet's baselines
+  and the size and stack ceilings re-recorded.
 - The C ABIs' signatures and symbol sets follow K8; each header states the counts it
   serves.
 - The README's tested pairs name DspTap `v0.2.0`; SampleRateTap is tagged `v0.7.0`;

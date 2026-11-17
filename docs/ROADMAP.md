@@ -165,7 +165,10 @@ gated on shipping.
   count to a compile-time constant for one and two channels (the lever its PLAN.md
   section 6 had named). Measured on the M33, M55, Hexagon and host in both
   configurations: the counts identical to the instruction with and without exceptions
-  on every row of every engine; against the previous baselines `bridge` and `async`
+  on every row of every engine (corrected by A13's gate 0, 2026-11-17: not so on the
+  QEMU targets, where program start-up differs and `bridge`'s ↓ Q15 super-economy row on
+  the M55 counts 2.5 % fewer instructions without exceptions; within the ratchet's
+  tolerance, and exact on the host); against the previous baselines `bridge` and `async`
   unchanged (within ±0.7 %), `rational` 17 of 18 M55 rows improved (Q15 −9.5 … −17.8 %,
   the chain −12.9 %, the one row up +1.8 %), the M33 to −16 %, Hexagon to −9 %, the host
   stereo rows −5 %; `rational`'s baselines re-recorded on every target and its ceilings
@@ -185,8 +188,12 @@ gated on shipping.
   count-independent code once per format and rate (its K12). On the host, a stage pair's
   code then falls 6 to 25 % at one count and holds within about 1 % at three counts in
   `-O2`/`-O3` builds, and grows 8 to 29 % at two or three counts in `-Os` builds.
-  *The maintainer's decisions recorded 2026-11-17 (section 7, Q7); not started: gate 0
-  is the first step.*
+  *The maintainer's decisions recorded 2026-11-17 (section 7, Q7). Gate 0 ran the same
+  day (`CHANNELS_PLAN.md` section 3): `async` passes on every target, `bridge` passes with
+  its walk kept out of line, and `rational` fails on the M55 and M33 in every placement of
+  its per-count block measured (the M55's ↓3 Q15 row +8.6 %, the M33's Q15 rows up to
+  +23 % as GCC places it; +1.3 % at best on both). Waiting on the maintainer's choice
+  among the plan's options; no API change made.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 
