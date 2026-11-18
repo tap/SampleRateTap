@@ -75,11 +75,10 @@ namespace {
 
     template <typename S>
     double run_pipeline() {
-        constexpr std::size_t  k_ch    = TAP_SR_ASYNC_SC_CH;
-        constexpr std::size_t  k_block = 32;
-        tap::sr::async::config cfg;
-        cfg.channels = k_ch;
-        tap::sr::async::basic_converter<S> asrc(cfg);
+        constexpr std::size_t                    k_ch    = TAP_SR_ASYNC_SC_CH;
+        constexpr std::size_t                    k_block = 32;
+        const tap::sr::async::config             cfg;
+        tap::sr::async::basic_converter<S, k_ch> asrc(cfg);
 
         const auto     input = sine_block<S>(12000 * k_ch, 997.0, 0.5); // 0.25 s, cycled
         std::vector<S> out(k_block * k_ch);
@@ -112,13 +111,12 @@ namespace {
     // calls are tens of millions of instructions.
     template <typename S>
     double run_construct() {
-        constexpr std::size_t  k_ch    = TAP_SR_ASYNC_SC_CH;
-        constexpr std::size_t  k_block = 32;
-        tap::sr::async::config cfg;
-        cfg.channels = k_ch;
-        tap::sr::async::basic_converter<S> asrc(cfg);
-        const auto                         input = sine_block<S>(12000 * k_ch, 997.0, 0.5); // as run_pipeline
-        std::vector<S>                     out(k_block * k_ch);
+        constexpr std::size_t                    k_ch    = TAP_SR_ASYNC_SC_CH;
+        constexpr std::size_t                    k_block = 32;
+        const tap::sr::async::config             cfg;
+        tap::sr::async::basic_converter<S, k_ch> asrc(cfg);
+        const auto                               input = sine_block<S>(12000 * k_ch, 997.0, 0.5); // as run_pipeline
+        std::vector<S>                           out(k_block * k_ch);
         asrc.push(input.data(), k_block);
         asrc.pull(out.data(), k_block);
         return static_cast<double>(out[0]) + asrc.designed_latency_seconds();

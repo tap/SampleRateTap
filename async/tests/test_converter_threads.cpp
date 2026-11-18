@@ -91,15 +91,11 @@ namespace {
             0}; // the poller's snapshots that found filling, after one that did not
     };
 
-    tap::sr::async::config threads_config() {
-        tap::sr::async::config cfg;
-        cfg.channels = k_channels;
-        return cfg;
-    }
+    using converter = tap::sr::async::converter<k_channels>;
 
     // Producer thread: push blocks of a 997 Hz tone while allowed, burst when
     // told, stop when told.
-    void produce(tap::sr::async::converter& asrc, shared_state& st) {
+    void produce(converter& asrc, shared_state& st) {
         std::vector<float> block(k_block * k_channels);
         std::vector<float> burst(k_burst_chunk * k_channels, 0.0f);
         std::uint64_t      idx     = 0;
@@ -153,8 +149,7 @@ namespace {
 
     // Poller thread: status() from a third thread, as a UI or a watchdog would
     // call it, checking each snapshot against the last.
-    void poll(const tap::sr::async::converter& asrc, shared_state& st, poll_result& out,
-              std::size_t configured_target) {
+    void poll(const converter& asrc, shared_state& st, poll_result& out, std::size_t configured_target) {
         tap::sr::async::converter_status prev = asrc.status();
         while (!st.poller_stop.load(std::memory_order_relaxed)) {
             const auto s = asrc.status();
@@ -185,7 +180,7 @@ namespace {
 
     // Consumer side (this thread): pull blocks while allowed, for `seconds` of
     // output-clock virtual time.
-    consumed consume(tap::sr::async::converter& asrc, shared_state& st, double seconds, std::vector<float>& out) {
+    consumed consume(converter& asrc, shared_state& st, double seconds, std::vector<float>& out) {
         const std::uint64_t from  = st.pulled.load(std::memory_order_relaxed);
         const std::uint64_t until = from + static_cast<std::uint64_t>(seconds * k_fs_out);
         const std::uint64_t tail  = until - static_cast<std::uint64_t>(2.0 * k_fs_out);
@@ -231,11 +226,11 @@ namespace {
     }
 
     TEST(Threads, ProducerConsumerAndPollerShareOneConverter) {
-        const auto                cfg = threads_config();
-        tap::sr::async::converter asrc(cfg);
-        shared_state              st;
-        poll_result               polled;
-        std::vector<float>        out(k_block * k_channels);
+        const tap::sr::async::config cfg;
+        converter                    asrc(cfg);
+        shared_state                 st;
+        poll_result                  polled;
+        std::vector<float>           out(k_block * k_channels);
 
         std::thread producer([&] { produce(asrc, st); });
         std::thread poller([&] { poll(asrc, st, polled, cfg.target_latency_frames); });

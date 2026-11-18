@@ -14,14 +14,15 @@
 namespace async_test {
 
     // ANCHOR: pf_knobs
-    template <tap::sr::async::sample_type S>
+    template <tap::sr::async::sample_type S, std::size_t Ch>
     struct two_clock_sim_t {
-        tap::sr::async::basic_converter<S>& asrc;
-        double                              fs_in;  ///< input-domain event rate (true input sample rate)
-        double                              fs_out; ///< output-domain event rate (true output sample rate)
-        std::size_t                         channels  = 1;
-        std::size_t                         chunk_in  = 32; ///< frames pushed per producer event
-        std::size_t                         chunk_out = 32; ///< frames pulled per consumer event
+        static constexpr std::size_t k_channels = Ch; ///< the converter's, the type's (A13)
+
+        tap::sr::async::basic_converter<S, Ch>& asrc;
+        double                                  fs_in;          ///< input-domain event rate (true input sample rate)
+        double                                  fs_out;         ///< output-domain event rate (true output sample rate)
+        std::size_t                             chunk_in  = 32; ///< frames pushed per producer event
+        std::size_t                             chunk_out = 32; ///< frames pulled per consumer event
         /// Input signal generator: value at input sample index i (all channels).
         std::function<S(std::uint64_t)> gen = [](std::uint64_t) { return S{}; };
         /// Per-channel generator (sample index, channel); overrides gen when set.
@@ -36,8 +37,8 @@ namespace async_test {
         /// pulled block: (interleavedSamples, frames, virtualTime).
         template <typename OnOutput>
         void run(double seconds, OnOutput&& on_out) {
-            std::vector<S> in_buf(chunk_in * channels);
-            std::vector<S> out_buf(chunk_out * channels);
+            std::vector<S> in_buf(chunk_in * k_channels);
+            std::vector<S> out_buf(chunk_out * k_channels);
             double         t_in  = 0.0;
             double         t_out = 0.0;
             std::uint64_t  idx   = 0;
@@ -45,15 +46,15 @@ namespace async_test {
                 if (t_in <= t_out) {
                     for (std::size_t f = 0; f < chunk_in; ++f) {
                         if (gen_ch) {
-                            for (std::size_t c = 0; c < channels; ++c) {
-                                in_buf[f * channels + c] = gen_ch(idx, c);
+                            for (std::size_t c = 0; c < k_channels; ++c) {
+                                in_buf[f * k_channels + c] = gen_ch(idx, c);
                             }
                             ++idx;
                         }
                         else {
                             const S v = gen(idx++);
-                            for (std::size_t c = 0; c < channels; ++c) {
-                                in_buf[f * channels + c] = v;
+                            for (std::size_t c = 0; c < k_channels; ++c) {
+                                in_buf[f * k_channels + c] = v;
                             }
                         }
                     }
@@ -70,6 +71,8 @@ namespace async_test {
         // ANCHOR_END: pf_run
     };
 
-    using two_clock_sim = two_clock_sim_t<float>;
+    /// The float converter's simulation at Ch channels.
+    template <std::size_t Ch>
+    using two_clock_sim = two_clock_sim_t<float, Ch>;
 
 } // namespace async_test

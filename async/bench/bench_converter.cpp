@@ -50,16 +50,17 @@ namespace {
         state.SetItemsProcessed(static_cast<std::int64_t>(state.iterations()));
     }
 
-    template <typename S>
-    void pipelineBench(benchmark::State& state, const tap::sr::async::filter_spec& spec, std::size_t channels) {
+    // The channel count is the converter's type (A13): one instantiation per
+    // count benchmarked.
+    template <typename S, std::size_t channels>
+    void pipelineBench(benchmark::State& state, const tap::sr::async::filter_spec& spec) {
         constexpr std::size_t  kBlock = 128;
         tap::sr::async::config cfg;
-        cfg.channels = channels;
-        cfg.filter   = spec;
+        cfg.filter = spec;
         // The FIFO setpoint must exceed the pull block size (see README latency
         // notes); 2 blocks gives headroom without distorting per-frame cost.
         cfg.target_latency_frames = 2 * kBlock;
-        tap::sr::async::basic_converter<S> asrc(cfg);
+        tap::sr::async::basic_converter<S, channels> asrc(cfg);
 
         // One second of pregenerated input so signal synthesis stays out of the
         // measured region; consumed cyclically.
@@ -111,36 +112,36 @@ namespace {
 
     // --- Pipeline: type x channels (balanced), plus the transparent ceiling ---
     void BM_Pipeline_Float_Balanced_1ch(benchmark::State& s) {
-        pipelineBench<float>(s, tap::sr::async::filter_spec::balanced(), 1);
+        pipelineBench<float, 1>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_Pipeline_Float_Balanced_2ch(benchmark::State& s) {
-        pipelineBench<float>(s, tap::sr::async::filter_spec::balanced(), 2);
+        pipelineBench<float, 2>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_Pipeline_Float_Balanced_8ch(benchmark::State& s) {
-        pipelineBench<float>(s, tap::sr::async::filter_spec::balanced(), 8);
+        pipelineBench<float, 8>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_Pipeline_Q15_Balanced_2ch(benchmark::State& s) {
-        pipelineBench<std::int16_t>(s, tap::sr::async::filter_spec::balanced(), 2);
+        pipelineBench<std::int16_t, 2>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_Pipeline_Q31_Balanced_2ch(benchmark::State& s) {
-        pipelineBench<std::int32_t>(s, tap::sr::async::filter_spec::balanced(), 2);
+        pipelineBench<std::int32_t, 2>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_Pipeline_Float_Transparent_2ch(benchmark::State& s) {
-        pipelineBench<float>(s, tap::sr::async::filter_spec::transparent(), 2);
+        pipelineBench<float, 2>(s, tap::sr::async::filter_spec::transparent());
     }
     // Deployment shapes: 12 channels (7.1.4 surround), 16 (AVB stream bundling
     // reference microphones with the program feed).
     void BM_Pipeline_Float_Balanced_12ch(benchmark::State& s) {
-        pipelineBench<float>(s, tap::sr::async::filter_spec::balanced(), 12);
+        pipelineBench<float, 12>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_Pipeline_Q15_Balanced_12ch(benchmark::State& s) {
-        pipelineBench<std::int16_t>(s, tap::sr::async::filter_spec::balanced(), 12);
+        pipelineBench<std::int16_t, 12>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_Pipeline_Float_Balanced_16ch(benchmark::State& s) {
-        pipelineBench<float>(s, tap::sr::async::filter_spec::balanced(), 16);
+        pipelineBench<float, 16>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_Pipeline_Q15_Balanced_16ch(benchmark::State& s) {
-        pipelineBench<std::int16_t>(s, tap::sr::async::filter_spec::balanced(), 16);
+        pipelineBench<std::int16_t, 16>(s, tap::sr::async::filter_spec::balanced());
     }
     BENCHMARK(BM_Pipeline_Float_Balanced_1ch);
     BENCHMARK(BM_Pipeline_Float_Balanced_2ch);

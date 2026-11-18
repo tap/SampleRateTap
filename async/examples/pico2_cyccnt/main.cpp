@@ -97,30 +97,31 @@ namespace {
         return out;
     }
 
-    template <typename S>
-    void runCase(const char* typeName, const char* profileName, const tap::sr::async::filter_spec& spec,
-                 std::size_t channels) {
+    /// The async converter at Ch channels (the count is its type, A13).
+    template <typename S, std::size_t Ch>
+    void runCase(const char* typeName, const char* profileName, const tap::sr::async::filter_spec& spec) {
+        using converter                 = tap::sr::async::basic_converter<S, Ch>;
+        constexpr std::size_t  channels = Ch;
         tap::sr::async::config cfg;
-        cfg.channels = channels;
-        cfg.filter   = spec;
+        cfg.filter = spec;
 
         // Heap-constructed so allocation failure (e.g. 12ch + float on a tighter
         // build) degrades to a printed SKIP row instead of a hard fault, where
         // the build has exceptions to catch it with.
-        std::unique_ptr<tap::sr::async::basic_converter<S>> asrc;
-        std::vector<S>                                      input;
-        std::vector<S>                                      out;
+        std::unique_ptr<converter> asrc;
+        std::vector<S>             input;
+        std::vector<S>             out;
         // Built without exceptions (the SDK default; PICO_CXX_ENABLE_EXCEPTIONS
         // below), the configuration is checked first — the constructor
         // terminates on what validate() rejects — and a refused allocation
         // is a hard fault, as every other allocation's is in such a build.
-        if (const char* why = tap::sr::async::config::validate(cfg)) {
+        if (const char* why = converter::validate(cfg)) {
             std::printf("%-6s %-9s %3u  SKIP (%s)\n", typeName, profileName, static_cast<unsigned>(channels), why);
             return;
         }
 #if TAP_DSP_HAS_EXCEPTIONS
         try {
-            asrc  = std::make_unique<tap::sr::async::basic_converter<S>>(cfg);
+            asrc  = std::make_unique<converter>(cfg);
             input = sineBlock<S>(kInputFrames * channels, 997.0, 0.5);
             out.resize(kBlockFrames * channels);
         }
@@ -129,7 +130,7 @@ namespace {
             return;
         }
 #else
-        asrc  = std::make_unique<tap::sr::async::basic_converter<S>>(cfg);
+        asrc  = std::make_unique<converter>(cfg);
         input = sineBlock<S>(kInputFrames * channels, 997.0, 0.5);
         out.resize(kBlockFrames * channels);
 #endif
@@ -267,15 +268,17 @@ int main() {
     std::printf("%-6s %-9s %3s  %10s %10s %10s %10s %9s\n", "type", "profile", "ch", "mean/blk", "p99/blk", "max/blk",
                 "cyc/frame", "%core@48k");
 
-    for (const std::size_t ch : {std::size_t{1}, std::size_t{2}, std::size_t{12}}) {
-        runCase<std::int16_t>("q15", "fast", tap::sr::async::filter_spec::fast(), ch);
-        runCase<std::int16_t>("q15", "balanced", tap::sr::async::filter_spec::balanced(), ch);
-    }
+    runCase<std::int16_t, 1>("q15", "fast", tap::sr::async::filter_spec::fast());
+    runCase<std::int16_t, 1>("q15", "balanced", tap::sr::async::filter_spec::balanced());
+    runCase<std::int16_t, 2>("q15", "fast", tap::sr::async::filter_spec::fast());
+    runCase<std::int16_t, 2>("q15", "balanced", tap::sr::async::filter_spec::balanced());
+    runCase<std::int16_t, 12>("q15", "fast", tap::sr::async::filter_spec::fast());
+    runCase<std::int16_t, 12>("q15", "balanced", tap::sr::async::filter_spec::balanced());
 #if PICO2_MEASURE_FLOAT
     // Soft FP64 accumulation: expected brutally slow on the M33 (the QEMU
     // baselines put pipeline_float at ~3.8x pipeline_q15 instructions).
-    runCase<float>("float", "fast", tap::sr::async::filter_spec::fast(), 1);
-    runCase<float>("float", "balanced", tap::sr::async::filter_spec::balanced(), 1);
+    runCase<float, 1>("float", "fast", tap::sr::async::filter_spec::fast());
+    runCase<float, 1>("float", "balanced", tap::sr::async::filter_spec::balanced());
 #endif
 
     // The synchronous engines, Q15 economy, stereo: cycles per output frame

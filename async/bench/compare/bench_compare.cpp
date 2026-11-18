@@ -106,11 +106,13 @@ namespace {
         std::size_t        pos_ = 0;
     };
 
-    template <typename S>
-    void srtBench(benchmark::State& state, const tap::sr::async::filter_spec& spec, std::size_t channels) {
-        const tap::sr::async::polyphase_filter_bank<S> bank(spec, 48000.0);
-        tap::sr::async::fractional_resampler<S>        rs(bank, channels);
-        InputTap                                       inFloat(48000, channels);
+    // The resampler's channel count is its type (A13): one instantiation per
+    // count compared.
+    template <typename S, std::size_t channels>
+    void srtBench(benchmark::State& state, const tap::sr::async::filter_spec& spec) {
+        const tap::sr::async::polyphase_filter_bank<S>    bank(spec, 48000.0);
+        tap::sr::async::fractional_resampler<S, channels> rs(bank);
+        InputTap                                          inFloat(48000, channels);
         // Requantize the shared float source once at setup for fixed-point runs.
         std::vector<S> buf(48000 * channels);
         {
@@ -326,13 +328,13 @@ namespace {
 
     // --- ~120 dB tier: mono / stereo / 8ch -------------------------------------
     void BM_SRT_Balanced_1ch(benchmark::State& s) {
-        srtBench<float>(s, tap::sr::async::filter_spec::balanced(), 1);
+        srtBench<float, 1>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_SRT_Balanced_2ch(benchmark::State& s) {
-        srtBench<float>(s, tap::sr::async::filter_spec::balanced(), 2);
+        srtBench<float, 2>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_SRT_Balanced_8ch(benchmark::State& s) {
-        srtBench<float>(s, tap::sr::async::filter_spec::balanced(), 8);
+        srtBench<float, 8>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_LSR_Medium_1ch(benchmark::State& s) {
         lsrBench(s, SRC_SINC_MEDIUM_QUALITY, 1);
@@ -386,7 +388,7 @@ namespace {
 
     // --- ~140 dB tier, stereo ---------------------------------------------------
     void BM_SRT_Transparent_2ch(benchmark::State& s) {
-        srtBench<float>(s, tap::sr::async::filter_spec::transparent(), 2);
+        srtBench<float, 2>(s, tap::sr::async::filter_spec::transparent());
     }
     void BM_LSR_Best_2ch(benchmark::State& s) {
         lsrBench(s, SRC_SINC_BEST_QUALITY, 2);
@@ -430,7 +432,7 @@ namespace {
     // soxr and r8brain are floating-point engines; SpeexDSP's FIXED_POINT
     // build is the one competitor here, at ~100 dB to balanced's 120 ---------
     void BM_SRT_Q15_Balanced_2ch(benchmark::State& s) {
-        srtBench<std::int16_t>(s, tap::sr::async::filter_spec::balanced(), 2);
+        srtBench<std::int16_t, 2>(s, tap::sr::async::filter_spec::balanced());
     }
     void BM_SPEEX_Fixed_Q10_2ch(benchmark::State& s) {
         speexBench<SpeexFixedApi, std::int16_t>(s, 10, 2);

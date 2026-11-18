@@ -86,11 +86,10 @@ namespace {
     // resample a sine, fit and remove the fundamental, measure the residual.
     template <tap::sr::async::sample_type S>
     double measure_snr_db(double freq_hz, double amp) {
-        tap::sr::async::config cfg;
-        cfg.channels = 1;
-        tap::sr::async::basic_converter<S> asrc(cfg);
-        async_test::two_clock_sim_t<S>     sim{
-                .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        tap::sr::async::config                cfg;
+        tap::sr::async::basic_converter<S, 1> asrc(cfg);
+        async_test::two_clock_sim_t<S, 1>     sim{
+                .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .chunk_in = 1, .chunk_out = 1};
         const double nu_in      = freq_hz / k_fs;
         const double full_scale = static_cast<double>(std::numeric_limits<S>::max());
         sim.gen                 = [&](std::uint64_t i) {
@@ -135,11 +134,10 @@ namespace {
         // Drive at 99% of full scale: any internal overflow/wraparound would
         // produce gross discontinuities; saturating finalize must keep the
         // second difference at the analytic bound for a clean sine.
-        tap::sr::async::config cfg;
-        cfg.channels = 1;
-        tap::sr::async::converter_q15             asrc(cfg);
-        async_test::two_clock_sim_t<std::int16_t> sim{
-            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        tap::sr::async::config                       cfg;
+        tap::sr::async::converter_q15<1>             asrc(cfg);
+        async_test::two_clock_sim_t<std::int16_t, 1> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .chunk_in = 1, .chunk_out = 1};
         const double nu = 1000.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
             return tap::sr::async::detail::round_sat<std::int16_t>(

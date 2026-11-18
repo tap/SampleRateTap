@@ -97,7 +97,7 @@ candidate.
 Virtual dispatch also answers a question nobody asked. Dynamic dispatch
 buys the ability to choose the implementation *at run time* — but a
 converter's sample type is fixed at the moment you write
-`converter_q15`. Paying the vtable price for flexibility that
+`converter_q15<2>`. Paying the vtable price for flexibility that
 is never exercised is the definition of the wrong tool.
 
 ### Why not CRTP

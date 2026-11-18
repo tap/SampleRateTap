@@ -77,9 +77,13 @@ one-line forwarder to it since the fixed-point formats landed),
 `reinterpret_cast` back on every call.
 No registry of live handles, no indirection table: there is nothing to
 store beyond the object itself, so the handle *is* the object. The object
-is one small interface over the three `basic_converter<S>` instantiations,
-so that the format chosen at `create` is a *type* on the C++ side and a
-tag on the C side; a push or pull through another format's entry point
+is one small interface over the `basic_converter<S, Ch>` instantiations
+the ABI serves — three formats at one and two channels — so that the format
+and the count chosen at `create` are a *type* on the C++ side and tags on
+the C side; any other count is refused with NULL, because the count is a
+template argument since 0.7.0 and fanning a stream out to one-channel
+converters, as the siblings' ABIs do, would give each channel a clock
+servo of its own; a push or pull through another format's entry point
 hits an `if constexpr` branch that returns 0 — the refusal costs one
 virtual call and no state.
 
@@ -296,8 +300,9 @@ Everything downstream — the lock-acquisition plot, the ≥125 dB
 transparency assertion, the impulse-response latency check that agrees
 with `tap_sr_async_designed_latency_seconds()` to within 0.3 ms — runs through
 the float half of these functions; `async/tests/test_capi.cpp` pins the
-other half, every format bit for bit against `basic_converter<S>` on one
-push/pull sequence, and the refusal of a wrong-format call.
+other half, every format at one and two channels bit for bit against
+`basic_converter<S, Ch>` on one push/pull sequence, the refusal of a
+wrong-format call, and NULL for every other count.
 
 ## Why these ~90 lines look the way they do
 
@@ -305,6 +310,7 @@ push/pull sequence, and the refusal of a wrong-format call.
 |---|---|---|
 | C shim over the C++ API | Python bindings / pybind11 | one C ABI serves ctypes, cffi, Julia, and everything else; bindings serve one language and drag in a build dependency |
 | Float first, then all three sample types behind one handle | three handles, or float forever | the consumers were metrology notebooks until the fixed-point deployments reached C through the third engine; one format per converter, chosen at `create`, keeps the float surface unchanged |
+| One and two channels natively, NULL for any other count | a fan-out to one-channel converters, as `bridge`'s and `rational`'s ABIs do | each one-channel converter would run its own clock servo, so the channels of one stream would no longer share a fractional position; every caller uses one or two, and another count is added when one needs it |
 | Named opaque handle | `void*` | keeps compiler type-checking alive at the FFI edge |
 | Handle = object pointer, `reinterpret_cast` | handle registry / wrapper struct | there is nothing else to store; indirection would add state and failure modes |
 | `impl()` overloads outside `extern "C"` | helpers inside the block | overloading is ill-formed with C linkage — the compiler enforced this one personally |
@@ -326,10 +332,10 @@ cmake --build build --target tap_sr_async_capi -j
 # as promised; the count is 14):
 nm -D --defined-only build/async/capi/libtap_sr_async_capi.so | grep -c ' T tap_sr_async_'
 
-# Every format against basic_converter<S>, and the wrong-format refusal:
+# Every format at one and two channels against basic_converter<S, Ch>, and the refusals:
 ctest --test-dir build -R 'async\.CApi\.' --output-on-failure
 
-# The one-integer smoke test (0.6.0 -> 1536, i.e. 0x000600):
+# The one-integer smoke test (0.7.0 -> 1792, i.e. 0x000700):
 python3 -c "import ctypes; \
   print(ctypes.CDLL('build/async/capi/libtap_sr_async_capi.so').tap_sr_async_version())"
 

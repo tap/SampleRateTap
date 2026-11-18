@@ -23,11 +23,10 @@ namespace {
     // input normalized frequency scaled by fsIn/fsOut.
     double measure_snr_db(const tap::sr::async::filter_spec& spec, double freq_hz) {
         tap::sr::async::config cfg;
-        cfg.channels = 1;
-        cfg.filter   = spec;
-        tap::sr::async::converter asrc(cfg);
-        async_test::two_clock_sim sim{
-            .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        cfg.filter = spec;
+        tap::sr::async::converter<1> asrc(cfg);
+        async_test::two_clock_sim<1> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .chunk_in = 1, .chunk_out = 1};
         const double nu_in = freq_hz / k_fs;
         sim.gen            = [&](std::uint64_t i) {
             return static_cast<float>(k_amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));

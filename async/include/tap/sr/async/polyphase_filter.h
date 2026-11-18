@@ -4,6 +4,7 @@
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 #pragma once
 
+#include <array>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
@@ -28,6 +29,9 @@
 #ifdef SRT_CP_MIN_CHANNELS
 #error "SRT_CP_MIN_CHANNELS was renamed TAP_SR_ASYNC_CP_MIN_CHANNELS in SampleRateTap 0.4.0"
 #endif
+// The layout is chosen at compile time from the type's channel count (A13),
+// so an override must be the same in every translation unit of a program:
+// two values would give one fractional_resampler<S, Ch> two layouts.
 #ifndef TAP_SR_ASYNC_CP_MIN_CHANNELS
 #define TAP_SR_ASYNC_CP_MIN_CHANNELS TAP_DSP_CP_MIN_CHANNELS
 #endif
@@ -132,7 +136,7 @@ namespace tap::sr::async {
         // ANCHOR: bank_build
         /// Designs the prototype (double precision) and builds the table.
         /// Allocates; rejects a bad spec with std::invalid_argument through
-        /// tap::dsp::raise (config::validate states the same conditions first,
+        /// tap::dsp::raise (basic_converter::validate states the same conditions first,
         /// for a build without exceptions) and may throw std::bad_alloc. Do
         /// this at setup time, not on the audio path.
         polyphase_filter_bank(const filter_spec& spec, double sample_rate_hz)
@@ -308,11 +312,14 @@ namespace tap::sr::async {
     using tap::dsp::dot_tile_frame_major;
 
     // ANCHOR: rs_class_doc
-    /// Streaming fractional-delay engine for one converter instance.
+    /// Streaming fractional-delay engine for one converter instance, over Ch
+    /// interleaved channels (a compile-time constant of at least 1, the
+    /// family's A13).
     ///
     /// Owns the history delay lines (planar per-channel below the
-    /// channel-parallel threshold, frame-major above it — see the hist_
-    /// field) and the phase accumulator mu. Input frames are pulled
+    /// channel-parallel threshold, frame-major at or above it — see the
+    /// m_hist field; the choice is the type's) and the phase accumulator
+    /// mu. Input frames are pulled
     /// through a caller-supplied PopFn in small bulk chunks and deinterleaved into
     /// the histories as the integer read position advances.
     ///
@@ -325,29 +332,35 @@ namespace tap::sr::async {
     /// what keeps it cheap on FPU-less DSP targets. Resolution is 2^-64 samples,
     /// far below the ~8 ps jitter budget for 120 dB transparency, and slips are
     /// detected by 64-bit wraparound instead of comparisons.
-    template <sample_type S>
+    template <sample_type S, std::size_t Ch>
     class fractional_resampler {
         // ANCHOR_END: rs_class_doc
+        static_assert(Ch >= 1, "tap::sr::async: a resampler's channel count is at least 1");
+
       public:
         /// Frame-major channel-parallel mode is compiled in only on CP targets
         /// and only for floating-point samples (see TAP_DSP_CHANNEL_PARALLEL).
         static constexpr bool k_channel_parallel = TAP_DSP_CHANNEL_PARALLEL != 0 && std::is_floating_point_v<S>;
+        /// The history layout, the type's: frame-major at or above
+        /// TAP_SR_ASYNC_CP_MIN_CHANNELS on channel-parallel targets, planar
+        /// below it and everywhere else.
+        static constexpr bool k_frame_major = k_channel_parallel && Ch >= TAP_SR_ASYNC_CP_MIN_CHANNELS;
+
+        /// The channel count, the type's (A13).
+        static constexpr std::size_t channels() noexcept { return Ch; }
 
         /// Allocates histories and the pop scratch buffer; setup time only.
-        fractional_resampler(const polyphase_filter_bank<S>& bank, std::size_t channels, std::size_t chunk_frames = 64)
+        explicit fractional_resampler(const polyphase_filter_bank<S>& bank, std::size_t chunk_frames = 64)
             : m_bank(&bank)
-            , m_channels(channels)
             , m_chunk(chunk_frames)
             , m_hist_cap(bank.taps() + chunk_frames)
-            , m_scratch(chunk_frames * channels)
-            , m_frame_major(k_channel_parallel && channels >= TAP_SR_ASYNC_CP_MIN_CHANNELS)
-            , m_hist(m_frame_major ? 1 : channels)
+            , m_scratch(chunk_frames * Ch)
             , m_row(bank.taps()) {
-            if (m_channels == 0 || m_chunk == 0) {
+            if (m_chunk == 0) {
                 tap::dsp::raise<std::invalid_argument>("fractional_resampler: bad config");
             }
             for (auto& h : m_hist) {
-                h.assign(m_hist_cap * (m_frame_major ? m_channels : 1), sample_traits<S>::silence());
+                h.assign(m_hist_cap * k_slot, sample_traits<S>::silence());
             }
             reset();
         }
@@ -433,16 +446,16 @@ namespace tap::sr::async {
                 // well: dotRow carries the dual-MAC loop, and the two paths are
                 // bit-exact by construction (see dotRow).
                 constexpr bool k_prefer_dot_row = TAP_DSP_Q15_SMLALD && std::is_same_v<S, std::int16_t>;
-                if (m_channels == 1 && !k_prefer_dot_row) { // fused blend+mac; no scratch traffic
+                if constexpr (Ch == 1 && !k_prefer_dot_row) { // fused blend+mac; no scratch traffic
                     out[n] = interpolate_phase(*m_bank, window(0), m);
                 }
-                else if (k_channel_parallel && m_frame_major) { // constant-folds away off-host
+                else if constexpr (k_frame_major) { // channel-parallel targets only
                     // High channel counts: one blend, then all channels' dots in
                     // a single channel-parallel pass over the frame-major window.
                     blend_row_phase(*m_bank, m_row.data(), m);
                     const std::size_t taps = m_bank->taps();
-                    const S*          base = m_hist[0].data() + (m_end - taps) * m_channels;
-                    dot_rows_frame_major<S>(m_row.data(), base, taps, m_channels, out + n * m_channels);
+                    const S*          base = m_hist[0].data() + (m_end - taps) * Ch;
+                    dot_rows_frame_major<S>(m_row.data(), base, taps, Ch, out + n * Ch);
                 }
                 else {
                     // Blend once per frame, dot per channel: the blend is the
@@ -450,8 +463,8 @@ namespace tap::sr::async {
                     // for stereo and scales with channel count.
                     blend_row_phase(*m_bank, m_row.data(), m);
                     const std::size_t taps = m_bank->taps();
-                    for (std::size_t c = 0; c < m_channels; ++c) {
-                        out[n * m_channels + c] = dot_row<S>(m_row.data(), window(c), taps);
+                    for (std::size_t c = 0; c < Ch; ++c) {
+                        out[n * Ch + c] = dot_row<S>(m_row.data(), window(c), taps);
                     }
                 }
                 // ANCHOR_END: rs_dispatch
@@ -474,21 +487,20 @@ namespace tap::sr::async {
             }
             if (m_end == m_hist_cap) { // compact: keep the newest T-1 frames at the front
                 const std::size_t keep = m_bank->taps() - 1;
-                // Samples per frame slot; the gate is compile-time so non-CP
-                // targets keep their previous codegen exactly (the runtime form
-                // measured +6-8% on the M55 ratchet from hot-loop branch bloat).
-                const std::size_t w = (k_channel_parallel && m_frame_major) ? m_channels : 1;
+                // Samples per frame slot, a compile-time constant (a runtime
+                // layout test measured +6-8% on the M55 ratchet from hot-loop
+                // branch bloat).
                 for (auto& h : m_hist) {
-                    std::memmove(h.data(), h.data() + (m_end - keep) * w, keep * w * sizeof(S));
+                    std::memmove(h.data(), h.data() + (m_end - keep) * k_slot, keep * k_slot * sizeof(S));
                 }
                 m_end = keep;
             }
-            const S* frame = m_scratch.data() + m_scratch_pos * m_channels;
-            if (k_channel_parallel && m_frame_major) { // frames stay interleaved: one contiguous copy
-                std::memcpy(m_hist[0].data() + m_end * m_channels, frame, m_channels * sizeof(S));
+            const S* frame = m_scratch.data() + m_scratch_pos * Ch;
+            if constexpr (k_frame_major) { // frames stay interleaved: one contiguous copy
+                std::memcpy(m_hist[0].data() + m_end * Ch, frame, Ch * sizeof(S));
             }
             else {
-                for (std::size_t c = 0; c < m_channels; ++c) {
+                for (std::size_t c = 0; c < Ch; ++c) {
                     m_hist[c][m_end] = frame[c];
                 }
             }
@@ -498,23 +510,25 @@ namespace tap::sr::async {
         }
         // ANCHOR_END: rs_append
 
+        /// Samples per history frame slot: Ch in the frame-major layout, 1 in the planar.
+        static constexpr std::size_t k_slot = k_frame_major ? Ch : 1;
+
         const polyphase_filter_bank<S>* m_bank;
-        std::size_t                     m_channels;
         std::size_t                     m_chunk;
         std::size_t                     m_hist_cap;
         std::vector<S>                  m_scratch; // interleaved staging for bulk pops
         // ANCHOR: rs_members
-        // History storage: planar (one delay line per channel, hist_[c]) below
-        // TAP_SR_ASYNC_CP_MIN_CHANNELS, frame-major (single interleaved line, hist_[0])
-        // at or above it on TAP_DSP_CHANNEL_PARALLEL targets. end_/histCap_ count
-        // frames in both modes.
-        bool                                          m_frame_major;
-        std::vector<std::vector<S>>                   m_hist;
-        std::vector<typename sample_traits<S>::coeff> m_row;     // per-frame blended coefficients
-        std::size_t                                   m_end = 0; // shared end index; all channels advance in lockstep
-        std::size_t                                   m_scratch_frames = 0;
-        std::size_t                                   m_scratch_pos    = 0;
-        std::uint64_t                                 m_phase          = 0; // fractional position, unsigned Q0.64
+        // History storage: planar (one delay line per channel, m_hist[c]) below
+        // TAP_SR_ASYNC_CP_MIN_CHANNELS, frame-major (a single interleaved line,
+        // m_hist[0]) at or above it on TAP_DSP_CHANNEL_PARALLEL targets; the
+        // count and so the layout are the type's (A13's K6: an array of lines,
+        // not a vector of them). m_end and m_hist_cap count frames in both.
+        std::array<std::vector<S>, k_frame_major ? 1 : Ch> m_hist;
+        std::vector<typename sample_traits<S>::coeff>      m_row; // per-frame blended coefficients
+        std::size_t   m_end            = 0;                       // shared end index; all channels advance in lockstep
+        std::size_t   m_scratch_frames = 0;
+        std::size_t   m_scratch_pos    = 0;
+        std::uint64_t m_phase          = 0; // fractional position, unsigned Q0.64
         // ANCHOR_END: rs_members
         bool m_primed = false;
     };

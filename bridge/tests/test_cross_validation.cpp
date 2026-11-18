@@ -57,7 +57,7 @@ namespace {
         spec.stopband_atten_db = p.stopband_atten_db;
         spec.image_zeros       = false;
         const tap::sr::async::polyphase_filter_bank<float> bank(spec, traits::k_input_rate_hz);
-        tap::sr::async::fractional_resampler<float>        rs(bank, 1);
+        tap::sr::async::fractional_resampler<float, 1>     rs(bank);
 
         // Zero-prepend alignment: prime() consumes the first T frames, so
         // T-1 zeros + x makes the primed window [0, ..., 0, x[0]] — the

@@ -116,11 +116,10 @@ namespace {
         constexpr std::size_t k_burst_at  = 72000; // input frame, 1.5 s
         constexpr std::size_t k_burst_len = 24;
 
-        tap::sr::async::config cfg;
-        cfg.channels = k_ch;
-        tap::sr::async::converter hit(cfg);
-        tap::sr::async::converter twin(cfg);
-        const std::size_t         taps = hit.filter_bank().taps();
+        const tap::sr::async::config    cfg;
+        tap::sr::async::converter<k_ch> hit(cfg);
+        tap::sr::async::converter<k_ch> twin(cfg);
+        const std::size_t               taps = hit.filter_bank().taps();
 
         std::vector<float> in_hit(k_block * k_ch);
         std::vector<float> in_twin(k_block * k_ch);

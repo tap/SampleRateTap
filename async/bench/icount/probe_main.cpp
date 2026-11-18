@@ -40,9 +40,10 @@ namespace {
 #else
     using sample = std::int32_t;
 #endif
-    using converter = tap::sr::async::basic_converter<sample>;
+    constexpr std::size_t k_ch = 2;
 
-    constexpr std::size_t k_ch     = 2;
+    using converter = tap::sr::async::basic_converter<sample, k_ch>;
+
     constexpr std::size_t k_block  = 32;
     constexpr std::size_t k_blocks = 1500; // 1 s at 48 kHz: priming, lock and steady state
 
@@ -72,9 +73,8 @@ namespace {
 } // namespace
 
 int main() {
-    tap::sr::async::config cfg;
-    cfg.channels = k_ch;
-    converter c(cfg);
+    const tap::sr::async::config cfg;
+    converter                    c(cfg);
     for (std::size_t i = 0; i < k_block * k_ch; ++i) {
         g_in[i] = triangle<sample>(i);
     }

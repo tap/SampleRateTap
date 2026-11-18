@@ -52,11 +52,10 @@ namespace {
 
 int main() {
     tap::sr::async::config cfg;
-    cfg.channels                      = 1;
     cfg.target_latency_frames         = 960; // 20 ms: room for OS scheduling jitter
     cfg.servo.lock_threshold_frames   = 4.0;
     cfg.servo.unlock_threshold_frames = 96.0;
-    tap::sr::async::converter asrc(cfg);
+    tap::sr::async::converter<1> asrc(cfg);
 
     std::printf("drifting_clocks: producer 48000.0 Hz, consumer %+.0f ppm, %g s\n", k_consumer_ppm, k_run_seconds);
     std::printf("designed latency: %.2f ms\n", asrc.designed_latency_seconds() * 1e3);

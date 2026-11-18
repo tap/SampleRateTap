@@ -7,12 +7,12 @@
           "recorded": 0
         },
         "engine_text": {
-          "ceiling": 31360,
-          "recorded": 30396
+          "ceiling": 30144,
+          "recorded": 29212
         },
         "image": {
-          "ceiling": 317376,
-          "recorded": 308128
+          "ceiling": 316160,
+          "recorded": 306944
         }
       },
       "q15": {
@@ -21,12 +21,12 @@
           "recorded": 0
         },
         "engine_text": {
-          "ceiling": 32768,
-          "recorded": 31760
+          "ceiling": 31872,
+          "recorded": 30924
         },
         "image": {
-          "ceiling": 319424,
-          "recorded": 310112
+          "ceiling": 318528,
+          "recorded": 309248
         }
       },
       "q31": {
@@ -35,12 +35,12 @@
           "recorded": 0
         },
         "engine_text": {
-          "ceiling": 32768,
-          "recorded": 31772
+          "ceiling": 32256,
+          "recorded": 31304
         },
         "image": {
-          "ceiling": 319424,
-          "recorded": 310080
+          "ceiling": 318976,
+          "recorded": 309632
         }
       }
     }
@@ -50,43 +50,43 @@
       "f32": {
         "engine_rodata": {
           "ceiling": 1408,
-          "recorded": 1359
+          "recorded": 1351
         },
         "engine_text": {
-          "ceiling": 15680,
-          "recorded": 15172
+          "ceiling": 15040,
+          "recorded": 14572
         },
         "image": {
-          "ceiling": 50688,
-          "recorded": 49161
+          "ceiling": 50048,
+          "recorded": 48545
         }
       },
       "q15": {
         "engine_rodata": {
           "ceiling": 1408,
-          "recorded": 1359
+          "recorded": 1351
         },
         "engine_text": {
-          "ceiling": 16448,
-          "recorded": 15956
+          "ceiling": 16000,
+          "recorded": 15532
         },
         "image": {
-          "ceiling": 51648,
-          "recorded": 50137
+          "ceiling": 51200,
+          "recorded": 49705
         }
       },
       "q31": {
         "engine_rodata": {
           "ceiling": 1408,
-          "recorded": 1359
+          "recorded": 1351
         },
         "engine_text": {
-          "ceiling": 16576,
-          "recorded": 16068
+          "ceiling": 16000,
+          "recorded": 15508
         },
         "image": {
-          "ceiling": 51776,
-          "recorded": 50249
+          "ceiling": 51200,
+          "recorded": 49673
         }
       }
     },
@@ -94,12 +94,12 @@
       "f32": {
         "pull": {
           "measured": {
-            "ceiling": 264,
-            "recorded": 256
+            "ceiling": 240,
+            "recorded": 232
           },
           "static": {
-            "ceiling": 288,
-            "recorded": 276
+            "ceiling": 264,
+            "recorded": 252
           }
         },
         "push": {
@@ -116,12 +116,12 @@
       "q15": {
         "pull": {
           "measured": {
-            "ceiling": 248,
-            "recorded": 240
+            "ceiling": 216,
+            "recorded": 208
           },
           "static": {
-            "ceiling": 272,
-            "recorded": 260
+            "ceiling": 240,
+            "recorded": 228
           }
         },
         "push": {
@@ -164,43 +164,43 @@
       "f32": {
         "engine_rodata": {
           "ceiling": 1408,
-          "recorded": 1359
+          "recorded": 1351
         },
         "engine_text": {
-          "ceiling": 12608,
-          "recorded": 12220
+          "ceiling": 12096,
+          "recorded": 11688
         },
         "image": {
-          "ceiling": 47360,
-          "recorded": 45921
+          "ceiling": 46784,
+          "recorded": 45377
         }
       },
       "q15": {
         "engine_rodata": {
           "ceiling": 1408,
-          "recorded": 1359
+          "recorded": 1351
         },
         "engine_text": {
-          "ceiling": 13312,
-          "recorded": 12872
+          "ceiling": 12736,
+          "recorded": 12324
         },
         "image": {
-          "ceiling": 48192,
-          "recorded": 46769
+          "ceiling": 47616,
+          "recorded": 46209
         }
       },
       "q31": {
         "engine_rodata": {
           "ceiling": 1408,
-          "recorded": 1359
+          "recorded": 1351
         },
         "engine_text": {
-          "ceiling": 13440,
-          "recorded": 13024
+          "ceiling": 12800,
+          "recorded": 12396
         },
         "image": {
-          "ceiling": 48384,
-          "recorded": 46929
+          "ceiling": 47680,
+          "recorded": 46289
         }
       }
     }

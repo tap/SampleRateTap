@@ -94,8 +94,7 @@ endif()
 
 # The footprint contract (test_footprint.cpp): an executable of its own,
 # because DspTap's heap meter replaces the global operator new for the whole
-# program. Hosted and on the Hexagon leg (where sizeof(std::vector) is 12, the
-# formula's one pointer-sized term); not on bare metal, whose one-shot runner
+# program. Hosted and on the Hexagon leg; not on bare metal, whose one-shot runner
 # is the main battery's, and not under a sanitizer whose runtime owns the
 # global allocator (address, thread, memory: it defines operator new itself,
 # so the meter's replacement cannot link beside it).
@@ -108,3 +107,24 @@ if(NOT TAP_SR_BARE_METAL AND NOT CMAKE_CXX_FLAGS MATCHES "-fsanitize=[^ ]*(addre
     gtest_discover_tests(tap_sr_async_footprint TEST_PREFIX "async." DISCOVERY_TIMEOUT 120
                          PROPERTIES TIMEOUT 900 LABELS async)
 endif()
+
+# The channel count is the type's (A13, K3): a converter of zero channels must
+# fail to compile WITH the engine's message. A compile that must fail cannot be
+# a target of this build, so compile_fail/ is its own small project that
+# try_compile()s the case and fails its configure when it compiles or the
+# message is missing; this test runs that configure with this build's compiler
+# (or toolchain file, on the cross legs: the case builds no executable).
+if(DEFINED CMAKE_TOOLCHAIN_FILE)
+    get_filename_component(_tc "${CMAKE_TOOLCHAIN_FILE}" ABSOLUTE BASE_DIR "${CMAKE_SOURCE_DIR}")
+    set(_compiler_args "-DCMAKE_TOOLCHAIN_FILE=${_tc}")
+else()
+    set(_compiler_args "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+endif()
+add_test(NAME async.Converter.ZeroChannelsFailToCompileWithTheMessage
+         COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
+                 -S ${CMAKE_CURRENT_SOURCE_DIR}/compile_fail
+                 -B ${CMAKE_CURRENT_BINARY_DIR}/compile_fail_channels
+                 ${_compiler_args}
+                 -DTAP_SR_ASYNC_INCLUDE=${CMAKE_CURRENT_SOURCE_DIR}/../include
+                 -DTAP_DSP_INCLUDE=${SampleRateTap_SOURCE_DIR}/submodules/dsptap/include)
+set_tests_properties(async.Converter.ZeroChannelsFailToCompileWithTheMessage PROPERTIES LABELS async TIMEOUT 300)

@@ -37,9 +37,9 @@ target_link_libraries(app PRIVATE tap::sr::async)
 
 tap::sr::async::config cfg;
 cfg.sample_rate_hz = 48000.0;
-cfg.channels = 2;
-// config::validate(cfg) == nullptr: the noexcept precheck (a build without exceptions calls it first)
-tap::sr::async::converter asrc(cfg);   // allocates + designs filter; rejects what validate() rejects
+// The channel count is the type's (since 0.7.0): converter<2> is a stereo float converter.
+// converter<2>::validate(cfg) == nullptr: the noexcept precheck (a build without exceptions calls it first)
+tap::sr::async::converter<2> asrc(cfg);   // allocates + designs filter; rejects what validate() rejects
 
 // Input-device thread (input clock):
 asrc.push(input_interleaved, frames);       // noexcept, lock-free
@@ -61,7 +61,8 @@ library through its C ABI (`-DTAP_SR_BUILD_CAPI=ON`, `capi/`; float for the
 notebooks, and Q15 / Q31 through `tap_sr_async_create_format` with the
 `_q15` / `_q31` push and pull for fixed-point FFI consumers; since 0.6.0
 the create functions take the family's argument order, profile and
-format before channels) via ctypes
+format before channels, and since 0.7.0 they serve one and two channels,
+each its own C++ type, and return NULL for any other count) via ctypes
 (the notebook environment is pinned, with hashes, in `requirements.lock`:
 `pip install --require-hashes -r requirements.lock`; the first cell
 rebuilds the shared library incrementally on every run). A second notebook,
@@ -85,7 +86,7 @@ instruction baselines), and `examples/pico2_dualcore/` (the
 one-clock-domain-per-core RP2350 deployment, self-validating).
 
 **Consuming the library**: `add_subdirectory` or `FetchContent` only —
-there are no install/package rules yet. The family version is 0.6.0
+there are no install/package rules yet. The family version is 0.7.0
 (`TAP_SR_VERSION_*` in `tap/sr/async/async.h`, token-identical in the three
 engines' umbrella headers, `tap_sr_async_version()` over the C ABI, D13);
 pre-1.0, the API may still change between versions.
@@ -234,8 +235,18 @@ at 5 ms blocks). Promotion to Quiet is gated on the
 cascade-smoothed error, which is exactly the discriminator between the two
 regimes.
 
-**Multichannel.** `channels` is a runtime count with no architectural limit
-(mono through 7.1.4 and beyond). Use **one converter instance per clock
+**Multichannel.** The channel count is the converter's type
+(`converter<Ch>`, `basic_converter<S, Ch>`; since 0.7.0, the family's A13),
+any count of at least 1 with no architectural limit (mono through 7.1.4 and
+beyond); zero does not compile (`async.Converter.ZeroChannelsFailToCompileWithTheMessage`),
+and a program that learns its count at run time switches over the counts it
+serves (`examples/alsa_bridge.cpp`'s `--channels`). The history layout is
+chosen from the count at compile time too: frame-major at or above
+`TAP_SR_ASYNC_CP_MIN_CHANNELS` on channel-parallel targets, planar below it,
+so an override of that macro must be the same in every translation unit of
+a program. The count-independent half (the bank, ring, servo and their
+construction, `converter_base<S>`) is compiled once per format whatever
+counts a program uses. Use **one converter instance per clock
 domain**, not per channel group: every channel of an instance is resampled
 at literally the same fractional position each frame, so inter-channel
 phase coherence is exact by construction — no skew to budget for in
@@ -317,7 +328,7 @@ samples and therefore triples in milliseconds (1.5 ms vs 0.5 ms).
 
 One converter's heap, after construction, is a formula in its geometry (L phases and
 T taps per phase from `filter_bank()`, `c` the coefficient size and `s` the sample
-size from `sample_traits`, `ch` channels, F the ring's frames: `fifo_frames`, or
+size from `sample_traits`, `ch` the type's channels, F the ring's frames: `fifo_frames`, or
 `max(1024, 4 (target_latency_frames + T))`):
 
 ```text
@@ -326,7 +337,6 @@ held = (L + 1) T c            polyphase table, one guard row
      + 16 ch s                pop scratch
      + (T + 16) ch s          filter history
      + T c                    blended row
-     + H sizeof(std::vector)  H = ch (1 when the channel-parallel path runs)
 ```
 
 Construction needs more than the converter keeps: the filter is designed in double
@@ -338,14 +348,15 @@ than an RP2350's 520 KB of SRAM; `balanced` and `program` need 300 and 394 KB.
 
 | profile | L × T | f32 held | f32 peak | Q15 held | Q15 peak | Q31 held | Q31 peak |
 |---|---|---:|---:|---:|---:|---:|---:|
-| `fast` | 128 × 32 | 25,392 | 49,536 | 12,720 | 41,536 | 25,392 | 49,792 |
-| `balanced` | 256 × 48 | 58,416 | 300,056 | 29,232 | 300,056 | 58,416 | 300,056 |
-| `program` | 512 × 32 | 74,544 | 393,784 | 37,296 | 393,784 | 74,544 | 393,784 |
-| `transparent` | 512 × 80 | 173,616 | 985,208 | 86,832 | 985,208 | 173,616 | 985,208 |
+| `fast` | 128 × 32 | 25,344 | 49,536 | 12,672 | 41,536 | 25,344 | 49,792 |
+| `balanced` | 256 × 48 | 58,368 | 300,056 | 29,184 | 300,056 | 58,368 | 300,056 |
+| `program` | 512 × 32 | 74,496 | 393,784 | 37,248 | 393,784 | 74,496 | 393,784 |
+| `transparent` | 512 × 80 | 173,568 | 985,208 | 86,784 | 985,208 | 173,568 | 985,208 |
 
-The figures are bytes on a 64-bit host, stereo; a 32-bit target holds
-`sizeof(std::vector)` (12 instead of 24) less per history vector and nothing else
-changes. `tests/test_footprint.cpp` pins each formula against DspTap's heap meter
+The figures are bytes on a 64-bit host, stereo; the formula has no
+pointer-sized term since 0.7.0 (the history's lines are an array in the
+object, A13's K6: 48 B less per stereo converter than 0.6.0's table), so a
+32-bit target holds the same bytes. `tests/test_footprint.cpp` pins each formula against DspTap's heap meter
 (`tap/dsp/analysis/heap_meter.h`) exactly, on the hosted legs (not under ASan or TSan, whose runtime owns the allocator) and on Hexagon
 (32-bit), and checks that processing allocates nothing. On Windows x64 the allocator asks for more than the formula: MSVC's `std::allocator` pads every
 request of 4096 bytes or more by 39 bytes to align it to 32 bytes, and the test counts each
@@ -379,23 +390,23 @@ same PR, with the reason.
 <!-- ceilings:begin (scripts/ceilings.py docs; do not edit by hand) -->
 | target | format | engine `.text` (bytes) | ceiling | engine `.rodata` (bytes) | ceiling | image (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|--:|--:|
-| m33 | f32 | 15,172 | 15,680 | 1,359 | 1,408 | 49,161 | 50,688 |
-| m33 | q15 | 15,956 | 16,448 | 1,359 | 1,408 | 50,137 | 51,648 |
-| m33 | q31 | 16,068 | 16,576 | 1,359 | 1,408 | 50,249 | 51,776 |
-| m55 | f32 | 12,220 | 12,608 | 1,359 | 1,408 | 45,921 | 47,360 |
-| m55 | q15 | 12,872 | 13,312 | 1,359 | 1,408 | 46,769 | 48,192 |
-| m55 | q31 | 13,024 | 13,440 | 1,359 | 1,408 | 46,929 | 48,384 |
-| hexagon | f32 | 30,396 | 31,360 | 0 | 0 | 308,128 | 317,376 |
-| hexagon | q15 | 31,760 | 32,768 | 0 | 0 | 310,112 | 319,424 |
-| hexagon | q31 | 31,772 | 32,768 | 0 | 0 | 310,080 | 319,424 |
+| m33 | f32 | 14,572 | 15,040 | 1,351 | 1,408 | 48,545 | 50,048 |
+| m33 | q15 | 15,532 | 16,000 | 1,351 | 1,408 | 49,705 | 51,200 |
+| m33 | q31 | 15,508 | 16,000 | 1,351 | 1,408 | 49,673 | 51,200 |
+| m55 | f32 | 11,688 | 12,096 | 1,351 | 1,408 | 45,377 | 46,784 |
+| m55 | q15 | 12,324 | 12,736 | 1,351 | 1,408 | 46,209 | 47,616 |
+| m55 | q31 | 12,396 | 12,800 | 1,351 | 1,408 | 46,289 | 47,680 |
+| hexagon | f32 | 29,212 | 30,144 | 0 | 0 | 306,944 | 316,160 |
+| hexagon | q15 | 30,924 | 31,872 | 0 | 0 | 309,248 | 318,528 |
+| hexagon | q31 | 31,304 | 32,256 | 0 | 0 | 309,632 | 318,976 |
 
 | M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|
 | `push` | f32 | 40 | 48 | 40 | 48 |
 | `push` | q15 | 40 | 48 | 40 | 48 |
 | `push` | q31 | 40 | 48 | 40 | 48 |
-| `pull` | f32 | 276 | 288 | 256 | 264 |
-| `pull` | q15 | 260 | 272 | 240 | 248 |
+| `pull` | f32 | 252 | 264 | 232 | 240 |
+| `pull` | q15 | 228 | 240 | 208 | 216 |
 | `pull` | q31 | 228 | 240 | 208 | 216 |
 <!-- ceilings:end -->
 
@@ -486,24 +497,31 @@ Executed instructions per fixed workload (`async/bench/icount/`), measured under
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `callmax_pull_float` | 259,294 | 16,624 | 51,238 |
-| `callmax_pull_q15` | 32,878 | 17,354 | 12,629 |
-| `construct_q15` | 906,236,511 | 19,577,382 | 143,511,094 |
-| `kernel_float` | 2,427,595,993 | 109,298,076 | 422,160,541 |
-| `kernel_q15` | 1,123,119,218 | 192,431,957 | 187,429,187 |
-| `kernel_q31` | 1,169,957,251 | 221,164,795 | 194,964,122 |
-| `pipeline12_q15` | 1,498,750,507 | 231,525,615 | 463,498,599 |
-| `pipeline_float` | 2,391,686,215 | 102,590,477 | 419,186,490 |
-| `pipeline_q15` | 1,020,281,310 | 109,235,651 | 204,476,476 |
-| `pipeline_q31` | 1,102,554,828 | 173,088,119 | 205,223,931 |
+| `callmax_pull_float` | 258,504 | 14,900 | 50,989 |
+| `callmax_pull_q15` | 31,871 | 15,477 | 12,388 |
+| `construct_q15` | 906,236,180 | 19,576,933 | 143,509,199 |
+| `kernel_float` | 2,427,595,993 | 109,298,076 | 422,160,577 |
+| `kernel_q15` | 1,123,119,218 | 192,431,957 | 187,429,223 |
+| `kernel_q31` | 1,169,957,251 | 221,164,795 | 194,964,158 |
+| `pipeline12_q15` | 1,488,170,355 | 221,321,824 | 460,850,621 |
+| `pipeline_float` | 2,387,763,809 | 99,236,191 | 417,674,413 |
+| `pipeline_q15` | 1,015,977,626 | 104,418,276 | 204,155,387 |
+| `pipeline_q31` | 1,099,585,828 | 169,385,421 | 204,404,412 |
 
 On the host, the float converter in 128-frame blocks at 2 and 12 channels (`async/bench/icount/host_main.cpp`): instructions executed by the streaming loop alone, counted under callgrind on x86-64 with GCC 13 (`scripts/icount.py --target host`), gated the same way:
 
 | Workload | x86-64 |
 |---|---:|
-| `pipeline_float_12ch` | 362,078,536 |
-| `pipeline_float_2ch` | 109,526,808 |
+| `pipeline_float_12ch` | 352,980,493 |
+| `pipeline_float_2ch` | 104,913,538 |
 <!-- ICOUNT:END -->
+
+The channel count moved into the type at A13 (0.7.0, `docs/CHANNELS_PLAN.md`), and its gain is
+measured in instructions only: no cycle counts on hardware yet (K11, deferred). Against the
+baselines before it, no row rose on any target, the streaming sums fell on every target (−1.9 %
+on the Cortex-M55, −0.2 % on the M33, −0.3 % on Hexagon, −2.9 % on the host; −1.7 % at 16
+channels on the host, which no baseline gates), and the engine `.text` fell 1.5 … 4.8 %
+([`PLAN.md`](PLAN.md) section 6).
 
 <!-- PERF:BEGIN -->
 Indicative numbers from a shared machine (Intel(R) Xeon(R) Processor @ 2.80GHz, 2026-06-12); regenerate with `scripts/update_perf_docs.py`. Items are output samples (kernel) or frames (pipeline); ×realtime is per 48 kHz stream.
@@ -534,9 +552,9 @@ The datapath is templated on the sample type via `tap::sr::async::sample_traits`
 
 | Type | Alias | Format | Measured SNR (997 Hz / 19.5 kHz, half scale, +200 ppm) |
 |---|---|---|---|
-| `float` | `converter` | float I/O, double accumulation | 135 dB / 105 dB |
-| `std::int32_t` | `converter_q31` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
-| `std::int16_t` | `converter_q15` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
+| `float` | `converter<Ch>` | float I/O, double accumulation | 135 dB / 105 dB |
+| `std::int32_t` | `converter_q31<Ch>` | Q31 I/O, Q1.30 coeffs, int64 accumulation, saturating | 133 dB / 105 dB |
+| `std::int16_t` | `converter_q15<Ch>` | Q15 I/O, Q1.14 coeffs, int64 accumulation, saturating | 77 dB (format-limited) |
 
 The fixed-point datapaths have integer-only inner loops (the μ blend factor
 is converted once per output sample), making them the appropriate choice for

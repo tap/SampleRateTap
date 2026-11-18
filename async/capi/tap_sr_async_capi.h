@@ -67,7 +67,7 @@ typedef struct tap_sr_async_converter tap_sr_async_converter;
 
 /* ABI/version probe: the family version, bit-packed as
  * (TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH
- * (0x000600 for 0.6.0); tap_sr_bridge_version and tap_sr_rational_version
+ * (0x000700 for 0.7.0); tap_sr_bridge_version and tap_sr_rational_version
  * return the same value. */
 TAP_SR_ASYNC_API unsigned tap_sr_async_version(void);
 
@@ -79,6 +79,12 @@ TAP_SR_ASYNC_API unsigned tap_sr_async_version(void);
  * profile (and format), then channels, as tap_sr_bridge_create and
  * tap_sr_rational_create take them (since 0.6.0; before, channels came
  * second and the tag carried the retired name).
+ * channels: 1 or 2; NULL for any other count. In C++ the count is the
+ * converter's type (basic_converter<S, Ch>, since 0.7.0); this ABI serves the
+ * two deployment shapes natively. The siblings fan any other count out to
+ * one-channel converters; here that would give each channel a clock servo of
+ * its own, so another count is refused instead, and served when a caller
+ * needs it.
  * A float converter. */
 TAP_SR_ASYNC_API tap_sr_async_converter* tap_sr_async_create(double sample_rate_hz, size_t target_latency_frames,
                                                              int profile, unsigned channels);

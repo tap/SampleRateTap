@@ -26,8 +26,12 @@ The three rules, stated up front:
 
 ## Channels: coherence is free, so don't pay for it
 
-`config::channels` is a runtime count with no architectural limit — mono
-through 7.1.4 and beyond. The design rule is about instance boundaries:
+The channel count is the converter's type — `converter<2>`,
+`converter_q15<12>` — with no architectural limit: mono through 7.1.4 and
+beyond (a template argument since 0.7.0, the family's A13; a program that
+learns its count at run time switches over the counts it serves, as
+`examples/alsa_bridge.cpp`'s `--channels` does). The design rule is about
+instance boundaries:
 **one instance per clock domain**. If a 12-channel AVB stream and a stereo
 monitor feed arrive on the *same* recovered clock, they are one domain and
 could share one instance per stream as convenient; but never split one
@@ -154,7 +158,7 @@ The remedy is the `scaled_to` trio, and the factory that applies it:
 
 ```cpp
 tap::sr::async::config cfg = tap::sr::async::config::for_sample_rate(16000.0);
-cfg.channels = ...;            // then adjust as usual
+cfg.target_latency_frames = ...;   // then adjust as usual
 ```
 
 `filter_spec::scaled_to` multiplies the band edges by `fs/48000` — same L

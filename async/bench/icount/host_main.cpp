@@ -36,7 +36,7 @@ namespace {
 } // namespace
 
 /// The counted region: every block pushed and pulled, the input cycled.
-extern "C" [[gnu::noinline]] double tap_sr_host_counted(tap::sr::async::converter& c, const float* input,
+extern "C" [[gnu::noinline]] double tap_sr_host_counted(tap::sr::async::converter<k_ch>& c, const float* input,
                                                         std::size_t input_frames, float* out) {
     double      sink = 0.0;
     std::size_t off  = 0;
@@ -51,11 +51,10 @@ extern "C" [[gnu::noinline]] double tap_sr_host_counted(tap::sr::async::converte
 
 int main() {
     tap::sr::async::config cfg;
-    cfg.channels = k_ch;
     // The setpoint must exceed the pull block (the README's latency notes);
     // two blocks, as the host benchmark (bench/bench_converter.cpp) sets it.
     cfg.target_latency_frames = 2 * k_block;
-    tap::sr::async::converter c(cfg);
+    tap::sr::async::converter<k_ch> c(cfg);
 
     constexpr std::size_t k_input_frames = 12000; // 0.25 s, cycled
     std::vector<float>    input(k_input_frames * k_ch);

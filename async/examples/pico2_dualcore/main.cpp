@@ -50,7 +50,11 @@
 
 namespace {
 
-    using Asrc = tap::sr::async::converter_q15;
+    // The converter's channel count is its type (A13): phase A runs the stereo
+    // converter and phase B the 12-channel one, two instantiations, each handed
+    // to core1 through a pointer of its own type (docs/CHANNELS_PLAN.md, K9).
+    using AsrcA = tap::sr::async::converter_q15<2>;
+    using AsrcB = tap::sr::async::converter_q15<12>;
 
     constexpr std::size_t kBlockFrames  = 32;
     constexpr std::size_t kMaxChannels  = 12;
@@ -81,8 +85,9 @@ namespace {
         // multicore FIFO is left to the launch protocol — an atomic pointer
         // makes the C++ happens-before explicit instead of relying on hardware
         // FIFO side effects.
-        std::atomic<Asrc*>         asrc{nullptr};
-        std::atomic<std::uint32_t> consNumUs{0}; // consumer due(b) = t0 + (b*num)/den us
+        std::atomic<AsrcA*>        asrcA{nullptr}; // phase A's converter, null between phases
+        std::atomic<AsrcB*>        asrcB{nullptr}; // phase B's
+        std::atomic<std::uint32_t> consNumUs{0};   // consumer due(b) = t0 + (b*num)/den us
         std::atomic<std::uint32_t> consDen{1};
         std::atomic<std::uint32_t> statsSkipBlocks{0};  // exclude fill/acquire from stats
         std::atomic<bool>          stop{false};         // core0 -> core1: end of phase
@@ -102,8 +107,8 @@ namespace {
         std::atomic<std::uint32_t> late_max_us{0}; // worst consumer schedule slip
     };
 
-    static_assert(std::atomic<std::uint32_t>::is_always_lock_free && std::atomic<Asrc*>::is_always_lock_free
-                      && std::atomic<bool>::is_always_lock_free,
+    static_assert(std::atomic<std::uint32_t>::is_always_lock_free && std::atomic<AsrcA*>::is_always_lock_free
+                      && std::atomic<AsrcB*>::is_always_lock_free && std::atomic<bool>::is_always_lock_free,
                   "cross-core state must be lock-free on the M33");
 
     Shared g;
@@ -212,64 +217,77 @@ namespace {
     // Never prints — stdio stays a core0 concern, both for the FIFO budget and
     // because contending on the stdio mutex from the paced core would put USB
     // stalls on the output clock domain.
+    // One phase on core1, for the converter type the phase runs.
+    template <class Asrc>
+    void consumePhase(Asrc* asrc, std::atomic<Asrc*>& handoff) {
+        const std::uint32_t num   = g.consNumUs.load(std::memory_order_relaxed);
+        const std::uint32_t den   = g.consDen.load(std::memory_order_relaxed);
+        const std::uint32_t skip  = g.statsSkipBlocks.load(std::memory_order_relaxed);
+        const bool          timed = g.cyccnt.load(std::memory_order_relaxed) == 1;
+
+        std::fill(std::begin(gHist), std::end(gHist), 0u);
+        std::uint64_t cycSum = 0; // core1-private; only 32-bit digests cross cores
+        Snapshot      s;
+        publishSnapshot(s); // zero the previous phase's numbers
+
+        const std::uint64_t t0        = time_us_64() + 1000;
+        std::uint64_t       nextPubUs = t0 + 1000000;
+        for (std::uint64_t b = 0; !g.stop.load(std::memory_order_acquire); ++b) {
+            const std::uint64_t due = t0 + (b * num) / den;
+            std::uint64_t       now = time_us_64();
+            while (now < due) {
+                tight_loop_contents();
+                now = time_us_64();
+            }
+
+            // Timed region is pull() alone: the per-block datapath + servo
+            // cost the deployment budget cares about.
+            const std::uint32_t c0 = DWT->CYCCNT;
+            asrc->pull(gOut, kBlockFrames);
+            const std::uint32_t cyc = DWT->CYCCNT - c0;
+
+            if (b >= skip) {
+                if (timed) {
+                    cycSum += cyc;
+                    ++s.blocks;
+                    s.max_cyc = std::max(s.max_cyc, cyc);
+                    ++gHist[std::min<std::uint32_t>(cyc >> kHistShift, kHistBuckets - 1)];
+                }
+                // Schedule slip: if pull() ever exceeded the block period,
+                // lateness accumulates here long before the FIFO notices.
+                const std::uint64_t late = now - due;
+                if (late > s.late_max_us)
+                    s.late_max_us = static_cast<std::uint32_t>(std::min<std::uint64_t>(late, ~0u));
+            }
+            if (now >= nextPubUs) {
+                nextPubUs += 1000000;
+                finalizeAndPublish(s, cycSum);
+            }
+        }
+
+        finalizeAndPublish(s, cycSum); // final numbers for the summary line
+        g.consumerDone.store(true, std::memory_order_release);
+        // Wait out the teardown so a stale pointer cannot restart the phase.
+        while (handoff.load(std::memory_order_acquire) != nullptr)
+            tight_loop_contents();
+    }
+
     [[noreturn]] void core1Main() {
         g.cyccnt.store(enableCycleCounter() ? 1 : 2, std::memory_order_release);
 
         for (;;) {
-            Asrc* asrc;
-            while ((asrc = g.asrc.load(std::memory_order_acquire)) == nullptr)
+            // Wait for a phase: whichever converter pointer core0 publishes.
+            for (;;) {
+                if (AsrcA* a = g.asrcA.load(std::memory_order_acquire)) {
+                    consumePhase(a, g.asrcA);
+                    break;
+                }
+                if (AsrcB* b = g.asrcB.load(std::memory_order_acquire)) {
+                    consumePhase(b, g.asrcB);
+                    break;
+                }
                 tight_loop_contents();
-
-            const std::uint32_t num   = g.consNumUs.load(std::memory_order_relaxed);
-            const std::uint32_t den   = g.consDen.load(std::memory_order_relaxed);
-            const std::uint32_t skip  = g.statsSkipBlocks.load(std::memory_order_relaxed);
-            const bool          timed = g.cyccnt.load(std::memory_order_relaxed) == 1;
-
-            std::fill(std::begin(gHist), std::end(gHist), 0u);
-            std::uint64_t cycSum = 0; // core1-private; only 32-bit digests cross cores
-            Snapshot      s;
-            publishSnapshot(s); // zero the previous phase's numbers
-
-            const std::uint64_t t0        = time_us_64() + 1000;
-            std::uint64_t       nextPubUs = t0 + 1000000;
-            for (std::uint64_t b = 0; !g.stop.load(std::memory_order_acquire); ++b) {
-                const std::uint64_t due = t0 + (b * num) / den;
-                std::uint64_t       now = time_us_64();
-                while (now < due) {
-                    tight_loop_contents();
-                    now = time_us_64();
-                }
-
-                // Timed region is pull() alone: the per-block datapath + servo
-                // cost the deployment budget cares about.
-                const std::uint32_t c0 = DWT->CYCCNT;
-                asrc->pull(gOut, kBlockFrames);
-                const std::uint32_t cyc = DWT->CYCCNT - c0;
-
-                if (b >= skip) {
-                    if (timed) {
-                        cycSum += cyc;
-                        ++s.blocks;
-                        s.max_cyc = std::max(s.max_cyc, cyc);
-                        ++gHist[std::min<std::uint32_t>(cyc >> kHistShift, kHistBuckets - 1)];
-                    }
-                    // Schedule slip: if pull() ever exceeded the block period,
-                    // lateness accumulates here long before the FIFO notices.
-                    const std::uint64_t late = now - due;
-                    if (late > s.late_max_us)
-                        s.late_max_us = static_cast<std::uint32_t>(std::min<std::uint64_t>(late, ~0u));
-                }
-                if (now >= nextPubUs) {
-                    nextPubUs += 1000000;
-                    finalizeAndPublish(s, cycSum);
-                }
             }
-
-            finalizeAndPublish(s, cycSum); // final numbers for the summary line
-            g.consumerDone.store(true, std::memory_order_release);
-            // Wait out the teardown so a stale pointer cannot restart the phase.
-            while (g.asrc.load(std::memory_order_acquire) != nullptr)
-                tight_loop_contents();
         }
     }
 
@@ -283,7 +301,6 @@ namespace {
     struct PhaseSpec {
         char          tag;
         const char*   desc;
-        std::size_t   channels;
         double        rateHz;
         bool          scaledTo16k; // scale balanced() band edges + servo by 16/48
         std::uint32_t prodNumUs;   // producer due(b) = t0 + (b*num)/den us, +200 ppm baked in
@@ -339,12 +356,13 @@ namespace {
         return out;
     }
 
-    PhaseResult runPhase(const PhaseSpec& ph) {
-        PhaseResult r;
+    template <class Asrc>
+    PhaseResult runPhase(const PhaseSpec& ph, std::atomic<Asrc*>& handoff) {
+        PhaseResult           r;
+        constexpr std::size_t channels = Asrc::channels();
 
         tap::sr::async::config cfg;
         cfg.sample_rate_hz        = ph.rateHz;
-        cfg.channels              = ph.channels;
         cfg.target_latency_frames = kTargetLatencyFrames;
         if (ph.scaledTo16k) {
             // filter_spec band edges and servo_config bandwidths are absolute Hz
@@ -368,14 +386,14 @@ namespace {
         // every other allocation's is in such a build.
         std::unique_ptr<Asrc>     asrc;
         std::vector<std::int16_t> input;
-        if (const char* why = tap::sr::async::config::validate(cfg)) {
+        if (const char* why = Asrc::validate(cfg)) {
             std::printf("PHASE %c %s: SKIP (%s)\n", ph.tag, ph.desc, why);
             return r;
         }
 #if TAP_DSP_HAS_EXCEPTIONS
         try {
             asrc  = std::make_unique<Asrc>(cfg);
-            input = sineInput(ph.channels, ph.rateHz);
+            input = sineInput(channels, ph.rateHz);
         }
         catch (const std::exception& e) {
             std::printf("PHASE %c %s: SKIP (%s)\n", ph.tag, ph.desc, e.what());
@@ -383,7 +401,7 @@ namespace {
         }
 #else
         asrc  = std::make_unique<Asrc>(cfg);
-        input = sineInput(ph.channels, ph.rateHz);
+        input = sineInput(channels, ph.rateHz);
 #endif
         r.ran = true;
 
@@ -398,7 +416,7 @@ namespace {
         g.consNumUs.store(ph.consNumUs, std::memory_order_relaxed);
         g.consDen.store(ph.consDen, std::memory_order_relaxed);
         g.statsSkipBlocks.store(ph.statsSkip, std::memory_order_relaxed);
-        g.asrc.store(asrc.get(), std::memory_order_release);
+        handoff.store(asrc.get(), std::memory_order_release);
 
         const std::uint64_t tStart          = time_us_64();
         const std::uint64_t tEnd            = tStart + static_cast<std::uint64_t>(ph.runMs) * 1000;
@@ -424,8 +442,8 @@ namespace {
             }
 
             asrc->push(input.data() + off, kBlockFrames);
-            off += kBlockFrames * ph.channels;
-            if (off + kBlockFrames * ph.channels > input.size())
+            off += kBlockFrames * channels;
+            if (off + kBlockFrames * channels > input.size())
                 off = 0;
 
             const tap::sr::async::converter_status st = asrc->status();
@@ -471,7 +489,7 @@ namespace {
         const Snapshot                         fin = readSnapshot();
         const tap::sr::async::converter_status st  = asrc->status();
         ppmFinal                                   = st.ppm;
-        g.asrc.store(nullptr, std::memory_order_release);
+        handoff.store(nullptr, std::memory_order_release);
 
         // PASS = the deployment-shape claims, made falsifiable:
         //   1. servo Locked within lockLimitMs of a cold start;
@@ -537,13 +555,13 @@ int main() {
     // still yields the real-silicon counterpart of the 12-channel baseline.
     // Its lock/settle gates scale with the servo (bandwidths * 16/48).
     const PhaseSpec phases[] = {
-        {'A', "q15 2ch balanced @48000", 2, 48000.0, false, 10000000, 15003, 2000, 3, 7500, 2000, 10000, 30000},
-        {'B', "q15 12ch balanced16k @16000", 12, 16000.0, true, 10000000, 5001, 2000, 1, 2500, 6000, 15000, 30000},
+        {'A', "q15 2ch balanced @48000", 48000.0, false, 10000000, 15003, 2000, 3, 7500, 2000, 10000, 30000},
+        {'B', "q15 12ch balanced16k @16000", 16000.0, true, 10000000, 5001, 2000, 1, 2500, 6000, 15000, 30000},
     };
 
     PhaseResult res[2];
-    for (std::size_t i = 0; i < 2; ++i)
-        res[i] = runPhase(phases[i]);
+    res[0] = runPhase(phases[0], g.asrcA);
+    res[1] = runPhase(phases[1], g.asrcB);
 
     // A skipped phase B (allocation) is reported but does not fail the
     // deployment verdict — the configuration is optional by RAM budget.

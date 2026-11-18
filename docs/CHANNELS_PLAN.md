@@ -7,8 +7,11 @@ of line, `rational` does not pass on the M55 and M33 in any placement measured. 
 maintainer chose option 3 the same day: `rational`'s per-count blocks out of line in
 every stage, its three rises accepted (section 3, "Decided"). A13a (DspTap) is tap/DspTap#64;
 A13b (`rational`, SampleRateTap#98) merged 2026-11-18, one M55 row split between the two
-builds and accepted with a midpoint baseline; A13c (`bridge`) is measured the same day, five
-M55 Q15 rows split about 2 % and accepted the same way (section 3, "Decided").**
+builds and accepted with a midpoint baseline; A13c (`bridge`, SampleRateTap#99) merged the
+same day, five M55 Q15 rows split about 2 % and accepted the same way (section 3, "Decided");
+A13d (`async`, with 0.7.0) is measured the same day: no row rises, and two M55 rows widen
+the configuration gap by 0.11 and 0.12 points, accepted with one baseline each (section 3,
+"Decided").**
 v1 (2026-11-13, 45a22a0) was adversarially audited the same day
 ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md): four independent reviewers, a
 skeptic per reviewer, 52 of 53 findings surviving). This version answers every surviving
@@ -423,6 +426,17 @@ states it.
   row, in the same code until GCC's register allocation; each baseline is the midpoint of the
   two builds (both within ±1.2 %), the M33's smaller splits (0.1 … 0.6 %) recorded from the
   exceptions build (`bridge/PLAN.md` M7g).
+- **A13d: two M55 rows' configuration gap (decided by the maintainer 2026-11-18).** `async` at A13d: every
+  checksum equal and no row rising on any target, the streaming sums −1.94 % (M55), −0.20 %
+  (M33), −0.25 % (Hexagon) and −2.91 % (host), and −1.68 % at 16 channels on the host. Two M55
+  rows widen the gap between the configurations past item 4's 0.1-point margin:
+  `pipeline_float`, whose reference builds are −0.084 % apart and A13d's −0.190 % (0.106
+  points wider), and `pipeline_q31`, +0.008 % and +0.124 % (0.116 points wider); both builds
+  of each row fall 2.0 … 3.4 % below the reference. Gate 0's `async` variant widened the
+  same Q31 row by 0.2 points and was recorded as a pass (section 3, "The result").
+  The maintainer accepted both with one baseline each, recorded from the exceptions build as
+  every other row: the build without exceptions sits −0.19 % (float) and +0.12 % (Q31) from
+  it, inside ±3 % with no midpoint (`async/PLAN.md` section 6).
 
 ## 4. The pull requests, in order
 

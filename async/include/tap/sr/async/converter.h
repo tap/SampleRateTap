@@ -19,27 +19,41 @@
 #include "tap/sr/async/sample_traits.h"
 #include "tap/sr/async/spsc_ring.h"
 
+// The converter's cold code (the base's constructor and restart) stays out of
+// line, so each channel count a program instantiates calls one copy per format
+// instead of inlining its own (A13's K12, docs/CHANNELS_PLAN.md).
+#if defined(_MSC_VER)
+#define TAP_SR_ASYNC_NOINLINE __declspec(noinline)
+#else
+#define TAP_SR_ASYNC_NOINLINE __attribute__((noinline))
+#endif
+
 namespace tap::sr::async {
 
     struct config;
 
     namespace detail {
         /// The FIFO's capacity in samples for a config whose bank has `taps`
-        /// taps per phase: the caller's fifo_frames, or the automatic size,
-        /// rounded up to a power of two. Shared by the constructor and by
-        /// config::validate, so the two agree to the sample.
-        std::size_t ring_capacity_elems(const config& cfg, std::size_t taps) noexcept;
+        /// taps per phase, at `channels` channels: the caller's fifo_frames,
+        /// or the automatic size, rounded up to a power of two. Shared by the
+        /// constructor and by the precheck, so the two agree to the sample.
+        std::size_t ring_capacity_elems(const config& cfg, std::size_t taps, std::size_t channels) noexcept;
+
+        /// basic_converter<S, Ch>::validate's precheck with the count as a
+        /// value, compiled once whatever counts a program instantiates.
+        const char* config_rejection(const config& cfg, std::size_t channels) noexcept;
     } // namespace detail
 
     // ANCHOR: p0_config
     /// Converter configuration. The defaults give ~1.5 ms designed latency at
     /// 48 kHz (FIFO setpoint 48 frames + ~24 frames filter group delay; see
     /// the README latency section), transparent for clocks within +/-1000 ppm.
+    /// The channel count is not here: it is the converter type's
+    /// (basic_converter<S, Ch>, A13).
     struct config {
         double       sample_rate_hz        = 48000.0; ///< nominal rate of BOTH clock domains
-        std::size_t  channels              = 2;
-        std::size_t  target_latency_frames = 48; ///< FIFO occupancy setpoint (~1 ms at 48 kHz)
-        std::size_t  fifo_frames           = 0;  ///< ring capacity; 0 => automatic
+        std::size_t  target_latency_frames = 48;      ///< FIFO occupancy setpoint (~1 ms at 48 kHz)
+        std::size_t  fifo_frames           = 0;       ///< ring capacity; 0 => automatic
         filter_spec  filter{};
         servo_config servo{};
         // ANCHOR_END: p0_config
@@ -52,8 +66,8 @@ namespace tap::sr::async {
         /// see filter_spec::scaledTo and servo_config::scaledTo — and is the
         /// recommended starting point for any non-48 kHz deployment:
         ///
-        ///   tap::sr::async::Config cfg = tap::sr::async::Config::forSampleRate(16000.0);
-        ///   cfg.channels = ...;            // then adjust as usual
+        ///   auto cfg = tap::sr::async::config::for_sample_rate(16000.0);
+        ///   cfg.target_latency_frames = ...;   // then adjust as usual
         ///
         /// Frame-denominated fields (targetLatencyFrames, fifoFrames) are
         /// rate-invariant in frames and left alone; note their duration in
@@ -65,26 +79,6 @@ namespace tap::sr::async {
             c.servo          = c.servo.scaled_to(sample_rate_hz);
             return c;
         }
-
-        // ANCHOR: p0_validate
-        /// The reason a converter cannot be built from `cfg`, or nullptr when it
-        /// can: the family's error model. noexcept and allocation-free, and it
-        /// states every rejection the constructor makes other than a refused
-        /// allocation — NaN/Inf anywhere (a NaN sample rate designs an all-NaN
-        /// coefficient table), band edges whose sum exceeds the rate (anti-image
-        /// cutoff above input Nyquist passes images wholesale), a bank the
-        /// designer rejects (fewer than 4 taps per phase, 8 with image_zeros,
-        /// fewer than 2 phases, a stopband edge at or below the passband's or
-        /// above the rate), a deviation clamp large enough to overflow the Q0.64
-        /// eps conversion (UB), size products that overflow 32-bit size_t
-        /// targets, and a FIFO too small for its high-water mark. The
-        /// constructor runs the same check and rejects with the same text
-        /// (std::invalid_argument through tap::dsp::raise), so a build with
-        /// exceptions may construct and catch; a build without them
-        /// (-fno-exceptions, where the rejection terminates) calls this first
-        /// and constructs only on nullptr.
-        static const char* validate(const config& cfg) noexcept;
-        // ANCHOR_END: p0_validate
     };
 
     /// Converter state as seen by status().
@@ -116,7 +110,156 @@ namespace tap::sr::async {
         std::uint64_t effective_target_latency_frames = 0;
     };
 
-    /// Near-unity asynchronous sample rate converter between two clock domains.
+    /// The count-independent half of basic_converter (A13's K12): the
+    /// configuration, the bank, the ring, the servo, the setpoint state and the
+    /// telemetry, for one format. Its constructor and restart() are out of
+    /// line, so a program that instantiates several channel counts of one
+    /// format carries the design and the allocations once.
+    template <sample_type S>
+    class converter_base {
+      public:
+        converter_base(const converter_base&)            = delete;
+        converter_base& operator=(const converter_base&) = delete;
+
+        /// Any thread: telemetry snapshot (relaxed atomics; fields are individually
+        /// coherent, not mutually).
+        converter_status status() const noexcept {
+            converter_status s;
+            s.state                           = static_cast<converter_state>(m_state.load(std::memory_order_relaxed));
+            s.ppm                             = m_ppm.load(std::memory_order_relaxed);
+            s.ratio_estimate                  = 1.0 + s.ppm * 1e-6;
+            s.fifo_fill_frames                = m_fill.load(std::memory_order_relaxed);
+            s.underruns                       = m_underruns.load(std::memory_order_relaxed);
+            s.overruns                        = m_overruns.load(std::memory_order_relaxed);
+            s.resyncs                         = m_resyncs.load(std::memory_order_relaxed);
+            s.effective_target_latency_frames = m_effective_target.load(std::memory_order_relaxed);
+            return s;
+        }
+
+        /// Nominal design latency: FIFO setpoint + filter group delay. Uses the
+        /// effective (possibly adaptively raised) setpoint; the actual figure
+        /// breathes by a fraction of a frame as the servo tracks drift.
+        double designed_latency_seconds() const noexcept {
+            return (static_cast<double>(m_effective_target.load(std::memory_order_relaxed))
+                    + m_bank.group_delay_samples())
+                   / m_cfg.sample_rate_hz;
+        }
+
+        const polyphase_filter_bank<S>& filter_bank() const noexcept { return m_bank; }
+
+      protected:
+        static constexpr std::size_t k_pop_chunk_frames = 16;
+        static constexpr std::size_t k_fade_frames      = 64;
+
+        /// Validates `cfg` for `channels` channels, designs the bank and sizes
+        /// the ring; setup time only, out of line (one copy per format).
+        /// Rejects what basic_converter<S, Ch>::validate rejects, with its
+        /// text (std::invalid_argument through tap::dsp::raise).
+        TAP_SR_ASYNC_NOINLINE converter_base(const config& cfg, std::size_t channels)
+            : m_cfg(validated(cfg, channels))
+            , m_bank(m_cfg.filter, m_cfg.sample_rate_hz)
+            , m_ring(detail::ring_capacity_elems(m_cfg, m_bank.taps(), channels))
+            , m_servo(m_cfg.servo, m_cfg.sample_rate_hz, static_cast<double>(m_cfg.target_latency_frames))
+            , m_target_frames(m_cfg.target_latency_frames)
+            , m_fill_threshold_frames(m_cfg.target_latency_frames + m_bank.taps())
+            , m_high_water_frames(
+                  std::max(3 * m_cfg.target_latency_frames, m_fill_threshold_frames + m_cfg.target_latency_frames)) {
+            if (m_ring.capacity() / channels <= m_high_water_frames) {
+                // Unreachable after validated(): the same arithmetic, kept so
+                // the two cannot drift apart silently.
+                tap::dsp::raise<std::invalid_argument>("tap::sr::async::converter: fifoFrames too small");
+            }
+            // Largest setpoint the FIFO capacity supports while keeping the
+            // high-watermark relation; bounds the adaptive raise in pull().
+            const std::size_t cap_frames = m_ring.capacity() / channels;
+            const std::size_t taps       = m_bank.taps();
+            m_max_target_frames =
+                std::max(m_cfg.target_latency_frames,
+                         std::min((cap_frames - 1) / 3,
+                                  cap_frames > taps + 1 ? (cap_frames - taps - 1) / 2 : m_cfg.target_latency_frames));
+            m_effective_target.store(static_cast<std::uint32_t>(m_target_frames), std::memory_order_relaxed);
+        }
+
+        /// The base's half of a full restart: discard all buffered input,
+        /// forget the ppm estimate, return to Filling (the resampler is the
+        /// derived class's).
+        TAP_SR_ASYNC_NOINLINE void restart() noexcept {
+            m_ring.discard(m_ring.read_available());
+            m_servo.reset(false);
+            m_filling = true;
+            publish_status();
+        }
+
+        void fill_silence(S* dst, std::size_t count) noexcept {
+            for (std::size_t i = 0; i < count; ++i) {
+                dst[i] = sample_traits<S>::silence();
+            }
+        }
+
+        static S scale_sample(S x, double g) noexcept {
+            if constexpr (std::is_floating_point_v<S>) {
+                return static_cast<S>(static_cast<double>(x) * g);
+            }
+            else {
+                return detail::round_sat<S>(static_cast<double>(x) * g);
+            }
+        }
+
+        void publish_status() noexcept {
+            const converter_state st = m_filling          ? converter_state::filling
+                                       : m_servo.locked() ? converter_state::locked
+                                                          : converter_state::acquiring;
+            m_state.store(static_cast<int>(st), std::memory_order_relaxed);
+            m_ppm.store(static_cast<float>(m_servo.eps_hat() * 1e6), std::memory_order_relaxed);
+            m_fill.store(static_cast<float>(m_servo.smoothed_occupancy()), std::memory_order_relaxed);
+        }
+
+        config                   m_cfg;
+        polyphase_filter_bank<S> m_bank;
+        spsc_ring<S>             m_ring;
+        pi_servo                 m_servo;
+        // Consumer-thread setpoint state (see the adaptive raise in pull()).
+        std::size_t m_target_frames;
+        std::size_t m_fill_threshold_frames;
+        std::size_t m_high_water_frames;
+        std::size_t m_max_target_frames = 0;
+        std::size_t m_observed_max_pull = 0;
+        bool        m_filling           = true; // consumer-thread state; mirrored into m_state
+        std::size_t m_fade_frames_left  = 0;    // consumer-thread state
+
+        // Telemetry is 32-bit on purpose: 64-bit atomics fall back to lock-based
+        // libatomic on 32-bit targets (e.g. Hexagon), which would break the
+        // lock-free contract of the hot path. float carries ~7 significant
+        // digits — ample for ppm/fill observability; counters wrap at 2^32.
+        std::atomic<int>   m_state{static_cast<int>(converter_state::filling)};
+        std::atomic<float> m_ppm{0.0f};
+        std::atomic<float> m_fill{0.0f};
+        // Effective setpoint mirror for status()/designedLatencySeconds() from
+        // any thread; written only by the consumer (32-bit: lock-free everywhere).
+        std::atomic<std::uint32_t> m_effective_target{0};
+        std::atomic<std::uint32_t> m_underruns{0};
+        std::atomic<std::uint32_t> m_overruns{0};
+        std::atomic<std::uint32_t> m_resyncs{0};
+
+        static_assert(std::atomic<int>::is_always_lock_free && std::atomic<float>::is_always_lock_free
+                          && std::atomic<std::uint32_t>::is_always_lock_free,
+                      "telemetry atomics must be lock-free for the RT contract");
+
+      private:
+        /// The constructor's rejection: the precheck's reason, raised as
+        /// std::invalid_argument (a build without exceptions terminates here,
+        /// tap::dsp::raise; such a build calls validate() first).
+        static config validated(const config& cfg, std::size_t channels) {
+            if (const char* why = detail::config_rejection(cfg, channels)) {
+                tap::dsp::raise<std::invalid_argument>(why);
+            }
+            return cfg;
+        }
+    };
+
+    /// Near-unity asynchronous sample rate converter between two clock domains,
+    /// for Ch interleaved channels (a compile-time constant of at least 1, the
+    /// family's A13).
     ///
     /// One producer thread calls push() at the input clock; one consumer thread
     /// calls pull() at the output clock. A lock-free FIFO sits between the
@@ -127,44 +270,49 @@ namespace tap::sr::async {
     /// Real-time contract: the constructor performs all allocation and filter
     /// design and may throw; push(), pull(), status() and resetFromConsumer() are
     /// noexcept, lock-free and allocation-free.
-    template <sample_type S>
-    class basic_converter {
-      public:
-        explicit basic_converter(const config& cfg)
-            : m_cfg(validated(cfg))
-            , m_bank(m_cfg.filter, m_cfg.sample_rate_hz)
-            , m_resampler(m_bank, m_cfg.channels, k_pop_chunk_frames)
-            , m_ring(detail::ring_capacity_elems(m_cfg, m_bank.taps()))
-            , m_servo(m_cfg.servo, m_cfg.sample_rate_hz, static_cast<double>(m_cfg.target_latency_frames))
-            , m_target_frames(m_cfg.target_latency_frames)
-            , m_fill_threshold_frames(m_cfg.target_latency_frames + m_bank.taps())
-            , m_high_water_frames(
-                  std::max(3 * m_cfg.target_latency_frames, m_fill_threshold_frames + m_cfg.target_latency_frames)) {
-            if (m_ring.capacity() / m_cfg.channels <= m_high_water_frames) {
-                // Unreachable after validated(): the same arithmetic, kept so
-                // the two cannot drift apart silently.
-                tap::dsp::raise<std::invalid_argument>("tap::sr::async::converter: fifoFrames too small");
-            }
-            // Largest setpoint the FIFO capacity supports while keeping the
-            // high-watermark relation; bounds the adaptive raise in pull().
-            const std::size_t cap_frames = m_ring.capacity() / m_cfg.channels;
-            const std::size_t taps       = m_bank.taps();
-            m_max_target_frames =
-                std::max(m_cfg.target_latency_frames,
-                         std::min((cap_frames - 1) / 3,
-                                  cap_frames > taps + 1 ? (cap_frames - taps - 1) / 2 : m_cfg.target_latency_frames));
-            m_effective_target.store(static_cast<std::uint32_t>(m_target_frames), std::memory_order_relaxed);
-        }
+    template <sample_type S, std::size_t Ch>
+    class basic_converter : public converter_base<S> {
+        static_assert(Ch >= 1, "tap::sr::async: a converter's channel count is at least 1");
+        using base = converter_base<S>;
 
-        basic_converter(const basic_converter&)            = delete;
-        basic_converter& operator=(const basic_converter&) = delete;
+      public:
+        /// The channel count, the type's (A13).
+        static constexpr std::size_t channels() noexcept { return Ch; }
+
+        // ANCHOR: p0_validate
+        /// The reason a converter of this type cannot be built from `cfg`, or
+        /// nullptr when it can: the family's error model. noexcept and
+        /// allocation-free, and it states every rejection the constructor makes
+        /// other than a refused allocation — NaN/Inf anywhere (a NaN sample rate
+        /// designs an all-NaN coefficient table), band edges whose sum exceeds
+        /// the rate (anti-image cutoff above input Nyquist passes images
+        /// wholesale), a bank the designer rejects (fewer than 4 taps per phase,
+        /// 8 with image_zeros, fewer than 2 phases, a stopband edge at or below
+        /// the passband's or above the rate), a deviation clamp large enough to
+        /// overflow the Q0.64 eps conversion (UB), size products at this channel
+        /// count that overflow 32-bit size_t targets, and a FIFO too small for
+        /// its high-water mark. The constructor runs the same check and rejects
+        /// with the same text (std::invalid_argument through tap::dsp::raise), so
+        /// a build with exceptions may construct and catch; a build without them
+        /// (-fno-exceptions, where the rejection terminates) calls this first and
+        /// constructs only on nullptr. The checks need the count (the size
+        /// products, the FIFO's capacity in frames), so the precheck is the
+        /// converter type's rather than the config's (A13's K4).
+        static const char* validate(const config& cfg) noexcept { return detail::config_rejection(cfg, Ch); }
+        // ANCHOR_END: p0_validate
+
+        /// Validates, designs the bank and allocates every buffer; setup time
+        /// only. Rejects what validate() rejects, with its text.
+        explicit basic_converter(const config& cfg)
+            : base(cfg, Ch)
+            , m_resampler(m_bank, k_pop_chunk_frames) {}
 
         /// Producer thread: offer `frames` interleaved input frames at the input
         /// clock. Returns frames accepted; fewer than `frames` means the FIFO was
         /// full (newest data dropped, overrun counted).
         std::size_t push(const S* interleaved, std::size_t frames) noexcept {
-            const std::size_t accept_frames = std::min(frames, m_ring.write_available() / m_cfg.channels);
-            m_ring.write(interleaved, accept_frames * m_cfg.channels);
+            const std::size_t accept_frames = std::min(frames, m_ring.write_available() / Ch);
+            m_ring.write(interleaved, accept_frames * Ch);
             if (accept_frames < frames) {
                 m_overruns.fetch_add(1, std::memory_order_relaxed);
             }
@@ -179,9 +327,9 @@ namespace tap::sr::async {
         /// moment they occur.) Returns the number of frames synthesized from
         /// real input.
         std::size_t pull(S* interleaved, std::size_t frames) noexcept {
-            const std::size_t ch     = m_cfg.channels;
-            const auto        pop_fn = [this](S* dst, std::size_t max_frames) noexcept {
-                return m_ring.read(dst, max_frames * m_cfg.channels) / m_cfg.channels;
+            constexpr std::size_t ch     = Ch;
+            const auto            pop_fn = [this](S* dst, std::size_t max_frames) noexcept {
+                return m_ring.read(dst, max_frames * Ch) / Ch;
             };
 
             // ANCHOR: asrc_feasibility
@@ -266,65 +414,39 @@ namespace tap::sr::async {
             return made;
             // ANCHOR_END: asrc_underrun
         }
-
-        /// Any thread: telemetry snapshot (relaxed atomics; fields are individually
-        /// coherent, not mutually).
-        converter_status status() const noexcept {
-            converter_status s;
-            s.state                           = static_cast<converter_state>(m_state.load(std::memory_order_relaxed));
-            s.ppm                             = m_ppm.load(std::memory_order_relaxed);
-            s.ratio_estimate                  = 1.0 + s.ppm * 1e-6;
-            s.fifo_fill_frames                = m_fill.load(std::memory_order_relaxed);
-            s.underruns                       = m_underruns.load(std::memory_order_relaxed);
-            s.overruns                        = m_overruns.load(std::memory_order_relaxed);
-            s.resyncs                         = m_resyncs.load(std::memory_order_relaxed);
-            s.effective_target_latency_frames = m_effective_target.load(std::memory_order_relaxed);
-            return s;
-        }
-
         /// Consumer thread: full restart — discard all buffered input, forget the
         /// ppm estimate, return to Filling.
         void reset_from_consumer() noexcept {
-            m_ring.discard(m_ring.read_available());
             m_resampler.reset();
-            m_servo.reset(false);
-            m_filling = true;
-            publish_status();
+            base::restart();
         }
-
-        /// Nominal design latency: FIFO setpoint + filter group delay. Uses the
-        /// effective (possibly adaptively raised) setpoint; the actual figure
-        /// breathes by a fraction of a frame as the servo tracks drift.
-        double designed_latency_seconds() const noexcept {
-            return (static_cast<double>(m_effective_target.load(std::memory_order_relaxed))
-                    + m_bank.group_delay_samples())
-                   / m_cfg.sample_rate_hz;
-        }
-
-        const polyphase_filter_bank<S>& filter_bank() const noexcept { return m_bank; }
 
       private:
-        static constexpr std::size_t k_pop_chunk_frames = 16;
+        using base::fill_silence;
+        using base::k_fade_frames;
+        using base::k_pop_chunk_frames;
+        using base::m_bank;
+        using base::m_cfg;
+        using base::m_effective_target;
+        using base::m_fade_frames_left;
+        using base::m_fill_threshold_frames;
+        using base::m_filling;
+        using base::m_high_water_frames;
+        using base::m_max_target_frames;
+        using base::m_observed_max_pull;
+        using base::m_overruns;
+        using base::m_resyncs;
+        using base::m_ring;
+        using base::m_servo;
+        using base::m_target_frames;
+        using base::m_underruns;
+        using base::publish_status;
+        using base::scale_sample;
 
         /// Effective backlog: FIFO occupancy plus frames staged in the resampler's
         /// pop scratch (already off the ring but not yet through the filter).
         double backlog_frames() noexcept {
-            return static_cast<double>(m_ring.read_available() / m_cfg.channels + m_resampler.buffered_frames());
-        }
-
-        void fill_silence(S* dst, std::size_t count) noexcept {
-            for (std::size_t i = 0; i < count; ++i) {
-                dst[i] = sample_traits<S>::silence();
-            }
-        }
-
-        static S scale_sample(S x, double g) noexcept {
-            if constexpr (std::is_floating_point_v<S>) {
-                return static_cast<S>(static_cast<double>(x) * g);
-            }
-            else {
-                return detail::round_sat<S>(static_cast<double>(x) * g);
-            }
+            return static_cast<double>(m_ring.read_available() / Ch + m_resampler.buffered_frames());
         }
 
         /// Linear gain ramp over the first kFadeFrames frames after a (re)fill.
@@ -335,76 +457,28 @@ namespace tap::sr::async {
             const std::size_t done = k_fade_frames - m_fade_frames_left;
             for (std::size_t f = 0; f < n; ++f) {
                 const double g = static_cast<double>(done + f + 1) / static_cast<double>(k_fade_frames);
-                for (std::size_t c = 0; c < m_cfg.channels; ++c) {
-                    S& x = interleaved[f * m_cfg.channels + c];
+                for (std::size_t c = 0; c < Ch; ++c) {
+                    S& x = interleaved[f * Ch + c];
                     x    = scale_sample(x, g);
                 }
             }
             m_fade_frames_left -= n;
         }
 
-        void publish_status() noexcept {
-            const converter_state st = m_filling          ? converter_state::filling
-                                       : m_servo.locked() ? converter_state::locked
-                                                          : converter_state::acquiring;
-            m_state.store(static_cast<int>(st), std::memory_order_relaxed);
-            m_ppm.store(static_cast<float>(m_servo.eps_hat() * 1e6), std::memory_order_relaxed);
-            m_fill.store(static_cast<float>(m_servo.smoothed_occupancy()), std::memory_order_relaxed);
-        }
-
-        /// The constructor's rejection: config::validate's reason, raised as
-        /// std::invalid_argument (a build without exceptions terminates here,
-        /// tap::dsp::raise; such a build calls config::validate first).
-        static config validated(config cfg) {
-            if (const char* why = config::validate(cfg)) {
-                tap::dsp::raise<std::invalid_argument>(why);
-            }
-            return cfg;
-        }
-
-        static constexpr std::size_t k_fade_frames = 64;
-
-        config                   m_cfg;
-        polyphase_filter_bank<S> m_bank;
-        fractional_resampler<S>  m_resampler;
-        spsc_ring<S>             m_ring;
-        pi_servo                 m_servo;
-        // Consumer-thread setpoint state (see the adaptive raise in pull()).
-        std::size_t m_target_frames;
-        std::size_t m_fill_threshold_frames;
-        std::size_t m_high_water_frames;
-        std::size_t m_max_target_frames = 0;
-        std::size_t m_observed_max_pull = 0;
-        bool        m_filling           = true; // consumer-thread state; mirrored into state_
-        std::size_t m_fade_frames_left  = 0;    // consumer-thread state
-
-        // Telemetry is 32-bit on purpose: 64-bit atomics fall back to lock-based
-        // libatomic on 32-bit targets (e.g. Hexagon), which would break the
-        // lock-free contract of the hot path. float carries ~7 significant
-        // digits — ample for ppm/fill observability; counters wrap at 2^32.
-        std::atomic<int>   m_state{static_cast<int>(converter_state::filling)};
-        std::atomic<float> m_ppm{0.0f};
-        std::atomic<float> m_fill{0.0f};
-        // Effective setpoint mirror for status()/designedLatencySeconds() from
-        // any thread; written only by the consumer (32-bit: lock-free everywhere).
-        std::atomic<std::uint32_t> m_effective_target{0};
-        std::atomic<std::uint32_t> m_underruns{0};
-        std::atomic<std::uint32_t> m_overruns{0};
-        std::atomic<std::uint32_t> m_resyncs{0};
-
-        static_assert(std::atomic<int>::is_always_lock_free && std::atomic<float>::is_always_lock_free
-                          && std::atomic<std::uint32_t>::is_always_lock_free,
-                      "telemetry atomics must be lock-free for the RT contract");
+        fractional_resampler<S, Ch> m_resampler;
     };
 
-    /// The float converter.
-    using converter = basic_converter<float>;
+    /// The float converter at Ch channels.
+    template <std::size_t Ch>
+    using converter = basic_converter<float, Ch>;
     /// Q15 fixed-point converter (int16_t samples; see sample_traits<int16_t>).
-    using converter_q15 = basic_converter<std::int16_t>;
+    template <std::size_t Ch>
+    using converter_q15 = basic_converter<std::int16_t, Ch>;
     /// Q31 fixed-point converter (int32_t samples; see sample_traits<int32_t>).
-    using converter_q31 = basic_converter<std::int32_t>;
+    template <std::size_t Ch>
+    using converter_q31 = basic_converter<std::int32_t, Ch>;
 
-    inline std::size_t detail::ring_capacity_elems(const config& cfg, std::size_t taps) noexcept {
+    inline std::size_t detail::ring_capacity_elems(const config& cfg, std::size_t taps, std::size_t channels) noexcept {
         const std::size_t fill_threshold = cfg.target_latency_frames + taps;
         // The 1024-frame floor (21 ms at 48 kHz) leaves the adaptive
         // setpoint raise enough capacity for pull blocks up to ~340 frames
@@ -412,13 +486,12 @@ namespace tap::sr::async {
         // fifoFrames set by the caller (the raise clamps to capacity).
         const std::size_t frames =
             cfg.fifo_frames != 0 ? cfg.fifo_frames : std::max<std::size_t>(1024, 4 * fill_threshold);
-        return std::bit_ceil(frames * cfg.channels);
+        return std::bit_ceil(frames * channels);
     }
 
-    inline const char* config::validate(const config& cfg) noexcept {
+    inline const char* detail::config_rejection(const config& cfg, std::size_t channels) noexcept {
         const auto finite = [](double v) { return std::isfinite(v); };
-        if (cfg.channels == 0 || cfg.target_latency_frames == 0 || !finite(cfg.sample_rate_hz)
-            || cfg.sample_rate_hz <= 0.0) {
+        if (cfg.target_latency_frames == 0 || !finite(cfg.sample_rate_hz) || cfg.sample_rate_hz <= 0.0) {
             return "tap::sr::async::converter: bad Config";
         }
         const filter_spec& f = cfg.filter;
@@ -452,9 +525,8 @@ namespace tap::sr::async {
         const auto mul_ok = [](std::size_t a, std::size_t b) {
             return b == 0 || a <= std::numeric_limits<std::size_t>::max() / b;
         };
-        if (!mul_ok(phases + 1, f.taps_per_phase)
-            || !mul_ok(cfg.target_latency_frames + f.taps_per_phase, 8 * cfg.channels)
-            || !mul_ok(cfg.fifo_frames, 2 * cfg.channels)) {
+        if (!mul_ok(phases + 1, f.taps_per_phase) || !mul_ok(cfg.target_latency_frames + f.taps_per_phase, 8 * channels)
+            || !mul_ok(cfg.fifo_frames, 2 * channels)) {
             return "tap::sr::async::converter: Config sizes overflow";
         }
         // The FIFO must hold more than its high-water mark (the constructor's
@@ -463,7 +535,7 @@ namespace tap::sr::async {
         const std::size_t fill_threshold = cfg.target_latency_frames + taps;
         const std::size_t high_water =
             std::max(3 * cfg.target_latency_frames, fill_threshold + cfg.target_latency_frames);
-        if (detail::ring_capacity_elems(cfg, taps) / cfg.channels <= high_water) {
+        if (detail::ring_capacity_elems(cfg, taps, channels) / channels <= high_water) {
             return "tap::sr::async::converter: fifoFrames too small";
         }
         return nullptr;
