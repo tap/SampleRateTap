@@ -237,7 +237,7 @@ Negative results are worth exactly what you write down about them.
 
 For months the Hexagon leg was the quiet one. Then a hardening PR added
 the library's first `EXPECT_THROW` tests — constructor validation,
-`config::validated()` throwing on nonsense configurations — and the
+the converter throwing on nonsense configurations — and the
 Hexagon leg turned red in a way no other platform did. The constructor
 throws correctly. The `EXPECT_THROW` machinery is standing by to catch.
 And the exception never arrives: **this static-musl toolchain

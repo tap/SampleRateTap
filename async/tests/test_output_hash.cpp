@@ -95,10 +95,10 @@ namespace {
 
     template <class S>
     void hash_one(const char* profile_name, const tap::sr::async::filter_spec& spec, double ppm) {
-        const tap::sr::async::polyphase_filter_bank<S> bank(spec, k_fs);
-        tap::sr::async::fractional_resampler<S>        rs(bank, k_channels);
-        const std::vector<S>                           x   = multitone<S>();
-        std::size_t                                    fed = 0;
+        const tap::sr::async::polyphase_filter_bank<S>      bank(spec, k_fs);
+        tap::sr::async::fractional_resampler<S, k_channels> rs(bank);
+        const std::vector<S>                                x   = multitone<S>();
+        std::size_t                                         fed = 0;
         auto pop = [&](S* dst, std::size_t max_frames) noexcept -> std::size_t {
             std::size_t n = 0;
             for (; n < max_frames && fed < k_in_frames; ++n, ++fed) {

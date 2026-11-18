@@ -72,16 +72,26 @@ compiler executes.
 
 The datapath comes in three sample types — `float`, Q15 `int16_t`, Q31
 `int32_t` — and the axis is expressed as a template parameter constrained
-by a concept:
+by a concept; since 0.7.0 the channel count is a second one, a
+compile-time constant of at least 1 (the family's A13, below):
 
 ```cpp
-template <sample_type S>
-class basic_converter { ... };
+template <sample_type S, std::size_t Ch>
+class basic_converter : public converter_base<S> { ... };
 
-using converter    = basic_converter<float>;
-using converter_q15 = basic_converter<std::int16_t>;
-using converter_q31 = basic_converter<std::int32_t>;
+template <std::size_t Ch> using converter     = basic_converter<float, Ch>;
+template <std::size_t Ch> using converter_q15 = basic_converter<std::int16_t, Ch>;
+template <std::size_t Ch> using converter_q31 = basic_converter<std::int32_t, Ch>;
 ```
+
+The count followed the sample type into the type for the same reason the
+sample type is there: it is fixed when the code is written. With it a
+constant, the mono branch, the history layout and every division by the
+count are decided at compile time, and a converter compiles only its own
+shape; the count-independent half (the bank, ring, servo and their
+construction) is `converter_base<S>`, built once per format whatever counts
+a program instantiates. A program that learns its count at run time
+switches over the counts it serves (`examples/alsa_bridge.cpp`).
 
 The first rejected alternative is virtual dispatch: an abstract
 `ISampleOps` with `mac()`, `blend()`, `finalize()` virtuals. That dies on
@@ -599,7 +609,8 @@ one format per handle, chosen at `create` — behind an opaque
 `tap_sr_async_converter*`. The pattern is textbook, but two details record
 decisions. First, the handle is a declared-but-never-defined struct, and
 the conversion is a `reinterpret_cast` in a pair of helpers (to the small
-engine interface over the three `basic_converter<S>` instantiations):
+engine interface over the `basic_converter<S, Ch>` instantiations it
+serves, three formats at one and two channels):
 
 ```cpp
 extern "C" { struct tap_sr_async_converter; } // opaque

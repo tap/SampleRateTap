@@ -43,11 +43,10 @@ namespace {
     // from Config::forSampleRate (filter band edges, servo bandwidths and
     // hold times).
     double measure_snr_db16k(double freq_hz) {
-        tap::sr::async::config cfg = tap::sr::async::config::for_sample_rate(k_fs);
-        cfg.channels               = 1;
-        tap::sr::async::converter asrc(cfg);
-        async_test::two_clock_sim sim{
-            .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .channels = 1, .chunk_in = 1, .chunk_out = 1};
+        tap::sr::async::config       cfg = tap::sr::async::config::for_sample_rate(k_fs);
+        tap::sr::async::converter<1> asrc(cfg);
+        async_test::two_clock_sim<1> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .chunk_in = 1, .chunk_out = 1};
         const double nu_in = freq_hz / k_fs;
         sim.gen            = [&](std::uint64_t i) {
             return static_cast<float>(k_amp * std::sin(2.0 * std::numbers::pi * nu_in * static_cast<double>(i)));

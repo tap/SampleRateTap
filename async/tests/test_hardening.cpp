@@ -33,7 +33,6 @@ namespace {
     // zero underruns and report the raise.
     void run_feasibility(std::size_t pull_block) {
         tap::sr::async::config cfg;
-        cfg.channels = 1;
         // Lock-stage promotion gates compare smoothed occupancy error against
         // frame thresholds; with very coarse blocks the block-quantization
         // sawtooth dwarfs the 1-frame default and Acquire->Track never
@@ -44,13 +43,9 @@ namespace {
             cfg.servo.lock_threshold_frames   = static_cast<double>(pull_block) / 8.0;
             cfg.servo.unlock_threshold_frames = static_cast<double>(pull_block) * 1.5;
         }
-        tap::sr::async::converter asrc(cfg);
-        async_test::two_clock_sim sim{.asrc      = asrc,
-                                      .fs_in     = k_fs * (1.0 + 200e-6),
-                                      .fs_out    = k_fs,
-                                      .channels  = 1,
-                                      .chunk_in  = 32,
-                                      .chunk_out = pull_block};
+        tap::sr::async::converter<1> asrc(cfg);
+        async_test::two_clock_sim<1> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .chunk_in = 32, .chunk_out = pull_block};
         sim.gen = [](std::uint64_t i) { return static_cast<float>(0.5 * std::sin(0.13 * static_cast<double>(i))); };
         // Coarse blocks keep the servo in Track, where instantaneous ppm swings
         // with the block-beat FM — average it, as the 48 kHz lock test does.
@@ -80,10 +75,9 @@ namespace {
     }
 
     TEST(Feasibility, SmallPullsKeepConfiguredSetpoint) {
-        tap::sr::async::config cfg;
-        cfg.channels = 1;
-        tap::sr::async::converter asrc(cfg);
-        async_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
+        tap::sr::async::config       cfg;
+        tap::sr::async::converter<1> asrc(cfg);
+        async_test::two_clock_sim<1> sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs};
         sim.run(5.0, [](const float*, std::size_t, double) {});
         // 32-frame pulls against the 48-frame default were always feasible;
         // the adaptation must not inflate latency for them.
@@ -96,43 +90,70 @@ namespace {
         {
             tap::sr::async::config c;
             c.sample_rate_hz = std::numeric_limits<double>::quiet_NaN();
-            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter<2>{c}, std::invalid_argument);
         }
         {
             tap::sr::async::config c; // anti-image cutoff above input Nyquist
             c.filter.passband_hz = 23000.0;
             c.filter.stopband_hz = 47000.0;
-            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter<2>{c}, std::invalid_argument);
         }
         {
             tap::sr::async::config c; // eps * 2^64 would overflow int64 in the phase path
             c.servo.max_deviation_ppm = 400000.0;
-            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter<2>{c}, std::invalid_argument);
         }
         {
             tap::sr::async::config c;
             c.servo.quiet_bandwidth_hz = std::numeric_limits<double>::infinity();
-            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter<2>{c}, std::invalid_argument);
         }
         {
             tap::sr::async::config c;
             c.fifo_frames = 64; // below the high-watermark capacity requirement
-            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter{c}, std::invalid_argument);
+            TAP_SR_EXPECT_REJECTED(tap::sr::async::converter<2>{c}, std::invalid_argument);
         }
         // The rate-scaling factory sits exactly on the band-edge sum boundary
         // (passband + stopband == fs up to rounding); it must keep constructing.
-        TAP_SR_EXPECT_ACCEPTED(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(16000.0)});
-        TAP_SR_EXPECT_ACCEPTED(tap::sr::async::converter{tap::sr::async::config::for_sample_rate(44100.0)});
+        TAP_SR_EXPECT_ACCEPTED(tap::sr::async::converter<2>{tap::sr::async::config::for_sample_rate(16000.0)});
+        TAP_SR_EXPECT_ACCEPTED(tap::sr::async::converter<2>{tap::sr::async::config::for_sample_rate(44100.0)});
     }
 
-    // The family's error model (A3): config::validate is the constructor's
-    // rejection as a noexcept precheck — nullptr exactly where the converter
-    // constructs, and otherwise the text the constructor's exception carries.
-    // A build without exceptions calls it first; this build checks that the
-    // two agree on every rejection the constructor makes.
+    // The family's error model (A3): basic_converter<S, Ch>::validate is the
+    // constructor's rejection as a noexcept precheck — nullptr exactly where the
+    // converter constructs, and otherwise the text the constructor's exception
+    // carries. A build without exceptions calls it first; this build checks
+    // that the two agree on every rejection the constructor makes, at three
+    // channel counts (the count is the type's since A13, and the checks that
+    // need it, the size products and the FIFO's capacity in frames, run at it;
+    // zero channels fails to compile,
+    // async.Converter.ZeroChannelsFailToCompileWithTheMessage).
     namespace validate_support {
         std::string reason(const char* why) {
             return why == nullptr ? std::string{} : std::string{why};
+        }
+
+        template <std::size_t Ch>
+        std::size_t rejections(const std::vector<tap::sr::async::config>& cases) {
+            using float_converter = tap::sr::async::basic_converter<float, Ch>;
+            using q15_converter   = tap::sr::async::basic_converter<std::int16_t, Ch>;
+            std::size_t rejected  = 0;
+            for (std::size_t i = 0; i < cases.size(); ++i) {
+                const std::string by_validate = reason(float_converter::validate(cases[i]));
+                SCOPED_TRACE("case " + std::to_string(i) + " at " + std::to_string(Ch) + " channels");
+                EXPECT_EQ(reason(q15_converter::validate(cases[i])), by_validate) << "the format is not checked";
+                if (by_validate.empty()) {
+                    TAP_SR_EXPECT_ACCEPTED(float_converter{cases[i]});
+                    TAP_SR_EXPECT_ACCEPTED(q15_converter{cases[i]});
+                }
+                else {
+                    TAP_SR_EXPECT_REJECTED_WITH(float_converter{cases[i]}, std::invalid_argument, by_validate.c_str());
+                    TAP_SR_EXPECT_REJECTED_WITH(q15_converter{cases[i]}, std::invalid_argument, by_validate.c_str());
+                }
+                rejected += by_validate.empty() ? 0 : 1;
+            }
+            static_assert(noexcept(float_converter::validate(std::declval<const tap::sr::async::config&>())));
+            return rejected;
         }
     } // namespace validate_support
 
@@ -153,16 +174,8 @@ namespace {
             c.filter = tap::sr::async::filter_spec::program();
             cases.push_back(c);
         }
-        for (std::size_t ch : {std::size_t{1}, std::size_t{2}, std::size_t{8}}) {
-            config c   = config{};
-            c.channels = ch;
-            cases.push_back(c);
-        }
         {
             config c; // bad Config
-            c.channels = 0;
-            cases.push_back(c);
-            c                       = config{};
             c.target_latency_frames = 0;
             cases.push_back(c);
             c                = config{};
@@ -220,24 +233,10 @@ namespace {
             c.fifo_frames = 1; // the smallest explicit ring
             cases.push_back(c);
         }
-        std::size_t rejected = 0;
-        for (std::size_t i = 0; i < cases.size(); ++i) {
-            const std::string by_validate = reason(config::validate(cases[i]));
-            SCOPED_TRACE("case " + std::to_string(i));
-            if (by_validate.empty()) {
-                TAP_SR_EXPECT_ACCEPTED(tap::sr::async::basic_converter<float>{cases[i]});
-                TAP_SR_EXPECT_ACCEPTED(tap::sr::async::basic_converter<std::int16_t>{cases[i]});
-            }
-            else {
-                TAP_SR_EXPECT_REJECTED_WITH(tap::sr::async::basic_converter<float>{cases[i]}, std::invalid_argument,
-                                            by_validate.c_str());
-                TAP_SR_EXPECT_REJECTED_WITH(tap::sr::async::basic_converter<std::int16_t>{cases[i]},
-                                            std::invalid_argument, by_validate.c_str());
-            }
-            rejected += by_validate.empty() ? 0 : 1;
-        }
-        EXPECT_EQ(rejected, 16u) << "every rejection family is exercised";
-        static_assert(noexcept(config::validate(std::declval<const config&>())));
+        // Every rejection family is exercised, at each count.
+        EXPECT_EQ(rejections<1>(cases), 15u);
+        EXPECT_EQ(rejections<2>(cases), 15u);
+        EXPECT_EQ(rejections<8>(cases), 15u);
     }
 
     // Audit finding F3: with a setpoint below the resampler's staged-scratch
@@ -245,11 +244,10 @@ namespace {
     // cascade straight back into Filling.
     TEST(Resync, SmallSetpointRecovers) {
         tap::sr::async::config cfg;
-        cfg.channels              = 1;
         cfg.target_latency_frames = 4;
-        tap::sr::async::converter asrc(cfg);
-        std::vector<float>        in(32, 0.25f);
-        std::vector<float>        out(64);
+        tap::sr::async::converter<1> asrc(cfg);
+        std::vector<float>           in(32, 0.25f);
+        std::vector<float>           out(64);
         for (int i = 0; i < 8; ++i) { // reach steady operation
             asrc.push(in.data(), 32), asrc.pull(out.data(), 32);
         }
@@ -267,25 +265,23 @@ namespace {
     }
 
     TEST(Reset, ConsumerResetRelocks) {
-        tap::sr::async::config cfg;
-        cfg.channels = 1;
-        tap::sr::async::converter asrc(cfg);
-        async_test::two_clock_sim sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
+        tap::sr::async::config       cfg;
+        tap::sr::async::converter<1> asrc(cfg);
+        async_test::two_clock_sim<1> sim{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs};
         sim.run(5.0, [](const float*, std::size_t, double) {});
         ASSERT_EQ(asrc.status().state, tap::sr::async::converter_state::locked);
         asrc.reset_from_consumer();
         EXPECT_EQ(asrc.status().state, tap::sr::async::converter_state::filling);
-        async_test::two_clock_sim sim2{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1};
+        async_test::two_clock_sim<1> sim2{.asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs};
         sim2.run(5.0, [](const float*, std::size_t, double) {});
         EXPECT_EQ(asrc.status().state, tap::sr::async::converter_state::locked);
     }
 
     TEST(EdgeCalls, ZeroLengthAndOversized) {
-        tap::sr::async::config cfg;
-        cfg.channels = 2;
-        tap::sr::async::converter asrc(cfg);
-        std::vector<float>        in(2 * 4096, 0.1f);
-        std::vector<float>        out(2 * 8192);
+        tap::sr::async::config       cfg;
+        tap::sr::async::converter<2> asrc(cfg);
+        std::vector<float>           in(2 * 4096, 0.1f);
+        std::vector<float>           out(2 * 8192);
         EXPECT_EQ(asrc.push(in.data(), 0), 0u);
         EXPECT_EQ(asrc.pull(out.data(), 0), 0u);
         for (int i = 0; i < 64; ++i) {
@@ -303,12 +299,11 @@ namespace {
     // Fixed-point fade-in: test_fade.cpp covers float only; the Q15 scaleSample
     // branch (round-and-saturate) was untested.
     TEST(FadeQ15, OutputRampsAfterFill) {
-        tap::sr::async::config cfg;
-        cfg.channels = 1;
-        tap::sr::async::converter_q15 asrc(cfg);
-        std::vector<std::int16_t>     in(32, 16384);
-        std::vector<std::int16_t>     out(32);
-        std::vector<std::int16_t>     made;
+        tap::sr::async::config           cfg;
+        tap::sr::async::converter_q15<1> asrc(cfg);
+        std::vector<std::int16_t>        in(32, 16384);
+        std::vector<std::int16_t>        out(32);
+        std::vector<std::int16_t>        made;
         for (int it = 0; it < 400 && made.size() < 200; ++it) {
             asrc.push(in.data(), in.size());
             const std::size_t n = asrc.pull(out.data(), out.size());
@@ -328,11 +323,10 @@ namespace {
     // suites and the Hexagon leg, whose exclusion filters keep out every long
     // quality suite — leaving those targets without any on-target SNR check).
     TEST(QuickQuality, Q15Tone997) {
-        tap::sr::async::config cfg;
-        cfg.channels = 1;
-        tap::sr::async::converter_q15             asrc(cfg);
-        async_test::two_clock_sim_t<std::int16_t> sim{
-            .asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
+        tap::sr::async::config                       cfg;
+        tap::sr::async::converter_q15<1>             asrc(cfg);
+        async_test::two_clock_sim_t<std::int16_t, 1> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 200e-6), .fs_out = k_fs, .chunk_in = 8, .chunk_out = 8};
         const double nu = 997.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
             return tap::sr::async::detail::round_sat<std::int16_t>(
@@ -359,11 +353,10 @@ namespace {
         // 1 s near-full-scale variant of FixedPoint.FullScaleSineDoesNotWrapQ15,
         // sized for emulation and named so the bare-metal filter keeps it: the
         // wide-MAC (SMLALD) target previously never saw near-full-scale input.
-        tap::sr::async::config cfg;
-        cfg.channels = 1;
-        tap::sr::async::converter_q15             asrc(cfg);
-        async_test::two_clock_sim_t<std::int16_t> sim{
-            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .channels = 1, .chunk_in = 8, .chunk_out = 8};
+        tap::sr::async::config                       cfg;
+        tap::sr::async::converter_q15<1>             asrc(cfg);
+        async_test::two_clock_sim_t<std::int16_t, 1> sim{
+            .asrc = asrc, .fs_in = k_fs * (1.0 + 500e-6), .fs_out = k_fs, .chunk_in = 8, .chunk_out = 8};
         const double nu = 1000.0 / k_fs;
         sim.gen         = [&](std::uint64_t i) {
             return tap::sr::async::detail::round_sat<std::int16_t>(

@@ -26,6 +26,9 @@
 namespace trace_api {
     using config    = srt::Config;
     using converter = srt::AsyncSampleRateConverter;
+    inline void mono(config& c) {
+        c.channels = 1;
+    }
     inline double rate(const config& c) {
         return c.sampleRateHz;
     }
@@ -38,7 +41,8 @@ namespace trace_api {
 #include <tap/sr/async/converter.h>
 namespace trace_api {
     using config    = tap::sr::async::config;
-    using converter = tap::sr::async::converter;
+    using converter = tap::sr::async::converter<1>; // the count is the type's since 0.7.0
+    inline void   mono(config&) {}
     inline double rate(const config& c) {
         return c.sample_rate_hz;
     }
@@ -62,7 +66,7 @@ int main(int argc, char** argv) {
     const double      dropDur   = argc > 6 ? std::atof(argv[6]) : 0.0;
 
     trace_api::config cfg;
-    cfg.channels = 1;
+    trace_api::mono(cfg);
     trace_api::converter conv(cfg);
 
     const double       fsOut = trace_api::rate(cfg);

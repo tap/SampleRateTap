@@ -248,9 +248,13 @@ routes mono through blend + dot too, because the dual-MAC loop lives in
 makes that rerouting a non-event). Low channel counts blend once into
 `row_` and dot per channel over planar histories — the C1 shape. High
 channel counts on hosts take the frame-major branch, which is the next
-section but one. Note the branch condition `k_channel_parallel &&
-frameMajor_`: the first operand is `constexpr`, so on embedded targets
-the entire branch constant-folds away. That is not tidiness — a runtime
+section but one. Note the branch conditions: since 0.7.0 the channel
+count is the resampler's type (the family's A13), so `Ch == 1` and
+`k_frame_major` are both constants and each instantiation compiles only
+its own branch. Before that the frame-major flag was a run-time member,
+and the branch read `k_channel_parallel && frameMajor_`, whose first
+operand, `constexpr`, folded it away on embedded targets. That is not
+tidiness — a runtime
 flag in this loop measured **+6–8%** on the M55 instruction ratchet
 before the compile-time gate restored every embedded scenario to exactly
 0.00%. The ratchet is why the lesson is a number and not an anecdote.
@@ -414,6 +418,7 @@ reads is honest to sub-sample resolution.
 | Chunked pop_fn staging | pop one frame at a time | amortizes ring synchronization; staged frames stay visible to the servo via `buffered_frames()` |
 | Frame-major + channel-parallel dots (float, ≥4ch, hosts) | vectorize the float tap axis | tap-axis SIMD changes accumulation order = output bits; the channel axis is free and bit-exact (−38…−42% at 8–16ch) |
 | Compile-time mode gate | runtime `if (frameMajor_)` alone | a hot-loop runtime flag cost +6–8% M55 instructions; `constexpr` restored embedded codegen to 0.00% |
+| The channel count as a template parameter (since 0.7.0) | a run-time count in the config | the mono branch, the history layout and the divisions by the count become constants; the histories an array in the object; each count compiled only where a program uses it (the family's A13) |
 | Documented preconditions + `reset()` | internal auto-repair of dry slips | the failure needs a reprime anyway (stale window); a repair path would be untestable dead weight on the hot path |
 
 ## Verify it yourself

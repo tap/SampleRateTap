@@ -143,7 +143,8 @@ namespace {
                     "  --in <dev>       ALSA capture device, hw: only (e.g. hw:1,0); required\n"
                     "  --out <dev>      ALSA playback device, hw: only (e.g. hw:2,0); required\n"
                     "  --rate <hz>      nominal sample rate of both devices (default 48000)\n"
-                    "  --channels <n>   channel count (default 2)\n"
+                    "  --channels <n>   channel count: 1, 2, 4, 6 or 8 (default 2); the converter's\n"
+                    "                   count is its type, so this bridge compiles those five\n"
                     "  --period <n>     frames per ALSA period (default 128)\n"
                     "  --latency <n>    converter target_latency_frames (default 96)\n"
                     "  --csv <path>     write per-second telemetry CSV (alsa_bridge_report.py)\n"
@@ -369,6 +370,201 @@ namespace {
         }
     }
 
+    /// The counts this bridge compiles a converter for (--channels).
+    bool served_channel_count(unsigned channels) {
+        return channels == 1 || channels == 2 || channels == 4 || channels == 6 || channels == 8;
+    }
+
+    /// The bridge at Ch channels: the converter, the capture and playback
+    /// threads and the telemetry loop, once the devices are open.
+    template <std::size_t Ch>
+    int run_bridge(const cli_args& args, alsa_device& in, alsa_device& out) {
+        tap::sr::async::config cfg;
+        cfg.sample_rate_hz        = static_cast<double>(args.rate);
+        cfg.target_latency_frames = args.latency;
+        // Per the servo_config guidance: the unlock threshold must sit
+        // comfortably above half the transfer block, or block-quantized
+        // occupancy excursions can demote the servo stage spuriously.
+        cfg.servo.unlock_threshold_frames =
+            std::max(cfg.servo.unlock_threshold_frames, 1.5 * static_cast<double>(args.period));
+        tap::sr::async::converter<Ch> asrc(cfg);
+        std::printf("designed latency: %.2f ms%s\n", asrc.designed_latency_seconds() * 1e3,
+                    args.tone_hz > 0.0 ? "  (tone mode: captured samples discarded)" : "");
+
+        std::FILE* csv = nullptr;
+        if (args.csv_path != nullptr) {
+            csv = std::fopen(args.csv_path, "w");
+            if (csv == nullptr) {
+                std::fprintf(stderr, "cannot open CSV file '%s'\n", args.csv_path);
+                return 1;
+            }
+            std::fprintf(csv, "time_s,state,ppm,fill,underruns,overruns,resyncs,mono_raw_ns,in_frames,out_frames,"
+                              "in_xruns,out_xruns,in_errors,out_errors,in_hw_frames,in_hw_ns,out_hw_frames,"
+                              "out_hw_ns\n");
+        }
+        std::FILE* dump = nullptr;
+        if (args.dump_path != nullptr) {
+            dump = std::fopen(args.dump_path, "wb");
+            if (dump == nullptr) {
+                std::fprintf(stderr, "cannot open dump file '%s'\n", args.dump_path);
+                return 1;
+            }
+        }
+
+        std::signal(SIGINT, on_sigint);
+
+        std::thread capture([&] {
+            if (args.rt && !make_realtime("capture")) {
+                return;
+            }
+            constexpr std::size_t     ch     = Ch;
+            const snd_pcm_uframes_t   period = in.period_frames;
+            std::vector<std::int16_t> raw(period * ch);
+            std::vector<float>        buf(period * ch);
+            double                    phase = 0.0;
+            const double              dphi  = 2.0 * std::numbers::pi * args.tone_hz / static_cast<double>(args.rate);
+            while (!g_stop.load(std::memory_order_relaxed)) {
+                void*                   dst = in.format == SND_PCM_FORMAT_S16_LE ? static_cast<void*>(raw.data())
+                                                                                 : static_cast<void*>(buf.data());
+                const snd_pcm_sframes_t n   = snd_pcm_readi(in.pcm, dst, period);
+                if (n < 0) {
+                    (n == -EPIPE ? g_in_tel.xruns : g_in_tel.errors).fetch_add(1, std::memory_order_relaxed);
+                    if (snd_pcm_recover(in.pcm, static_cast<int>(n), 1) < 0) {
+                        std::fprintf(stderr, "capture failed: %s\n", snd_strerror(static_cast<int>(n)));
+                        g_stop.store(true, std::memory_order_relaxed);
+                        return;
+                    }
+                    continue;
+                }
+                const auto frames = static_cast<std::size_t>(n);
+                if (frames == 0) {
+                    continue;
+                }
+                g_in_tel.frames.fetch_add(frames, std::memory_order_relaxed);
+                record_hw_position(in, g_in_tel, true);
+                if (args.tone_hz > 0.0) { // tone mode: keep the device pacing, swap the payload
+                    for (std::size_t f = 0; f < frames; ++f) {
+                        const auto v = static_cast<float>(0.5 * std::sin(phase));
+                        phase += dphi;
+                        if (phase >= 2.0 * std::numbers::pi) {
+                            phase -= 2.0 * std::numbers::pi;
+                        }
+                        for (std::size_t c = 0; c < ch; ++c) {
+                            buf[f * ch + c] = v;
+                        }
+                    }
+                }
+                else if (in.format == SND_PCM_FORMAT_S16_LE) {
+                    s16_to_float(raw.data(), buf.data(), frames * ch);
+                }
+                asrc.push(buf.data(), frames); // overruns counted by the converter
+            }
+        });
+
+        std::thread playback([&] {
+            if (args.rt && !make_realtime("playback")) {
+                return;
+            }
+            constexpr std::size_t     ch     = Ch;
+            const snd_pcm_uframes_t   period = out.period_frames;
+            std::vector<float>        buf(period * ch);
+            std::vector<std::int16_t> raw(period * ch);
+            bool                      dump_failed = false;
+            while (!g_stop.load(std::memory_order_relaxed)) {
+                asrc.pull(buf.data(), period); // silence-pads while filling/underrun
+                if (dump != nullptr && !dump_failed
+                    && std::fwrite(buf.data(), sizeof(float), period * ch, dump) != period * ch) {
+                    std::fprintf(stderr, "dump write failed; disabling --dump\n");
+                    dump_failed = true;
+                }
+                if (out.format == SND_PCM_FORMAT_S16_LE) {
+                    float_to_s16(buf.data(), raw.data(), period * ch);
+                }
+                snd_pcm_uframes_t done = 0;
+                while (done < period && !g_stop.load(std::memory_order_relaxed)) {
+                    const void*             src = out.format == SND_PCM_FORMAT_S16_LE
+                                                      ? static_cast<const void*>(raw.data() + done * ch)
+                                                      : static_cast<const void*>(buf.data() + done * ch);
+                    const snd_pcm_sframes_t n   = snd_pcm_writei(out.pcm, src, period - done);
+                    if (n < 0) {
+                        (n == -EPIPE ? g_out_tel.xruns : g_out_tel.errors).fetch_add(1, std::memory_order_relaxed);
+                        if (snd_pcm_recover(out.pcm, static_cast<int>(n), 1) < 0) {
+                            std::fprintf(stderr, "playback failed: %s\n", snd_strerror(static_cast<int>(n)));
+                            g_stop.store(true, std::memory_order_relaxed);
+                            return;
+                        }
+                        continue;
+                    }
+                    done += static_cast<snd_pcm_uframes_t>(n);
+                    g_out_tel.frames.fetch_add(static_cast<std::uint64_t>(n), std::memory_order_relaxed);
+                    record_hw_position(out, g_out_tel, false);
+                }
+            }
+            snd_pcm_drain(out.pcm);
+        });
+
+        using clock   = std::chrono::steady_clock;
+        const auto t0 = clock::now();
+        for (unsigned long sec = 1; !g_stop.load(std::memory_order_relaxed); ++sec) {
+            std::this_thread::sleep_until(t0 + std::chrono::seconds(sec));
+            if (g_stop.load(std::memory_order_relaxed)) {
+                break;
+            }
+            const auto         st        = asrc.status();
+            const std::int64_t now_ns    = mono_raw_ns();
+            const auto         in_xruns  = g_in_tel.xruns.load(std::memory_order_relaxed);
+            const auto         out_xruns = g_out_tel.xruns.load(std::memory_order_relaxed);
+            std::printf("t=%6lus  state=%-9s  ppm=%+8.2f  fill=%8.1f  under=%llu over=%llu "
+                        "resync=%llu  xrun in=%llu out=%llu\n",
+                        sec, state_name(st.state), st.ppm, st.fifo_fill_frames,
+                        static_cast<unsigned long long>(st.underruns), static_cast<unsigned long long>(st.overruns),
+                        static_cast<unsigned long long>(st.resyncs), static_cast<unsigned long long>(in_xruns),
+                        static_cast<unsigned long long>(out_xruns));
+            std::fflush(stdout);
+            if (csv != nullptr) {
+                std::fprintf(csv, "%lu,%s,%.3f,%.2f,%llu,%llu,%llu,%lld,%llu,%llu,%llu,%llu,%llu,%llu", sec,
+                             state_name(st.state), st.ppm, st.fifo_fill_frames,
+                             static_cast<unsigned long long>(st.underruns),
+                             static_cast<unsigned long long>(st.overruns), static_cast<unsigned long long>(st.resyncs),
+                             static_cast<long long>(now_ns),
+                             static_cast<unsigned long long>(g_in_tel.frames.load(std::memory_order_relaxed)),
+                             static_cast<unsigned long long>(g_out_tel.frames.load(std::memory_order_relaxed)),
+                             static_cast<unsigned long long>(in_xruns), static_cast<unsigned long long>(out_xruns),
+                             static_cast<unsigned long long>(g_in_tel.errors.load(std::memory_order_relaxed)),
+                             static_cast<unsigned long long>(g_out_tel.errors.load(std::memory_order_relaxed)));
+                // The hardware pairs; empty fields where the driver gave none.
+                for (const device_telemetry* tel : {&g_in_tel, &g_out_tel}) {
+                    std::uint64_t hw_frames = 0;
+                    std::int64_t  hw_ns     = 0;
+                    if (tel->read_hw(hw_frames, hw_ns)) {
+                        std::fprintf(csv, ",%llu,%lld", static_cast<unsigned long long>(hw_frames),
+                                     static_cast<long long>(hw_ns));
+                    }
+                    else {
+                        std::fprintf(csv, ",,");
+                    }
+                }
+                std::fprintf(csv, "\n");
+                std::fflush(csv);
+            }
+            if (args.seconds != 0 && sec >= args.seconds) {
+                break;
+            }
+        }
+        g_stop.store(true, std::memory_order_relaxed);
+
+        capture.join();
+        playback.join();
+        if (csv != nullptr) {
+            std::fclose(csv);
+        }
+        if (dump != nullptr) {
+            std::fclose(dump);
+        }
+        std::printf("done.\n");
+        return g_failed.load(std::memory_order_relaxed) ? 1 : 0;
+    }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -379,6 +575,11 @@ int main(int argc, char** argv) {
     }
     if (args.channels == 0 || args.rate == 0 || args.period == 0 || args.latency == 0) {
         std::fprintf(stderr, "%s: rate/channels/period/latency must be nonzero\n", argv[0]);
+        return 2;
+    }
+    if (!served_channel_count(args.channels)) {
+        std::fprintf(stderr, "%s: --channels %u: this bridge serves 1, 2, 4, 6 or 8 channels\n", argv[0],
+                     args.channels);
         return 2;
     }
     for (const char* dev : {args.in_dev, args.out_dev}) {
@@ -404,188 +605,18 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    tap::sr::async::config cfg;
-    cfg.sample_rate_hz        = static_cast<double>(args.rate);
-    cfg.channels              = args.channels;
-    cfg.target_latency_frames = args.latency;
-    // Per the servo_config guidance: the unlock threshold must sit
-    // comfortably above half the transfer block, or block-quantized
-    // occupancy excursions can demote the servo stage spuriously.
-    cfg.servo.unlock_threshold_frames =
-        std::max(cfg.servo.unlock_threshold_frames, 1.5 * static_cast<double>(args.period));
-    tap::sr::async::converter asrc(cfg);
-    std::printf("designed latency: %.2f ms%s\n", asrc.designed_latency_seconds() * 1e3,
-                args.tone_hz > 0.0 ? "  (tone mode: captured samples discarded)" : "");
-
-    std::FILE* csv = nullptr;
-    if (args.csv_path != nullptr) {
-        csv = std::fopen(args.csv_path, "w");
-        if (csv == nullptr) {
-            std::fprintf(stderr, "cannot open CSV file '%s'\n", args.csv_path);
-            return 1;
-        }
-        std::fprintf(csv, "time_s,state,ppm,fill,underruns,overruns,resyncs,mono_raw_ns,in_frames,out_frames,"
-                          "in_xruns,out_xruns,in_errors,out_errors,in_hw_frames,in_hw_ns,out_hw_frames,"
-                          "out_hw_ns\n");
+    // The converter's channel count is its type (A13): the program switches
+    // over the counts it serves, never the engine (docs/CHANNELS_PLAN.md, K9).
+    switch (args.channels) {
+    case 1:
+        return run_bridge<1>(args, in, out);
+    case 2:
+        return run_bridge<2>(args, in, out);
+    case 4:
+        return run_bridge<4>(args, in, out);
+    case 6:
+        return run_bridge<6>(args, in, out);
+    default:
+        return run_bridge<8>(args, in, out); // the served list was checked before the devices opened
     }
-    std::FILE* dump = nullptr;
-    if (args.dump_path != nullptr) {
-        dump = std::fopen(args.dump_path, "wb");
-        if (dump == nullptr) {
-            std::fprintf(stderr, "cannot open dump file '%s'\n", args.dump_path);
-            return 1;
-        }
-    }
-
-    std::signal(SIGINT, on_sigint);
-
-    std::thread capture([&] {
-        if (args.rt && !make_realtime("capture")) {
-            return;
-        }
-        const std::size_t         ch     = args.channels;
-        const snd_pcm_uframes_t   period = in.period_frames;
-        std::vector<std::int16_t> raw(period * ch);
-        std::vector<float>        buf(period * ch);
-        double                    phase = 0.0;
-        const double              dphi  = 2.0 * std::numbers::pi * args.tone_hz / static_cast<double>(args.rate);
-        while (!g_stop.load(std::memory_order_relaxed)) {
-            void* dst =
-                in.format == SND_PCM_FORMAT_S16_LE ? static_cast<void*>(raw.data()) : static_cast<void*>(buf.data());
-            const snd_pcm_sframes_t n = snd_pcm_readi(in.pcm, dst, period);
-            if (n < 0) {
-                (n == -EPIPE ? g_in_tel.xruns : g_in_tel.errors).fetch_add(1, std::memory_order_relaxed);
-                if (snd_pcm_recover(in.pcm, static_cast<int>(n), 1) < 0) {
-                    std::fprintf(stderr, "capture failed: %s\n", snd_strerror(static_cast<int>(n)));
-                    g_stop.store(true, std::memory_order_relaxed);
-                    return;
-                }
-                continue;
-            }
-            const auto frames = static_cast<std::size_t>(n);
-            if (frames == 0) {
-                continue;
-            }
-            g_in_tel.frames.fetch_add(frames, std::memory_order_relaxed);
-            record_hw_position(in, g_in_tel, true);
-            if (args.tone_hz > 0.0) { // tone mode: keep the device pacing, swap the payload
-                for (std::size_t f = 0; f < frames; ++f) {
-                    const auto v = static_cast<float>(0.5 * std::sin(phase));
-                    phase += dphi;
-                    if (phase >= 2.0 * std::numbers::pi) {
-                        phase -= 2.0 * std::numbers::pi;
-                    }
-                    for (std::size_t c = 0; c < ch; ++c) {
-                        buf[f * ch + c] = v;
-                    }
-                }
-            }
-            else if (in.format == SND_PCM_FORMAT_S16_LE) {
-                s16_to_float(raw.data(), buf.data(), frames * ch);
-            }
-            asrc.push(buf.data(), frames); // overruns counted by the converter
-        }
-    });
-
-    std::thread playback([&] {
-        if (args.rt && !make_realtime("playback")) {
-            return;
-        }
-        const std::size_t         ch     = args.channels;
-        const snd_pcm_uframes_t   period = out.period_frames;
-        std::vector<float>        buf(period * ch);
-        std::vector<std::int16_t> raw(period * ch);
-        bool                      dump_failed = false;
-        while (!g_stop.load(std::memory_order_relaxed)) {
-            asrc.pull(buf.data(), period); // silence-pads while filling/underrun
-            if (dump != nullptr && !dump_failed
-                && std::fwrite(buf.data(), sizeof(float), period * ch, dump) != period * ch) {
-                std::fprintf(stderr, "dump write failed; disabling --dump\n");
-                dump_failed = true;
-            }
-            if (out.format == SND_PCM_FORMAT_S16_LE) {
-                float_to_s16(buf.data(), raw.data(), period * ch);
-            }
-            snd_pcm_uframes_t done = 0;
-            while (done < period && !g_stop.load(std::memory_order_relaxed)) {
-                const void*             src = out.format == SND_PCM_FORMAT_S16_LE
-                                                  ? static_cast<const void*>(raw.data() + done * ch)
-                                                  : static_cast<const void*>(buf.data() + done * ch);
-                const snd_pcm_sframes_t n   = snd_pcm_writei(out.pcm, src, period - done);
-                if (n < 0) {
-                    (n == -EPIPE ? g_out_tel.xruns : g_out_tel.errors).fetch_add(1, std::memory_order_relaxed);
-                    if (snd_pcm_recover(out.pcm, static_cast<int>(n), 1) < 0) {
-                        std::fprintf(stderr, "playback failed: %s\n", snd_strerror(static_cast<int>(n)));
-                        g_stop.store(true, std::memory_order_relaxed);
-                        return;
-                    }
-                    continue;
-                }
-                done += static_cast<snd_pcm_uframes_t>(n);
-                g_out_tel.frames.fetch_add(static_cast<std::uint64_t>(n), std::memory_order_relaxed);
-                record_hw_position(out, g_out_tel, false);
-            }
-        }
-        snd_pcm_drain(out.pcm);
-    });
-
-    using clock   = std::chrono::steady_clock;
-    const auto t0 = clock::now();
-    for (unsigned long sec = 1; !g_stop.load(std::memory_order_relaxed); ++sec) {
-        std::this_thread::sleep_until(t0 + std::chrono::seconds(sec));
-        if (g_stop.load(std::memory_order_relaxed)) {
-            break;
-        }
-        const auto         st        = asrc.status();
-        const std::int64_t now_ns    = mono_raw_ns();
-        const auto         in_xruns  = g_in_tel.xruns.load(std::memory_order_relaxed);
-        const auto         out_xruns = g_out_tel.xruns.load(std::memory_order_relaxed);
-        std::printf("t=%6lus  state=%-9s  ppm=%+8.2f  fill=%8.1f  under=%llu over=%llu "
-                    "resync=%llu  xrun in=%llu out=%llu\n",
-                    sec, state_name(st.state), st.ppm, st.fifo_fill_frames,
-                    static_cast<unsigned long long>(st.underruns), static_cast<unsigned long long>(st.overruns),
-                    static_cast<unsigned long long>(st.resyncs), static_cast<unsigned long long>(in_xruns),
-                    static_cast<unsigned long long>(out_xruns));
-        std::fflush(stdout);
-        if (csv != nullptr) {
-            std::fprintf(csv, "%lu,%s,%.3f,%.2f,%llu,%llu,%llu,%lld,%llu,%llu,%llu,%llu,%llu,%llu", sec,
-                         state_name(st.state), st.ppm, st.fifo_fill_frames,
-                         static_cast<unsigned long long>(st.underruns), static_cast<unsigned long long>(st.overruns),
-                         static_cast<unsigned long long>(st.resyncs), static_cast<long long>(now_ns),
-                         static_cast<unsigned long long>(g_in_tel.frames.load(std::memory_order_relaxed)),
-                         static_cast<unsigned long long>(g_out_tel.frames.load(std::memory_order_relaxed)),
-                         static_cast<unsigned long long>(in_xruns), static_cast<unsigned long long>(out_xruns),
-                         static_cast<unsigned long long>(g_in_tel.errors.load(std::memory_order_relaxed)),
-                         static_cast<unsigned long long>(g_out_tel.errors.load(std::memory_order_relaxed)));
-            // The hardware pairs; empty fields where the driver gave none.
-            for (const device_telemetry* tel : {&g_in_tel, &g_out_tel}) {
-                std::uint64_t hw_frames = 0;
-                std::int64_t  hw_ns     = 0;
-                if (tel->read_hw(hw_frames, hw_ns)) {
-                    std::fprintf(csv, ",%llu,%lld", static_cast<unsigned long long>(hw_frames),
-                                 static_cast<long long>(hw_ns));
-                }
-                else {
-                    std::fprintf(csv, ",,");
-                }
-            }
-            std::fprintf(csv, "\n");
-            std::fflush(csv);
-        }
-        if (args.seconds != 0 && sec >= args.seconds) {
-            break;
-        }
-    }
-    g_stop.store(true, std::memory_order_relaxed);
-
-    capture.join();
-    playback.join();
-    if (csv != nullptr) {
-        std::fclose(csv);
-    }
-    if (dump != nullptr) {
-        std::fclose(dump);
-    }
-    std::printf("done.\n");
-    return g_failed.load(std::memory_order_relaxed) ? 1 : 0;
 }

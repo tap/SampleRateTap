@@ -64,25 +64,30 @@ target_link_libraries(app PRIVATE tap::sr)           # all of them (the umbrella
 ```
 
 ```cpp
-#include <tap/sr/async/async.h>   // tap::sr::async::converter, converter_q15, converter_q31
+#include <tap/sr/async/async.h>   // tap::sr::async::converter<Ch>, converter_q15<Ch>, converter_q31<Ch>
 #include <tap/sr/bridge/ratio.h>  // tap::sr::bridge::converter_to_48k<Ch>, converter_to_44k1<Ch>, ...
 #include <tap/sr/rational/rational.h> // tap::sr::rational::converter<Ch, ratio<L, M>>, converter_q15, ...
 ```
 
-**Channel counts at compile time (A13, in progress; `docs/CHANNELS_PLAN.md`).**
-`rational`'s and `bridge`'s channel count is a template argument of every
-type, a compile-time constant of at least 1: `rational::converter<2, down_2>`
-and `bridge::converter_to_44k1<2>` are stereo converters, and a count of zero
-does not compile. `async` still takes its count at run time until its own A13
-change, after which the family moves to 0.7.0. The C ABIs keep a run-time count: one and two channels run the
-native types, any other count that many one-channel converters behind the
-handle, bit for bit the native type of that count.
+**Channel counts at compile time (A13, since 0.7.0; `docs/CHANNELS_PLAN.md`).**
+Every engine's channel count is a template argument of every type, a
+compile-time constant of at least 1: `async::converter<2>`,
+`bridge::converter_to_44k1<2>` and `rational::converter<2, down_2>` are
+stereo converters, and a count of zero does not compile. A program that
+learns its count at run time switches over the counts it serves
+(`async/examples/alsa_bridge.cpp`'s `--channels`). The C ABIs keep a run-time
+count: `bridge`'s and `rational`'s run one and two channels as the native
+types and any other count as that many one-channel converters behind the
+handle, bit for bit the native type of that count; `async`'s serves one and
+two and returns NULL for any other count, since a fan-out would give each
+channel a clock servo of its own. The gain is measured in instructions
+(each engine's README); cycle counts on hardware are deferred (K11).
 
 **Errors: one model (A3).** Construction is where an engine can reject
 its arguments; processing is `noexcept`. Each engine states the rejection
 twice, in the same words: `validate(...)`, a `noexcept` precheck that returns
 the reason as a `const char*` (nullptr when the converter constructs) —
-`async::config::validate(cfg)`, `bridge::basic_converter<…>::validate(profile)`,
+`async::basic_converter<…>::validate(cfg)`, `bridge::basic_converter<…>::validate(profile)`,
 `rational::basic_stage<…>::validate(profile)` and
 `basic_chain<…>::validate(profile)` — and the constructor, which
 raises that reason as `std::invalid_argument` (`std::runtime_error` for a
@@ -123,7 +128,7 @@ A retired pre-family option (`SRT_*`, `TAP_RATIO_*`) fails the configure
 loudly (`cmake/retired_options.cmake`) rather than dropping a gate silently.
 
 **Version.** One family version, `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}`
-(0.6.0, the minor bump the async vocabulary pass brought; 0.5.0 was the third engine's C ABI), defined
+(0.7.0, the minor bump A13 brought: every channel count the type's; 0.6.0 was the async vocabulary pass), defined
 identically in each engine's umbrella header and returned bit-packed —
 `(major << 16) | (minor << 8) | patch` — by each C ABI's
 `tap_sr_async_version()` / `tap_sr_bridge_version()` /
@@ -199,7 +204,7 @@ equal). A commit that moves `submodules/dsptap` names the DspTap tag it pins.
 | SampleRateTap | DspTap floor | DspTap pinned |
 |---|---|---|
 | 0.6.0 | 0.1.0 | v0.1.0 |
-| `main` (0.7.0 in progress, A13) | 0.2.0 | v0.2.0 |
+| 0.7.0 | 0.2.0 | v0.2.0 |
 
 ## Provenance and license
 

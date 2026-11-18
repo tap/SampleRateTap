@@ -204,7 +204,13 @@ gated on shipping.
   SampleRateTap#98. A13c (`bridge`) measured the same day: every checksum equal, the streaming
   sums down on every target (−1.1 % on the M55, −0.04 % on the M33, −0.07 % on Hexagon, −1.0 %
   on the host), the engine `.text` −49 … −60 %; five M55 Q15 rows about 2 % apart between the
-  builds, accepted at the midpoint the same way.*
+  builds, accepted at the midpoint the same way; merged as SampleRateTap#99. A13d (`async`,
+  the family to 0.7.0) measured the same day: every checksum equal and no row rising, the
+  streaming sums down on every target (−1.9 % on the M55, −0.2 % on the M33, −0.3 % on
+  Hexagon, −2.9 % on the host, −1.7 % at 16 channels), the engine `.text` −1.5 … −4.8 %; two
+  M55 rows' configuration gap widened by 0.11 and 0.12 points, past gate 0's 0.1-point
+  margin, accepted by the maintainer with one baseline each. With
+  it every engine's channel count is the type's: A13 landed with 0.7.0.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 

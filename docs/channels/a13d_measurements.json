@@ -1,0 +1,571 @@
+{
+  "about": "A13d's measurements (docs/CHANNELS_PLAN.md section 4): async's ratchet workloads at the 2ed199a reference and at A13d, with and without exceptions and RTTI, on every ratchet target. main before A13d (beed6a0) counts identically to the reference on every row, target and configuration. host_16ch is the risk section's 16-channel check: host_main.cpp at TAP_SR_ASYNC_HC_CH=16, GCC 13 -O3, counted as scripts/icount.py counts the host rows (the same build at 12 channels reproduces the gated 12-channel row to the instruction).",
+  "counts": {
+    "a13d": {
+      "noexc_OFF": {
+        "hexagon": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617166714",
+            "insns": 50989
+          },
+          "callmax_pull_q15": {
+            "checksum": "263845",
+            "insns": 12388
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 143509199
+          },
+          "kernel_float": {
+            "checksum": "7430.2646034811623",
+            "insns": 422160577
+          },
+          "kernel_q15": {
+            "checksum": "243292165",
+            "insns": 187429223
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 194964158
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 460850621
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 417674413
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 204155387
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 204404412
+          }
+        },
+        "host": {
+          "pipeline_float_12ch": {
+            "checksum": "-1.3462150391133036",
+            "insns": 352980493
+          },
+          "pipeline_float_2ch": {
+            "checksum": "3.0573261592071503",
+            "insns": 104913538
+          }
+        },
+        "m33": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617166714",
+            "insns": 258504
+          },
+          "callmax_pull_q15": {
+            "checksum": "263843",
+            "insns": 31871
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 906236180
+          },
+          "kernel_float": {
+            "checksum": "7430.2646035715006",
+            "insns": 2427595993
+          },
+          "kernel_q15": {
+            "checksum": "243293031",
+            "insns": 1123119218
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 1169957251
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 1488170355
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 2387763809
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 1015977626
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 1099585828
+          }
+        },
+        "m55": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617230052",
+            "insns": 14900
+          },
+          "callmax_pull_q15": {
+            "checksum": "263843",
+            "insns": 15477
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 19576933
+          },
+          "kernel_float": {
+            "checksum": "7430.2646034811623",
+            "insns": 109298076
+          },
+          "kernel_q15": {
+            "checksum": "243293031",
+            "insns": 192431957
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 221164795
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 221321824
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 99236191
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 104418276
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 169385421
+          }
+        }
+      },
+      "noexc_ON": {
+        "hexagon": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617166714",
+            "insns": 50989
+          },
+          "callmax_pull_q15": {
+            "checksum": "263845",
+            "insns": 12388
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 144245569
+          },
+          "kernel_float": {
+            "checksum": "7430.2646034811623",
+            "insns": 422668038
+          },
+          "kernel_q15": {
+            "checksum": "243292165",
+            "insns": 188153613
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 193682117
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 461521367
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 418372859
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 204854760
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 205105350
+          }
+        },
+        "host": {
+          "pipeline_float_12ch": {
+            "checksum": "-1.3462150391133036",
+            "insns": 352980493
+          },
+          "pipeline_float_2ch": {
+            "checksum": "3.0573261592071503",
+            "insns": 104913538
+          }
+        },
+        "m33": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617166714",
+            "insns": 258504
+          },
+          "callmax_pull_q15": {
+            "checksum": "263843",
+            "insns": 31871
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 906052877
+          },
+          "kernel_float": {
+            "checksum": "7430.2646035715006",
+            "insns": 2427412551
+          },
+          "kernel_q15": {
+            "checksum": "243293031",
+            "insns": 1122935929
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 1169774515
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 1487843066
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 2388251910
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 1015794329
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 1099307148
+          }
+        },
+        "m55": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617230052",
+            "insns": 14900
+          },
+          "callmax_pull_q15": {
+            "checksum": "263843",
+            "insns": 15477
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 19582405
+          },
+          "kernel_float": {
+            "checksum": "7430.2646034811623",
+            "insns": 109301805
+          },
+          "kernel_q15": {
+            "checksum": "243293031",
+            "insns": 192437444
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 220982357
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 221324309
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 99048042
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 104423759
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 169594850
+          }
+        }
+      }
+    },
+    "reference_2ed199a": {
+      "noexc_OFF": {
+        "hexagon": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617166714",
+            "insns": 51238
+          },
+          "callmax_pull_q15": {
+            "checksum": "263845",
+            "insns": 12629
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 143511162
+          },
+          "kernel_float": {
+            "checksum": "7430.2646034811623",
+            "insns": 422160577
+          },
+          "kernel_q15": {
+            "checksum": "243292165",
+            "insns": 187429223
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 194964158
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 463498668
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 419186558
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 204476544
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 205223999
+          }
+        },
+        "host": {
+          "pipeline_float_12ch": {
+            "checksum": "-1.3462150391133036",
+            "insns": 362078536
+          },
+          "pipeline_float_2ch": {
+            "checksum": "3.0573261592071503",
+            "insns": 109526808
+          }
+        },
+        "m33": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617166714",
+            "insns": 259294
+          },
+          "callmax_pull_q15": {
+            "checksum": "263843",
+            "insns": 32878
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 906236693
+          },
+          "kernel_float": {
+            "checksum": "7430.2646035715006",
+            "insns": 2427595993
+          },
+          "kernel_q15": {
+            "checksum": "243293031",
+            "insns": 1123119218
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 1169957251
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 1498750689
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 2391686397
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 1020281492
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 1102555010
+          }
+        },
+        "m55": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617230052",
+            "insns": 16624
+          },
+          "callmax_pull_q15": {
+            "checksum": "263843",
+            "insns": 17354
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 19577419
+          },
+          "kernel_float": {
+            "checksum": "7430.2646034811623",
+            "insns": 109298076
+          },
+          "kernel_q15": {
+            "checksum": "243293031",
+            "insns": 192431957
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 221164795
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 231525652
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 102590514
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 109235688
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 173088156
+          }
+        }
+      },
+      "noexc_ON": {
+        "hexagon": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617166714",
+            "insns": 51238
+          },
+          "callmax_pull_q15": {
+            "checksum": "263845",
+            "insns": 12645
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 144247529
+          },
+          "kernel_float": {
+            "checksum": "7430.2646034811623",
+            "insns": 422668038
+          },
+          "kernel_q15": {
+            "checksum": "243292165",
+            "insns": 188153613
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 193682117
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 464339887
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 419885002
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 205206976
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 205951918
+          }
+        },
+        "host": {
+          "pipeline_float_12ch": {
+            "checksum": "-1.3462150391133036",
+            "insns": 362078536
+          },
+          "pipeline_float_2ch": {
+            "checksum": "3.0573261592071503",
+            "insns": 109526808
+          }
+        },
+        "m33": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617166714",
+            "insns": 259294
+          },
+          "callmax_pull_q15": {
+            "checksum": "263843",
+            "insns": 32881
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 906053398
+          },
+          "kernel_float": {
+            "checksum": "7430.2646035715006",
+            "insns": 2427412551
+          },
+          "kernel_q15": {
+            "checksum": "243293031",
+            "insns": 1122935929
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 1169774515
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 1496548113
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 2391493510
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 1019997636
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 1102371767
+          }
+        },
+        "m55": {
+          "callmax_pull_float": {
+            "checksum": "191922.19617230052",
+            "insns": 16624
+          },
+          "callmax_pull_q15": {
+            "checksum": "263843",
+            "insns": 17210
+          },
+          "construct_q15": {
+            "checksum": "0.0014999593098958333",
+            "insns": 19582908
+          },
+          "kernel_float": {
+            "checksum": "7430.2646034811623",
+            "insns": 109301805
+          },
+          "kernel_q15": {
+            "checksum": "243293031",
+            "insns": 192437444
+          },
+          "kernel_q31": {
+            "checksum": "15956371331740",
+            "insns": 220982357
+          },
+          "pipeline12_q15": {
+            "checksum": "80",
+            "insns": 231630081
+          },
+          "pipeline_float": {
+            "checksum": "2.0883870968536939",
+            "insns": 102504354
+          },
+          "pipeline_q15": {
+            "checksum": "68536",
+            "insns": 109343115
+          },
+          "pipeline_q31": {
+            "checksum": "4484779661",
+            "insns": 173102670
+          }
+        }
+      }
+    }
+  },
+  "host_16ch": {
+    "a13d": {
+      "checksum": "-0.16597660441766493",
+      "insns": 443393957
+    },
+    "reference_2ed199a": {
+      "checksum": "-0.16597660441766493",
+      "insns": 450976436
+    }
+  }
+}

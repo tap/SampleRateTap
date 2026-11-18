@@ -57,7 +57,7 @@ namespace {
     constexpr double      k_end_s   = 4.0;
 
     template <typename S>
-    [[gnu::noinline]] std::size_t measured_pull(tap::sr::async::basic_converter<S>& c, S* out) noexcept {
+    [[gnu::noinline]] std::size_t measured_pull(tap::sr::async::basic_converter<S, k_ch>& c, S* out) noexcept {
         tap_sr_call_begin();
         const std::size_t made = c.pull(out, k_block);
         tap_sr_call_end();
@@ -66,9 +66,8 @@ namespace {
 
     template <typename S>
     double run() {
-        tap::sr::async::config cfg;
-        cfg.channels = k_ch;
-        tap::sr::async::basic_converter<S> asrc(cfg);
+        const tap::sr::async::config             cfg;
+        tap::sr::async::basic_converter<S, k_ch> asrc(cfg);
 
         // 0.25 s of a 997 Hz tone at the input rate, cycled block-aligned
         // (12000 % 16 == 0); precomputed so libm stays out of the stream.

@@ -18,7 +18,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <new>
 #include <type_traits>
 
@@ -49,7 +48,7 @@ namespace {
         virtual void                             reset_from_consumer() noexcept                            = 0;
     };
 
-    template <typename S>
+    template <typename S, std::size_t Ch>
     class typed_engine final : public engine {
       public:
         explicit typed_engine(const tap::sr::async::config& cfg)
@@ -91,8 +90,41 @@ namespace {
             }
         }
 
-        tap::sr::async::basic_converter<S> m_c;
+        tap::sr::async::basic_converter<S, Ch> m_c;
     };
+
+    // One format at one of the counts this ABI serves (1 or 2): NULL when
+    // the converter of that type would reject the configuration (its
+    // validate(), checked before constructing) or, with exceptions, when an
+    // allocation is refused.
+    template <typename S, std::size_t Ch>
+    tap_sr_async_converter* make_engine(const tap::sr::async::config& cfg) {
+        if (tap::sr::async::basic_converter<S, Ch>::validate(cfg) != nullptr) {
+            return nullptr; // the constructor would reject it (and, without exceptions, terminate)
+        }
+#if TAP_DSP_HAS_EXCEPTIONS
+        try {
+            return reinterpret_cast<tap_sr_async_converter*>(new typed_engine<S, Ch>(cfg));
+        }
+        catch (...) {
+            return nullptr; // a refused allocation; the configuration was validated above
+        }
+#else
+        return reinterpret_cast<tap_sr_async_converter*>(new typed_engine<S, Ch>(cfg));
+#endif
+    }
+
+    template <typename S>
+    tap_sr_async_converter* make_format(const tap::sr::async::config& cfg, unsigned channels) {
+        switch (channels) {
+        case 1:
+            return make_engine<S, 1>(cfg);
+        case 2:
+            return make_engine<S, 2>(cfg);
+        default:
+            return nullptr; // a count this ABI does not serve (the header says why)
+        }
+    }
 
     // The handle is the engine pointer in disguise.
     engine* impl(tap_sr_async_converter* h) noexcept {
@@ -116,17 +148,17 @@ unsigned tap_sr_async_version(void) {
 
 // ANCHOR: abi_create
 /// profile: 0 = fast, 1 = balanced, 2 = transparent; format: a
-/// TAP_SR_ASYNC_FORMAT_* value. NULL on an invalid configuration
-/// (config::validate's rejection, checked before constructing), an unknown
-/// format or profile, or — where the library was built with exceptions — an
-/// allocation failure; the C boundary never unwinds. Built without exceptions
-/// (-fno-exceptions), a refused allocation terminates, as the standard
-/// library's does there.
+/// TAP_SR_ASYNC_FORMAT_* value; channels: 1 or 2, each its own C++ type
+/// (basic_converter<S, Ch>). NULL on an invalid configuration (that type's
+/// validate() rejection, checked before constructing), an unknown format or
+/// profile, another channel count, or — where the library was built with
+/// exceptions — an allocation failure; the C boundary never unwinds. Built
+/// without exceptions (-fno-exceptions), a refused allocation terminates, as
+/// the standard library's does there.
 tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, size_t target_latency_frames, int profile,
                                                    int format, unsigned channels) {
     tap::sr::async::config cfg;
     cfg.sample_rate_hz = sample_rate_hz;
-    cfg.channels       = channels;
     if (target_latency_frames != 0) {
         cfg.target_latency_frames = target_latency_frames;
     }
@@ -136,36 +168,16 @@ tap_sr_async_converter* tap_sr_async_create_format(double sample_rate_hz, size_t
     cfg.filter = profile == 0   ? tap::sr::async::filter_spec::fast()
                  : profile == 2 ? tap::sr::async::filter_spec::transparent()
                                 : tap::sr::async::filter_spec::balanced();
-    if (tap::sr::async::config::validate(cfg) != nullptr) {
-        return nullptr; // the constructor would reject it (and, without exceptions, terminate)
+    switch (format) {
+    case TAP_SR_ASYNC_FORMAT_FLOAT:
+        return make_format<float>(cfg, channels);
+    case TAP_SR_ASYNC_FORMAT_Q15:
+        return make_format<std::int16_t>(cfg, channels);
+    case TAP_SR_ASYNC_FORMAT_Q31:
+        return make_format<std::int32_t>(cfg, channels);
+    default:
+        return nullptr;
     }
-    const auto make = [&]() -> tap_sr_async_converter* {
-        std::unique_ptr<engine> e;
-        switch (format) {
-        case TAP_SR_ASYNC_FORMAT_FLOAT:
-            e = std::make_unique<typed_engine<float>>(cfg);
-            break;
-        case TAP_SR_ASYNC_FORMAT_Q15:
-            e = std::make_unique<typed_engine<std::int16_t>>(cfg);
-            break;
-        case TAP_SR_ASYNC_FORMAT_Q31:
-            e = std::make_unique<typed_engine<std::int32_t>>(cfg);
-            break;
-        default:
-            return nullptr;
-        }
-        return reinterpret_cast<tap_sr_async_converter*>(e.release());
-    };
-#if TAP_DSP_HAS_EXCEPTIONS
-    try {
-        return make();
-    }
-    catch (...) {
-        return nullptr; // a refused allocation; the configuration was validated above
-    }
-#else
-    return make();
-#endif
 }
 
 tap_sr_async_converter* tap_sr_async_create(double sample_rate_hz, size_t target_latency_frames, int profile,

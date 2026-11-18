@@ -7,16 +7,18 @@
 // the global operator new for the whole program (tests/CMakeLists.txt).
 //
 // Persistent bytes, with L phases and T taps per phase (filter_bank()), c the
-// coefficient size and s the sample size (sample_traits), ch channels, F the
-// ring's frames (fifo_frames, or max(1024, 4 (target_latency_frames + T))) and
-// V = sizeof(std::vector<S>):
+// coefficient size and s the sample size (sample_traits), ch channels (the
+// type's) and F the ring's frames (fifo_frames, or
+// max(1024, 4 (target_latency_frames + T))):
 //
 //   (L + 1) T c                       the polyphase table, one guard row
 // + bit_ceil(F ch) s                  the SPSC ring
 // + 16 ch s                           the pop scratch (16-frame chunks)
 // + (T + 16) ch s                     the filter history
 // + T c                               the blended row
-// + H V                               the history's vectors: H = ch, or 1 frame-major
+//
+// The history's lines are a std::array in the object since A13 (K6), so the
+// heap holds no vector of them: one allocation fewer than 0.6.0's formula.
 //
 // The peak while constructing is the larger of that and the design's: with
 // n = L T prototype taps, a plain Kaiser design (fast) peaks at the double
@@ -92,22 +94,21 @@ namespace {
         return std::max({held, table_phase, design_phase});
     }
 
-    template <typename S>
-    std::size_t persistent_formula(const basic_converter<S>& conv, const config& cfg) {
+    template <typename S, std::size_t Ch>
+    std::size_t persistent_formula(const basic_converter<S, Ch>& conv, const config& cfg) {
         using coeff          = typename sample_traits<S>::coeff;
         const std::size_t L  = conv.filter_bank().num_phases();
         const std::size_t T  = conv.filter_bank().taps();
         const std::size_t c  = sizeof(coeff);
         const std::size_t s  = sizeof(S);
-        const std::size_t ch = cfg.channels;
+        const std::size_t ch = Ch;
         const std::size_t F =
             cfg.fifo_frames != 0 ? cfg.fifo_frames : std::max<std::size_t>(1024, 4 * (cfg.target_latency_frames + T));
-        const bool frame_major = fractional_resampler<S>::k_channel_parallel && ch >= TAP_SR_ASYNC_CP_MIN_CHANNELS;
-        const std::size_t H    = frame_major ? 1 : ch;
+        constexpr bool    frame_major = fractional_resampler<S, Ch>::k_frame_major;
         const std::size_t history =
             frame_major ? request((T + k_chunk_frames) * ch * s) : ch * request((T + k_chunk_frames) * s);
         return request((L + 1) * T * c) + request(std::bit_ceil(F * ch) * s) + request(k_chunk_frames * ch * s)
-               + history + request(T * c) + request(H * sizeof(std::vector<S>));
+               + history + request(T * c);
     }
 
     struct measured {
@@ -117,19 +118,19 @@ namespace {
         std::size_t phases  = 0;
     };
 
-    template <typename S>
+    template <typename S, std::size_t Ch>
     measured measure(const config& cfg) {
-        measured                            m;
-        std::unique_ptr<basic_converter<S>> conv;
+        measured                                m;
+        std::unique_ptr<basic_converter<S, Ch>> conv;
         {
             const heap_meter meter;
-            conv    = std::make_unique<basic_converter<S>>(cfg);
+            conv    = std::make_unique<basic_converter<S, Ch>>(cfg);
             m.stats = meter.stats();
         }
         // The converter object itself is on the heap here, so it is in the
         // count; the formula is the heap it owns.
-        m.stats.live_bytes -= sizeof(basic_converter<S>);
-        m.stats.peak_bytes -= sizeof(basic_converter<S>);
+        m.stats.live_bytes -= sizeof(basic_converter<S, Ch>);
+        m.stats.peak_bytes -= sizeof(basic_converter<S, Ch>);
         m.formula = persistent_formula(*conv, cfg);
         m.taps    = conv->filter_bank().taps();
         m.phases  = conv->filter_bank().num_phases();
@@ -148,23 +149,24 @@ namespace {
                 {"program", filter_spec::program()}};
     }
 
+    template <typename S, std::size_t Ch>
+    void check_profile(const named_profile& p, const char* format) {
+        config cfg;
+        cfg.filter   = p.spec;
+        const auto m = measure<S, Ch>(cfg);
+        EXPECT_EQ(m.stats.live_bytes, m.formula) << format << ' ' << p.name << ' ' << Ch << " ch";
+        EXPECT_EQ(m.stats.peak_bytes, peak_formula<S>(m.formula, cfg)) << format << ' ' << p.name << ' ' << Ch << " ch";
+        std::printf("[ measured ] async %-4s %-11s %2zu ch: L %zu T %zu, %zu B held, %zu B peak in construction\n",
+                    format, p.name, Ch, m.phases, m.taps, m.stats.live_bytes, m.stats.peak_bytes);
+    }
+
     template <typename S>
     void check_every_profile(const char* format) {
         ASSERT_TRUE(heap_meter::installed());
         for (const auto& p : profiles()) {
-            for (const std::size_t ch : {std::size_t{1}, std::size_t{2}, std::size_t{12}}) {
-                config cfg;
-                cfg.channels = ch;
-                cfg.filter   = p.spec;
-                const auto m = measure<S>(cfg);
-                EXPECT_EQ(m.stats.live_bytes, m.formula) << format << ' ' << p.name << ' ' << ch << " ch";
-                EXPECT_EQ(m.stats.peak_bytes, peak_formula<S>(m.formula, cfg))
-                    << format << ' ' << p.name << ' ' << ch << " ch";
-                std::printf("[ measured ] async %-4s %-11s %2zu ch: L %zu T %zu, %zu B held, %zu B peak in "
-                            "construction (sizeof(std::vector) %zu)\n",
-                            format, p.name, ch, m.phases, m.taps, m.stats.live_bytes, m.stats.peak_bytes,
-                            sizeof(std::vector<S>));
-            }
+            check_profile<S, 1>(p, format);
+            check_profile<S, 2>(p, format);
+            check_profile<S, 12>(p, format);
         }
     }
 
@@ -180,17 +182,17 @@ namespace {
 
     TEST(Footprint, AnExplicitFifoSizesTheRing) {
         config cfg;
-        cfg.fifo_frames = 3000; // bit_ceil(6000) = 8192 samples
-        const auto m    = measure<float>(cfg);
+        cfg.fifo_frames = 3000; // bit_ceil(6000) = 8192 samples at two channels
+        const auto m    = measure<float, 2>(cfg);
         EXPECT_EQ(m.stats.live_bytes, m.formula);
     }
 
     TEST(Footprint, ProcessingAllocatesNothing) {
-        config                 cfg;
-        basic_converter<float> conv(cfg);
-        std::vector<float>     in(64 * cfg.channels, 0.25F);
-        std::vector<float>     out(64 * cfg.channels);
-        const heap_meter       meter;
+        const config              cfg;
+        basic_converter<float, 2> conv(cfg);
+        std::vector<float>        in(64 * conv.channels(), 0.25F);
+        std::vector<float>        out(64 * conv.channels());
+        const heap_meter          meter;
         for (int i = 0; i < 200; ++i) {
             conv.push(in.data(), 64);
             conv.pull(out.data(), 64);

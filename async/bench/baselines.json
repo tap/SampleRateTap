@@ -1,42 +1,42 @@
 {
   "hexagon": {
-    "callmax_pull_float": 51238,
-    "callmax_pull_q15": 12629,
-    "construct_q15": 143511094,
-    "kernel_float": 422160541,
-    "kernel_q15": 187429187,
-    "kernel_q31": 194964122,
-    "pipeline12_q15": 463498599,
-    "pipeline_float": 419186490,
-    "pipeline_q15": 204476476,
-    "pipeline_q31": 205223931
+    "callmax_pull_float": 50989,
+    "callmax_pull_q15": 12388,
+    "construct_q15": 143509199,
+    "kernel_float": 422160577,
+    "kernel_q15": 187429223,
+    "kernel_q31": 194964158,
+    "pipeline12_q15": 460850621,
+    "pipeline_float": 417674413,
+    "pipeline_q15": 204155387,
+    "pipeline_q31": 204404412
   },
   "host": {
-    "pipeline_float_12ch": 362078536,
-    "pipeline_float_2ch": 109526808
+    "pipeline_float_12ch": 352980493,
+    "pipeline_float_2ch": 104913538
   },
   "m33": {
-    "callmax_pull_float": 259294,
-    "callmax_pull_q15": 32878,
-    "construct_q15": 906236511,
+    "callmax_pull_float": 258504,
+    "callmax_pull_q15": 31871,
+    "construct_q15": 906236180,
     "kernel_float": 2427595993,
     "kernel_q15": 1123119218,
     "kernel_q31": 1169957251,
-    "pipeline12_q15": 1498750507,
-    "pipeline_float": 2391686215,
-    "pipeline_q15": 1020281310,
-    "pipeline_q31": 1102554828
+    "pipeline12_q15": 1488170355,
+    "pipeline_float": 2387763809,
+    "pipeline_q15": 1015977626,
+    "pipeline_q31": 1099585828
   },
   "m55": {
-    "callmax_pull_float": 16624,
-    "callmax_pull_q15": 17354,
-    "construct_q15": 19577382,
+    "callmax_pull_float": 14900,
+    "callmax_pull_q15": 15477,
+    "construct_q15": 19576933,
     "kernel_float": 109298076,
     "kernel_q15": 192431957,
     "kernel_q31": 221164795,
-    "pipeline12_q15": 231525615,
-    "pipeline_float": 102590477,
-    "pipeline_q15": 109235651,
-    "pipeline_q31": 173088119
+    "pipeline12_q15": 221321824,
+    "pipeline_float": 99236191,
+    "pipeline_q15": 104418276,
+    "pipeline_q31": 169385421
   }
 }

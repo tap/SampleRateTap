@@ -146,7 +146,7 @@ namespace {
 
     double run() {
         const tap::sr::async::polyphase_filter_bank<Sample> bank(tap::sr::async::filter_spec::balanced(), 48000.0);
-        tap::sr::async::fractional_resampler<Sample>        rs(bank, kCh);
+        tap::sr::async::fractional_resampler<Sample, kCh>   rs(bank);
         const auto  input = toSample<Sample>(sineInput(12000)); // 0.25 s, cycled
         std::size_t pos   = 0;
         const auto  pop   = [&](Sample* dst, std::size_t n) {

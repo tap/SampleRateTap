@@ -46,9 +46,8 @@ int main() {
     tap::sr::bridge::converter_to_48k<1> ratio;
 
     // Stage 2 (clock boundary): near-unity ASRC at nominal 48 kHz.
-    tap::sr::async::config cfg;
-    cfg.channels = 1;
-    tap::sr::async::converter asrc(cfg);
+    const tap::sr::async::config cfg;
+    tap::sr::async::converter<1> asrc(cfg);
 
     // Deterministic two-clock simulation: for every local 48 kHz output
     // block we owe the BT domain dt * 44100 * (1 + ppm) input samples;

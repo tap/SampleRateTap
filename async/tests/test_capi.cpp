@@ -3,11 +3,12 @@
 //
 // The C ABI (capi/tap_sr_async_capi.h) is the notebooks' seam, so it must be
 // the shipping C++ exactly: a converter in each format — float, Q15, Q31 —
-// pushes and pulls bit for bit what basic_converter<S> does on the same
-// single-threaded sequence, with the same telemetry (a call in another
-// format than the converter's is refused and moves nothing); every entry
-// point tolerates NULL; invalid configuration returns NULL; and the version
-// probe pins the family encoding (D13). Links the shipped shared library, so
+// and at each count it serves, one and two channels, pushes and pulls bit
+// for bit what basic_converter<S, Ch> does on the same single-threaded
+// sequence, with the same telemetry (a call in another format than the
+// converter's is refused and moves nothing); any other count, every entry
+// point's NULL and invalid configuration return NULL or nothing; and the
+// version probe pins the family encoding (D13). Links the shipped shared library, so
 // it exists wherever TAP_SR_BUILD_CAPI builds one.
 #include <cmath>
 #include <cstddef>
@@ -28,9 +29,9 @@ namespace {
             static_cast<unsigned>((TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH);
         const unsigned v = tap_sr_async_version();
         EXPECT_EQ(v, k_packed);
-        EXPECT_EQ(v, 0x000600u); // 0.6.0
+        EXPECT_EQ(v, 0x000700u); // 0.7.0
         EXPECT_EQ(v >> 16, 0u);
-        EXPECT_EQ((v >> 8) & 0xFFu, 6u);
+        EXPECT_EQ((v >> 8) & 0xFFu, 7u);
         EXPECT_EQ(v & 0xFFu, 0u);
     }
 
@@ -71,48 +72,49 @@ namespace {
         }
     }
 
-    /// Deterministic stereo noise at half scale (a fixed LCG; the second
-    /// channel negated), `frames` frames.
-    template <typename S>
+    /// Deterministic noise at half scale over Ch channels (a fixed LCG; every
+    /// odd channel negated), `frames` frames.
+    template <typename S, std::size_t Ch>
     std::vector<S> noise(std::size_t frames, std::uint32_t& seed) {
-        std::vector<S> x(2 * frames);
+        std::vector<S> x(Ch * frames);
         for (std::size_t i = 0; i < frames; ++i) {
             seed           = seed * 1664525u + 1013904223u;
             const double v = (static_cast<double>(seed >> 8) / 16777216.0 - 0.5); // [-0.5, 0.5)
-            x[2 * i]       = to_sample<S>(v);
-            x[2 * i + 1]   = to_sample<S>(-v);
+            for (std::size_t c = 0; c < Ch; ++c) {
+                x[Ch * i + c] = to_sample<S>(c % 2 == 0 ? v : -v);
+            }
         }
         return x;
     }
 
-    /// The ABI's converter against basic_converter<S> on one single-threaded
-    /// push / pull sequence (the converter is deterministic given the
-    /// sequence): every pull bit-identical, every return value and the
-    /// telemetry equal; a call in another format refused and moving nothing.
-    template <typename S>
+    /// The ABI's converter against basic_converter<S, Ch> on one
+    /// single-threaded push / pull sequence (the converter is deterministic
+    /// given the sequence): every pull bit-identical, every return value and
+    /// the telemetry equal; a call in another format refused and moving
+    /// nothing.
+    template <typename S, std::size_t Ch>
     void expect_abi_is_the_converter(int profile, const tap::sr::async::filter_spec& spec) {
         constexpr double        k_fs    = 48000.0;
         constexpr std::size_t   k_block = 240; // the notebooks' largest block: the setpoint raise fits the default FIFO
         tap_sr_async_converter* h       = std::is_same_v<S, float>
-                                              ? tap_sr_async_create(k_fs, 0, profile, 2)
-                                              : tap_sr_async_create_format(k_fs, 0, profile, format_tag<S>(), 2);
+                                              ? tap_sr_async_create(k_fs, 0, profile, Ch)
+                                              : tap_sr_async_create_format(k_fs, 0, profile, format_tag<S>(), Ch);
         ASSERT_NE(h, nullptr) << profile;
         EXPECT_EQ(tap_sr_async_format(h), format_tag<S>());
         tap::sr::async::config cfg;
         cfg.sample_rate_hz = k_fs;
-        cfg.channels       = 2;
         cfg.filter         = spec;
-        tap::sr::async::basic_converter<S> ref(cfg);
+        tap::sr::async::basic_converter<S, Ch> ref(cfg);
         EXPECT_DOUBLE_EQ(tap_sr_async_designed_latency_seconds(h), ref.designed_latency_seconds());
 
         std::uint32_t  seed_a = 12345u, seed_b = 12345u;
-        std::vector<S> ya(2 * k_block), yb(2 * k_block);
+        std::vector<S> ya(Ch * k_block), yb(Ch * k_block);
         for (int round = 0; round < 120; ++round) {
             // A little more input than output per round, so the FIFO fills
             // and the servo leaves Filling within the sequence.
             const std::size_t in_frames = k_block + (round < 8 ? 24 : 0);
-            const auto        xa        = noise<S>(in_frames, seed_a);
-            const auto        xb        = noise<S>(in_frames, seed_b);
+            const auto        xa        = noise<S, Ch>(in_frames, seed_a);
+            const auto        xb        = noise<S, Ch>(in_frames, seed_b);
             ASSERT_EQ(xa, xb);
             EXPECT_EQ(abi_push(h, xa.data(), in_frames), ref.push(xb.data(), in_frames)) << round;
             EXPECT_EQ(abi_pull(h, ya.data(), k_block), ref.pull(yb.data(), k_block)) << round;
@@ -159,11 +161,34 @@ namespace {
     }
 
     TEST(CApi, EveryFormatIsTheConverter) {
-        expect_abi_is_the_converter<float>(1, tap::sr::async::filter_spec::balanced());
-        expect_abi_is_the_converter<std::int16_t>(1, tap::sr::async::filter_spec::balanced());
-        expect_abi_is_the_converter<std::int32_t>(1, tap::sr::async::filter_spec::balanced());
-        expect_abi_is_the_converter<float>(0, tap::sr::async::filter_spec::fast());
-        expect_abi_is_the_converter<std::int16_t>(2, tap::sr::async::filter_spec::transparent());
+        expect_abi_is_the_converter<float, 2>(1, tap::sr::async::filter_spec::balanced());
+        expect_abi_is_the_converter<std::int16_t, 2>(1, tap::sr::async::filter_spec::balanced());
+        expect_abi_is_the_converter<std::int32_t, 2>(1, tap::sr::async::filter_spec::balanced());
+        expect_abi_is_the_converter<float, 2>(0, tap::sr::async::filter_spec::fast());
+        expect_abi_is_the_converter<std::int16_t, 2>(2, tap::sr::async::filter_spec::transparent());
+        // One channel is served natively too (A13's K8): its own type.
+        expect_abi_is_the_converter<float, 1>(1, tap::sr::async::filter_spec::balanced());
+        expect_abi_is_the_converter<std::int16_t, 1>(1, tap::sr::async::filter_spec::balanced());
+        expect_abi_is_the_converter<std::int32_t, 1>(1, tap::sr::async::filter_spec::balanced());
+    }
+
+    // A13's K8: the count is a C++ type, and this ABI serves one and two
+    // channels natively. Any other count is refused with NULL in every
+    // format: a fan-out to one-channel converters, as the siblings' ABIs do,
+    // would give each channel a clock servo of its own.
+    TEST(CApi, ServesOneAndTwoChannelsAndRefusesEveryOtherCount) {
+        for (int format : {TAP_SR_ASYNC_FORMAT_FLOAT, TAP_SR_ASYNC_FORMAT_Q15, TAP_SR_ASYNC_FORMAT_Q31}) {
+            for (unsigned channels : {1u, 2u}) {
+                tap_sr_async_converter* h = tap_sr_async_create_format(48000.0, 0, 1, format, channels);
+                EXPECT_NE(h, nullptr) << format << " at " << channels;
+                tap_sr_async_destroy(h);
+            }
+            for (unsigned channels : {0u, 3u, 4u, 6u, 8u, 12u, 16u}) {
+                EXPECT_EQ(tap_sr_async_create_format(48000.0, 0, 1, format, channels), nullptr)
+                    << format << " at " << channels;
+            }
+        }
+        EXPECT_EQ(tap_sr_async_create(48000.0, 0, 1, 3), nullptr);
     }
 
     TEST(CApi, NullAndInvalidAreSoft) {

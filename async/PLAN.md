@@ -34,10 +34,23 @@ The boundaries are identity, not policy:
 
 ## 2. Contract
 
-- Header-only C++20 over `tap::dsp` only. `basic_converter<Sample>` with the
-  `converter` (float), `converter_q15` and `converter_q31` profiles; float
+- Header-only C++20 over `tap::dsp` only. `basic_converter<Sample, Ch>` with the
+  `converter<Ch>` (float), `converter_q15<Ch>` and `converter_q31<Ch>` profiles; float
   is the golden model, the fixed-point profiles carry their numbers as
   contracts (`sample_traits.h`).
+- **The channel count is the type's (since 0.7.0, the family's A13 and D18;
+  `../docs/CHANNELS_PLAN.md`).** `Ch`, a compile-time constant of at least
+  1, is `basic_converter<S, Ch>`'s and `fractional_resampler<S, Ch>`'s
+  second parameter and the aliases' only one; zero fails to compile
+  (`async.Converter.ZeroChannelsFailToCompileWithTheMessage`). `config` has
+  no channel count, and the precheck is the converter type's,
+  `basic_converter<S, Ch>::validate(cfg)` (K4: its checks need the count).
+  The configuration, bank, ring, servo, setpoint state and telemetry, with
+  their construction and restart, are `converter_base<S>`'s, built once per
+  format (K12); the mono branch, the history layout and the divisions by
+  the count are compile-time (K5), and the histories are a `std::array` of
+  lines (K6). Before 0.7.0 the count was `config::channels`, a run-time
+  value.
 - Real-time safe by construction: all allocation and filter design in the
   constructor (which may throw on a bad `config`); `push()`/`pull()` are
   `noexcept`, lock-free and allocation-free, one producer thread and one
@@ -52,14 +65,17 @@ The boundaries are identity, not policy:
 - The C ABI (`capi/`, `libtap_sr_async_capi`): fourteen `tap_sr_async_*`
   functions in all — the float surface, `create_format` / `format`, the
   `_q15` / `_q31` push and pull (the family's shape since `rational`'s ABI
-  set it, each format pinned bit for bit against `basic_converter<S>`) and
+  set it, each format pinned bit for bit against `basic_converter<S, Ch>`;
+  one and two channels served natively, any other count NULL, A13's K8,
+  since a fan-out would give each channel a servo of its own) and
   `tap_sr_async_version()`, the family's bit-packed version (D13); the
   symbol set is pinned by `async.Family.ExportedSymbolsArePinned`.
 
 ## 3. Status
 
-**v0.6.0** — the family version (D13), in the SampleRateTap tree since the
-2026 migration; before it, SampleRateTap v0.1.0 (the campaign's PR A–C6 in
+**v0.7.0** — the family version (D13), in the SampleRateTap tree since the
+2026 migration; 0.7.0 moved the channel count into the type (A13, the
+record in section 6); before it, SampleRateTap v0.1.0 (the campaign's PR A–C6 in
 `docs/PERFORMANCE.md` "Sequencing & status"). The DspTap adoption
 (`bridge/PLAN.md` Appendix B) moved the FIR substrate out; the
 engine-owned datapaths — `fractional_resampler`, the polyphase bank, the
@@ -96,8 +112,9 @@ In expected order; each item lands as its own PR with its measurements.
    there). *Done* (the roadmap's A2): the static link lacked
    `--eh-frame-hdr`, not an unwinder; with it in
    `cmake/hexagon-linux-musl.cmake` throws propagate and `ConfigValidation`
-   runs on the leg (`docs/PERFORMANCE.md`, "Resolved"). A3's
-   `config::validate()` stays the answer wherever a throw cannot propagate.
+   runs on the leg (`docs/PERFORMANCE.md`, "Resolved"). A3's precheck,
+   `basic_converter<S, Ch>::validate()` since A13, stays the answer wherever
+   a throw cannot propagate.
 6. **Housekeeping from the migration.** Bring `bench/icount/` under the
    clang-tidy gate (excluded by path in `style.yml`). *Done* (the roadmap's
    A2): `icount_main.cpp` is tidy-clean and the exclusion is gone. *Also done:* the Hexagon
@@ -113,3 +130,37 @@ In expected order; each item lands as its own PR with its measurements.
 - A `(in_hz, out_hz)` lookup, here or anywhere in the family (D12).
 - Absorbing DspTap's `decimate.h`, or any building block that belongs in
   the substrate (D11): shared code lands in DspTap first.
+
+## 6. Records
+
+- **A13 — the channel count in the type (A13d, 2026-11-18; the family's D18,
+  `../docs/CHANNELS_PLAN.md`).** `basic_converter<S, Ch>` and
+  `fractional_resampler<S, Ch>`: the count is the second parameter, at least 1
+  and with no default, and the aliases take it alone (`converter<2>`). The
+  configuration, bank, ring, servo, setpoint state and telemetry are
+  `converter_base<S>`'s, its constructor and restart out of line (K12: built
+  once per format); `config` loses `channels`, and `config::validate` is
+  retired for `basic_converter<S, Ch>::validate` (K4, no alias: D7); the mono
+  branch, the history layout and the divisions by the count are
+  compile-time (K5), and the histories are a `std::array` of lines (K6, one
+  allocation fewer: the footprint's `H sizeof(std::vector)` term is gone,
+  48 B per stereo converter on a 64-bit host). The C ABI serves one and two
+  channels natively and returns NULL for any other count (K8). Measured
+  against gate 0's same-job reference (2ed199a; `main` before A13d counted
+  identically on every row) on every target in both configurations, every
+  checksum equal and no row rising: M55 −10.82 … +0.00 % (streaming sum
+  −1.94 % with exceptions, −1.95 % without), M33 −3.07 … +0.00 % (−0.20 %,
+  −0.18 %), Hexagon −2.03 … +0.00 % (−0.25 %, −0.26 %), host −4.21 % at 2
+  channels and −2.51 % at 12 (−2.91 %); the kernel rows, which construct no
+  converter, do not move. At 16 channels, the plan's check that a large
+  constant count does not regress, the host pipeline counts −1.68 %
+  (443,393,957 against 450,976,436, the same checksum). Two M55 rows widen
+  the gap between the two configurations past gate 0's 0.1-point margin:
+  `pipeline_float` (the reference's builds −0.084 % apart, A13d's −0.190 %)
+  and `pipeline_q31` (+0.008 %, +0.124 %), both builds of each row below the
+  reference by 2 … 3.4 %. The maintainer accepted both (2026-11-18) with one baseline each, recorded from the exceptions build as every other row: the build without exceptions sits −0.19 % (float) and +0.12 % (Q31) from it, inside ±3 % with no midpoint. The baselines are re-recorded from
+  the exceptions build on every target. The ceilings fell on all three
+  targets: engine `.text` −1.5 … −4.8 %, the probes' images −0.1 … −1.5 %,
+  engine `.rodata` −8 B on the Arm targets, the M33's `pull()` stacks −24 B
+  (float) and −32 B (Q15). The numbers are in
+  `../docs/channels/a13d_measurements.json`.

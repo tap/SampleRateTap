@@ -63,23 +63,19 @@ namespace {
         double worst_crosstalk_db = -300.0; ///< worst other-channel tone, dB rel. own
     };
 
-    /// Runs `channels` distinct tones through one converter across a +200 ppm
-    /// clock crossing, then analyzes the last `windowSeconds` per channel.
-    /// chunk = 1 reproduces the quality-suite methodology (sample-granular
-    /// transfer reaches the Quiet servo stage); chunk = 8 is AVB Class A-like
-    /// granularity for the Track-stage short variant.
-    template <typename S>
-    std::vector<channel_report> measure_independence(std::size_t channels, double total_seconds, double window_seconds,
-                                                     std::size_t chunk) {
-        tap::sr::async::config cfg;
-        cfg.channels = channels;
-        tap::sr::async::basic_converter<S> asrc(cfg);
-        async_test::two_clock_sim_t<S>     sim{.asrc      = asrc,
-                                               .fs_in     = k_fs * (1.0 + k_eps),
-                                               .fs_out    = k_fs,
-                                               .channels  = channels,
-                                               .chunk_in  = chunk,
-                                               .chunk_out = chunk};
+    /// Runs Ch distinct tones through one converter of Ch channels (the
+    /// type's, A13) across a +200 ppm clock crossing, then analyzes the last
+    /// `windowSeconds` per channel. chunk = 1 reproduces the quality-suite
+    /// methodology (sample-granular transfer reaches the Quiet servo stage);
+    /// chunk = 8 is AVB Class A-like granularity for the Track-stage short
+    /// variant.
+    template <typename S, std::size_t Ch>
+    std::vector<channel_report> measure_independence(double total_seconds, double window_seconds, std::size_t chunk) {
+        constexpr std::size_t                  channels = Ch;
+        const tap::sr::async::config           cfg;
+        tap::sr::async::basic_converter<S, Ch> asrc(cfg);
+        async_test::two_clock_sim_t<S, Ch>     sim{
+                .asrc = asrc, .fs_in = k_fs * (1.0 + k_eps), .fs_out = k_fs, .chunk_in = chunk, .chunk_out = chunk};
         sim.gen_ch = [&](std::uint64_t i, std::size_t c) {
             const double w = 2.0 * std::numbers::pi * channel_freq_hz(c) / k_fs;
             // Per-channel phase offsets decorrelate the channel waveforms.
@@ -139,7 +135,7 @@ namespace {
     // thresholds (float floor here is interpolation noise at the per-channel
     // tone frequency; Q15's is the format's own quantization).
     TEST(MultiChannel, Independence12chFloat) {
-        const auto r = measure_independence<float>(12, 40.0, 1.0, 1);
+        const auto r = measure_independence<float, 12>(40.0, 1.0, 1);
         for (const auto& ch : r) {
             EXPECT_NEAR(ch.amplitude, k_amp, 0.01);
             EXPECT_GT(ch.snr_db, 100.0);
@@ -148,7 +144,7 @@ namespace {
     }
 
     TEST(MultiChannel, Independence16chQ15) {
-        const auto r = measure_independence<std::int16_t>(16, 40.0, 1.0, 1);
+        const auto r = measure_independence<std::int16_t, 16>(40.0, 1.0, 1);
         for (const auto& ch : r) {
             EXPECT_NEAR(ch.amplitude, k_amp, 0.01);
             EXPECT_GT(ch.snr_db, 72.0);
@@ -165,7 +161,7 @@ namespace {
     // audit found those tiles had zero coverage. Float, because float is the
     // channel-parallel sample type.
     TEST(MultiChannelShort, Independence5chFloat) {
-        const auto r = measure_independence<float>(5, 4.0, 0.25, 8);
+        const auto r = measure_independence<float, 5>(4.0, 0.25, 8);
         for (const auto& ch : r) {
             EXPECT_NEAR(ch.amplitude, k_amp, 0.05);
             EXPECT_GT(ch.snr_db, 35.0);
@@ -174,7 +170,7 @@ namespace {
     }
 
     TEST(MultiChannelShort, Independence7chFloat) {
-        const auto r = measure_independence<float>(7, 4.0, 0.25, 8);
+        const auto r = measure_independence<float, 7>(4.0, 0.25, 8);
         for (const auto& ch : r) {
             EXPECT_NEAR(ch.amplitude, k_amp, 0.05);
             EXPECT_GT(ch.snr_db, 35.0);
@@ -183,7 +179,7 @@ namespace {
     }
 
     TEST(MultiChannelShort, Independence12chQ15) {
-        const auto r = measure_independence<std::int16_t>(12, 4.0, 0.25, 8);
+        const auto r = measure_independence<std::int16_t, 12>(4.0, 0.25, 8);
         for (const auto& ch : r) {
             EXPECT_NEAR(ch.amplitude, k_amp, 0.05);
             EXPECT_GT(ch.snr_db, 35.0);

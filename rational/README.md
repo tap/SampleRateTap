@@ -111,7 +111,7 @@ chain's `validate` are the same verdict as a `noexcept` `const char*` reason
   `chain_q31`; `macs_per_output_exact()` the MACs per output as a reduced rational and
   `macs_per_output()` its double; and the 20 named multi-stage
   chains of the coverage matrix (`up_2_up_2<S, Ch>` … `down_3_down_8_down_2<S, Ch>`).
-- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.6.0 since the audit response; 0.5.0 from M6);
+- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.7.0 since A13; 0.6.0 from the audit response, 0.5.0 from M6);
   the named ratios of the vocabulary (`up_2` … `ratio_3_8`) are `ratio.h`'s.
 
 Against the general-purpose resampler libraries at four ratios of the
