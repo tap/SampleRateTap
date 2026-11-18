@@ -27,9 +27,9 @@ family roadmap's A11): `bridge` in both directions (48 → 44.1 and
 44.1 → 48 kHz) and `rational` up 2, down 2 and 2/3, all Q15 at the default
 profile (`economy`), stereo, each `process()` of 32 input frames timed. Their
 QEMU M33 steady states, from `bridge/bench/baselines.json` less the
-construct-only legs (2 s of stereo), are 424.9 instructions per output frame
-down ((173,755,176 − 136,279,322) / 88,200) and 311.5 up
-((133,914,472 − 104,011,630) / 96,000): the firmware's cycles per output
+construct-only legs (2 s of stereo), are 421.9 instructions per output frame
+down ((173,490,049 − 136,278,807) / 88,200) and 309.0 up
+((133,676,365 − 104,011,144) / 96,000): the firmware's cycles per output
 frame divided by those is the same calibration ratio, read off a second
 datapath. `rational`'s construct leg is its chain's (`down2_down2_q15_eco`),
 so its single-stage totals still carry their own construction, and the
@@ -110,7 +110,7 @@ TAP_SR_PICO2_DONE
 - **cyc/frame ÷ 1,138** (Q15 balanced 2ch) and **÷ 3,326** (12ch) give the
   silicon cycles-per-QEMU-instruction ratio — the calibration constant for
   all M33 instruction baselines in the README table.
-- **cyc/out ÷ 424.9** (`bridge` 48>44.1) and **÷ 311.5** (44.1>48) read the
+- **cyc/out ÷ 421.9** (`bridge` 48>44.1) and **÷ 309.0** (44.1>48) read the
   same ratio off the synchronous datapath; the two ratios agreeing is the
   check that one constant serves every engine.
 - **%core@48k** is the headline budget figure. The float rows exist to put a

@@ -33,9 +33,9 @@ namespace {
 
     constexpr auto k_dir =
         TAP_SR_BRIDGE_HC_DIR == 0 ? tap::sr::bridge::direction::up_to_48k : tap::sr::bridge::direction::down_to_44k1;
-    using converter = tap::sr::bridge::basic_converter<float, k_dir, 0>;
+    constexpr std::size_t k_ch = TAP_SR_BRIDGE_HC_CH;
+    using converter            = tap::sr::bridge::basic_converter<float, k_ch, k_dir, 0>;
 
-    constexpr std::size_t k_ch     = TAP_SR_BRIDGE_HC_CH;
     constexpr std::size_t k_block  = 128;
     constexpr std::size_t k_blocks = 2 * 44100 / k_block; // about 2 s of input
 
@@ -55,7 +55,7 @@ extern "C" [[gnu::noinline]] double tap_sr_host_counted(converter& c, const floa
 }
 
 int main() {
-    converter c(k_ch);
+    converter c;
 
     constexpr std::size_t k_input_frames = 12000; // cycled
     std::vector<float>    input(k_input_frames * k_ch);

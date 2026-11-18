@@ -4,8 +4,13 @@
 >
 > — Donald Knuth, "Structured Programming with go to Statements"
 
-`basic_converter<S, D, K>` is the table, the schedule, planar delay lines
-per channel, and four entry points: `process`, `pull`, `flush`, `reset`.
+`basic_converter<S, Ch, D, K>` is the table, the schedule, planar delay
+lines per channel, and four entry points: `process`, `pull`, `flush`,
+`reset`. The channel count `Ch` is the type's, a compile-time constant of at
+least 1 (the family's A13): the table and the stream position live in
+`converter_base<S, D, K>`, whose constructor designs the table out of line,
+once per format, direction and rate scale, so an image that runs one
+converter type at several counts carries the design once.
 This chapter reads the contract first, then the three measured codegen
 levers that took the hot path from a correct loop to the numbers in the
 README — and it reads the one lever that measured at zero and the one
@@ -70,9 +75,11 @@ The walk settles the trip count by `outputs_for()` arithmetic before the
 first sample moves, so the loop has no exhaustion checks; the schedule
 cursor, history end and pending gap live in locals the compiler keeps in
 registers; input and output advance by pointer bumps; and the mono and
-stereo shapes — the deployment shapes — are stamped out as their own
-specializations with the planar history pointers hoisted, so the channel
-loop vanishes. The dots are the unchanged `tap::dsp` kernels and the
+stereo shapes — the deployment shapes — are their own bodies with the
+planar history pointers hoisted, so the channel loop vanishes, while every
+other count is a loop of constant length. Since A13 the count is the
+type's, so each converter compiles only its own shape, and the walk is out
+of line per trip count, its codegen its own. The dots are the unchanged `tap::dsp` kernels and the
 append/emit order is identical, so the outputs are bit-exact, and the
 scipy-vector tests are the proof: a change that moved a bit would fail
 them before the ratchet ever ran.
@@ -175,7 +182,7 @@ without a number next to it.
 |---|---|---|
 | Trip count settled by arithmetic before the walk | per-frame exhaustion checks | the loop body has no branches the compiler cannot resolve; `outputs_for` is exact |
 | State machine in locals, pointer bumps | member variables, index multiplies | M55 −31 … −60 %, M33 fixed point −12 … −25 %; Hexagon flat, which located the overhead |
-| Mono and stereo as stamped-out specializations | one generic channel loop | the deployment shapes; the channel loop vanishes |
+| Mono and stereo as their own bodies, the count in the type | one generic channel loop; a run-time count dispatched to them | the deployment shapes; the channel loop vanishes, and since A13 a converter compiles only its own count |
 | Four `constexpr` trip counts, one dispatch per call | a runtime dot length | Hexagon pipelines exact counts (−7 … −12 %); 44 taps unrolls under Helium (−15 %) |
 | Mirrored dot out of line on Arm, inline on Hexagon | one choice for all targets | two inlined arms cost +3.3 % on the M55; a call costs +3.3 % on Hexagon; gated per target with the numbers in the comment |
 | `pull()` keeps the per-frame loop | walk it too | its granularity is the callback; a different lever |

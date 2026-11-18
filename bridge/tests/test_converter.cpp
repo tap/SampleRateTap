@@ -33,7 +33,9 @@ namespace {
     using tap::sr::bridge::ratio_traits;
 
     template <direction D>
-    using conv = basic_converter<float, D>;
+    using conv = basic_converter<float, 1, D>;
+    template <direction D>
+    using conv2 = basic_converter<float, 2, D>;
 
     // ------------------------------------------------------------------
     // Structural correctness: a unit impulse must reproduce the quantized
@@ -43,7 +45,7 @@ namespace {
     // verified bit for bit in one sweep, no external reference needed.
     template <direction D>
     void check_impulse_reproduces_table(const profile& p) {
-        conv<D>            c(1, p);
+        conv<D>            c(p);
         const std::size_t  taps = c.taps();
         const std::size_t  n_in = taps + 4;
         std::vector<float> x(n_in, 0.0f);
@@ -90,7 +92,7 @@ namespace {
     // peak; see tools/reference/make_reference_vectors.py).
     template <direction D, std::size_t NRef>
     void check_reference(const profile& p, const std::array<float, NRef>& ref) {
-        conv<D> c(1, p);
+        conv<D> c(p);
         ASSERT_EQ(c.outputs_for(ratio_ref::k_input.size()), NRef);
         std::vector<float> y(NRef);
         ASSERT_EQ(c.process(ratio_ref::k_input.data(), ratio_ref::k_input.size(), y.data()), NRef);
@@ -131,11 +133,11 @@ namespace {
     TEST(Converter, PullMatchesProcessBitExact) {
         const auto& x = ratio_ref::k_input;
 
-        conv<direction::down_to_44k1> a(1);
+        conv<direction::down_to_44k1> a;
         std::vector<float>            ya(a.outputs_for(x.size()));
         a.process(x.data(), x.size(), ya.data());
 
-        conv<direction::down_to_44k1> b(1);
+        conv<direction::down_to_44k1> b;
         std::size_t                   fed  = 0;
         std::size_t                   call = 0;
         auto                          pop  = [&](float* dst, std::size_t max_frames) noexcept -> std::size_t {
@@ -157,11 +159,11 @@ namespace {
     TEST(Converter, PullShortReturnsOnDryThenResumes) {
         const auto& x = ratio_ref::k_input;
 
-        conv<direction::up_to_48k> a(1);
+        conv<direction::up_to_48k> a;
         std::vector<float>         ya(a.outputs_for(x.size()));
         a.process(x.data(), x.size(), ya.data());
 
-        conv<direction::up_to_48k> b(1);
+        conv<direction::up_to_48k> b;
         std::vector<float>         yb(ya.size());
         std::size_t                fed   = 0;
         std::size_t                limit = 100; // first tranche of input
@@ -190,7 +192,7 @@ namespace {
     template <direction D>
     void check_accounting_exhaustively() {
         constexpr std::size_t l = ratio_traits<D>::k_phases;
-        conv<D>               c(1);
+        conv<D>               c;
         std::size_t           consumed = 0;
         auto                  pop      = [&](float* dst, std::size_t max_frames) noexcept -> std::size_t {
             for (std::size_t i = 0; i < max_frames; ++i) {
@@ -256,7 +258,7 @@ namespace {
     namespace an = tap::dsp::analysis;
 
     std::vector<float> run_sine_down(const profile& p, double freq_hz, double amp, std::size_t n_in) {
-        conv<direction::down_to_44k1> c(1, p);
+        conv<direction::down_to_44k1> c(p);
         std::vector<float>            x(n_in);
         for (std::size_t i = 0; i < n_in; ++i) {
             x[i] =
@@ -327,9 +329,9 @@ namespace {
         // transparent profile: its -121 dB floor puts filter spurs far below
         // the crosstalk threshold, so the fit at the other channel's tone
         // measures actual channel bleed and nothing else.
-        conv<direction::down_to_44k1> c(2, profile::transparent());
-        const std::size_t             n_in = 1 << 15;
-        std::vector<float>            x(n_in * 2);
+        conv2<direction::down_to_44k1> c(profile::transparent());
+        const std::size_t              n_in = 1 << 15;
+        std::vector<float>             x(n_in * 2);
         for (std::size_t i = 0; i < n_in; ++i) {
             const auto t = static_cast<double>(i);
             x[i * 2]     = static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * 997.0 / 48000.0 * t));
@@ -354,7 +356,7 @@ namespace {
         // channel's frequency cannot show this — the rectangular-window
         // leakage of the strong own-tone floors such a probe near -87 dB
         // regardless of bleed.)
-        conv<direction::down_to_44k1> mono(1, profile::transparent());
+        conv<direction::down_to_44k1> mono(profile::transparent());
         std::vector<float>            x0(n_in);
         for (std::size_t i = 0; i < n_in; ++i) {
             x0[i] = x[i * 2];
@@ -370,7 +372,7 @@ namespace {
     // Lifecycle: flush drains the tail to silence with the predicted count;
     // reset reproduces the identical stream bit for bit.
     TEST(Converter, FlushDrainsTailToSilence) {
-        conv<direction::down_to_44k1> c(1);
+        conv<direction::down_to_44k1> c;
         const std::size_t             n_in = 480;
         std::vector<float>            x(n_in);
         for (std::size_t i = 0; i < n_in; ++i) {
@@ -390,7 +392,7 @@ namespace {
     }
 
     TEST(Converter, ResetReproducesBitExactly) {
-        conv<direction::up_to_48k> c(1);
+        conv<direction::up_to_48k> c;
         const auto&                x = ratio_ref::k_input;
         std::vector<float>         y1(c.outputs_for(x.size()));
         c.process(x.data(), x.size(), y1.data());
@@ -408,11 +410,11 @@ namespace {
     // the schedule are K-independent (test_design.cpp pins the table).
     template <typename S, direction D, unsigned K>
     void check_rate_scaled_converter_is_the_base_machine() {
-        using base_t   = basic_converter<S, D, 0>;
-        using scaled_t = basic_converter<S, D, K>;
+        using base_t   = basic_converter<S, 2, D, 0>;
+        using scaled_t = basic_converter<S, 2, D, K>;
         static_assert(base_t::k_rate_scale == 0 && scaled_t::k_rate_scale == K);
-        base_t   base(2, profile::balanced());
-        scaled_t scaled(2, profile::balanced());
+        base_t   base(profile::balanced());
+        scaled_t scaled(profile::balanced());
         ASSERT_EQ(base.taps(), scaled.taps());
         ASSERT_EQ(base.latency_input_frames(), scaled.latency_input_frames());
         constexpr std::size_t n_in = 2000;
@@ -437,12 +439,12 @@ namespace {
 
     TEST(Converter, RateScaledConvertersAreTheBaseMachine) {
         namespace br = tap::sr::bridge;
-        static_assert(std::is_same_v<br::converter_to_96k, basic_converter<float, direction::up_to_48k, 1>>);
-        static_assert(std::is_same_v<br::converter_to_88k2, basic_converter<float, direction::down_to_44k1, 1>>);
+        static_assert(std::is_same_v<br::converter_to_96k<1>, basic_converter<float, 1, direction::up_to_48k, 1>>);
+        static_assert(std::is_same_v<br::converter_to_88k2<2>, basic_converter<float, 2, direction::down_to_44k1, 1>>);
         static_assert(
-            std::is_same_v<br::converter_to_192k_q15, basic_converter<std::int16_t, direction::up_to_48k, 2>>);
-        static_assert(
-            std::is_same_v<br::converter_to_176k4_q31, basic_converter<std::int32_t, direction::down_to_44k1, 2>>);
+            std::is_same_v<br::converter_to_192k_q15<1>, basic_converter<std::int16_t, 1, direction::up_to_48k, 2>>);
+        static_assert(std::is_same_v<br::converter_to_176k4_q31<6>,
+                                     basic_converter<std::int32_t, 6, direction::down_to_44k1, 2>>);
         check_rate_scaled_converter_is_the_base_machine<float, direction::up_to_48k, 1>();
         check_rate_scaled_converter_is_the_base_machine<float, direction::down_to_44k1, 1>();
         check_rate_scaled_converter_is_the_base_machine<float, direction::up_to_48k, 2>();
@@ -454,10 +456,13 @@ namespace {
     }
 
     TEST(Converter, LatencyAndValidation) {
-        conv<direction::down_to_44k1> c(1);
+        conv<direction::down_to_44k1> c;
         EXPECT_NEAR(c.latency_input_frames(), 58.0 / 2.0, 0.51);
+        // The count is the type's (A13); zero fails to compile
+        // (bridge.Converter.ZeroChannelsFailToCompileWithTheMessage).
+        static_assert(conv<direction::down_to_44k1>::channels() == 1);
+        static_assert(conv2<direction::down_to_44k1>::channels() == 2);
         EXPECT_EQ(c.channels(), 1u);
-        TAP_SR_EXPECT_REJECTED(conv<direction::down_to_44k1>(0), std::invalid_argument);
     }
 
     // The family's error model (A3): validate() is the constructor's rejection
@@ -468,24 +473,22 @@ namespace {
         using tap::sr::bridge::profile;
         using down = conv<direction::down_to_44k1>;
         using up   = conv<direction::up_to_48k>;
-        static_assert(noexcept(down::validate(1, profile::economy())));
+        static_assert(noexcept(down::validate(profile::economy())));
         for (const profile& p :
              {profile::super_economy(), profile::economy(), profile::balanced(), profile::transparent()}) {
-            EXPECT_EQ(down::validate(1, p), nullptr);
-            EXPECT_EQ(up::validate(2, p), nullptr);
-            TAP_SR_EXPECT_ACCEPTED(down(1, p));
+            EXPECT_EQ(down::validate(p), nullptr);
+            EXPECT_EQ(conv2<direction::up_to_48k>::validate(p), nullptr);
+            TAP_SR_EXPECT_ACCEPTED(down{p});
         }
-        EXPECT_STREQ(down::validate(0), "tap::sr::bridge::basic_converter: channels == 0");
-        TAP_SR_EXPECT_REJECTED_WITH(down(0), std::invalid_argument, down::validate(0));
         profile bad     = profile::economy();
         bad.passband_hz = 23000.0; // above the down direction's stopband edge
-        EXPECT_STREQ(down::validate(1, bad), "tap::sr::bridge::design_prototype: bad profile");
-        TAP_SR_EXPECT_REJECTED_WITH(down(1, bad), std::invalid_argument, down::validate(1, bad));
-        EXPECT_EQ(up::validate(1, bad), nullptr) << "23 kHz is below the up direction's 24 kHz edge";
+        EXPECT_STREQ(down::validate(bad), "tap::sr::bridge::design_prototype: bad profile");
+        TAP_SR_EXPECT_REJECTED_WITH(down{bad}, std::invalid_argument, down::validate(bad));
+        EXPECT_EQ(up::validate(bad), nullptr) << "23 kHz is below the up direction's 24 kHz edge";
         profile q           = profile::economy();
         q.stopband_atten_db = -1.0;
-        EXPECT_NE(up::validate(1, q), nullptr);
-        TAP_SR_EXPECT_REJECTED_WITH(up(1, q), std::invalid_argument, up::validate(1, q));
+        EXPECT_NE(up::validate(q), nullptr);
+        TAP_SR_EXPECT_REJECTED_WITH(up{q}, std::invalid_argument, up::validate(q));
     }
 
 } // namespace

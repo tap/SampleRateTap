@@ -133,10 +133,10 @@ namespace {
 
     template <typename S, direction D>
     void bridge_bench(benchmark::State& state, const tap::sr::bridge::profile& p) {
-        tap::sr::bridge::basic_converter<S, D> conv(k_ch, p);
-        input_tap<S>                           in(rates<D>::k_in);
-        std::vector<S>                         out(static_cast<std::size_t>(conv.outputs_for(k_block) + 1) * k_ch);
-        std::int64_t                           frames = 0;
+        tap::sr::bridge::basic_converter<S, k_ch, D> conv(p);
+        input_tap<S>                                 in(rates<D>::k_in);
+        std::vector<S> out(static_cast<std::size_t>(conv.outputs_for(k_block) + 1) * k_ch);
+        std::int64_t   frames = 0;
         for (auto _ : state) {
             const std::size_t got = conv.process(in.run(), k_block, out.data());
             benchmark::DoNotOptimize(out.data());

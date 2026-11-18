@@ -84,7 +84,7 @@ namespace {
                                          ? tap_sr_bridge_create(dir_tag, profile_tag, 2)
                                          : tap_sr_bridge_create_format(dir_tag, profile_tag, format_tag<S>(), 2);
         ASSERT_NE(c, nullptr) << dir_tag << " " << profile_tag;
-        basic_converter<S, D> ref(2, p);
+        basic_converter<S, 2, D> ref(p);
         EXPECT_EQ(tap_sr_bridge_format(c), format_tag<S>());
         const auto&    n = ratio_ref::k_input;
         std::vector<S> x(2 * n.size());
@@ -144,6 +144,74 @@ namespace {
         expect_both_directions<float>();
         expect_both_directions<std::int16_t>();
         expect_both_directions<std::int32_t>();
+    }
+
+    // A count the C ABI does not serve natively (A13's K8, option (b)): the
+    // C ABI runs that many one-channel converters behind the handle. Bit for
+    // bit the native converter of that count, on N channels of the reference
+    // noise (channel c scaled by (c + 1) / (N + 1), odd channels negated):
+    // one call longer than the fan-out's 256-frame staging, then a short one,
+    // the accounting from mid-stream, flush, and reset.
+    template <typename S, std::size_t N, direction D>
+    void expect_fan_out_is_native(int dir_tag) {
+        tap_sr_bridge_converter* c = tap_sr_bridge_create_format(dir_tag, 0, format_tag<S>(), N);
+        ASSERT_NE(c, nullptr) << dir_tag;
+        basic_converter<S, N, D> ref(profile::economy());
+        const auto&              n = ratio_ref::k_input;
+        std::vector<S>           x(N * n.size());
+        for (std::size_t i = 0; i < n.size(); ++i) {
+            for (std::size_t ch = 0; ch < N; ++ch) {
+                const float sign  = ch % 2 == 0 ? 1.0F : -1.0F;
+                const float scale = static_cast<float>(ch + 1) / static_cast<float>(N + 1);
+                x[i * N + ch]     = to_sample<S>(sign * scale * n[i]);
+            }
+        }
+        const std::size_t first = n.size() - 7;
+        ASSERT_GT(first, std::size_t{256}) << dir_tag << ": longer than the staging";
+        std::vector<S>    ya(N * (static_cast<std::size_t>(ref.outputs_for(n.size())) + 8));
+        std::vector<S>    yb(ya.size());
+        const std::size_t a1 = abi_process(c, x.data(), first, ya.data());
+        const std::size_t b1 = ref.process(x.data(), first, yb.data());
+        ASSERT_EQ(a1, b1) << dir_tag;
+        const std::size_t a2 = abi_process(c, x.data() + N * first, 7, ya.data() + N * a1);
+        const std::size_t b2 = ref.process(x.data() + N * first, 7, yb.data() + N * b1);
+        ASSERT_EQ(a2, b2) << dir_tag;
+        ya.resize(N * (a1 + a2));
+        yb.resize(ya.size());
+        EXPECT_TRUE(ya == yb) << dir_tag;
+        EXPECT_EQ(tap_sr_bridge_outputs_for(c, 100), ref.outputs_for(100)) << dir_tag;
+        EXPECT_EQ(tap_sr_bridge_frames_needed(c, 100), ref.frames_needed(100)) << dir_tag;
+        EXPECT_EQ(tap_sr_bridge_taps(c), ref.taps()) << dir_tag;
+        EXPECT_DOUBLE_EQ(tap_sr_bridge_latency_input_frames(c), ref.latency_input_frames()) << dir_tag;
+        const auto tail = static_cast<std::size_t>(tap_sr_bridge_flush_output_frames(c));
+        ASSERT_EQ(tail, ref.flush_output_frames()) << dir_tag;
+        std::vector<S> fa(N * tail);
+        std::vector<S> fb(N * tail);
+        EXPECT_EQ(abi_flush(c, fa.data()), tail) << dir_tag;
+        ref.flush(fb.data());
+        EXPECT_TRUE(fa == fb) << dir_tag;
+        tap_sr_bridge_reset(c);
+        ref.reset();
+        EXPECT_EQ(tap_sr_bridge_outputs_for(c, n.size()), ref.outputs_for(n.size())) << dir_tag;
+        tap_sr_bridge_destroy(c);
+    }
+
+    template <typename S, std::size_t N>
+    void expect_fan_out_at() {
+        expect_fan_out_is_native<S, N, direction::up_to_48k>(0);
+        expect_fan_out_is_native<S, N, direction::down_to_44k1>(1);
+    }
+
+    TEST(CApi, FanOutIsTheNativeConverterBitForBit) {
+        expect_fan_out_at<float, 3>();
+        expect_fan_out_at<float, 6>();
+        expect_fan_out_at<float, 12>();
+        expect_fan_out_at<std::int16_t, 3>();
+        expect_fan_out_at<std::int16_t, 6>();
+        expect_fan_out_at<std::int16_t, 12>();
+        expect_fan_out_at<std::int32_t, 3>();
+        expect_fan_out_at<std::int32_t, 6>();
+        expect_fan_out_at<std::int32_t, 12>();
     }
 
     TEST(CApi, InvalidArgumentsReturnNull) {

@@ -1,0 +1,881 @@
+{
+  "about": "A13c's measurements (docs/CHANNELS_PLAN.md section 4): bridge's ratchet workloads at the 2ed199a reference and at A13c, with and without exceptions and RTTI, on every ratchet target.",
+  "counts": {
+    "a13c": {
+      "noexc_OFF": {
+        "hexagon": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 108834
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 7594
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 81575
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 6169
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 24938675
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 20103575
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 304480111
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 944034530
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 45571406
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 33123379
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 45467724
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 220063952
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 533608001
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 35881082
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 27248312
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 35849684
+          }
+        },
+        "host": {
+          "down_float_12ch": {
+            "checksum": "-4.5620880753267556",
+            "insns": 586852336
+          },
+          "down_float_2ch": {
+            "checksum": "-4.9389975592494011",
+            "insns": 99767151
+          },
+          "up_float_12ch": {
+            "checksum": "3.6419107757287748",
+            "insns": 464083929
+          },
+          "up_float_2ch": {
+            "checksum": "-3.4350557418501921",
+            "insns": 79463088
+          }
+        },
+        "m33": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 544858
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 12904
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 416269
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 10934
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 136278807
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 104011144
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 1720700517
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 5473027607
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 173490049
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 130702831
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 244091594
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 1231719777
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 3110077618
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 133676365
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 102394732
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 184167773
+          }
+        },
+        "m55": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 23687
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 6480
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 18827
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 5798
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 4259966
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 3470314
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 72960268
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 213941893
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 21976280
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 16706945
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 96803300
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 54398609
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 125024952
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 18410843
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 16815048
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 72774401
+          }
+        }
+      },
+      "noexc_ON": {
+        "hexagon": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 108834
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 7594
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 81575
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 6169
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 24950804
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 20113770
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 304470605
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 944024962
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 45574256
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 33123832
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 45470510
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 220055530
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 533599499
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 35882980
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 27248642
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 35852192
+          }
+        },
+        "host": {
+          "down_float_12ch": {
+            "checksum": "-4.5620880753267556",
+            "insns": 586852336
+          },
+          "down_float_2ch": {
+            "checksum": "-4.9389975592494011",
+            "insns": 99767151
+          },
+          "up_float_12ch": {
+            "checksum": "3.6419107757287748",
+            "insns": 464083929
+          },
+          "up_float_2ch": {
+            "checksum": "-3.4350557418501921",
+            "insns": 79463088
+          }
+        },
+        "m33": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 544858
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 12845
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 416269
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 10871
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 136264096
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 104006839
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 1720700511
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 5473027601
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 173300472
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 130520217
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 244079299
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 1231719767
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 3110077608
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 133497094
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 102834916
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 184164009
+          }
+        },
+        "m55": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 23687
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 6631
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 18827
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 5927
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 4264581
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 3473707
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 72964524
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 213955410
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 22422022
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 17063164
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 96807552
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 54401647
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 125032630
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 18768233
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 17171638
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 72777457
+          }
+        }
+      }
+    },
+    "reference_2ed199a": {
+      "noexc_OFF": {
+        "hexagon": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 108885
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 7629
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 81626
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 6209
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 24941177
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 20108300
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 304636218
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 944365108
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 45676983
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 33235134
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 45622586
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 220214323
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 533810371
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 35990414
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 27424113
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 36007856
+          }
+        },
+        "host": {
+          "down_float_12ch": {
+            "checksum": "-4.5620880753267556",
+            "insns": 593269419
+          },
+          "down_float_2ch": {
+            "checksum": "-4.9389975592494011",
+            "insns": 99512817
+          },
+          "up_float_12ch": {
+            "checksum": "3.6419107757287748",
+            "insns": 470747117
+          },
+          "up_float_2ch": {
+            "checksum": "-3.4350557418501921",
+            "insns": 79169263
+          }
+        },
+        "m33": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 544859
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 12995
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 416230
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 11022
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 136279342
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 104011650
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 1720668811
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 5473370744
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 173743182
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 130955932
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 245083560
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 1231616607
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 3110474134
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 133903454
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 103379915
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 185378957
+          }
+        },
+        "m55": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 24108
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 6628
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 19318
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 6048
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 4260558
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 3470985
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 74184008
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 215093248
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 22395805
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 17740374
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 96896010
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 55743436
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 126399439
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 19084874
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 17484911
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 72863179
+          }
+        }
+      },
+      "noexc_ON": {
+        "hexagon": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 108885
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 7629
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 81626
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 6209
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 24953466
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 20118655
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 304626872
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 944355700
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 45679993
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 33235747
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 45625531
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 220206061
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 533802029
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 35992472
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 27424603
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 36010523
+          }
+        },
+        "host": {
+          "down_float_12ch": {
+            "checksum": "-4.5620880753267556",
+            "insns": 593269419
+          },
+          "down_float_2ch": {
+            "checksum": "-4.9389975592494011",
+            "insns": 99512817
+          },
+          "up_float_12ch": {
+            "checksum": "3.6419107757287748",
+            "insns": 470747117
+          },
+          "up_float_2ch": {
+            "checksum": "-3.4350557418501921",
+            "insns": 79169263
+          }
+        },
+        "m33": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 544859
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 12995
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 416230
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 11022
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 136289493
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 104002994
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 1720668807
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 5473370740
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 173758034
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 130967249
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 245276147
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 1231616602
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 3110474129
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 133900060
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 103116189
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 185306314
+          }
+        },
+        "m55": {
+          "callmax_down_float": {
+            "checksum": "88197.995786508545",
+            "insns": 24108
+          },
+          "callmax_down_q15": {
+            "checksum": "22534",
+            "insns": 6628
+          },
+          "callmax_up_float": {
+            "checksum": "95993.877066601097",
+            "insns": 19318
+          },
+          "callmax_up_q15": {
+            "checksum": "157460",
+            "insns": 6048
+          },
+          "construct_down_q15_eco": {
+            "checksum": "58.996598639455783",
+            "insns": 4262842
+          },
+          "construct_up_q15_eco": {
+            "checksum": "53.996875000000003",
+            "insns": 3480586
+          },
+          "down_float_eco": {
+            "checksum": "88197.995786508545",
+            "insns": 74188265
+          },
+          "down_float_tr": {
+            "checksum": "88198.159601442836",
+            "insns": 215106766
+          },
+          "down_q15_eco": {
+            "checksum": "22534",
+            "insns": 22398017
+          },
+          "down_q15_se": {
+            "checksum": "124052",
+            "insns": 17300159
+          },
+          "down_q31_eco": {
+            "checksum": "-4303923922",
+            "insns": 96720750
+          },
+          "up_float_eco": {
+            "checksum": "95993.877066601097",
+            "insns": 55746475
+          },
+          "up_float_tr": {
+            "checksum": "95995.77426427466",
+            "insns": 126407118
+          },
+          "up_q15_eco": {
+            "checksum": "157460",
+            "insns": 19094397
+          },
+          "up_q15_se": {
+            "checksum": "215775",
+            "insns": 17489543
+          },
+          "up_q31_eco": {
+            "checksum": "4031061713",
+            "insns": 72699411
+          }
+        }
+      }
+    }
+  }
+}

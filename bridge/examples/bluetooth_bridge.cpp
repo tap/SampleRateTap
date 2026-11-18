@@ -43,7 +43,7 @@ int main() {
     constexpr double k_amp     = 0.5;
 
     // Stage 1 (BT side): exact rational 44.1 -> 48, economy profile.
-    tap::sr::bridge::converter_to_48k ratio(1);
+    tap::sr::bridge::converter_to_48k<1> ratio;
 
     // Stage 2 (clock boundary): near-unity ASRC at nominal 48 kHz.
     tap::sr::async::config cfg;

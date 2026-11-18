@@ -40,9 +40,9 @@ namespace {
         const profile p = profile::economy();
 
         // ---- bridge: the exact rational machine.
-        basic_converter<float, D> exact(1, p);
-        const auto&               x = ratio_ref::k_input;
-        std::vector<float>        y_exact(exact.outputs_for(x.size()));
+        basic_converter<float, 1, D> exact(p);
+        const auto&                  x = ratio_ref::k_input;
+        std::vector<float>           y_exact(exact.outputs_for(x.size()));
         ASSERT_EQ(exact.process(x.data(), x.size(), y_exact.data()), y_exact.size());
 
         // ---- SampleRateTap: the same prototype (plain Kaiser, same cutoff,

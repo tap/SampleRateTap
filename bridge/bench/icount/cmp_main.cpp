@@ -120,9 +120,9 @@ namespace {
 #else
         const tap::sr::bridge::profile prof = tap::sr::bridge::profile::economy();
 #endif
-        tap::sr::bridge::basic_converter<sample, k_dir> conv(k_ch, prof);
-        const auto                                      input = sine_input<sample>();
-        std::size_t                                     pos   = 0;
+        tap::sr::bridge::basic_converter<sample, k_ch, k_dir> conv(prof);
+        const auto                                            input = sine_input<sample>();
+        std::size_t                                           pos   = 0;
         std::vector<sample> out((static_cast<std::size_t>(conv.outputs_for(k_block)) + 1) * k_ch);
         double              sink = 0.0;
         for (std::size_t b = 0; b < k_blocks; ++b) {

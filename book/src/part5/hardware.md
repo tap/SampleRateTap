@@ -279,7 +279,7 @@ costs. And the calibration is no longer one engine's: a second table times
 `bridge` in both directions and `rational` at ↑2, ↓2 and 2/3, all Q15
 `economy` stereo, per `process()` of 32 input frames and per output frame.
 `bridge`'s M33 steady states, its baselines less its construct-only legs,
-are 424.9 instructions per output frame going down and 311.5 going up, so
+are 421.9 instructions per output frame going down and 309.0 going up, so
 its rows give the same ratio read off a different datapath — the check
 that one constant serves the family.
 

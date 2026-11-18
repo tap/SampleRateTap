@@ -83,7 +83,7 @@ namespace {
         constexpr std::size_t k_ch    = TAP_SR_BRIDGE_SC_CH;
         constexpr std::size_t k_block = 32;
 
-        tap::sr::bridge::basic_converter<S, k_dir> conv(k_ch, k_prof);
+        tap::sr::bridge::basic_converter<S, k_ch, k_dir> conv(k_prof);
 
 #if TAP_SR_BRIDGE_SC_KIND == 1
         // The streaming workload with its stream removed: the converter's
