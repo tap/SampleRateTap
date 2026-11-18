@@ -98,9 +98,15 @@ typedef struct tap_sr_rational_converter tap_sr_rational_converter;
 /// independent. The accessors (format, ratio, taps, latency, the counts)
 /// read state the processing calls write and follow the same rule.
 
-/// chain:   one of the TAP_SR_RATIONAL_* chain constants above.
-/// profile: 0 = economy (default tier), 1 = transparent, 2 = balanced,
-///          3 = super_economy (bridge's C ABI tags).
+/// chain:    one of the TAP_SR_RATIONAL_* chain constants above.
+/// profile:  0 = economy (default tier), 1 = transparent, 2 = balanced,
+///           3 = super_economy (bridge's C ABI tags).
+/// channels: at least 1. In C++ the count is a converter's type; here one and
+///           two channels run those types natively, and any other count runs
+///           that many one-channel converters behind the handle, the frames
+///           split to them and interleaved back: bit-identical to the native
+///           type of that count, since the channels share only the schedule
+///           (SampleRateTap's A13, CHANNELS_PLAN.md K8, option (b)).
 /// Returns NULL on invalid arguments. A float converter.
 TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create(int chain, int profile, unsigned channels);
 /// As tap_sr_rational_create in a stated format (TAP_SR_RATIONAL_FORMAT_*);

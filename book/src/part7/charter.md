@@ -184,7 +184,7 @@ ctest --test-dir build -R 'rational\.Ratio\.' --output-on-failure
 # build's compiler and asserts the three rejections carry the message):
 ctest --test-dir build -R ChartersFailToCompileWithTheMessage --output-on-failure
 
-# Break it on purpose: write `tap::sr::rational::converter<tap::sr::rational::ratio<5, 1>>`
+# Break it on purpose: write `tap::sr::rational::converter<1, tap::sr::rational::ratio<5, 1>>`
 # anywhere in a test. It will not link, because it will not compile, and the
 # first line of the diagnostic is the charter.
 ```

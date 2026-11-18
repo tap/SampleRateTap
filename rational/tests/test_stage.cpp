@@ -79,16 +79,16 @@ namespace {
     // deviation from the exact quotient near a boundary sample_traits.h
     // documents.
     template <typename S, rational_ratio R>
-    S expected_one_product(S a, typename basic_stage<S, R>::coeff c, std::size_t& ties) {
+    S expected_one_product(S a, typename basic_stage<S, 1, R>::coeff c, std::size_t& ties) {
         using tr                   = tap::dsp::sample_traits<S>;
         const typename tr::accum p = tr::mac(typename tr::accum{}, a, c);
         if constexpr (!tr::k_is_fixed_point) {
             return tr::finalize(p);
         }
         else {
-            constexpr std::size_t g = basic_stage<S, R>::k_table_gain;
+            constexpr std::size_t g = basic_stage<S, 1, R>::k_table_gain;
             if constexpr (std::is_same_v<S, std::int16_t> && (g & (g - 1)) != 0) {
-                return basic_stage<S, R>::finalize_output(p);
+                return basic_stage<S, 1, R>::finalize_output(p);
             }
             else {
                 constexpr int k = [] {
@@ -118,10 +118,10 @@ namespace {
         constexpr std::size_t m    = R::k_down;
         std::size_t           ties = 0;
         for (std::size_t d = 0; d < m; ++d) {
-            basic_stage<S, R> c(1, p);
-            const std::size_t t_len = c.row_length();
-            const std::size_t n_in  = (c.taps() + 2) * m + d;
-            std::vector<S>    x(n_in, tr::silence());
+            basic_stage<S, 1, R> c(p);
+            const std::size_t    t_len = c.row_length();
+            const std::size_t    n_in  = (c.taps() + 2) * m + d;
+            std::vector<S>       x(n_in, tr::silence());
             x[d] = amplitude;
             std::vector<S>    y(c.outputs_for(n_in));
             const std::size_t made = c.process(x.data(), n_in, y.data());
@@ -172,7 +172,7 @@ namespace {
     template <typename S, rational_ratio R>
     void check_ties_round_half_up(const profile& p) {
         if constexpr (tap::dsp::sample_traits<S>::k_is_fixed_point) {
-            constexpr std::size_t g = basic_stage<S, R>::k_table_gain;
+            constexpr std::size_t g = basic_stage<S, 1, R>::k_table_gain;
             S                     a{};
             if constexpr (std::is_same_v<S, std::int32_t>) {
                 a = std::int32_t{1} << 29;
@@ -234,8 +234,8 @@ namespace {
         using sample = TypeParam;
         using tr     = tap::dsp::sample_traits<sample>;
         {
-            basic_stage<sample, up_3> c(1);
-            const std::vector<double> h = design_stage<up_3>(profile::economy());
+            basic_stage<sample, 1, up_3> c;
+            const std::vector<double>    h = design_stage<up_3>(profile::economy());
             for (std::size_t p = 0; p < 3; ++p) {
                 for (std::size_t t = 0; t < c.row_length(); ++t) {
                     const std::size_t i = p + (c.row_length() - 1 - t) * 3;
@@ -250,8 +250,8 @@ namespace {
             }
         }
         if constexpr (tr::k_is_fixed_point) {
-            const auto                unity = static_cast<std::int64_t>(tr::k_coeff_scale);
-            basic_stage<sample, up_2> up(1);
+            const auto                   unity = static_cast<std::int64_t>(tr::k_coeff_scale);
+            basic_stage<sample, 1, up_2> up;
             for (std::size_t p = 0; p < 2; ++p) {
                 std::int64_t sum = 0;
                 for (std::size_t t = 0; t < up.row_length(); ++t) {
@@ -259,17 +259,17 @@ namespace {
                 }
                 EXPECT_EQ(sum, unity) << "up phase " << p;
             }
-            basic_stage<sample, ratio_2_3> mixed(1);
+            basic_stage<sample, 1, ratio_2_3> mixed;
             for (std::size_t p = 0; p < 2; ++p) {
                 std::int64_t sum = 0;
                 for (std::size_t t = 0; t < mixed.row_length(); ++t) {
                     sum += mixed.coefficient(p, t);
                 }
-                EXPECT_EQ(sum, unity * static_cast<std::int64_t>(basic_stage<sample, ratio_2_3>::k_table_gain))
+                EXPECT_EQ(sum, unity * static_cast<std::int64_t>(basic_stage<sample, 1, ratio_2_3>::k_table_gain))
                     << "mixed phase " << p;
             }
-            basic_stage<sample, down_3> down(1);
-            std::int64_t                whole = 0;
+            basic_stage<sample, 1, down_3> down;
+            std::int64_t                   whole = 0;
             for (std::size_t j = 0; j < 3; ++j) {
                 for (std::size_t t = 0; t < down.row_length(); ++t) {
                     whole += down.coefficient(j, t);
@@ -277,9 +277,9 @@ namespace {
             }
             // A Q15 decimator holds each branch at unity (its finalize
             // divides by M); the other formats hold the whole filter at it.
-            EXPECT_EQ(whole, unity * static_cast<std::int64_t>(basic_stage<sample, down_3>::k_table_gain))
+            EXPECT_EQ(whole, unity * static_cast<std::int64_t>(basic_stage<sample, 1, down_3>::k_table_gain))
                 << "decimator, all branches";
-            if constexpr (basic_stage<sample, down_3>::k_branch_quantized) {
+            if constexpr (basic_stage<sample, 1, down_3>::k_branch_quantized) {
                 for (std::size_t j = 0; j < 3; ++j) {
                     std::int64_t branch = 0;
                     for (std::size_t t = 0; t < down.row_length(); ++t) {
@@ -298,9 +298,9 @@ namespace {
     // reference's own float32 cast, 1e-7.
     template <typename S, rational_ratio R, std::size_t N>
     void check_matches_scipy(const std::array<float, N>& ref, const profile& p) {
-        basic_stage<S, R> c(1, p);
-        std::vector<S>    x(rational_ref::k_input.begin(), rational_ref::k_input.end());
-        std::vector<S>    y(c.outputs_for(x.size()));
+        basic_stage<S, 1, R> c(p);
+        std::vector<S>       x(rational_ref::k_input.begin(), rational_ref::k_input.end());
+        std::vector<S>       y(c.outputs_for(x.size()));
         ASSERT_EQ(c.process(x.data(), x.size(), y.data()), y.size());
         ASSERT_EQ(y.size(), N);
         const double tol   = std::is_same_v<S, float> ? 3e-5 : 1e-7;
@@ -342,14 +342,14 @@ namespace {
     template <rational_ratio R>
     void check_accounting_from_every_position() {
         constexpr std::size_t period = R::k_up * R::k_down;
-        converter<R>          c(1);
+        converter<1, R>       c;
         // Enough input for the largest probe: frames_needed(2 period) is
         // at most (2 period + 1) M; outputs sized for the whole of x.
         std::vector<float> x((2 * period + 2) * R::k_down + 8, 0.25f);
         std::vector<float> y(c.outputs_for(x.size()) + 8);
         for (std::size_t pos = 0; pos < 2 * period; ++pos) {
             for (std::size_t n = 0; n <= 2 * period; ++n) {
-                converter<R> probe = c;
+                converter<1, R> probe = c;
                 EXPECT_EQ(probe.process(x.data(), n, y.data()), c.outputs_for(n)) << "pos " << pos << " n " << n;
             }
             EXPECT_EQ(c.frames_needed(0), 0u);
@@ -359,7 +359,7 @@ namespace {
                 EXPECT_LT(c.outputs_for(n - 1), k) << "pos " << pos << " k " << k;
                 // process() writes everything those n inputs make ready: at
                 // least k (an interpolator's last input can complete more).
-                converter<R> probe = c;
+                converter<1, R> probe = c;
                 ASSERT_LE(n, x.size());
                 EXPECT_GE(probe.process(x.data(), n, y.data()), k) << "pos " << pos << " k " << k;
             }
@@ -392,15 +392,15 @@ namespace {
             s ^= s << 5;
             v = static_cast<float>(static_cast<double>(s) / 4294967296.0 - 0.5);
         }
-        const basic_stage<float, ratio_t> fresh(1, p); // one search (about half a second); the runs below copy it
-        basic_stage<float, ratio_t>       whole = fresh;
-        std::vector<float>                ref(whole.outputs_for(x.size()));
+        const basic_stage<float, 1, ratio_t> fresh(p); // one search (about half a second); the runs below copy it
+        basic_stage<float, 1, ratio_t>       whole = fresh;
+        std::vector<float>                   ref(whole.outputs_for(x.size()));
         ASSERT_EQ(whole.process(x.data(), x.size(), ref.data()), ref.size());
         EXPECT_GT(ref.size(), 6u * L - L);
         for (const std::size_t chunk : {std::size_t{1}, std::size_t{7}, std::size_t{M - 1}, std::size_t{M + 1}}) {
-            basic_stage<float, ratio_t> c = fresh;
-            std::vector<float>          y;
-            std::vector<float>          buf(c.outputs_for(chunk) + L + 2);
+            basic_stage<float, 1, ratio_t> c = fresh;
+            std::vector<float>             y;
+            std::vector<float>             buf(c.outputs_for(chunk) + L + 2);
             for (std::size_t pos = 0; pos < x.size(); pos += chunk) {
                 const std::size_t n    = pos + chunk <= x.size() ? chunk : x.size() - pos;
                 const std::size_t want = c.outputs_for(n);
@@ -410,12 +410,12 @@ namespace {
             }
             EXPECT_TRUE(y == ref) << "chunk " << chunk;
         }
-        basic_stage<float, ratio_t> c = fresh;
-        std::vector<float>          y(c.outputs_for(x.size()) + L);
+        basic_stage<float, 1, ratio_t> c = fresh;
+        std::vector<float>             y(c.outputs_for(x.size()) + L);
         for (std::size_t step = 0; step < 4; ++step) {
             const std::size_t probes[] = {0, 1, std::size_t{M} / L, std::size_t{M} / L + 1, M, 2 * std::size_t{M} + 1};
             for (const std::size_t n : probes) {
-                basic_stage<float, ratio_t> probe = c;
+                basic_stage<float, 1, ratio_t> probe = c;
                 EXPECT_EQ(probe.process(x.data(), n, y.data()), c.outputs_for(n)) << "step " << step << " n " << n;
             }
             for (std::size_t k = 1; k <= 4; ++k) {
@@ -449,8 +449,8 @@ namespace {
     // reset.
     template <typename S, rational_ratio R>
     std::vector<S> run_whole(const std::vector<S>& x) {
-        basic_stage<S, R> c(1);
-        std::vector<S>    y(c.outputs_for(x.size()));
+        basic_stage<S, 1, R> c;
+        std::vector<S>       y(c.outputs_for(x.size()));
         c.process(x.data(), x.size(), y.data());
         return y;
     }
@@ -459,9 +459,9 @@ namespace {
     void check_chunking(const std::vector<S>& x) {
         const auto ref = run_whole<S, R>(x);
         for (const std::size_t chunk : {1u, 5u, 63u, 64u, 65u, 200u}) {
-            basic_stage<S, R> c(1);
-            std::vector<S>    y;
-            std::vector<S>    buf(c.outputs_for(chunk) + R::k_up + 2);
+            basic_stage<S, 1, R> c;
+            std::vector<S>       y;
+            std::vector<S>       buf(c.outputs_for(chunk) + R::k_up + 2);
             for (std::size_t pos = 0; pos < x.size(); pos += chunk) {
                 const std::size_t n    = pos + chunk <= x.size() ? chunk : x.size() - pos;
                 const std::size_t want = c.outputs_for(n);
@@ -488,14 +488,14 @@ namespace {
     template <rational_ratio R>
     void check_pull_matches_process() {
         const auto&        x = rational_ref::k_input;
-        converter<R>       a(1);
+        converter<1, R>    a;
         std::vector<float> ya(a.outputs_for(x.size()));
         a.process(x.data(), x.size(), ya.data());
 
-        converter<R> b(1);
-        std::size_t  fed  = 0;
-        std::size_t  call = 0;
-        auto         pop  = [&](float* dst, std::size_t max_frames) noexcept -> std::size_t {
+        converter<1, R> b;
+        std::size_t     fed  = 0;
+        std::size_t     call = 0;
+        auto            pop  = [&](float* dst, std::size_t max_frames) noexcept -> std::size_t {
             const std::size_t dribble = 1 + (call++ % 3); // 1..3 frames per call
             std::size_t       n       = 0;
             while (n < max_frames && n < dribble && fed < x.size()) {
@@ -520,16 +520,16 @@ namespace {
     }
 
     TEST(Stage, PullShortReturnsOnDryThenResumes) {
-        const auto&          x = rational_ref::k_input;
-        converter<ratio_2_3> a(1);
-        std::vector<float>   ya(a.outputs_for(x.size()));
+        const auto&             x = rational_ref::k_input;
+        converter<1, ratio_2_3> a;
+        std::vector<float>      ya(a.outputs_for(x.size()));
         a.process(x.data(), x.size(), ya.data());
 
-        converter<ratio_2_3> b(1);
-        std::vector<float>   yb(ya.size());
-        std::size_t          fed   = 0;
-        std::size_t          limit = 101;
-        auto                 pop   = [&](float* dst, std::size_t max_frames) noexcept -> std::size_t {
+        converter<1, ratio_2_3> b;
+        std::vector<float>      yb(ya.size());
+        std::size_t             fed   = 0;
+        std::size_t             limit = 101;
+        auto                    pop   = [&](float* dst, std::size_t max_frames) noexcept -> std::size_t {
             std::size_t n = 0;
             while (n < max_frames && fed < limit) {
                 dst[n++] = x[fed++];
@@ -549,8 +549,8 @@ namespace {
     // (down_3, left at phase 1 of 3 by 124 frames); the audit's F12.
     template <typename S, rational_ratio R>
     void check_reset_reproduces(const std::vector<S>& x) {
-        basic_stage<S, R> c(1);
-        std::vector<S>    y1(c.outputs_for(x.size()));
+        basic_stage<S, 1, R> c;
+        std::vector<S>       y1(c.outputs_for(x.size()));
         c.process(x.data(), x.size(), y1.data());
         std::vector<S> scratch(c.outputs_for(124) + 2);
         c.process(x.data(), 124, scratch.data()); // leave it mid-stream
@@ -577,7 +577,7 @@ namespace {
     // stream would have produced (bit for bit).
     template <rational_ratio R>
     void check_flush() {
-        converter<R>       c(1);
+        converter<1, R>    c;
         const std::size_t  n_in = 300;
         std::vector<float> x(n_in);
         for (std::size_t i = 0; i < n_in; ++i) {
@@ -591,7 +591,7 @@ namespace {
         ASSERT_GE(tail.size(), 2u);
         EXPECT_LT(std::fabs(tail[tail.size() - 1]), 1e-4f);
         // The same stream zero-padded by window_frames(): identical outputs.
-        converter<R>       d(1);
+        converter<1, R>    d;
         std::vector<float> xz(x);
         xz.resize(n_in + d.window_frames(), 0.0f);
         std::vector<float> yz(d.outputs_for(xz.size()));
@@ -623,7 +623,7 @@ namespace {
     void check_latency_by_impulse() {
         constexpr std::size_t l = R::k_up;
         constexpr std::size_t m = R::k_down;
-        converter<R>          c(1);
+        converter<1, R>       c;
         const std::size_t     centre = (c.taps() - 1) / 2;
         EXPECT_EQ(c.latency_output_frames(), (tap::dsp::exact_ratio{centre, m}));
         EXPECT_NEAR(c.latency_seconds(48000.0), static_cast<double>(centre) / static_cast<double>(m) / 48000.0, 1e-15);
@@ -690,11 +690,11 @@ namespace {
                 }
             }
         };
-        basic_stage<sample, up_2>      a(1);
-        basic_stage<sample, down_3>    b(1);
-        basic_stage<sample, ratio_2_3> d(1);
-        basic_stage<sample, ratio_3_2> e(1);
-        basic_stage<sample, down_8>    f(1);
+        basic_stage<sample, 1, up_2>      a;
+        basic_stage<sample, 1, down_3>    b;
+        basic_stage<sample, 1, ratio_2_3> d;
+        basic_stage<sample, 1, ratio_3_2> e;
+        basic_stage<sample, 1, down_8>    f;
         check(a, "up_2");
         check(b, "down_3");
         check(d, "ratio_2_3");
@@ -707,25 +707,25 @@ namespace {
     // the design's nonzero count for every interpolator and decimator; a
     // mixed stage pays its T per output less the padding.
     TEST(Stage, MacsPerOutputAreTheNonzeroCounts) {
-        converter<up_2> u2(1);
+        converter<1, up_2> u2;
         EXPECT_EQ(u2.macs_per_superblock(), 23u); // 2 m + 1, m = 11
         EXPECT_DOUBLE_EQ(u2.macs_per_output(), 11.5);
-        converter<down_2> d2(1);
+        converter<1, down_2> d2;
         EXPECT_EQ(d2.macs_per_superblock(), 23u);
         EXPECT_DOUBLE_EQ(d2.macs_per_output(), 23.0); // of 43 taps: the half-band's half
-        converter<down_3> d3(1);
+        converter<1, down_3> d3;
         EXPECT_EQ(d3.macs_per_superblock(), 45u); // 2 m (M - 1) + 1
-        converter<up_8> u8(1);
+        converter<1, up_8> u8;
         EXPECT_EQ(u8.macs_per_superblock(), 169u); // 2 * 12 * 7 + 1
-        converter<down_8> d8(1);
+        converter<1, down_8> d8;
         EXPECT_EQ(d8.macs_per_superblock(), 169u);
-        converter<ratio_2_3> m23(1);
+        converter<1, ratio_2_3> m23;
         EXPECT_EQ(m23.macs_per_superblock(), 65u); // N over 2 phases: 33 + 32
         EXPECT_DOUBLE_EQ(m23.macs_per_output(), 32.5);
-        converter<ratio_3_8> m38(1);
+        converter<1, ratio_3_8> m38;
         EXPECT_EQ(m38.macs_per_superblock(), 191u);
         EXPECT_EQ(m38.row_length(), stage_taps_per_phase<ratio_3_8>(profile::economy()));
-        converter<up_2> tr(1, profile::transparent());
+        converter<1, up_2> tr(profile::transparent());
         EXPECT_EQ(tr.taps(), 123u);
         EXPECT_EQ(tr.macs_per_superblock(), 63u);
     }
@@ -741,8 +741,9 @@ namespace {
         }
         auto run_pair = [&](auto tag) {
             using stage_ratio = decltype(tag);
-            converter<stage_ratio> a(1), b(1), s(2);
-            std::vector<float>     ya(a.outputs_for(x.size())), yb(ya.size()), inter(2 * x.size()), ys(2 * ya.size());
+            converter<1, stage_ratio> a, b;
+            converter<2, stage_ratio> s;
+            std::vector<float> ya(a.outputs_for(x.size())), yb(ya.size()), inter(2 * x.size()), ys(2 * ya.size());
             a.process(x.data(), x.size(), ya.data());
             b.process(xb.data(), xb.size(), yb.data());
             for (std::size_t i = 0; i < x.size(); ++i) {
@@ -778,7 +779,7 @@ namespace {
         for (std::size_t i = 0; i < n_in; ++i) {
             x[i] = static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * f0 * static_cast<double>(i) / fs_in));
         }
-        converter<ratio<1, M>>              ours(1);
+        converter<1, ratio<1, M>>           ours;
         tap::dsp::basic_decimator<float, M> theirs;
         std::vector<float>                  yo(ours.outputs_for(n_in)), yt(theirs.outputs_for(n_in));
         ours.process(x.data(), n_in, yo.data());
@@ -806,29 +807,23 @@ namespace {
         check_against_dsptap_decimator<6>();
     }
 
-    TEST(Stage, ZeroChannelsThrows) {
-        TAP_SR_EXPECT_REJECTED((converter<up_2>(0)), std::invalid_argument);
-    }
-
     // The family's error model (A3): validate() is the constructor's rejection
     // as a noexcept precheck — nullptr exactly where the stage constructs,
     // else the text the constructor's exception carries. A build without
     // exceptions calls it first; this build checks the two agree.
     TEST(Stage, ValidateAgreesWithTheConstructor) {
-        using stage = basic_stage<float, up_2>;
-        static_assert(noexcept(stage::validate(1, profile::economy())));
+        using stage = basic_stage<float, 1, up_2>;
+        static_assert(noexcept(stage::validate(profile::economy())));
         for (const profile& p :
              {profile::super_economy(), profile::economy(), profile::balanced(), profile::transparent()}) {
-            EXPECT_EQ(stage::validate(1, p), nullptr);
-            EXPECT_EQ((basic_stage<std::int16_t, ratio_2_3>::validate(2, p)), nullptr);
-            EXPECT_EQ((basic_stage<double, down_8>::validate(4, p.relaxed({3, 2}))), nullptr);
+            EXPECT_EQ(stage::validate(p), nullptr);
+            EXPECT_EQ((basic_stage<std::int16_t, 2, ratio_2_3>::validate(p)), nullptr);
+            EXPECT_EQ((basic_stage<double, 4, down_8>::validate(p.relaxed({3, 2}))), nullptr);
         }
-        EXPECT_STREQ(stage::validate(0), "tap::sr::rational::basic_stage: channels == 0");
-        TAP_SR_EXPECT_REJECTED_WITH(stage(0), std::invalid_argument, stage::validate(0));
         profile bad       = profile::economy();
         bad.passband_frac = 0.5; // the lower rate's Nyquist: no transition band
-        EXPECT_EQ(stage::validate(1, bad), validate(bad)) << "the designer's own text";
-        TAP_SR_EXPECT_REJECTED_WITH(stage(1, bad), std::invalid_argument, stage::validate(1, bad));
+        EXPECT_EQ(stage::validate(bad), validate(bad)) << "the designer's own text";
+        TAP_SR_EXPECT_REJECTED_WITH(stage{bad}, std::invalid_argument, stage::validate(bad));
     }
 
     // The same agreement where the designer finds no length: an unpinned
@@ -838,11 +833,11 @@ namespace {
     // searches outlast the job on the Cortex-M33 and the per-test timeout
     // under qemu-hexagon).
     TEST(Stage, ValidateAgreesWithTheConstructorOnAnUnmeetableSpec) {
-        using stage              = basic_stage<float, up_2>;
+        using stage              = basic_stage<float, 1, up_2>;
         const profile unmeetable = {
             .passband_frac = 0.4999, .stopband_atten_db = 160.0, .taps_per_branch = {0, 0, 0, 0, 0}};
-        EXPECT_STREQ(stage::validate(1, unmeetable), k_unmeetable_spec_reason);
-        TAP_SR_EXPECT_REJECTED_WITH(stage(1, unmeetable), std::runtime_error, stage::validate(1, unmeetable));
+        EXPECT_STREQ(stage::validate(unmeetable), k_unmeetable_spec_reason);
+        TAP_SR_EXPECT_REJECTED_WITH(stage{unmeetable}, std::runtime_error, stage::validate(unmeetable));
     }
 
 } // namespace

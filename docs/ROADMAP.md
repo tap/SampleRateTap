@@ -165,13 +165,42 @@ gated on shipping.
   count to a compile-time constant for one and two channels (the lever its PLAN.md
   section 6 had named). Measured on the M33, M55, Hexagon and host in both
   configurations: the counts identical to the instruction with and without exceptions
-  on every row of every engine; against the previous baselines `bridge` and `async`
+  on every row of every engine (corrected by A13's gate 0, 2026-11-17: not so on the
+  QEMU targets, where program start-up differs and `bridge`'s ↓ Q15 super-economy row on
+  the M55 counts 2.5 % fewer instructions without exceptions; within the ratchet's
+  tolerance, and exact on the host); against the previous baselines `bridge` and `async`
   unchanged (within ±0.7 %), `rational` 17 of 18 M55 rows improved (Q15 −9.5 … −17.8 %,
   the chain −12.9 %, the one row up +1.8 %), the M33 to −16 %, Hexagon to −9 %, the host
   stereo rows −5 %; `rational`'s baselines re-recorded on every target and its ceilings
-  on the three (engine `.text` +25 … +50 % for the three channel instantiations, the M33
+  on the three (engine `.text` +19 … +57 % for the three channel instantiations, the M33
   call stacks +64 … +104 B for the out-of-line frame), with the reason in
   `rational/PLAN.md` section 6.*
+- **A13. Channel counts at compile time** (added 2026-11-13, the maintainer's decision:
+  every channel count is known at compile time, never at run time). The count moves into
+  every engine's type, so each converter compiles one channel shape instead of
+  dispatching among three, with every output unchanged. Planned in
+  [`CHANNELS_PLAN.md`](CHANNELS_PLAN.md): a measurement on the M33, M55 and Hexagon that
+  gates the work, then four PRs (DspTap's `chain`, then `rational`, `bridge` and `async`,
+  the last bumping the family to 0.7.0). The plan's adversarial audit
+  ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md)) found that the code-size gain holds
+  only for an image with one count per converter type; one type can appear at several
+  counts in the maintainer's firmware, so v2 of the plan builds each engine's
+  count-independent code once per format and rate (its K12). On the host, a stage pair's
+  code then falls 6 to 25 % at one count and holds within about 1 % at three counts in
+  `-O2`/`-O3` builds, and grows 8 to 29 % at two or three counts in `-Os` builds.
+  *The maintainer's decisions recorded 2026-11-17 (section 7, Q7). Gate 0 ran the same
+  day (`CHANNELS_PLAN.md` section 3): `async` passes on every target, `bridge` passes with
+  its walk kept out of line, and `rational` fails on the M55 and M33 in every placement of
+  its per-count block measured (the M55's ↓3 Q15 row +8.6 %, the M33's Q15 rows up to
+  +23 % as GCC places it; +1.3 % at best on both). The maintainer chose the plan's option
+  3 the same day: `rational`'s per-count blocks out of line in every stage, with three rows
+  accepted above the gate's rule (two M55 Q15 interpolators, +1.28 and +0.63 %, and the
+  M33's ↓3 float row, +1.37 %). A13a (DspTap) is tap/DspTap#64. A13b (`rational`)
+  measured 2026-11-18: every checksum equal, the streaming sums down on every target
+  (−2.9 % on the M55, −0.2 % on the M33, −0.4 % on Hexagon, −2.3 % on the host), the probes'
+  engine `.text` −16 … −34 %; one M55 row (`ratio23_q15_eco`) 5 % apart between the builds
+  with and without exceptions (GCC's register allocation, the code identical before it),
+  accepted by the maintainer with its baseline at the midpoint of the two.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 
@@ -287,6 +316,17 @@ confirm them.
 - **Q6. The host ratchet.** A hard gate on callgrind `Ir` (deterministic enough on the
   runners), or an unguarded trend with the channel-parallel path documented as ungated?
   **Decided:** a hard gate, two-sided at ±3 % (A8).
+- **Q7. A13's shape** (2026-11-17, after the plan's audit): where the channel count sits
+  in each type, whether it has a default, what the C ABIs do with a count, how the work
+  is split, and whether the RP2350 times it before 0.7.0.
+  **Decided:** the count is the second template parameter, after the sample format
+  (`CHANNELS_PLAN.md` K1); no default, every count explicit (K2); the C ABIs of `bridge`
+  and `rational` serve one and two channels natively and other counts as that many mono
+  converters behind one handle, `async`'s one and two natively (K8, option (b)); four PRs,
+  DspTap first (K10); the hardware confirmation deferred, the gain stated in instructions
+  (K11). After gate 0 (same day), option 3 of `CHANNELS_PLAN.md` section 3: `rational`'s
+  per-count blocks out of line in every stage, its three rises over the gate's rule
+  accepted at their measured figures.
 
 ## 8. Stays deferred, on purpose
 

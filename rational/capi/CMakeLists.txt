@@ -17,6 +17,10 @@ endif()
 add_library(tap_sr_rational_capi SHARED tap_sr_rational_capi.cpp)
 target_link_libraries(tap_sr_rational_capi PRIVATE tap::sr::rational tap_sr_rational_warnings)
 target_compile_definitions(tap_sr_rational_capi PRIVATE TAP_SR_RATIONAL_CAPI_BUILDING)
+# Under MSVC the named chains in three formats at one and two channels, with
+# the fan-out, need more than COFF's 2^16 sections (C1128, since A13b put the
+# count in the type).
+target_compile_options(tap_sr_rational_capi PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/bigobj>")
 set_target_properties(tap_sr_rational_capi PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON

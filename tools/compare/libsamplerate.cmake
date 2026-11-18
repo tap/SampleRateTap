@@ -14,5 +14,11 @@ if(NOT TARGET samplerate)
         libsamplerate
         URL https://github.com/libsndfile/libsamplerate/releases/download/0.2.2/libsamplerate-0.2.2.tar.xz
         URL_HASH SHA256=3258da280511d24b49d6b08615bbe824d0cacc9842b0e4caf11c52cf2b043893)
+    # 0.2.2's CMakeLists asks for a CMake older than 3.5, whose compatibility
+    # CMake 4 removed (the CI runners' since 2026-11): its configure is told
+    # 3.5's policies, and only its own, by a variable unset after it. Older
+    # CMakes do not read the variable.
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
     FetchContent_MakeAvailable(libsamplerate)
+    unset(CMAKE_POLICY_VERSION_MINIMUM)
 endif()

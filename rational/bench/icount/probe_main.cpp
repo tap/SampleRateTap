@@ -40,10 +40,10 @@ namespace {
 #else
     using sample = std::int32_t;
 #endif
-    using up_stage   = tap::sr::rational::basic_stage<sample, tap::sr::rational::up_2>;
-    using down_stage = tap::sr::rational::basic_stage<sample, tap::sr::rational::down_2>;
 
     constexpr std::size_t k_ch     = 2;
+    using up_stage                 = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::up_2>;
+    using down_stage               = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::down_2>;
     constexpr std::size_t k_block  = 32;
     constexpr std::size_t k_blocks = 1500;
     constexpr std::size_t k_room   = 2 * k_block + 2; // outputs_for(n) <= floor(n L / M) + 2
@@ -74,8 +74,8 @@ namespace {
 } // namespace
 
 int main() {
-    up_stage   up(k_ch);
-    down_stage down(k_ch);
+    up_stage   up;
+    down_stage down;
     for (std::size_t i = 0; i < k_block * k_ch; ++i) {
         g_in[i] = triangle<sample>(i);
     }

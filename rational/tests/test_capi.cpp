@@ -137,7 +137,7 @@ namespace {
         tap_sr_rational_converter* c = std::is_same_v<S, float>
                                            ? tap_sr_rational_create(chain, 0, 2)
                                            : tap_sr_rational_create_format(chain, 0, format_tag<S>(), 2);
-        basic_chain<S, Rs...>      ref(2, profile::economy());
+        basic_chain<S, 2, Rs...>   ref(profile::economy());
         expect_abi_is_the_chain(c, ref, name);
         std::uint64_t num = 0, den = 0;
         tap_sr_rational_macs_per_output(c, &num, &den);
@@ -192,7 +192,7 @@ namespace {
         for (std::size_t i = 0; i < 4; ++i) {
             tap_sr_rational_converter* c = tap_sr_rational_create(TAP_SR_RATIONAL_DOWN_2, tags[i], 1);
             ASSERT_NE(c, nullptr);
-            EXPECT_EQ(tap_sr_rational_stage_taps(c, 0), (basic_stage<float, down_2>(1, ps[i]).taps())) << i;
+            EXPECT_EQ(tap_sr_rational_stage_taps(c, 0), (basic_stage<float, 1, down_2>(ps[i]).taps())) << i;
             tap_sr_rational_destroy(c);
         }
     }
@@ -202,7 +202,7 @@ namespace {
     void expect_stage(unsigned l, unsigned m, int tag, const profile& p, exact_ratio d) {
         tap_sr_rational_converter* c = tap_sr_rational_create_stage_format(
             l, m, tag, static_cast<std::uint32_t>(d.num), static_cast<std::uint32_t>(d.den), format_tag<S>(), 2);
-        tap::dsp::chain<basic_stage<S, R>> ref(2, basic_stage<S, R>(2, p.relaxed(d)));
+        tap::dsp::chain<basic_stage<S, 2, R>> ref(basic_stage<S, 2, R>(p.relaxed(d)));
         expect_abi_is_the_chain(c, ref, "stage");
         std::uint64_t num = 0, den = 0;
         tap_sr_rational_macs_per_output(c, &num, &den);
@@ -249,6 +249,84 @@ namespace {
         EXPECT_EQ(TAP_SR_RATIONAL_FORMAT_Q15, 1);
         EXPECT_EQ(TAP_SR_RATIONAL_FORMAT_Q31, 2);
         tap_sr_rational_destroy(nullptr); // the free() convention
+    }
+
+    // The fan-out (A13's K8, option (b)): at a count other than one or two the
+    // C ABI runs that many one-channel converters behind the handle. Bit for
+    // bit the native converter of that count, on N channels of the reference
+    // noise (channel c scaled by (c + 1) / (N + 1), odd channels negated):
+    // one call longer than the fan-out's 256-frame staging, then a short one,
+    // the accounting from mid-stream, flush, and reset.
+    template <typename S, std::size_t N, typename Native>
+    void expect_fan_out_is_native(tap_sr_rational_converter* c, Native& ref, const char* name) {
+        ASSERT_NE(c, nullptr) << name;
+        const auto&    n = rational_ref::k_input;
+        std::vector<S> x(N * n.size());
+        for (std::size_t i = 0; i < n.size(); ++i) {
+            for (std::size_t ch = 0; ch < N; ++ch) {
+                const float sign  = ch % 2 == 0 ? 1.0F : -1.0F;
+                const float scale = static_cast<float>(ch + 1) / static_cast<float>(N + 1);
+                x[i * N + ch]     = to_sample<S>(sign * scale * n[i]);
+            }
+        }
+        const std::size_t first = n.size() - 7;
+        ASSERT_GT(first, std::size_t{256}) << name << ": longer than the staging";
+        std::vector<S>    ya(N * (ref.outputs_for(n.size()) + 8));
+        std::vector<S>    yb(ya.size());
+        const std::size_t a1 = abi_process(c, x.data(), first, ya.data());
+        const std::size_t b1 = ref.process(x.data(), first, yb.data());
+        ASSERT_EQ(a1, b1) << name;
+        const std::size_t a2 = abi_process(c, x.data() + N * first, 7, ya.data() + N * a1);
+        const std::size_t b2 = ref.process(x.data() + N * first, 7, yb.data() + N * b1);
+        ASSERT_EQ(a2, b2) << name;
+        ya.resize(N * (a1 + a2));
+        yb.resize(ya.size());
+        EXPECT_TRUE(ya == yb) << name;
+        EXPECT_EQ(tap_sr_rational_outputs_for(c, 100), ref.outputs_for(100)) << name;
+        EXPECT_EQ(tap_sr_rational_frames_needed(c, 100), ref.frames_needed(100)) << name;
+        std::uint64_t num = 0, den = 0;
+        tap_sr_rational_latency_output_frames(c, &num, &den);
+        EXPECT_EQ((exact_ratio{num, den}), ref.latency_output_frames()) << name;
+        const std::size_t tail = static_cast<std::size_t>(tap_sr_rational_flush_output_frames(c));
+        ASSERT_EQ(tail, ref.flush_output_frames()) << name;
+        std::vector<S> fa(N * tail);
+        std::vector<S> fb(N * tail);
+        EXPECT_EQ(abi_flush(c, fa.data()), tail) << name;
+        ref.flush(fb.data());
+        EXPECT_TRUE(fa == fb) << name;
+        tap_sr_rational_reset(c);
+        ref.reset();
+        EXPECT_EQ(tap_sr_rational_outputs_for(c, n.size()), ref.outputs_for(n.size())) << name;
+        tap_sr_rational_destroy(c);
+    }
+
+    template <typename S, std::size_t N, rational_ratio... Rs>
+    void expect_fan_out_chain(int tag, const char* name) {
+        basic_chain<S, N, Rs...> ref(profile::economy());
+        expect_fan_out_is_native<S, N>(tap_sr_rational_create_format(tag, 0, format_tag<S>(), N), ref, name);
+    }
+
+    template <typename S, std::size_t N>
+    void expect_fan_out_at() {
+        expect_fan_out_chain<S, N, up_2>(TAP_SR_RATIONAL_UP_2, "up_2");
+        expect_fan_out_chain<S, N, ratio_2_3>(TAP_SR_RATIONAL_RATIO_2_3, "ratio_2_3");
+        expect_fan_out_chain<S, N, down_3, down_2>(TAP_SR_RATIONAL_DOWN_3_DOWN_2, "down_3_down_2");
+        // The stage constructor: up 2 at the 147/160 divisor.
+        tap::dsp::chain<basic_stage<S, N, up_2>> ref(basic_stage<S, N, up_2>(profile::economy().relaxed({147, 160})));
+        expect_fan_out_is_native<S, N>(tap_sr_rational_create_stage_format(2, 1, 0, 147, 160, format_tag<S>(), N), ref,
+                                       "stage up_2 at 147/160");
+    }
+
+    TEST(CApi, FanOutIsTheNativeConverterBitForBit) {
+        expect_fan_out_at<float, 3>();
+        expect_fan_out_at<float, 6>();
+        expect_fan_out_at<float, 12>();
+        expect_fan_out_at<std::int16_t, 3>();
+        expect_fan_out_at<std::int16_t, 6>();
+        expect_fan_out_at<std::int16_t, 12>();
+        expect_fan_out_at<std::int32_t, 3>();
+        expect_fan_out_at<std::int32_t, 6>();
+        expect_fan_out_at<std::int32_t, 12>();
     }
 
 } // namespace

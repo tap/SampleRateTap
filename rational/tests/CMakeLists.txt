@@ -39,11 +39,14 @@ add_executable(tap_sr_rational_tests
 # overflow the M55 image's CODE region, so it is compiled out there.
 if(NOT TAP_SR_BARE_METAL)
     target_sources(tap_sr_rational_tests PRIVATE test_matrix.cpp)
-    # Under MSVC its 182 instantiations need more than COFF's 2^16 sections
-    # (C1128, first hit when A3 added validate() and raise to every stage).
-    set_source_files_properties(test_matrix.cpp PROPERTIES
-        COMPILE_OPTIONS "$<$<CXX_COMPILER_ID:MSVC>:/bigobj>")
 endif()
+# Under MSVC a translation unit that instantiates many stages and chains needs
+# more than COFF's 2^16 sections (C1128): test_matrix.cpp's 182 rows first,
+# when A3 added validate() and raise to every stage, and since A13b put the
+# count in the type, test_capi.cpp and test_chain.cpp past it (their sections
+# outnumber test_matrix.cpp's in the GCC build). The whole target takes
+# /bigobj, so the next such file does not wait for Windows CI to say so.
+target_compile_options(tap_sr_rational_tests PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/bigobj>")
 # The C ABI, pinned against the shipped shared library wherever it is built
 # (the version probe, D13, and every enumerator against its named chain);
 # the library target is defined after this directory, which
@@ -127,3 +130,14 @@ add_test(NAME rational.Ratio.ChartersFailToCompileWithTheMessage
                  ${_compiler_args}
                  -DTAP_SR_RATIONAL_INCLUDE=${CMAKE_CURRENT_SOURCE_DIR}/../include)
 set_tests_properties(rational.Ratio.ChartersFailToCompileWithTheMessage PROPERTIES LABELS rational TIMEOUT 300)
+# The channel count (A13): the same project's second case set, a stage of zero
+# channels, which also reaches DspTap's headers.
+add_test(NAME rational.Stage.ZeroChannelsFailToCompileWithTheMessage
+         COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
+                 -S ${CMAKE_CURRENT_SOURCE_DIR}/compile_fail
+                 -B ${CMAKE_CURRENT_BINARY_DIR}/compile_fail_channels
+                 ${_compiler_args}
+                 -DTAP_SR_RATIONAL_COMPILE_FAIL_SET=channels
+                 -DTAP_SR_RATIONAL_INCLUDE=${CMAKE_CURRENT_SOURCE_DIR}/../include
+                 -DTAP_DSP_INCLUDE=${SampleRateTap_SOURCE_DIR}/submodules/dsptap/include)
+set_tests_properties(rational.Stage.ZeroChannelsFailToCompileWithTheMessage PROPERTIES LABELS rational TIMEOUT 300)

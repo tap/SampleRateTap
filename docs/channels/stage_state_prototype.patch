@@ -1,0 +1,395 @@
+Gate 0 evidence for docs/CHANNELS_PLAN.md (A13): the host prototype of K12,
+rational's stage with the count in the type (ChT, 0 keeping today's runtime
+dispatch) and its count-independent state and cold code in stage_state<S, R>,
+built once per (S, R). Not shipping code. Applies to rational/include at
+2ed199a with: git apply docs/channels/stage_state_prototype.patch
+
+diff --git a/rational/include/tap/sr/rational/stage.h b/rational/include/tap/sr/rational/stage.h
+index 8f3f50c..8f3d6e9 100644
+--- a/rational/include/tap/sr/rational/stage.h
++++ b/rational/include/tap/sr/rational/stage.h
+@@ -169,10 +169,73 @@ namespace tap::sr::rational {
+     }
+     // ANCHOR_END: rational_schedule
+ 
++    namespace detail_proto {
++        template <tap::dsp::sample_type S, rational_ratio R> struct ops;
++    }
++    template <tap::dsp::sample_type S, rational_ratio R> struct stage_table;
++    namespace detail_proto {
++        template <tap::dsp::sample_type S, rational_ratio R>
++        TAP_SR_RATIONAL_NOINLINE stage_table<S, R> make_stage_table(const profile& p);
++    }
++    // Prototype (the audit's design-2 remedy): a stage's state and cold code,
++    // built once per (S, R) and shared by every channel count; the count is a
++    // value here and a constant only in the derived class's hot paths.
++    template <tap::dsp::sample_type S, rational_ratio R>
++    struct stage_state {
++        using coeff = typename tap::dsp::sample_traits<S>::coeff;
++        static constexpr bool        k_is_decimator = ratio_traits<R>::k_is_decimator;
++        static constexpr std::size_t k_down  = ratio_traits<R>::k_down;
++        static constexpr std::size_t k_rows  = k_is_decimator ? ratio_traits<R>::k_down : ratio_traits<R>::k_up;
++        static constexpr std::size_t k_lines = k_is_decimator ? k_down : 1;
++        static constexpr std::size_t k_hist_slack = 64;
++        static constexpr std::size_t k_pop_chunk  = 16;
++        TAP_SR_RATIONAL_NOINLINE stage_state(std::size_t channels, const profile& p) : m_channels(channels) {
++            if (channels == 0) {
++                tap::dsp::raise<std::invalid_argument>("tap::sr::rational::basic_stage: channels == 0");
++            }
++            {
++                auto t    = detail_proto::make_stage_table<S, R>(p);
++                m_taps    = t.taps;
++                m_row_len = t.row_len;
++                m_rows    = std::move(t.rows);
++                m_first   = t.first;
++                m_count   = t.count;
++            }
++            m_hist_cap = m_row_len + k_hist_slack;
++            m_hist.assign(channels * k_lines * m_hist_cap, tap::dsp::sample_traits<S>::silence());
++            m_scratch.resize(k_pop_chunk * channels);
++            reset_state();
++        }
++        TAP_SR_RATIONAL_NOINLINE void reset_state() noexcept {
++            for (auto& v : m_hist) {
++                v = tap::dsp::sample_traits<S>::silence();
++            }
++            for (auto& e : m_end) {
++                e = m_row_len;
++            }
++            m_pos     = 0;
++            m_pending = 1; // the pre-advance that delivers x[0] under output 0
++            m_dphase  = 0;
++        }
++        std::size_t                      m_channels;
++        std::size_t                      m_taps     = 0; ///< N
++        std::size_t                      m_row_len  = 0; ///< T (per phase or per branch)
++        std::size_t                      m_hist_cap = 0;
++        std::vector<coeff>               m_rows;        ///< k_rows x T, tap-reversed
++        std::array<std::size_t, k_rows>  m_first{};     ///< nonzero span start per row
++        std::array<std::size_t, k_rows>  m_count{};     ///< nonzero span length per row
++        std::vector<S>                   m_hist;        ///< channels x k_lines planar lines of m_hist_cap each
++        std::array<std::size_t, k_lines> m_end{};       ///< newest sample index + 1 per sub-line
++        std::vector<S>                   m_scratch;     ///< interleaved staging for pull()
++        std::uint32_t                    m_pos     = 0; ///< superblock position in [0, L)
++        std::uint32_t                    m_pending = 1; ///< inputs before the next output (L-phase machine)
++        std::uint32_t                    m_dphase  = 0; ///< inputs since the last output (decimator)
++    };
++
+     // ANCHOR: rational_stage
+     /// One Nyquist stage at ratio R over sample format S; see the file header.
+-    template <tap::dsp::sample_type S, rational_ratio R>
+-    class basic_stage {
++    template <tap::dsp::sample_type S, rational_ratio R, std::size_t ChT = 0>
++    class basic_stage : private stage_state<S, R> {
+       public:
+         using sample = S;
+         using coeff  = typename tap::dsp::sample_traits<S>::coeff;
+@@ -254,18 +317,7 @@ namespace tap::sr::rational {
+         /// Designs the table and allocates the histories; setup time only.
+         /// Rejects what validate() rejects, with its text.
+         explicit basic_stage(std::size_t channels = 1, const profile& p = profile::economy())
+-            : m_channels(channels) {
+-            if (channels == 0) {
+-                tap::dsp::raise<std::invalid_argument>("tap::sr::rational::basic_stage: channels == 0");
+-            }
+-            const std::vector<double> h = design_stage<R>(p);
+-            m_taps                      = h.size();
+-            build_table(h);
+-            m_hist_cap = m_row_len + k_hist_slack;
+-            m_hist.assign(channels * k_lines * m_hist_cap, tap::dsp::sample_traits<S>::silence());
+-            m_scratch.resize(k_pop_chunk * channels);
+-            reset();
+-        }
++            : stage_state<S, R>(channels, p) {}
+ 
+         /// Push-transform: consumes all in_frames interleaved frames, writes
+         /// outputs_for(in_frames) frames (out must hold them); returns that.
+@@ -274,6 +326,7 @@ namespace tap::sr::rational {
+             // counts (bridge's process() does the same for its tap count): the
+             // channel loops unroll, and the block runs with two fewer live
+             // values in the engine's own frame.
++            if constexpr (ChT != 0) { return process_block<ChT>(in, in_frames, out); } else
+             switch (m_channels) {
+             case 1:
+                 return process_block<1>(in, in_frames, out);
+@@ -332,6 +385,7 @@ namespace tap::sr::rational {
+         TAP_SR_RATIONAL_NOINLINE std::size_t pull(S* out, std::size_t out_frames, PopFn&& pop) noexcept {
+             static_assert(std::is_nothrow_invocable_r_v<std::size_t, PopFn&, S*, std::size_t>,
+                           "pull() requires a noexcept PopFn: std::size_t(S*, std::size_t) noexcept");
++            if constexpr (ChT != 0) { return pull_block<ChT>(out, out_frames, pop); } else
+             switch (m_channels) { // the channel count as a constant, as process()
+             case 1:
+                 return pull_block<1>(out, out_frames, pop);
+@@ -409,6 +463,7 @@ namespace tap::sr::rational {
+         /// that become ready — flush_output_frames() of them. The stage is
+         /// left mid-stream in the zero-fed state; reset() before reuse.
+         TAP_SR_RATIONAL_NOINLINE std::size_t flush(S* out) noexcept {
++            if constexpr (ChT != 0) { return flush_block<ChT>(out); } else
+             switch (m_channels) { // the channel count as a constant, as process()
+             case 1:
+                 return flush_block<1>(out);
+@@ -460,17 +515,7 @@ namespace tap::sr::rational {
+         std::size_t flush_output_frames() const noexcept { return outputs_for(window_frames()); }
+ 
+         /// Return to the zero-primed initial state.
+-        void reset() noexcept {
+-            for (auto& v : m_hist) {
+-                v = tap::dsp::sample_traits<S>::silence();
+-            }
+-            for (auto& e : m_end) {
+-                e = m_row_len;
+-            }
+-            m_pos     = 0;
+-            m_pending = 1; // the pre-advance that delivers x[0] under output 0
+-            m_dphase  = 0;
+-        }
++        void reset() noexcept { this->reset_state(); }
+ 
+         /// Group delay at the output rate: (N - 1) / (2 M), exact (R7).
+         tap::dsp::exact_ratio latency_output_frames() const noexcept {
+@@ -523,96 +568,8 @@ namespace tap::sr::rational {
+         // ANCHOR: rational_build_table
+         /// Builds the rows from the design: scaling (file header), tap
+         /// reversal, trimming to the nonzero span, quantization.
+-        void build_table(const std::vector<double>& h) {
+-            const std::size_t n = h.size();
+-            if constexpr (k_is_decimator) {
+-                // The whole filter at sum 1, quantized as ONE row so the
+-                // fixed-point sum lands on unity exactly, then scattered to
+-                // the M branches (branch j: taps j + s M, s ascending =
+-                // older, so the row is stored reversed: oldest first). In
+-                // Q15 each branch of the unscaled design (every branch of a
+-                // Nyquist filter sums to 1) is quantized on its own at unity
+-                // instead, and the 1 / M is applied in the finalize.
+-                std::vector<coeff> q(n);
+-                if constexpr (k_branch_quantized) {
+-                    std::vector<double> branch((n + k_down - 1) / k_down);
+-                    std::vector<coeff>  qb(branch.size());
+-                    for (std::size_t j = 0; j < k_down; ++j) {
+-                        const std::size_t len = (n - j + k_down - 1) / k_down; // taps j, j + M, ...
+-                        for (std::size_t s = 0; s < len; ++s) {
+-                            branch[s] = h[j + s * k_down];
+-                        }
+-                        tap::dsp::quantize_row_preserving_sum<S>(std::span<const double>(branch.data(), len),
+-                                                                 std::span<coeff>(qb.data(), len));
+-                        for (std::size_t s = 0; s < len; ++s) {
+-                            q[j + s * k_down] = qb[s];
+-                        }
+-                    }
+-                }
+-                else {
+-                    std::vector<double> scaled(n);
+-                    for (std::size_t i = 0; i < n; ++i) {
+-                        scaled[i] = h[i] / static_cast<double>(k_down);
+-                    }
+-                    tap::dsp::quantize_row_preserving_sum<S>(scaled, q);
+-                }
+-                m_row_len = (n + k_down - 1) / k_down; // 2 m
+-                m_rows.assign(k_rows * m_row_len, static_cast<coeff>(0));
+-                for (std::size_t j = 0; j < k_rows; ++j) {
+-                    const std::size_t len = (n - j + k_down - 1) / k_down; // taps j, j + M, ...
+-                    // Right-aligned to the newest sample (s = 0 at the row's
+-                    // end): a branch one tap short pads at its OLD end.
+-                    for (std::size_t s = 0; s < len; ++s) {
+-                        m_rows[j * m_row_len + (m_row_len - 1 - s)] = q[j + s * k_down];
+-                    }
+-                    trim_row(j);
+-                }
+-            }
+-            else {
+-                m_row_len = (n + k_up - 1) / k_up; // T = ceil(N / L)
+-                m_rows.assign(k_rows * m_row_len, static_cast<coeff>(0));
+-                std::vector<double> row(m_row_len);
+-                std::vector<coeff>  q(m_row_len);
+-                for (std::size_t p = 0; p < k_rows; ++p) {
+-                    double sum = 0.0;
+-                    for (std::size_t t = 0; t < m_row_len; ++t) {
+-                        const std::size_t i    = p + t * k_up;
+-                        const double      v    = i < n ? h[i] : 0.0;
+-                        row[m_row_len - 1 - t] = v;
+-                        sum += v;
+-                    }
+-                    if constexpr (!traits::k_is_up) {
+-                        // A mixed ratio going down: the L phases are not the
+-                        // design's M branches; normalize each to DC gain 1
+-                        // (k_table_gain in Q15, divided out in the rounding).
+-                        for (auto& v : row) {
+-                            v = v / sum * static_cast<double>(k_table_gain);
+-                        }
+-                    }
+-                    tap::dsp::quantize_row_preserving_sum<S>(row, q);
+-                    for (std::size_t t = 0; t < m_row_len; ++t) {
+-                        m_rows[p * m_row_len + t] = q[t];
+-                    }
+-                    trim_row(p);
+-                }
+-            }
+-        }
+         // ANCHOR_END: rational_build_table
+ 
+-        /// Records the nonzero span [first, first + count) of row r.
+-        void trim_row(std::size_t r) noexcept {
+-            const coeff* row   = m_rows.data() + r * m_row_len;
+-            std::size_t  first = 0;
+-            while (first < m_row_len && row[first] == static_cast<coeff>(0)) {
+-                ++first;
+-            }
+-            std::size_t last = m_row_len;
+-            while (last > first && row[last - 1] == static_cast<coeff>(0)) {
+-                --last;
+-            }
+-            m_first[r] = first;
+-            m_count[r] = last - first;
+-        }
+ 
+         // ANCHOR: rational_cursor
+         /// The hot loops' view of the stage for one call: the stream state
+@@ -775,22 +732,135 @@ namespace tap::sr::rational {
+         }
+         // ANCHOR_END: rational_emit
+ 
+-        std::size_t                      m_channels;
+-        std::size_t                      m_taps     = 0; ///< N
+-        std::size_t                      m_row_len  = 0; ///< T (per phase or per branch)
+-        std::size_t                      m_hist_cap = 0;
+-        std::vector<coeff>               m_rows;        ///< k_rows x T, tap-reversed
+-        std::array<std::size_t, k_rows>  m_first{};     ///< nonzero span start per row
+-        std::array<std::size_t, k_rows>  m_count{};     ///< nonzero span length per row
+-        std::vector<S>                   m_hist;        ///< channels x k_lines planar lines of m_hist_cap each
+-        std::array<std::size_t, k_lines> m_end{};       ///< newest sample index + 1 per sub-line
+-        std::vector<S>                   m_scratch;     ///< interleaved staging for pull()
+-        std::uint32_t                    m_pos     = 0; ///< superblock position in [0, L)
+-        std::uint32_t                    m_pending = 1; ///< inputs before the next output (L-phase machine)
+-        std::uint32_t                    m_dphase  = 0; ///< inputs since the last output (decimator)
++        using base = stage_state<S, R>;
++        using base::m_channels;
++        using base::m_taps;
++        using base::m_row_len;
++        using base::m_hist_cap;
++        using base::m_rows;
++        using base::m_first;
++        using base::m_count;
++        using base::m_hist;
++        using base::m_end;
++        using base::m_scratch;
++        using base::m_pos;
++        using base::m_pending;
++        using base::m_dphase;
+     };
+     // ANCHOR_END: rational_stage
+ 
++    // The count-independent part of a stage, built once per (S, R) and shared
++    // by every channel count (prototype: the audit's design-2 remedy).
++    template <tap::dsp::sample_type S, rational_ratio R>
++    struct stage_table {
++        using B = basic_stage<S, R, 0>;
++        std::size_t taps = 0, row_len = 0;
++        std::vector<typename B::coeff> rows;
++        std::array<std::size_t, B::k_rows> first{}, count{};
++    };
++    namespace detail_proto {
++        template <tap::dsp::sample_type S, rational_ratio R>
++        struct ops {
++            using B = basic_stage<S, R, 0>;
++            /// Records the nonzero span [first, first + count) of row r.
++        static void trim_into(stage_table<S, R>& tb, std::size_t r) noexcept {
++            const typename B::coeff* row   = tb.rows.data() + r * tb.row_len;
++            std::size_t  first = 0;
++            while (first < tb.row_len && row[first] == static_cast<typename B::coeff>(0)) {
++                ++first;
++            }
++            std::size_t last = tb.row_len;
++            while (last > first && row[last - 1] == static_cast<typename B::coeff>(0)) {
++                --last;
++            }
++            tb.first[r] = first;
++            tb.count[r] = last - first;
++        }
++        static void build_into(stage_table<S, R>& tb, const std::vector<double>& h) {
++            const std::size_t n = h.size();
++            if constexpr (B::k_is_decimator) {
++                // The whole filter at sum 1, quantized as ONE row so the
++                // fixed-point sum lands on unity exactly, then scattered to
++                // the M branches (branch j: taps j + s M, s ascending =
++                // older, so the row is stored reversed: oldest first). In
++                // Q15 each branch of the unscaled design (every branch of a
++                // Nyquist filter sums to 1) is quantized on its own at unity
++                // instead, and the 1 / M is applied in the finalize.
++                std::vector<typename B::coeff> q(n);
++                if constexpr (B::k_branch_quantized) {
++                    std::vector<double> branch((n + B::k_down - 1) / B::k_down);
++                    std::vector<typename B::coeff>  qb(branch.size());
++                    for (std::size_t j = 0; j < B::k_down; ++j) {
++                        const std::size_t len = (n - j + B::k_down - 1) / B::k_down; // taps j, j + M, ...
++                        for (std::size_t s = 0; s < len; ++s) {
++                            branch[s] = h[j + s * B::k_down];
++                        }
++                        tap::dsp::quantize_row_preserving_sum<S>(std::span<const double>(branch.data(), len),
++                                                                 std::span<typename B::coeff>(qb.data(), len));
++                        for (std::size_t s = 0; s < len; ++s) {
++                            q[j + s * B::k_down] = qb[s];
++                        }
++                    }
++                }
++                else {
++                    std::vector<double> scaled(n);
++                    for (std::size_t i = 0; i < n; ++i) {
++                        scaled[i] = h[i] / static_cast<double>(B::k_down);
++                    }
++                    tap::dsp::quantize_row_preserving_sum<S>(scaled, q);
++                }
++                tb.row_len = (n + B::k_down - 1) / B::k_down; // 2 m
++                tb.rows.assign(B::k_rows * tb.row_len, static_cast<typename B::coeff>(0));
++                for (std::size_t j = 0; j < B::k_rows; ++j) {
++                    const std::size_t len = (n - j + B::k_down - 1) / B::k_down; // taps j, j + M, ...
++                    // Right-aligned to the newest sample (s = 0 at the row's
++                    // end): a branch one tap short pads at its OLD end.
++                    for (std::size_t s = 0; s < len; ++s) {
++                        tb.rows[j * tb.row_len + (tb.row_len - 1 - s)] = q[j + s * B::k_down];
++                    }
++                    trim_into(tb, j);
++                }
++            }
++            else {
++                tb.row_len = (n + B::k_up - 1) / B::k_up; // T = ceil(N / L)
++                tb.rows.assign(B::k_rows * tb.row_len, static_cast<typename B::coeff>(0));
++                std::vector<double> row(tb.row_len);
++                std::vector<typename B::coeff>  q(tb.row_len);
++                for (std::size_t p = 0; p < B::k_rows; ++p) {
++                    double sum = 0.0;
++                    for (std::size_t t = 0; t < tb.row_len; ++t) {
++                        const std::size_t i    = p + t * B::k_up;
++                        const double      v    = i < n ? h[i] : 0.0;
++                        row[tb.row_len - 1 - t] = v;
++                        sum += v;
++                    }
++                    if constexpr (!B::traits::k_is_up) {
++                        // A mixed ratio going down: the L phases are not the
++                        // design's M branches; normalize each to DC gain 1
++                        // (B::k_table_gain in Q15, divided out in the rounding).
++                        for (auto& v : row) {
++                            v = v / sum * static_cast<double>(B::k_table_gain);
++                        }
++                    }
++                    tap::dsp::quantize_row_preserving_sum<S>(row, q);
++                    for (std::size_t t = 0; t < tb.row_len; ++t) {
++                        tb.rows[p * tb.row_len + t] = q[t];
++                    }
++                    trim_into(tb, p);
++                }
++            }
++        }
++        };
++        template <tap::dsp::sample_type S, rational_ratio R>
++        TAP_SR_RATIONAL_NOINLINE stage_table<S, R> make_stage_table(const profile& p) {
++            stage_table<S, R> t;
++            const std::vector<double> h = design_stage<R>(p);
++            t.taps = h.size();
++            ops<S, R>::build_into(t, h);
++            return t;
++        }
++    }
++
+     static_assert(tap::dsp::sync_stage<basic_stage<float, ratio<2, 1>>>);
+     static_assert(tap::dsp::sync_stage<basic_stage<double, ratio<1, 3>>>);
+     static_assert(tap::dsp::sync_stage<basic_stage<std::int16_t, ratio<2, 3>>>);
