@@ -56,7 +56,7 @@ namespace {
 
     template <typename S, rat::rational_ratio R>
     double run() {
-        rat::basic_stage<S, R> conv(k_channels, rat::profile::economy());
+        rat::basic_stage<S, k_channels, R> conv(rat::profile::economy());
         using conv_t = decltype(conv);
 
         // 0.25 s of input, cycled block-aligned, as icount_main.cpp's stream.

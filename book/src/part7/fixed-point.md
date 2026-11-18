@@ -7,7 +7,7 @@
 Part I's sample-traits chapter set up the family's ladder — double is the
 golden model, float the embedded profile, Q15 and Q31 the format-limited
 embedded profiles — and `rational` inherits it unchanged: `basic_stage<S,
-R>` is one template over `tap::dsp::sample_traits`, so the Q15 and Q31
+Ch, R>` is one template over `tap::dsp::sample_traits`, so the Q15 and Q31
 datapaths were there the day the float one worked. What this chapter adds
 is the measurement discipline the plan calls M5: every stage, every
 profile, every format, numbers stated and pinned, and *two honest limits*

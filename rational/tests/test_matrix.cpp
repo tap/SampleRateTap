@@ -64,7 +64,7 @@ namespace {
     struct stage_for;
     template <typename S, rational_ratio R>
     struct stage_for<S, R> {
-        using type = basic_stage<S, R>;
+        using type = basic_stage<S, 1, R>;
     };
     template <typename S, unsigned K>
     struct stage_for<S, bridge_down<K>> {
@@ -103,12 +103,12 @@ namespace {
     }
 
     template <typename S, typename D>
-    typename stage_for<S, D>::type make_stage(std::size_t channels, std::size_t prof, exact_ratio divisor) {
+    typename stage_for<S, D>::type make_stage(std::size_t prof, exact_ratio divisor) {
         if constexpr (is_bridge<D>::value) {
-            return typename stage_for<S, D>::type(channels, bridge_profile(prof));
+            return typename stage_for<S, D>::type(bridge_profile(prof));
         }
         else {
-            return typename stage_for<S, D>::type(channels, rational_profile(prof).relaxed(divisor));
+            return typename stage_for<S, D>::type(rational_profile(prof).relaxed(divisor));
         }
     }
 
@@ -199,7 +199,7 @@ namespace {
 
     template <typename... Descs, std::size_t... I>
     row_chain<Descs...> build_chain(const row_spec& r, std::size_t prof, std::index_sequence<I...>) {
-        return row_chain<Descs...>(std::size_t{1}, make_stage<double, Descs>(1, prof, r.divisors[I])...);
+        return row_chain<Descs...>(make_stage<double, Descs>(prof, r.divisors[I])...);
     }
 
     /// A row of the matrix with its chain type erased: the spec, the rates,
@@ -229,10 +229,10 @@ namespace {
             return std::make_unique<row_handle<Descs...>>(std::move(c), macs);
         };
         if constexpr (!(is_bridge<Descs>::value || ...)) {
-            constexpr auto divisors = basic_chain<double, Descs...>::k_divisors;
+            constexpr auto divisors = basic_chain<double, 1, Descs...>::k_divisors;
             r.named_divisors.assign(divisors.begin(), divisors.end());
             r.named_numbers = [](std::size_t prof) {
-                basic_chain<double, Descs...> named(1, rational_profile(prof));
+                basic_chain<double, 1, Descs...> named(rational_profile(prof));
                 return std::pair{named.macs_per_output_exact(), named.latency_output_frames()};
             };
         }

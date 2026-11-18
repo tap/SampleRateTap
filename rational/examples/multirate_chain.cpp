@@ -19,7 +19,7 @@ int main() {
     constexpr double      in_hz    = 12000.0;
     constexpr std::size_t channels = 2;
 
-    chain<up_2, ratio_4_3> to_32k(channels); // economy: 3/8 of the lower rate flat, 70 dB
+    chain<channels, up_2, ratio_4_3> to_32k; // economy: 3/8 of the lower rate flat, 70 dB
     static_assert(decltype(to_32k)::k_up == 8 && decltype(to_32k)::k_down == 3);
     static_assert(decltype(to_32k)::k_divisors[0] == tap::dsp::exact_ratio{1, 1}); // up_2 at the lowest rate
     static_assert(decltype(to_32k)::k_divisors[1] == tap::dsp::exact_ratio{2, 1}); // 4/3 at twice it

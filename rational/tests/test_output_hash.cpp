@@ -86,11 +86,11 @@ namespace {
 
     template <class S, rational_ratio R>
     void hash_one(const char* ratio_name) {
-        basic_stage<S, R> c(k_channels);
-        const auto        x = multitone<S>();
-        std::vector<S>    y((c.outputs_for(k_in_frames) + c.flush_output_frames()) * k_channels);
-        const std::size_t made = c.process(x.data(), k_in_frames, y.data());
-        const std::size_t tail = c.flush(y.data() + made * k_channels);
+        basic_stage<S, k_channels, R> c;
+        const auto                    x = multitone<S>();
+        std::vector<S>                y((c.outputs_for(k_in_frames) + c.flush_output_frames()) * k_channels);
+        const std::size_t             made = c.process(x.data(), k_in_frames, y.data());
+        const std::size_t             tail = c.flush(y.data() + made * k_channels);
         y.resize((made + tail) * k_channels);
         double energy = 0.0;
         for (const S v : y) {

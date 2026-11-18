@@ -127,3 +127,14 @@ add_test(NAME rational.Ratio.ChartersFailToCompileWithTheMessage
                  ${_compiler_args}
                  -DTAP_SR_RATIONAL_INCLUDE=${CMAKE_CURRENT_SOURCE_DIR}/../include)
 set_tests_properties(rational.Ratio.ChartersFailToCompileWithTheMessage PROPERTIES LABELS rational TIMEOUT 300)
+# The channel count (A13): the same project's second case set, a stage of zero
+# channels, which also reaches DspTap's headers.
+add_test(NAME rational.Stage.ZeroChannelsFailToCompileWithTheMessage
+         COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
+                 -S ${CMAKE_CURRENT_SOURCE_DIR}/compile_fail
+                 -B ${CMAKE_CURRENT_BINARY_DIR}/compile_fail_channels
+                 ${_compiler_args}
+                 -DTAP_SR_RATIONAL_COMPILE_FAIL_SET=channels
+                 -DTAP_SR_RATIONAL_INCLUDE=${CMAKE_CURRENT_SOURCE_DIR}/../include
+                 -DTAP_DSP_INCLUDE=${SampleRateTap_SOURCE_DIR}/submodules/dsptap/include)
+set_tests_properties(rational.Stage.ZeroChannelsFailToCompileWithTheMessage PROPERTIES LABELS rational TIMEOUT 300)

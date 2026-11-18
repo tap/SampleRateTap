@@ -82,8 +82,8 @@ namespace {
     /// S (input quantized to S, output back to full-scale units).
     template <typename S, rational_ratio R>
     std::vector<double> run_stage(const profile& p, const std::vector<double>& x) {
-        basic_stage<S, R> c(1, p);
-        std::vector<S>    xs(x.size());
+        basic_stage<S, 1, R> c(p);
+        std::vector<S>       xs(x.size());
         for (std::size_t i = 0; i < x.size(); ++i) {
             xs[i] = to_sample<S>(x[i]);
         }
@@ -109,7 +109,7 @@ namespace {
     // move in any tap changes it). The pattern of DspTap's
     // Decimate.FixedPointTablesAreBitPinned.
     template <typename S, rational_ratio R>
-    std::uint64_t table_fnv1a64(const basic_stage<S, R>& c) {
+    std::uint64_t table_fnv1a64(const basic_stage<S, 1, R>& c) {
         std::uint64_t h = 0xcbf29ce484222325ULL;
         for (std::size_t r = 0; r < k_rows<R>; ++r) {
             for (std::size_t t = 0; t < c.row_length(); ++t) {
@@ -229,10 +229,10 @@ namespace {
     // decimator's whole filter.
     template <typename S, rational_ratio R>
     void expect_rows_sum_to_unity(const pin_row& row, const profile& p) {
-        using tr                = tap::dsp::sample_traits<S>;
-        const auto        unity = static_cast<std::int64_t>(tr::k_coeff_scale);
-        basic_stage<S, R> c(1, p);
-        std::int64_t      whole = 0;
+        using tr                   = tap::dsp::sample_traits<S>;
+        const auto           unity = static_cast<std::int64_t>(tr::k_coeff_scale);
+        basic_stage<S, 1, R> c(p);
+        std::int64_t         whole = 0;
         for (std::size_t r = 0; r < k_rows<R>; ++r) {
             std::int64_t sum = 0;
             for (std::size_t t = 0; t < c.row_length(); ++t) {
@@ -241,17 +241,17 @@ namespace {
             whole += sum;
             if constexpr (R::k_up != 1) {
                 // Unity, or a Q15 mixed ratio going down's power-of-two gain.
-                EXPECT_EQ(sum, unity * static_cast<std::int64_t>(basic_stage<S, R>::k_table_gain))
+                EXPECT_EQ(sum, unity * static_cast<std::int64_t>(basic_stage<S, 1, R>::k_table_gain))
                     << row.ratio << " " << row.profile << " q" << sizeof(S) * 8 << " row " << r;
             }
         }
         if constexpr (R::k_up == 1) {
             // A Q15 decimator holds each of its M branches at unity (its
             // finalize divides by M); Q31 holds the whole filter at unity.
-            constexpr auto gain = static_cast<std::int64_t>(basic_stage<S, R>::k_table_gain);
+            constexpr auto gain = static_cast<std::int64_t>(basic_stage<S, 1, R>::k_table_gain);
             EXPECT_EQ(whole, unity * gain)
                 << row.ratio << " " << row.profile << " q" << sizeof(S) * 8 << " whole filter";
-            if constexpr (basic_stage<S, R>::k_branch_quantized) {
+            if constexpr (basic_stage<S, 1, R>::k_branch_quantized) {
                 for (std::size_t r = 0; r < k_rows<R>; ++r) {
                     std::int64_t sum = 0;
                     for (std::size_t t = 0; t < c.row_length(); ++t) {
@@ -279,9 +279,9 @@ namespace {
     template <typename R>
     struct bit_pins {
         static void run(const pin_row& row, const profile& p) {
-            EXPECT_EQ(table_fnv1a64(basic_stage<std::int16_t, R>(1, p)), row.fnv_q15)
+            EXPECT_EQ(table_fnv1a64(basic_stage<std::int16_t, 1, R>(p)), row.fnv_q15)
                 << row.ratio << " " << row.profile;
-            EXPECT_EQ(table_fnv1a64(basic_stage<std::int32_t, R>(1, p)), row.fnv_q31)
+            EXPECT_EQ(table_fnv1a64(basic_stage<std::int32_t, 1, R>(p)), row.fnv_q31)
                 << row.ratio << " " << row.profile;
         }
     };
@@ -298,8 +298,8 @@ namespace {
     void expect_shared_q15_table() {
         for (const profile& p :
              {profile::super_economy(), profile::economy(), profile::balanced(), profile::transparent()}) {
-            EXPECT_EQ(table_fnv1a64(basic_stage<std::int16_t, Down>(1, p)),
-                      table_fnv1a64(basic_stage<std::int16_t, Up>(1, p)))
+            EXPECT_EQ(table_fnv1a64(basic_stage<std::int16_t, 1, Down>(p)),
+                      table_fnv1a64(basic_stage<std::int16_t, 1, Up>(p)))
                 << ratio_traits<Down>::k_band << " " << p.stopband_atten_db;
         }
     }
@@ -309,9 +309,9 @@ namespace {
         expect_shared_q15_table<up_3, down_3>();
         expect_shared_q15_table<up_6, down_6>();
         expect_shared_q15_table<up_8, down_8>();
-        static_assert(basic_stage<std::int16_t, down_6>::k_table_gain == 6);
-        static_assert(basic_stage<std::int32_t, down_6>::k_table_gain == 1);
-        static_assert(basic_stage<std::int16_t, up_6>::k_table_gain == 1);
+        static_assert(basic_stage<std::int16_t, 1, down_6>::k_table_gain == 6);
+        static_assert(basic_stage<std::int32_t, 1, down_6>::k_table_gain == 1);
+        static_assert(basic_stage<std::int16_t, 1, up_6>::k_table_gain == 1);
     }
 
     // ------------------------------------------------------------------
@@ -321,7 +321,7 @@ namespace {
     // quantized span in Q15.
     template <typename S, rational_ratio R>
     std::size_t expect_no_structural_zero_in_the_dot(const pin_row& row, const profile& p, std::size_t& zeros_in_dot) {
-        basic_stage<S, R>         c(1, p);
+        basic_stage<S, 1, R>      c(p);
         const std::vector<double> h      = design_stage<R>(p);
         constexpr std::size_t     band   = ratio_traits<R>::k_band;
         const std::size_t         center = (h.size() - 1) / 2;
@@ -452,7 +452,7 @@ namespace {
     // a 16384-point DFT.
     template <typename S, rational_ratio R>
     double quantized_stopband_db(const profile& p) {
-        basic_stage<S, R>     c(1, p);
+        basic_stage<S, 1, R>  c(p);
         constexpr std::size_t l     = R::k_up;
         constexpr std::size_t m     = R::k_down;
         constexpr std::size_t band  = l > m ? l : m;
@@ -622,13 +622,13 @@ namespace {
     // for any row shorter than 8192 taps).
     template <typename S, rational_ratio R>
     void expect_full_scale_dc_exact(const pin_row& row, const profile& p, S level) {
-        basic_stage<S, R> c(1, p);
-        const std::size_t fill = c.window_frames() + R::k_down;
-        const std::size_t n_in = fill + 2 * R::k_up * R::k_down + 4;
-        std::vector<S>    x(n_in, level);
-        std::vector<S>    y(c.outputs_for(n_in));
-        const std::size_t made = c.process(x.data(), n_in, y.data());
-        const std::size_t skip = c.outputs_for(0) + (fill * R::k_up) / R::k_down + 1;
+        basic_stage<S, 1, R> c(p);
+        const std::size_t    fill = c.window_frames() + R::k_down;
+        const std::size_t    n_in = fill + 2 * R::k_up * R::k_down + 4;
+        std::vector<S>       x(n_in, level);
+        std::vector<S>       y(c.outputs_for(n_in));
+        const std::size_t    made = c.process(x.data(), n_in, y.data());
+        const std::size_t    skip = c.outputs_for(0) + (fill * R::k_up) / R::k_down + 1;
         ASSERT_GT(made, skip);
         for (std::size_t n = skip; n < made; ++n) {
             ASSERT_EQ(y[n], level) << row.ratio << " " << row.profile << " q" << sizeof(S) * 8 << " n " << n;
@@ -655,8 +655,8 @@ namespace {
     template <typename Chain, typename ChainD>
     std::pair<double, double> chain_floor(const profile& p) {
         const auto x = reference_noise();
-        ChainD     cd(1, p);
-        Chain      cq(1, p);
+        ChainD     cd(p);
+        Chain      cq(p);
         using sample = typename Chain::sample;
         std::vector<double> yd(cd.outputs_for(x.size()));
         cd.process(x.data(), x.size(), yd.data());
@@ -677,10 +677,10 @@ namespace {
 
     TEST(FixedPoint, ChainsStackTheFloorStageByStage) {
         const profile eco = profile::economy();
-        const auto    a   = chain_floor<down_3_down_8_down_2<std::int16_t>, down_3_down_8_down_2<double>>(eco);
-        const auto    b   = chain_floor<up_2_up_8_up_3<std::int16_t>, up_2_up_8_up_3<double>>(eco);
-        const auto    c   = chain_floor<ratio_3_8_down_3<std::int16_t>, ratio_3_8_down_3<double>>(eco);
-        const auto    d   = chain_floor<down_3_down_8_down_2<std::int32_t>, down_3_down_8_down_2<double>>(eco);
+        const auto    a   = chain_floor<down_3_down_8_down_2<std::int16_t, 1>, down_3_down_8_down_2<double, 1>>(eco);
+        const auto    b   = chain_floor<up_2_up_8_up_3<std::int16_t, 1>, up_2_up_8_up_3<double, 1>>(eco);
+        const auto    c   = chain_floor<ratio_3_8_down_3<std::int16_t, 1>, ratio_3_8_down_3<double, 1>>(eco);
+        const auto    d   = chain_floor<down_3_down_8_down_2<std::int32_t, 1>, down_3_down_8_down_2<double, 1>>(eco);
         std::printf("[ measured ] Q15 chains: 1/48 worst %.2e rms %.1f dBFS; 48/1 worst %.2e rms %.1f dBFS; 1/8 (44.1) "
                     "worst %.2e rms %.1f dBFS; Q31 1/48 worst %.2e\n",
                     a.first, a.second, b.first, b.second, c.first, c.second, d.first);

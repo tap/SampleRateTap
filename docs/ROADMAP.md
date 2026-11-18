@@ -195,7 +195,12 @@ gated on shipping.
   +23 % as GCC places it; +1.3 % at best on both). The maintainer chose the plan's option
   3 the same day: `rational`'s per-count blocks out of line in every stage, with three rows
   accepted above the gate's rule (two M55 Q15 interpolators, +1.28 and +0.63 %, and the
-  M33's ↓3 float row, +1.37 %). A13a (DspTap) is next.*
+  M33's ↓3 float row, +1.37 %). A13a (DspTap) is tap/DspTap#64. A13b (`rational`)
+  measured 2026-11-18: every checksum equal, the streaming sums down on every target
+  (−2.9 % on the M55, −0.2 % on the M33, −0.4 % on Hexagon, −2.3 % on the host), the probes'
+  engine `.text` −16 … −34 %; one M55 row (`ratio23_q15_eco`) 5 % apart between the builds
+  with and without exceptions (GCC's register allocation, the code identical before it),
+  accepted by the maintainer with its baseline at the midpoint of the two.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 

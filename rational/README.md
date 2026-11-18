@@ -16,7 +16,7 @@ sample-format traits, the dot kernels and the row-sum quantization).
 
 > **Status: M6 of [PLAN.md](PLAN.md) section 6, the plan complete.** The single stages ship
 > for every ratio of the vocabulary — ↑2, ↓2, ↑3, ↓3, ↑6, ↓6, ↑8, ↓8 and the
-> mixed 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 — as `converter<ratio<L, M>>` (float,
+> mixed 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 — as `converter<Ch, ratio<L, M>>` (float,
 > the golden model pinned sample-for-sample against committed scipy
 > `upfirdn` vectors), `converter_q15` and `converter_q31`, with the family's
 > call shapes: `process`, `pull`, exact `outputs_for` / `frames_needed`,
@@ -26,7 +26,7 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > structural zeros are never multiplied by an interpolator or a decimator,
 > so the half-band decimator costs 23 MACs per output of its 43 taps and an
 > interpolator's centre phase is a copy. The chains ship too (`chain.h`):
-> `basic_chain<S, R...>` runs stages in sequence with each stage designed at
+> `basic_chain<S, Ch, R...>` runs stages in sequence with each stage designed at
 > its own rate, and the 20 named multi-stage chains of the 14 × 14 coverage
 > matrix (PLAN.md section 3), pinned row by row by `tests/test_matrix.cpp`.
 > The fixed-point profiles are measured per stage (`tests/test_fixed_point.cpp`,
@@ -50,7 +50,7 @@ sample-format traits, the dot kernels and the row-sum quantization).
 
 using namespace tap::sr::rational;
 
-converter<down_2> down(2);                 // 96 -> 48 kHz (any by-2), stereo, economy
+converter<2, down_2> down;                 // 96 -> 48 kHz (any by-2), stereo, economy
 // profiles: economy() (default, 3/8 of the lower rate flat) | balanced() |
 // transparent() (120 dB) | super_economy()
 std::vector<float> out(down.outputs_for(n_in) * 2);
@@ -58,20 +58,25 @@ std::size_t made = down.process(in, n_in, out.data());   // noexcept, alloc-free
 std::vector<float> tail(down.flush_output_frames() * 2);
 down.flush(tail.data());                                 // end of stream
 
-converter<ratio_2_3> to_32k(1);            // 48 -> 32 kHz: one mixed stage, 32.5 MACs per output
+converter<1, ratio_2_3> to_32k;            // 48 -> 32 kHz: one mixed stage, 32.5 MACs per output
 auto lat = to_32k.latency_output_frames(); // exact: {32, 3} output frames = 32 / 3
 
-down_3_down_8_down_2<float> to_8k(1);      // 384 -> 8 kHz: the matrix's 1/48 chain, 373 MACs per output
+down_3_down_8_down_2<float, 1> to_8k;      // 384 -> 8 kHz: the matrix's 1/48 chain, 373 MACs per output
 // each stage designed at its own rate: divisors 16, 2, 1 of the chain's lowest rate (PLAN.md 3.1)
 static_assert(to_8k.k_divisors[0] == tap::dsp::exact_ratio{16, 1});
-chain<up_2, ratio_4_3> to_32k_from_12k(2); // 12 -> 32 kHz: 8/3 as the matrix factors it, stereo
+chain<2, up_2, ratio_4_3> to_32k_from_12k; // 12 -> 32 kHz: 8/3 as the matrix factors it, stereo
 ```
 
 The ratio is a compile-time type (`ratio<L, M>`, L and M of the form
 2^a · 3^b in lowest terms: anything else fails to compile with the charter's
-message). Construction rejects zero channels, a profile the designer refuses
-and a spec no length up to the search bound meets (`std::invalid_argument`,
-`std::runtime_error`); `converter<R>::validate(channels, profile)` and a
+message). The channel count is the type's too, the first template argument
+of the aliases (`converter<2, down_2>`, `chain<2, up_2, ratio_4_3>`) and the
+second of `basic_stage<S, Ch, R>` / `basic_chain<S, Ch, R...>`: a
+compile-time constant of at least 1, never a constructor argument, and a
+count of zero fails to compile (A13, `docs/CHANNELS_PLAN.md`). Construction
+rejects a profile the designer refuses and a spec no length up to the
+search bound meets (`std::invalid_argument`,
+`std::runtime_error`); `converter<Ch, R>::validate(profile)` and a
 chain's `validate` are the same verdict as a `noexcept` `const char*` reason
 (nullptr when it constructs), the family's error model (root README,
 "Errors") — what a build without exceptions calls before constructing. `pull(out, n, pop_fn)` is the callback-driven shape and
@@ -87,22 +92,25 @@ chain's `validate` are the same verdict as a `noexcept` `const char*` reason
   length (a custom profile without pins is searched on the same
   16384-point grid), centre exactly 1, zeros exactly 0, every branch at DC
   gain 1; `stage_taps_per_phase<R>` for the mixed ratios.
-- `stage.h` — `basic_stage<S, R>`: the L-phase schedule machine (bridge's)
+- `stage.h` — `basic_stage<S, Ch, R>`: the L-phase schedule machine (bridge's)
   for interpolators and mixed ratios, each phase row trimmed to its nonzero
   span; the M-branch commutator for decimators, the nonzero branches summed
   under one finalize. Zero-primed and causal (scipy's `upfirdn` streaming
   prefix), bit-identical for any chunking, DC gain exactly 1 in every
-  format.
-- `converter.h` — `basic_converter<S, R>` and the `converter<R>`,
-  `converter_q15<R>`, `converter_q31<R>` aliases.
-- `chain.h` — `basic_chain<S, R...>`: DspTap's `chain<>` over
+  format. Its count-independent state and cold code are `stage_base<S, R>`'s,
+  built once per format and ratio whatever counts an image runs (A13's
+  K12); only `process`, `pull` and `flush` are compiled per count, each out
+  of line.
+- `converter.h` — `basic_converter<S, Ch, R>` and the `converter<Ch, R>`,
+  `converter_q15<Ch, R>`, `converter_q31<Ch, R>` aliases.
+- `chain.h` — `basic_chain<S, Ch, R...>`: DspTap's `chain<>` over
   `basic_stage`, constructing each stage at the profile relaxed by the
   stage's design divisor (its lower rate over the chain's lowest, the
   largest 2^a · 3^b at or below it; `profile::relaxed`, the pinned
-  relaxation tables of `design.h`); `chain<R...>` / `chain_q15` /
+  relaxation tables of `design.h`); `chain<Ch, R...>` / `chain_q15` /
   `chain_q31`; `macs_per_output_exact()` the MACs per output as a reduced rational and
   `macs_per_output()` its double; and the 20 named multi-stage
-  chains of the coverage matrix (`up_2_up_2<S>` … `down_3_down_8_down_2<S>`).
+  chains of the coverage matrix (`up_2_up_2<S, Ch>` … `down_3_down_8_down_2<S, Ch>`).
 - `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.6.0 since the audit response; 0.5.0 from M6);
   the named ratios of the vocabulary (`up_2` … `ratio_3_8`) are `ratio.h`'s.
 
@@ -206,7 +214,13 @@ divisor_den, channels)` is one stage of the vocabulary at a stated design
 divisor, what a chain through `bridge` composes. Each converter reports its
 exact accounting, its latency and its MACs per output as exact rationals,
 per-stage design lengths, and the bit-packed family version
-(`tap_sr_rational_version()`). `notebooks/tap_sr_rational_py.py` is the
+(`tap_sr_rational_version()`). The C ABI takes the channel count at run time,
+where the C++ types carry it: one and two channels run `basic_chain<S, 1, …>`
+and `basic_chain<S, 2, …>`, and any other count that many one-channel
+converters behind the handle, the frames split to them and interleaved back,
+bit for bit the native type of that count
+(`CApi.FanOutIsTheNativeConverterBitForBit`, 3, 6 and 12 channels in every
+format; A13's K8, option (b)). `notebooks/tap_sr_rational_py.py` is the
 ctypes binding the notebook measures the shipping C++ through
 (`Chain(name, fmt="q15")` for the fixed-point formats).
 
@@ -233,38 +247,49 @@ python3 scripts/icount.py --engine rational --target m55 --build-dir build-m55 \
       --plugin libinsncount.so
 ```
 
+The channel count moved into the type at A13 (`docs/CHANNELS_PLAN.md`), and its gain is
+measured in instructions only: no cycle counts on hardware yet (K11, deferred to 0.7.0).
+Against the baselines before it, three rows were accepted above gate 0's rule, and shipped
+at the M55's `up2_q15_eco` −2.62 % and `up3_q15_eco` −3.70 % (+1.28 and +0.63 % at gate 0)
+and the M33's `down3_float_eco` +1.29 % (+1.37 %). One row is gated at a midpoint: the M55's
+`ratio23_q15_eco` counts 15,341,916 instructions with exceptions and 14,577,966 without (GCC
+allocates the block's registers differently in the two builds, their GIMPLE identical:
+`PLAN.md` section 6, the A13 record), so its baseline is the midpoint, 14,959,941, and both
+builds sit within ±2.55 % of it. Re-record that row at the midpoint of the two builds' counts,
+never with `--update` from one of them.
+
 <!-- ICOUNT:BEGIN -->
 Executed instructions per fixed workload (`rational/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `rational/bench/baselines.json`. A `callmax_` row is the worst single call instead of a total: the most instructions one call executes over that stream (`bench/icount/callmax_main.cpp`):
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `callmax_down2_float` | 118,191 | 8,131 | 23,943 |
-| `callmax_down2_q15` | 7,224 | 5,735 | 4,268 |
-| `callmax_up2_float` | 231,726 | 14,175 | 44,683 |
-| `callmax_up2_q15` | 12,391 | 9,607 | 6,304 |
-| `construct_q15_eco` | 26,795,397 | 1,563,967 | 8,330,417 |
-| `down2_down2_q15_eco` | 55,160,639 | 24,552,975 | 22,071,551 |
-| `down2_float_eco` | 373,681,206 | 24,882,828 | 72,885,988 |
-| `down2_float_tr` | 970,180,513 | 48,302,560 | 174,817,755 |
-| `down2_q15_eco` | 47,081,268 | 17,059,962 | 18,048,480 |
-| `down3_float_eco` | 467,685,055 | 29,237,795 | 90,250,094 |
-| `down3_q15_eco` | 49,852,601 | 18,116,226 | 19,549,385 |
-| `ratio23_float_eco` | 591,237,741 | 33,460,544 | 125,408,437 |
-| `ratio23_q15_eco` | 49,645,786 | 15,451,527 | 18,689,641 |
-| `up2_float_eco` | 712,003,791 | 43,649,236 | 134,224,931 |
-| `up2_float_tr` | 1,902,619,470 | 90,108,510 | 336,949,711 |
-| `up2_q15_eco` | 63,617,031 | 29,508,255 | 26,236,602 |
-| `up3_float_eco` | 1,366,708,994 | 75,348,550 | 249,845,161 |
-| `up3_q15_eco` | 87,322,867 | 44,313,203 | 38,272,880 |
+| `callmax_down2_float` | 117,941 | 8,005 | 23,575 |
+| `callmax_down2_q15` | 6,941 | 5,688 | 4,027 |
+| `callmax_up2_float` | 230,591 | 13,300 | 44,745 |
+| `callmax_up2_q15` | 11,904 | 9,244 | 6,204 |
+| `construct_q15_eco` | 26,795,094 | 1,563,927 | 8,330,092 |
+| `down2_down2_q15_eco` | 54,230,002 | 24,338,577 | 21,039,350 |
+| `down2_float_eco` | 372,931,250 | 24,518,460 | 71,762,029 |
+| `down2_float_tr` | 969,430,557 | 47,938,192 | 173,693,796 |
+| `down2_q15_eco` | 46,259,438 | 16,928,036 | 17,391,093 |
+| `down3_float_eco` | 473,727,618 | 28,994,407 | 89,559,636 |
+| `down3_q15_eco` | 49,603,197 | 17,690,346 | 18,922,927 |
+| `ratio23_float_eco` | 590,589,638 | 32,850,410 | 125,532,691 |
+| `ratio23_q15_eco` | 49,398,652 | 14,959,941 | 18,650,895 |
+| `up2_float_eco` | 709,452,097 | 41,024,131 | 134,413,185 |
+| `up2_float_tr` | 1,900,067,616 | 87,483,405 | 337,137,965 |
+| `up2_q15_eco` | 62,262,576 | 28,735,799 | 25,938,856 |
+| `up3_float_eco` | 1,362,234,116 | 70,992,375 | 250,129,415 |
+| `up3_q15_eco` | 85,299,411 | 42,673,747 | 38,461,134 |
 
 On the host, the float converter in 128-frame blocks at 2 and 12 channels (`rational/bench/icount/host_main.cpp`): instructions executed by the streaming loop alone, counted under callgrind on x86-64 with GCC 13 (`scripts/icount.py --target host`), gated the same way:
 
 | Workload | x86-64 |
 |---|---:|
-| `down2_float_12ch` | 161,390,269 |
-| `down2_float_2ch` | 28,551,355 |
-| `up2_float_12ch` | 282,912,211 |
-| `up2_float_2ch` | 54,413,191 |
+| `down2_float_12ch` | 157,185,769 |
+| `down2_float_2ch` | 28,640,629 |
+| `up2_float_12ch` | 277,123,855 |
+| `up2_float_2ch` | 52,007,143 |
 <!-- ICOUNT:END -->
 
 ## Footprint
@@ -347,24 +372,24 @@ same PR, with the reason.
 <!-- ceilings:begin (scripts/ceilings.py docs; do not edit by hand) -->
 | target | format | engine `.text` (bytes) | ceiling | engine `.rodata` (bytes) | ceiling | image (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|--:|--:|
-| m33 | f32 | 10,948 | 11,328 | 996 | 1,088 | 45,481 | 46,848 |
-| m33 | q15 | 13,152 | 13,568 | 996 | 1,088 | 47,897 | 49,344 |
-| m33 | q31 | 12,680 | 13,120 | 996 | 1,088 | 47,417 | 48,896 |
-| m55 | f32 | 10,088 | 10,432 | 996 | 1,088 | 45,833 | 47,232 |
-| m55 | q15 | 12,292 | 12,672 | 996 | 1,088 | 48,345 | 49,856 |
-| m55 | q31 | 11,664 | 12,032 | 996 | 1,088 | 47,721 | 49,216 |
-| hexagon | f32 | 25,704 | 26,496 | 428 | 448 | 303,144 | 312,256 |
-| hexagon | q15 | 32,496 | 33,472 | 428 | 448 | 310,600 | 319,936 |
-| hexagon | q31 | 31,596 | 32,576 | 428 | 448 | 309,704 | 319,040 |
+| m33 | f32 | 9,240 | 9,536 | 1,050 | 1,088 | 43,801 | 45,120 |
+| m33 | q15 | 10,728 | 11,072 | 1,050 | 1,088 | 45,497 | 46,912 |
+| m33 | q31 | 10,444 | 10,816 | 1,050 | 1,088 | 45,201 | 46,592 |
+| m55 | f32 | 8,052 | 8,320 | 1,050 | 1,088 | 43,825 | 45,184 |
+| m55 | q15 | 9,448 | 9,792 | 1,050 | 1,088 | 45,529 | 46,912 |
+| m55 | q31 | 9,228 | 9,536 | 1,050 | 1,088 | 45,313 | 46,720 |
+| hexagon | f32 | 19,636 | 20,288 | 428 | 448 | 296,984 | 305,920 |
+| hexagon | q15 | 21,944 | 22,656 | 428 | 448 | 299,928 | 308,928 |
+| hexagon | q31 | 20,824 | 21,504 | 428 | 448 | 298,840 | 307,840 |
 
 | M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|
-| `up` | f32 | 192 | 200 | 192 | 200 |
-| `up` | q15 | 192 | 200 | 176 | 184 |
-| `up` | q31 | 200 | 208 | 200 | 208 |
-| `down` | f32 | 208 | 216 | 208 | 216 |
-| `down` | q15 | 200 | 208 | 184 | 192 |
-| `down` | q31 | 184 | 192 | 184 | 192 |
+| `up` | f32 | 160 | 168 | 160 | 168 |
+| `up` | q15 | 144 | 152 | 128 | 136 |
+| `up` | q31 | 144 | 152 | 144 | 152 |
+| `down` | f32 | 184 | 192 | 184 | 192 |
+| `down` | q15 | 184 | 192 | 164 | 176 |
+| `down` | q31 | 160 | 168 | 160 | 168 |
 <!-- ceilings:end -->
 
 ## Non-finite input and denormals

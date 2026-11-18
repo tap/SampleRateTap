@@ -5,7 +5,9 @@ recommended, K2 no default, K8 option (b), K10 four PRs, K11 deferred). Gate 0 r
 2026-11-17 (section 3, "The result"): `async` passes, `bridge` passes with its walk out
 of line, `rational` does not pass on the M55 and M33 in any placement measured. The
 maintainer chose option 3 the same day: `rational`'s per-count blocks out of line in
-every stage, its three rises accepted (section 3, "Decided"). A13a (DspTap) is next.**
+every stage, its three rises accepted (section 3, "Decided"). A13a (DspTap) is tap/DspTap#64;
+A13b (`rational`) is measured (2026-11-18), one M55 row split between the two builds and
+accepted with a midpoint baseline (section 3, "Decided").**
 v1 (2026-11-13, 45a22a0) was adversarially audited the same day
 ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md): four independent reviewers, a
 skeptic per reviewer, 52 of 53 findings surviving). This version answers every surviving
@@ -403,6 +405,16 @@ states it.
   the three with their figures beside K11's note that the gain is measured in
   instructions.
 - **The order stands** (K10): DspTap, `rational`, `bridge`, `async`, 0.7.0 at the end.
+- **A fourth row, at A13b (decided by the maintainer 2026-11-18).** The M55's
+  `ratio23_q15_eco` counts 15,341,916 instructions with exceptions and 14,577,966 without,
+  both below the reference's 15,451,527, but 5 % apart: the configuration-gap clause of item
+  4's rule fails for that row alone. The blocks' GIMPLE is identical in the two builds; GCC's
+  RTL PRE sizes its table from a UID counter that a once-per-file setup charges to whichever
+  function reaches PRE first, and the allocator follows (`rational/PLAN.md` section 6, the
+  A13 record, with the three variants measured and declined). Its baseline is the midpoint
+  of the two builds (14,959,941, each within ±2.55 %), re-recorded at the midpoint, never with
+  `--update` from one build. *Declined:* a baseline per build in the ratchet (exact, but
+  infrastructure for all three engines), and searching further (each variant moved the split).
 
 ## 4. The pull requests, in order
 
@@ -461,7 +473,8 @@ figure falls, so a gain is gated and not just observed.
 - Every output pin is unchanged: scipy vectors, matrix rows, output hashes, the C ABIs'
   bit-for-bit tests, and every workload's checksum against the 2ed199a reference.
 - Gate 0's rule holds at A13d's head against the reference, on every target, in both
-  configurations, the gap between the configurations included; the ratchet's baselines
+  configurations, the gap between the configurations included (but the M55's
+  `ratio23_q15_eco`, accepted at A13b: section 3, "Decided"); the ratchet's baselines
   and the size and stack ceilings re-recorded.
 - The C ABIs' signatures and symbol sets follow K8; each header states the counts it
   serves.

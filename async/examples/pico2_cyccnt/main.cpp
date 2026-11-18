@@ -176,9 +176,36 @@ namespace {
     /// One synchronous engine (bridge or rational) streaming 32-frame input
     /// blocks through process(), timed per call. The cost is stated per output
     /// frame and as one stream's share of the core at the engine's output rate.
+    /// An engine whose type carries its channel count (rational since A13) is
+    /// checked and built from the profile alone; one that takes the count at
+    /// run time (bridge until its A13 change) from the count.
+    template <typename Engine>
+    constexpr bool kCountInType = requires { Engine::channels(); };
+
+    template <typename Engine>
+    const char* validateFor(std::size_t channels) {
+        if constexpr (kCountInType<Engine>) {
+            return channels == Engine::channels() ? Engine::validate() : "channel count is not the type's";
+        }
+        else {
+            return Engine::validate(channels);
+        }
+    }
+
+    template <typename Engine>
+    std::unique_ptr<Engine> makeEngine(std::size_t channels) {
+        if constexpr (kCountInType<Engine>) {
+            static_cast<void>(channels);
+            return std::make_unique<Engine>();
+        }
+        else {
+            return std::make_unique<Engine>(channels);
+        }
+    }
+
     template <typename Engine>
     void runSyncCase(const char* engineName, const char* caseName, std::size_t channels, double outRateHz) {
-        if (const char* why = Engine::validate(channels)) {
+        if (const char* why = validateFor<Engine>(channels)) {
             std::printf("%-8s %-8s %3u  SKIP (%s)\n", engineName, caseName, static_cast<unsigned>(channels), why);
             return;
         }
@@ -189,7 +216,7 @@ namespace {
         const std::size_t outCap = (3 * kBlockFrames + 8) * channels;
 #if TAP_DSP_HAS_EXCEPTIONS
         try {
-            conv  = std::make_unique<Engine>(channels);
+            conv  = makeEngine<Engine>(channels);
             input = sineBlock<std::int16_t>(kInputFrames * channels, 997.0, 0.5);
             out.resize(outCap);
         }
@@ -198,7 +225,7 @@ namespace {
             return;
         }
 #else
-        conv  = std::make_unique<Engine>(channels);
+        conv  = makeEngine<Engine>(channels);
         input = sineBlock<std::int16_t>(kInputFrames * channels, 997.0, 0.5);
         out.resize(outCap);
 #endif
@@ -284,9 +311,9 @@ int main() {
                                                                                             44100.0);
     runSyncCase<tap::sr::bridge::basic_converter<std::int16_t, direction::up_to_48k, 0>>("bridge", "44.1>48", 2,
                                                                                          48000.0);
-    runSyncCase<tap::sr::rational::converter_q15<tap::sr::rational::up_2>>("rational", "up2", 2, 48000.0);
-    runSyncCase<tap::sr::rational::converter_q15<tap::sr::rational::down_2>>("rational", "down2", 2, 24000.0);
-    runSyncCase<tap::sr::rational::converter_q15<tap::sr::rational::ratio_2_3>>("rational", "2/3", 2, 32000.0);
+    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::up_2>>("rational", "up2", 2, 48000.0);
+    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::down_2>>("rational", "down2", 2, 24000.0);
+    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::ratio_2_3>>("rational", "2/3", 2, 32000.0);
 
     std::printf("TAP_SR_PICO2_DONE\n");
     while (true)

@@ -148,26 +148,26 @@ namespace {
     // the span the copy phase's outputs of finite inputs stay clean); down
     // 2, 33 over 33 against 34; the 8/1 chain, 401 over 419 against 448.
     TYPED_TEST(non_finite_test, BurstClearsAfterOneWindowInterpolator) {
-        constexpr std::size_t        k_burst = 24;
-        basic_stage<TypeParam, up_3> hit(2);
-        basic_stage<TypeParam, up_3> twin(2);
+        constexpr std::size_t           k_burst = 24;
+        basic_stage<TypeParam, 2, up_3> hit;
+        basic_stage<TypeParam, 2, up_3> twin;
         check_burst<TypeParam>(hit, twin, k_burst, reach(k_burst, hit.window_frames(), 3, 1));
     }
 
     TYPED_TEST(non_finite_test, BurstClearsAfterOneWindowDecimator) {
-        constexpr std::size_t          k_burst = 24;
-        basic_stage<TypeParam, down_2> hit(2);
-        basic_stage<TypeParam, down_2> twin(2);
+        constexpr std::size_t             k_burst = 24;
+        basic_stage<TypeParam, 2, down_2> hit;
+        basic_stage<TypeParam, 2, down_2> twin;
         check_burst<TypeParam>(hit, twin, k_burst, reach(k_burst, hit.window_frames(), 1, 2));
     }
 
     // A chain: the span widens stage by stage, each stage's reach applied to
     // the last one's.
     TYPED_TEST(non_finite_test, BurstClearsAfterOneWindowPerStageThroughAChain) {
-        using engine                  = up_2_ratio_4_3_up_3<TypeParam>; // 8/1: up 2, 4/3, up 3
+        using engine                  = up_2_ratio_4_3_up_3<TypeParam, 2>; // 8/1: up 2, 4/3, up 3
         constexpr std::size_t k_burst = 24;
-        engine                hit(2);
-        engine                twin(2);
+        engine                hit;
+        engine                twin;
         std::size_t           span = k_burst;
         span                       = reach(span, hit.template stage<0>().window_frames(), 2, 1);
         span                       = reach(span, hit.template stage<1>().window_frames(), 4, 3);

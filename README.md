@@ -66,16 +66,25 @@ target_link_libraries(app PRIVATE tap::sr)           # all of them (the umbrella
 ```cpp
 #include <tap/sr/async/async.h>   // tap::sr::async::converter, converter_q15, converter_q31
 #include <tap/sr/bridge/ratio.h>  // tap::sr::bridge::converter_to_48k, converter_to_44k1, ...
-#include <tap/sr/rational/rational.h> // tap::sr::rational::converter<ratio<L, M>>, converter_q15, ...
+#include <tap/sr/rational/rational.h> // tap::sr::rational::converter<Ch, ratio<L, M>>, converter_q15, ...
 ```
+
+**Channel counts at compile time (A13, in progress; `docs/CHANNELS_PLAN.md`).**
+`rational`'s channel count is a template argument of every type, a
+compile-time constant of at least 1: `converter<2, down_2>` is a stereo
+converter, and a count of zero does not compile. `bridge` and `async` still
+take theirs at run time until their own A13 changes, after which the family
+moves to 0.7.0. The C ABIs keep a run-time count: one and two channels run the
+native types, any other count that many one-channel converters behind the
+handle, bit for bit the native type of that count.
 
 **Errors: one model (A3).** Construction is where an engine can reject
 its arguments; processing is `noexcept`. Each engine states the rejection
 twice, in the same words: `validate(...)`, a `noexcept` precheck that returns
 the reason as a `const char*` (nullptr when the converter constructs) —
 `async::config::validate(cfg)`, `bridge::basic_converter<…>::validate(channels,
-profile)`, `rational::basic_stage<…>::validate(channels, profile)` and
-`basic_chain<…>::validate(channels, profile)` — and the constructor, which
+profile)`, `rational::basic_stage<…>::validate(profile)` and
+`basic_chain<…>::validate(profile)` — and the constructor, which
 raises that reason as `std::invalid_argument` (`std::runtime_error` for a
 `rational` spec no length meets) through `tap::dsp::raise`. Built with
 exceptions, construct and catch, or call `validate()` first; built with
@@ -190,6 +199,7 @@ equal). A commit that moves `submodules/dsptap` names the DspTap tag it pins.
 | SampleRateTap | DspTap floor | DspTap pinned |
 |---|---|---|
 | 0.6.0 | 0.1.0 | v0.1.0 |
+| `main` (0.7.0 in progress, A13) | 0.2.0 | v0.2.0 |
 
 ## Provenance and license
 

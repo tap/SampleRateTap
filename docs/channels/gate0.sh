@@ -58,7 +58,7 @@ for t in m33 m55 hexagon; do
   case $t in m55) tc=cmake/arm-cortex-m55-mps3.cmake; sz=arm-none-eabi-size ;; m33) tc=cmake/arm-cortex-m33-mps2.cmake; sz=arm-none-eabi-size ;; hexagon) tc=cmake/hexagon-linux-musl.cmake; sz=llvm-size ;; esac
   for bt in Release MinSizeRel; do
     d="$W/mc-$t-$bt"; rm -rf "${d:?}"
-    cmake -S "$R/docs/channels/multicount" -B "$d" -DCMAKE_BUILD_TYPE=$bt -DCMAKE_TOOLCHAIN_FILE="$R/$tc" -DTODAY="$R" -DVARIANT_TREE="$W/variant" > "$d.cfg" 2>&1 &&
+    cmake -S "$R/docs/channels/multicount" -B "$d" -DCMAKE_BUILD_TYPE=$bt -DCMAKE_TOOLCHAIN_FILE="$R/$tc" -DTODAY="$R" -DVARIANT_TREE="$W/variant" -DVARIANT_API=prototype > "$d.cfg" 2>&1 &&
       cmake --build "$d" -j 4 > "$d.build" 2>&1 || { echo "multicount $t $bt FAILED"; continue; }
     for o in $(find "$d" -path '*/CMakeFiles/p_*.dir/*' \( -name '*.o' -o -name '*.obj' \) | sort); do
       printf "%s\t%s\t%s\t%s\n" "$t" "$bt" "$(basename "$(dirname "$o")" .dir)" \

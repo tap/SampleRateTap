@@ -5,12 +5,14 @@
 
 #include "tap_sr_rational_capi.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "tap/dsp/detail/expects.h"
 #include "tap/sr/rational/rational.h"
@@ -133,6 +135,137 @@ namespace {
         Chain m_c;
     };
 
+    /// Any channel count but the native ones (one and two, CHANNELS_PLAN.md
+    /// K8, option (b)): that many mono engines behind one handle, the
+    /// interleaved frames split to them and their outputs interleaved back
+    /// through staging buffers allocated here. Bit-identical to the native
+    /// converter of that count, because the channels share nothing but the
+    /// schedule, which every mono engine runs identically (pinned by
+    /// CApi.FanOutIsTheNativeConverterBitForBit at 3, 6 and 12 channels).
+    template <typename S>
+    class fan_out_engine final : public engine {
+      public:
+        fan_out_engine(std::vector<std::unique_ptr<engine>> monos)
+            : m_monos(std::move(monos))
+            , m_in(k_chunk)
+            , m_out(chunk_output_capacity())
+            , m_flush(2 * m_monos.front()->flush_output_frames() + 64) {}
+
+        int         format() const override { return m_monos.front()->format(); }
+        std::size_t process(const float* in, std::size_t n, float* out) override { return run(in, n, out); }
+        std::size_t process(const std::int16_t* in, std::size_t n, std::int16_t* out) override {
+            return run(in, n, out);
+        }
+        std::size_t process(const std::int32_t* in, std::size_t n, std::int32_t* out) override {
+            return run(in, n, out);
+        }
+        std::size_t flush(float* out) override { return drain(out); }
+        std::size_t flush(std::int16_t* out) override { return drain(out); }
+        std::size_t flush(std::int32_t* out) override { return drain(out); }
+        std::size_t outputs_for(std::size_t n) const override { return m_monos.front()->outputs_for(n); }
+        std::size_t frames_needed(std::size_t k) const override { return m_monos.front()->frames_needed(k); }
+        std::size_t flush_output_frames() const override { return m_monos.front()->flush_output_frames(); }
+        void        reset() override {
+            for (auto& m : m_monos) {
+                m->reset();
+            }
+        }
+        exact_ratio latency_output_frames() const override { return m_monos.front()->latency_output_frames(); }
+        exact_ratio macs_per_output() const override { return m_monos.front()->macs_per_output(); }
+        exact_ratio ratio() const override { return m_monos.front()->ratio(); }
+        std::size_t stages() const override { return m_monos.front()->stages(); }
+        std::size_t stage_taps(std::size_t i) const override { return m_monos.front()->stage_taps(i); }
+
+      private:
+        static constexpr std::size_t k_chunk = 256; ///< input frames staged per pass
+
+        /// Outputs one chunk can reach: its frames times L / M, rounded up,
+        /// plus a superblock's L for the phase it starts in.
+        std::size_t chunk_output_capacity() const {
+            const exact_ratio r = m_monos.front()->ratio();
+            return static_cast<std::size_t>((k_chunk * r.num + r.den - 1) / r.den + r.num) + 8;
+        }
+
+        template <typename T>
+        std::size_t run(const T* in, std::size_t n, T* out) {
+            if constexpr (!std::is_same_v<T, S>) {
+                return 0; // another format's converter
+            }
+            else {
+                const std::size_t ch   = m_monos.size();
+                std::size_t       made = 0;
+                while (n > 0) {
+                    std::size_t take = std::min(n, k_chunk);
+                    while (outputs_for(take) > m_out.size()) {
+                        take /= 2; // one frame never exceeds a superblock's L
+                    }
+                    std::size_t produced = 0;
+                    for (std::size_t c = 0; c < ch; ++c) {
+                        for (std::size_t i = 0; i < take; ++i) {
+                            m_in[i] = in[i * ch + c];
+                        }
+                        produced = m_monos[c]->process(m_in.data(), take, m_out.data());
+                        for (std::size_t k = 0; k < produced; ++k) {
+                            out[(made + k) * ch + c] = m_out[k];
+                        }
+                    }
+                    made += produced;
+                    in += take * ch;
+                    n -= take;
+                }
+                return made;
+            }
+        }
+
+        template <typename T>
+        std::size_t drain(T* out) {
+            if constexpr (!std::is_same_v<T, S>) {
+                return 0;
+            }
+            else {
+                const std::size_t ch   = m_monos.size();
+                const std::size_t need = flush_output_frames();
+                if (need > m_flush.size()) {
+                    m_flush.resize(need); // end of stream, not the streaming path
+                }
+                std::size_t made = 0;
+                for (std::size_t c = 0; c < ch; ++c) {
+                    made = m_monos[c]->flush(m_flush.data());
+                    for (std::size_t k = 0; k < made; ++k) {
+                        out[k * ch + c] = m_flush[k];
+                    }
+                }
+                return made;
+            }
+        }
+
+        std::vector<std::unique_ptr<engine>> m_monos;
+        std::vector<S>                       m_in;
+        std::vector<S>                       m_out;
+        std::vector<S>                       m_flush;
+    };
+
+    /// The native one- and two-channel engines, and the fan-out for any
+    /// other count (K8, option (b)); NULL when a mono engine is refused.
+    template <typename S, typename Make>
+    std::unique_ptr<engine> by_channels(unsigned channels, Make&& make) {
+        if (channels == 1) {
+            return make(std::integral_constant<std::size_t, 1>{});
+        }
+        if (channels == 2) {
+            return make(std::integral_constant<std::size_t, 2>{});
+        }
+        std::vector<std::unique_ptr<engine>> monos;
+        monos.reserve(channels);
+        for (unsigned c = 0; c < channels; ++c) {
+            monos.push_back(make(std::integral_constant<std::size_t, 1>{}));
+            if (!monos.back()) {
+                return nullptr;
+            }
+        }
+        return std::make_unique<fan_out_engine<S>>(std::move(monos));
+    }
+
     rat::profile profile_for(int p) {
         return p == 0   ? rat::profile::economy()
                : p == 1 ? rat::profile::transparent()
@@ -145,11 +278,13 @@ namespace {
     // exceptions, never a terminate.
     template <typename S, rat::rational_ratio... Rs>
     std::unique_ptr<engine> make_chain(const rat::profile& p, unsigned channels) {
-        using chain = rat::basic_chain<S, Rs...>;
-        if (chain::validate(channels, p) != nullptr) {
-            return nullptr;
-        }
-        return std::make_unique<chain_engine<chain>>(chain(channels, p));
+        return by_channels<S>(channels, [&](auto ch) -> std::unique_ptr<engine> {
+            using chain = rat::basic_chain<S, decltype(ch)::value, Rs...>;
+            if (chain::validate(p) != nullptr) {
+                return nullptr;
+            }
+            return std::make_unique<chain_engine<chain>>(chain(p));
+        });
     }
 
     template <typename S>
@@ -218,12 +353,15 @@ namespace {
     }
 
     template <typename S, rat::rational_ratio R>
-    std::unique_ptr<engine> make_stage(const rat::profile& p, exact_ratio divisor, unsigned ch) {
-        using chain = tap::dsp::chain<rat::basic_stage<S, R>>;
-        if (rat::basic_stage<S, R>::validate(ch, p.relaxed(divisor)) != nullptr) {
-            return nullptr;
-        }
-        return std::make_unique<chain_engine<chain>>(chain(ch, rat::basic_stage<S, R>(ch, p.relaxed(divisor))));
+    std::unique_ptr<engine> make_stage(const rat::profile& p, exact_ratio divisor, unsigned channels) {
+        return by_channels<S>(channels, [&](auto ch) -> std::unique_ptr<engine> {
+            using stage = rat::basic_stage<S, decltype(ch)::value, R>;
+            using chain = tap::dsp::chain<stage>;
+            if (stage::validate(p.relaxed(divisor)) != nullptr) {
+                return nullptr;
+            }
+            return std::make_unique<chain_engine<chain>>(chain(stage(p.relaxed(divisor))));
+        });
     }
 
     template <typename S>

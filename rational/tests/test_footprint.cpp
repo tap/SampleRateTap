@@ -109,11 +109,11 @@ namespace {
     }
 
     template <typename Stage>
-    heap_stats measure_owned(std::unique_ptr<Stage>& out, std::size_t ch, const profile& p) {
+    heap_stats measure_owned(std::unique_ptr<Stage>& out, const profile& p) {
         heap_stats st;
         {
             const heap_meter meter;
-            out = std::make_unique<Stage>(ch, p);
+            out = std::make_unique<Stage>(p);
             st  = meter.stats();
         }
         st.live_bytes -= sizeof(Stage); // the object is on the heap here
@@ -133,24 +133,28 @@ namespace {
                 {"transparent", profile::transparent()}};
     }
 
-    template <typename S, typename R>
-    void check_stage(const char* fmt, const char* ratio_name) {
-        using stage_t = basic_stage<S, R>;
+    template <typename S, typename R, std::size_t Ch>
+    void check_stage_at(const char* fmt, const char* ratio_name) {
+        using stage_t = basic_stage<S, Ch, R>;
         for (const auto& np : ladder()) {
-            for (const std::size_t ch : {std::size_t{1}, std::size_t{2}}) {
-                std::unique_ptr<stage_t> st;
-                const auto               m    = measure_owned(st, ch, np.p);
-                const std::size_t        held = stage_held(*st);
-                EXPECT_EQ(m.live_bytes, held) << fmt << ' ' << ratio_name << ' ' << np.name << ' ' << ch;
-                EXPECT_EQ(m.peak_bytes, std::max(stage_design_peak(*st), request(k_double_bytes * st->taps()) + held))
-                    << fmt << ' ' << ratio_name << ' ' << np.name << ' ' << ch;
-                if (ch == 2) {
-                    std::printf("[ measured ] rational stage %-3s %-9s %-13s 2 ch: N %3zu T %2zu, %6zu B held, %6zu "
-                                "B peak in construction\n",
-                                fmt, ratio_name, np.name, st->taps(), st->row_length(), m.live_bytes, m.peak_bytes);
-                }
+            std::unique_ptr<stage_t> st;
+            const auto               m    = measure_owned(st, np.p);
+            const std::size_t        held = stage_held(*st);
+            EXPECT_EQ(m.live_bytes, held) << fmt << ' ' << ratio_name << ' ' << np.name << ' ' << Ch;
+            EXPECT_EQ(m.peak_bytes, std::max(stage_design_peak(*st), request(k_double_bytes * st->taps()) + held))
+                << fmt << ' ' << ratio_name << ' ' << np.name << ' ' << Ch;
+            if constexpr (Ch == 2) {
+                std::printf("[ measured ] rational stage %-3s %-9s %-13s 2 ch: N %3zu T %2zu, %6zu B held, %6zu "
+                            "B peak in construction\n",
+                            fmt, ratio_name, np.name, st->taps(), st->row_length(), m.live_bytes, m.peak_bytes);
             }
         }
+    }
+
+    template <typename S, typename R>
+    void check_stage(const char* fmt, const char* ratio_name) {
+        check_stage_at<S, R, 1>(fmt, ratio_name);
+        check_stage_at<S, R, 2>(fmt, ratio_name);
     }
 
     template <typename S>
@@ -214,7 +218,7 @@ namespace {
             heap_stats             m;
             {
                 const heap_meter meter;
-                c = std::make_unique<Chain>(2, np.p);
+                c = std::make_unique<Chain>(np.p);
                 m = meter.stats();
             }
             m.live_bytes -= sizeof(Chain);
@@ -228,35 +232,35 @@ namespace {
 
     TEST(Footprint, ChainHeapIsItsStagesAndScratch) {
         ASSERT_TRUE(heap_meter::installed());
-        check_chain<up_2_up_2<float>>("up_2_up_2");
-        check_chain<up_2_up_3<float>>("up_2_up_3");
-        check_chain<up_2_ratio_4_3_up_3<float>>("up_2_ratio_4_3_up_3");
-        check_chain<up_3_ratio_8_3<float>>("up_3_ratio_8_3");
-        check_chain<up_2_up_6<float>>("up_2_up_6");
-        check_chain<up_2_up_8<float>>("up_2_up_8");
-        check_chain<up_2_up_6_up_2<float>>("up_2_up_6_up_2");
-        check_chain<up_2_up_8_up_2<float>>("up_2_up_8_up_2");
-        check_chain<up_2_up_8_up_3<float>>("up_2_up_8_up_3");
-        check_chain<up_2_ratio_4_3<float>>("up_2_ratio_4_3");
-        check_chain<ratio_3_4_down_2<float>>("ratio_3_4_down_2");
-        check_chain<down_2_down_2<float>>("down_2_down_2");
-        check_chain<down_3_down_2<float>>("down_3_down_2");
-        check_chain<down_3_ratio_3_4_down_2<float>>("down_3_ratio_3_4_down_2");
-        check_chain<ratio_3_8_down_3<float>>("ratio_3_8_down_3");
-        check_chain<down_6_down_2<float>>("down_6_down_2");
-        check_chain<down_8_down_2<float>>("down_8_down_2");
-        check_chain<down_2_down_6_down_2<float>>("down_2_down_6_down_2");
-        check_chain<down_2_down_8_down_2<float>>("down_2_down_8_down_2");
-        check_chain<down_3_down_8_down_2<float>>("down_3_down_8_down_2");
-        check_chain<down_3_down_2<std::int16_t>>("down_3_down_2 (q15)");
-        check_chain<up_2_up_2<std::int32_t>>("up_2_up_2 (q31)");
+        check_chain<up_2_up_2<float, 2>>("up_2_up_2");
+        check_chain<up_2_up_3<float, 2>>("up_2_up_3");
+        check_chain<up_2_ratio_4_3_up_3<float, 2>>("up_2_ratio_4_3_up_3");
+        check_chain<up_3_ratio_8_3<float, 2>>("up_3_ratio_8_3");
+        check_chain<up_2_up_6<float, 2>>("up_2_up_6");
+        check_chain<up_2_up_8<float, 2>>("up_2_up_8");
+        check_chain<up_2_up_6_up_2<float, 2>>("up_2_up_6_up_2");
+        check_chain<up_2_up_8_up_2<float, 2>>("up_2_up_8_up_2");
+        check_chain<up_2_up_8_up_3<float, 2>>("up_2_up_8_up_3");
+        check_chain<up_2_ratio_4_3<float, 2>>("up_2_ratio_4_3");
+        check_chain<ratio_3_4_down_2<float, 2>>("ratio_3_4_down_2");
+        check_chain<down_2_down_2<float, 2>>("down_2_down_2");
+        check_chain<down_3_down_2<float, 2>>("down_3_down_2");
+        check_chain<down_3_ratio_3_4_down_2<float, 2>>("down_3_ratio_3_4_down_2");
+        check_chain<ratio_3_8_down_3<float, 2>>("ratio_3_8_down_3");
+        check_chain<down_6_down_2<float, 2>>("down_6_down_2");
+        check_chain<down_8_down_2<float, 2>>("down_8_down_2");
+        check_chain<down_2_down_6_down_2<float, 2>>("down_2_down_6_down_2");
+        check_chain<down_2_down_8_down_2<float, 2>>("down_2_down_8_down_2");
+        check_chain<down_3_down_8_down_2<float, 2>>("down_3_down_8_down_2");
+        check_chain<down_3_down_2<std::int16_t, 2>>("down_3_down_2 (q15)");
+        check_chain<up_2_up_2<std::int32_t, 2>>("up_2_up_2 (q31)");
     }
 
     TEST(Footprint, ProcessingAllocatesNothing) {
-        up_2_ratio_4_3_up_3<float> c(2);
-        std::vector<float>         in(256 * 2, 0.25F);
-        std::vector<float>         out(c.outputs_for(256) * 2 + 64);
-        const heap_meter           meter;
+        up_2_ratio_4_3_up_3<float, 2> c;
+        std::vector<float>            in(256 * 2, 0.25F);
+        std::vector<float>            out(c.outputs_for(256) * 2 + 64);
+        const heap_meter              meter;
         for (int i = 0; i < 50; ++i) {
             static_cast<void>(c.process(in.data(), 256, out.data()));
         }

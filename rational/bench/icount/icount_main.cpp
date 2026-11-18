@@ -86,7 +86,7 @@ namespace {
 
     template <typename S, rat::rational_ratio R>
     double stage_workload(const rat::profile& p) {
-        rat::basic_stage<S, R> conv(k_channels, p);
+        rat::basic_stage<S, k_channels, R> conv(p);
         return stream(conv);
     }
 
@@ -110,7 +110,7 @@ namespace {
 #elif TAP_SR_RATIONAL_SC == 7
         return stage_workload<std::int16_t, rat::down_3>(eco);
 #elif TAP_SR_RATIONAL_SC == 8
-        rat::down_2_down_2<std::int16_t> conv(k_channels, eco);
+        rat::down_2_down_2<std::int16_t, k_channels> conv(eco);
         return stream(conv);
 #elif TAP_SR_RATIONAL_SC == 9
         return stage_workload<float, rat::up_2>(tr);
@@ -130,8 +130,8 @@ namespace {
         // (async's construct_q15, bridge's construct_*_q15_eco). The fixture
         // belongs here and not in the difference: its libm sin() calls are
         // soft-double on the M33.
-        using conv_t = rat::down_2_down_2<std::int16_t>;
-        conv_t                    conv(k_channels, eco);
+        using conv_t = rat::down_2_down_2<std::int16_t, k_channels>;
+        conv_t                    conv(eco);
         const auto                input   = sine_block<std::int16_t>(12000); // as stream()
         constexpr std::size_t     out_cap = k_block * conv_t::k_up / conv_t::k_down + conv_t::k_up + 2;
         std::vector<std::int16_t> out(out_cap * k_channels);

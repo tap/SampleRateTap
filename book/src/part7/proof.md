@@ -87,7 +87,11 @@ profile, divisor_num, divisor_den, channels)`, builds a single stage of the
 vocabulary at a stated design divisor: the piece a cross-family chain
 through `bridge` is composed from, by a caller who writes the chain — which
 is exactly how the matrix notebook builds the cross rows, through
-`bridge`'s own C ABI.
+`bridge`'s own C ABI. The channel count stays a run-time argument at the C
+boundary, where in C++ it is the type's (A13): one and two channels run the
+native types, and any other count that many one-channel converters behind
+the handle, bit for bit the native type of that count
+(`CApi.FanOutIsTheNativeConverterBitForBit`).
 
 The second was a departure from the siblings when it landed, and the plan
 flagged it as one. `async`'s and `bridge`'s ABIs were float-only, on the

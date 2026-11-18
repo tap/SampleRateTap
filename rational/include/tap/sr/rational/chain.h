@@ -1,5 +1,5 @@
 /// @file chain.h
-/// @brief basic_chain<S, R...>: stages in sequence at one profile, each designed at its own rate; the named chains.
+/// @brief basic_chain<S, Ch, R...>: stages in sequence at one profile, each designed at its own rate; the named chains.
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
@@ -107,13 +107,14 @@ namespace tap::sr::rational {
     } // namespace detail
 
     // ANCHOR: rational_chain
-    /// A chain of stages at the ratios Rs, in order, over sample format S;
+    /// A chain of stages at the ratios Rs, in order, over sample format S,
+    /// every stage running Ch interleaved channels (a compile-time count);
     /// see the file header. Constructs each stage at the profile relaxed by
     /// the stage's design divisor (k_divisors); everything else is
-    /// tap::dsp::chain's.
-    template <tap::dsp::sample_type S, rational_ratio... Rs>
-    class basic_chain : public tap::dsp::chain<basic_stage<S, Rs>...> {
-        using base = tap::dsp::chain<basic_stage<S, Rs>...>;
+    /// tap::dsp::chain's, which takes the count from the stages.
+    template <tap::dsp::sample_type S, std::size_t Ch, rational_ratio... Rs>
+    class basic_chain : public tap::dsp::chain<basic_stage<S, Ch, Rs>...> {
+        using base = tap::dsp::chain<basic_stage<S, Ch, Rs>...>;
 
       public:
         static_assert(sizeof...(Rs) >= 1, "tap::sr::rational::basic_chain: a chain has at least one stage");
@@ -123,21 +124,21 @@ namespace tap::sr::rational {
         static constexpr std::array<tap::dsp::exact_ratio, k_stages> k_divisors =
             detail::chain_rates<Rs...>::k_divisors;
 
-        /// The reason a chain cannot be built from (channels, p), or nullptr
-        /// when it can: each stage's basic_stage::validate at its design
+        /// The reason a chain cannot be built from p, or nullptr when it
+        /// can: each stage's basic_stage::validate at its design
         /// divisor (the profile relaxed as the constructor relaxes it), in
         /// stage order, the first reason wins. noexcept; allocation-free for
         /// the named profiles (every relaxation the matrix uses has its pin).
-        static const char* validate(std::size_t channels, const profile& p = profile::economy()) noexcept {
-            return validate(channels, p, std::make_index_sequence<k_stages>{});
+        static const char* validate(const profile& p = profile::economy()) noexcept {
+            return validate(p, std::make_index_sequence<k_stages>{});
         }
 
         /// Allocates every stage's state and designs its table; rejects what
         /// validate() rejects, with its text (tap::dsp::raise: a build without
         /// exceptions terminates there and asks validate() first). Setup time
         /// only (R9).
-        explicit basic_chain(std::size_t channels = 1, const profile& p = profile::economy())
-            : basic_chain(channels, p, std::make_index_sequence<k_stages>{}) {}
+        explicit basic_chain(const profile& p = profile::economy())
+            : basic_chain(p, std::make_index_sequence<k_stages>{}) {}
 
         /// MACs per output frame per channel: the sum over the stages of
         /// macs_per_output() at the stage's output rate, scaled to the
@@ -161,75 +162,75 @@ namespace tap::sr::rational {
 
       private:
         template <std::size_t... I>
-        basic_chain(std::size_t channels, const profile& p, std::index_sequence<I...>)
-            : base(channels, basic_stage<S, Rs>(channels, p.relaxed(k_divisors[I]))...) {}
+        basic_chain(const profile& p, std::index_sequence<I...>)
+            : base(basic_stage<S, Ch, Rs>(p.relaxed(k_divisors[I]))...) {}
 
         template <std::size_t... I>
-        static const char* validate(std::size_t channels, const profile& p, std::index_sequence<I...>) noexcept {
+        static const char* validate(const profile& p, std::index_sequence<I...>) noexcept {
             const char* why = nullptr;
             // Left to right, stopping at the first reason.
-            ((why == nullptr ? (why = basic_stage<S, Rs>::validate(channels, p.relaxed(k_divisors[I]))) : why), ...);
+            ((why == nullptr ? (why = basic_stage<S, Ch, Rs>::validate(p.relaxed(k_divisors[I]))) : why), ...);
             return why;
         }
     };
     // ANCHOR_END: rational_chain
 
-    /// The float chain at the ratios Rs (the golden-model profile), and the
-    /// Q15 / Q31 chains (R8).
-    template <rational_ratio... Rs>
-    using chain = basic_chain<float, Rs...>;
-    template <rational_ratio... Rs>
-    using chain_q15 = basic_chain<std::int16_t, Rs...>;
-    template <rational_ratio... Rs>
-    using chain_q31 = basic_chain<std::int32_t, Rs...>;
+    /// The float chain of Ch channels at the ratios Rs (the golden-model
+    /// profile), and the Q15 / Q31 chains (R8).
+    template <std::size_t Ch, rational_ratio... Rs>
+    using chain = basic_chain<float, Ch, Rs...>;
+    template <std::size_t Ch, rational_ratio... Rs>
+    using chain_q15 = basic_chain<std::int16_t, Ch, Rs...>;
+    template <std::size_t Ch, rational_ratio... Rs>
+    using chain_q31 = basic_chain<std::int32_t, Ch, Rs...>;
 
     // ANCHOR: rational_named_chains
     /// The named chains of the coverage matrix (PLAN.md 3.3 / 3.4), one per
     /// distinct chain of two or more stages, named by its stages in order
-    /// (a one-stage chain is basic_converter<S, R>): the 48 kHz family's
+    /// (a one-stage chain is basic_converter<S, Ch, R>): the 48 kHz family's
     /// twenty, plus the two the 44.1 kHz family's lattice chooses for 8/1
     /// and 1/8 (its r_min * 3 intermediate, 33.075 kHz, where the 48 family
     /// has r_min * 8/3). Ratios in comments are the chain's L/M.
-    template <tap::dsp::sample_type S>
-    using up_2_up_2 = basic_chain<S, up_2, up_2>; ///< 4/1
-    template <tap::dsp::sample_type S>
-    using up_2_up_3 = basic_chain<S, up_2, up_3>; ///< 6/1
-    template <tap::dsp::sample_type S>
-    using up_2_ratio_4_3_up_3 = basic_chain<S, up_2, ratio_4_3, up_3>; ///< 8/1 (48 family)
-    template <tap::dsp::sample_type S>
-    using up_3_ratio_8_3 = basic_chain<S, up_3, ratio_8_3>; ///< 8/1 (44.1 family)
-    template <tap::dsp::sample_type S>
-    using up_2_up_6 = basic_chain<S, up_2, up_6>; ///< 12/1
-    template <tap::dsp::sample_type S>
-    using up_2_up_8 = basic_chain<S, up_2, up_8>; ///< 16/1
-    template <tap::dsp::sample_type S>
-    using up_2_up_6_up_2 = basic_chain<S, up_2, up_6, up_2>; ///< 24/1
-    template <tap::dsp::sample_type S>
-    using up_2_up_8_up_2 = basic_chain<S, up_2, up_8, up_2>; ///< 32/1
-    template <tap::dsp::sample_type S>
-    using up_2_up_8_up_3 = basic_chain<S, up_2, up_8, up_3>; ///< 48/1
-    template <tap::dsp::sample_type S>
-    using up_2_ratio_4_3 = basic_chain<S, up_2, ratio_4_3>; ///< 8/3
-    template <tap::dsp::sample_type S>
-    using ratio_3_4_down_2 = basic_chain<S, ratio_3_4, down_2>; ///< 3/8
-    template <tap::dsp::sample_type S>
-    using down_2_down_2 = basic_chain<S, down_2, down_2>; ///< 1/4
-    template <tap::dsp::sample_type S>
-    using down_3_down_2 = basic_chain<S, down_3, down_2>; ///< 1/6
-    template <tap::dsp::sample_type S>
-    using down_3_ratio_3_4_down_2 = basic_chain<S, down_3, ratio_3_4, down_2>; ///< 1/8 (48 family)
-    template <tap::dsp::sample_type S>
-    using ratio_3_8_down_3 = basic_chain<S, ratio_3_8, down_3>; ///< 1/8 (44.1 family)
-    template <tap::dsp::sample_type S>
-    using down_6_down_2 = basic_chain<S, down_6, down_2>; ///< 1/12
-    template <tap::dsp::sample_type S>
-    using down_8_down_2 = basic_chain<S, down_8, down_2>; ///< 1/16
-    template <tap::dsp::sample_type S>
-    using down_2_down_6_down_2 = basic_chain<S, down_2, down_6, down_2>; ///< 1/24
-    template <tap::dsp::sample_type S>
-    using down_2_down_8_down_2 = basic_chain<S, down_2, down_8, down_2>; ///< 1/32
-    template <tap::dsp::sample_type S>
-    using down_3_down_8_down_2 = basic_chain<S, down_3, down_8, down_2>; ///< 1/48
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_2_up_2 = basic_chain<S, Ch, up_2, up_2>; ///< 4/1
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_2_up_3 = basic_chain<S, Ch, up_2, up_3>; ///< 6/1
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_2_ratio_4_3_up_3 = basic_chain<S, Ch, up_2, ratio_4_3, up_3>; ///< 8/1 (48 family)
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_3_ratio_8_3 = basic_chain<S, Ch, up_3, ratio_8_3>; ///< 8/1 (44.1 family)
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_2_up_6 = basic_chain<S, Ch, up_2, up_6>; ///< 12/1
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_2_up_8 = basic_chain<S, Ch, up_2, up_8>; ///< 16/1
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_2_up_6_up_2 = basic_chain<S, Ch, up_2, up_6, up_2>; ///< 24/1
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_2_up_8_up_2 = basic_chain<S, Ch, up_2, up_8, up_2>; ///< 32/1
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_2_up_8_up_3 = basic_chain<S, Ch, up_2, up_8, up_3>; ///< 48/1
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_2_ratio_4_3 = basic_chain<S, Ch, up_2, ratio_4_3>; ///< 8/3
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using ratio_3_4_down_2 = basic_chain<S, Ch, ratio_3_4, down_2>; ///< 3/8
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_2_down_2 = basic_chain<S, Ch, down_2, down_2>; ///< 1/4
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_3_down_2 = basic_chain<S, Ch, down_3, down_2>; ///< 1/6
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_3_ratio_3_4_down_2 = basic_chain<S, Ch, down_3, ratio_3_4, down_2>; ///< 1/8 (48 family)
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using ratio_3_8_down_3 = basic_chain<S, Ch, ratio_3_8, down_3>; ///< 1/8 (44.1 family)
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_6_down_2 = basic_chain<S, Ch, down_6, down_2>; ///< 1/12
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_8_down_2 = basic_chain<S, Ch, down_8, down_2>; ///< 1/16
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_2_down_6_down_2 = basic_chain<S, Ch, down_2, down_6, down_2>; ///< 1/24
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_2_down_8_down_2 = basic_chain<S, Ch, down_2, down_8, down_2>; ///< 1/32
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_3_down_8_down_2 = basic_chain<S, Ch, down_3, down_8, down_2>; ///< 1/48
     // ANCHOR_END: rational_named_chains
 
 } // namespace tap::sr::rational

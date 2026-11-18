@@ -139,10 +139,10 @@ namespace {
 
     template <typename S, typename R>
     void rational_bench(benchmark::State& state, const rat::profile& p) {
-        rat::basic_converter<S, R> conv(k_ch, p);
-        input_tap<S>               in(rates<R>::k_in);
-        std::vector<S>             out((conv.outputs_for(k_block) + 2) * k_ch);
-        std::int64_t               frames = 0;
+        rat::basic_converter<S, k_ch, R> conv(p);
+        input_tap<S>                     in(rates<R>::k_in);
+        std::vector<S>                   out((conv.outputs_for(k_block) + 2) * k_ch);
+        std::int64_t                     frames = 0;
         for (auto _ : state) {
             const std::size_t got = conv.process(in.run(), k_block, out.data());
             benchmark::DoNotOptimize(out.data());

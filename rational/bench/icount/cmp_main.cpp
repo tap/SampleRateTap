@@ -136,11 +136,11 @@ namespace {
 #else
         const rat::profile prof = rat::profile::economy();
 #endif
-        rat::basic_converter<sample, ratio_t> conv(k_ch, prof);
-        const auto                            input = sine_input<sample>();
-        std::size_t                           pos   = 0;
-        std::vector<sample>                   out((conv.outputs_for(k_block) + 2) * k_ch);
-        double                                sink = 0.0;
+        rat::basic_converter<sample, k_ch, ratio_t> conv(prof);
+        const auto                                  input = sine_input<sample>();
+        std::size_t                                 pos   = 0;
+        std::vector<sample>                         out((conv.outputs_for(k_block) + 2) * k_ch);
+        double                                      sink = 0.0;
         for (std::size_t b = 0; b < k_blocks; ++b) {
             if (conv.process(block(input, pos), k_block, out.data()) > 0) {
                 sink += static_cast<double>(out[0]);

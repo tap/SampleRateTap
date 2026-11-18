@@ -75,8 +75,15 @@
 //     zero-primed state;
 //   - the constructor designs and allocates (may throw); process(), pull(),
 //     flush() and reset() are noexcept and allocation-free; one stream per
-//     instance, channels planar inside and interleaved at the API, every
-//     channel sharing the coefficient row per frame;
+//     instance, of Ch channels, a compile-time count of at least 1 (the
+//     second template parameter: A13, CHANNELS_PLAN.md K1), planar inside
+//     and interleaved at the API, every channel sharing the coefficient row
+//     per frame;
+//   - the count-independent state and cold code (the design, the table,
+//     the histories' allocation, validate(), reset(), the accessors and the
+//     latency accounting) are stage_base<S, R>'s, built once per format and
+//     ratio whatever counts an image runs (K12); only process(), pull() and
+//     flush() are compiled per count;
 //   - the stage satisfies tap::dsp::sync_stage, so chains compose it;
 //   - fixed point (PLAN.md section 6, M5; pinned by test_fixed_point.cpp):
 //     every row sums to exact unity in the format, so full-scale DC of
@@ -114,11 +121,25 @@
 // instruction count is a property of the engine and not of whatever the
 // caller happens to have live around it (measured both ways on the M33, M55
 // and Hexagon, the ratchet's record in PLAN.md section 6: inlined into a
-// large caller the inner MAC loop lost its two pointers to the stack).
+// large caller the inner MAC loop lost its two pointers to the stack). Each
+// is now the block for its channel count itself, out of line in every stage
+// (A13's gate 0, option 3: no placement kept every row on both Arm targets;
+// this one is the one the maintainer accepted, CHANNELS_PLAN.md section 3).
 #if defined(_MSC_VER)
 #define TAP_SR_RATIONAL_NOINLINE __declspec(noinline)
 #else
 #define TAP_SR_RATIONAL_NOINLINE __attribute__((noinline))
+#endif
+// emit() is forced into its block under clang only: clang for Hexagon left
+// it out of line in the float stages once each block was a function of its
+// own, a call per output frame (+0.7 ... +0.8 % on the float interpolators,
+// A13b's measurement; A12's record measured emit out of line at +4.8 % on
+// the M55's floats). GCC inlines it on its own, and forcing it there moved
+// the M55's Q15 register allocation instead (ratio23_q15_eco +1.8 %).
+#if defined(__clang__)
+#define TAP_SR_RATIONAL_ALWAYS_INLINE inline __attribute__((always_inline))
+#else
+#define TAP_SR_RATIONAL_ALWAYS_INLINE inline
 #endif
 
 namespace tap::sr::rational {
@@ -170,9 +191,13 @@ namespace tap::sr::rational {
     // ANCHOR_END: rational_schedule
 
     // ANCHOR: rational_stage
-    /// One Nyquist stage at ratio R over sample format S; see the file header.
+    /// The count-independent part of a stage at ratio R over sample format S
+    /// (A13's K12): everything but the hot paths, built once per format and
+    /// ratio and shared by every channel count's basic_stage<S, Ch, R>. The
+    /// count reaches it as a value, to size the histories; see the file
+    /// header.
     template <tap::dsp::sample_type S, rational_ratio R>
-    class basic_stage {
+    class stage_base {
       public:
         using sample = S;
         using coeff  = typename tap::dsp::sample_traits<S>::coeff;
@@ -224,11 +249,12 @@ namespace tap::sr::rational {
         static constexpr std::size_t k_rows = k_is_decimator ? k_down : k_up;
 
         // ANCHOR: rational_validate
-        /// The reason a stage cannot be built from (channels, p), or nullptr
-        /// when it can: the family's error model. noexcept; it states every
+        /// The reason a stage cannot be built from p, or nullptr when it
+        /// can: the family's error model. noexcept; it states every
         /// rejection the constructor makes other than a refused allocation —
-        /// zero channels, a profile the designer rejects (validate(p)), a
-        /// spec no length up to the search bound meets. Allocation-free for a
+        /// a profile the designer rejects (validate(p)), a spec no length up
+        /// to the search bound meets (a channel count of zero is a compile
+        /// error: basic_stage's static_assert). Allocation-free for a
         /// profile with a pin for this stage's band (the four named profiles
         /// and their relaxations); a custom profile runs the design search,
         /// as construction does. The constructor rejects with the same text
@@ -237,10 +263,7 @@ namespace tap::sr::rational {
         /// construct and catch; a build without them (-fno-exceptions, where
         /// the rejection terminates) calls this first and constructs only on
         /// nullptr.
-        static const char* validate(std::size_t channels, const profile& p = profile::economy()) noexcept {
-            if (channels == 0) {
-                return "tap::sr::rational::basic_stage: channels == 0";
-            }
+        static const char* validate(const profile& p = profile::economy()) noexcept {
             if (const char* why = tap::sr::rational::validate(p)) {
                 return why;
             }
@@ -250,128 +273,6 @@ namespace tap::sr::rational {
             return nullptr;
         }
         // ANCHOR_END: rational_validate
-
-        /// Designs the table and allocates the histories; setup time only.
-        /// Rejects what validate() rejects, with its text.
-        explicit basic_stage(std::size_t channels = 1, const profile& p = profile::economy())
-            : m_channels(channels) {
-            if (channels == 0) {
-                tap::dsp::raise<std::invalid_argument>("tap::sr::rational::basic_stage: channels == 0");
-            }
-            const std::vector<double> h = design_stage<R>(p);
-            m_taps                      = h.size();
-            build_table(h);
-            m_hist_cap = m_row_len + k_hist_slack;
-            m_hist.assign(channels * k_lines * m_hist_cap, tap::dsp::sample_traits<S>::silence());
-            m_scratch.resize(k_pop_chunk * channels);
-            reset();
-        }
-
-        /// Push-transform: consumes all in_frames interleaved frames, writes
-        /// outputs_for(in_frames) frames (out must hold them); returns that.
-        TAP_SR_RATIONAL_NOINLINE std::size_t process(const S* in, std::size_t in_frames, S* out) noexcept {
-            // The channel count as a compile-time constant for the common
-            // counts (bridge's process() does the same for its tap count): the
-            // channel loops unroll, and the block runs with two fewer live
-            // values in the engine's own frame.
-            switch (m_channels) {
-            case 1:
-                return process_block<1>(in, in_frames, out);
-            case 2:
-                return process_block<2>(in, in_frames, out);
-            default:
-                return process_block<0>(in, in_frames, out);
-            }
-        }
-
-        /// process() for a channel count known at compile time (Ch), or at
-        /// run time (Ch == 0).
-        template <std::size_t Ch>
-        std::size_t process_block(const S* in, std::size_t in_frames, S* out) noexcept {
-            std::size_t produced = 0;
-            cursor      b        = open();
-            if constexpr (Ch != 0) {
-                b.channels = Ch;
-            }
-            if constexpr (k_is_decimator) {
-                for (std::size_t i = 0; i < in_frames; ++i) {
-                    append_frame(b, in + i * b.channels);
-                    if (b.dphase == 0) {
-                        emit(b, out + produced * b.channels);
-                        ++produced;
-                    }
-                    b.dphase = b.dphase + 1 == k_down ? 0 : b.dphase + 1;
-                }
-            }
-            else {
-                const std::size_t total = outputs_for(in_frames);
-                std::size_t       fed   = 0;
-                for (; produced < total; ++produced) {
-                    while (b.pending != 0) { // never outruns in_frames: total is exact
-                        append_frame(b, in + fed * b.channels);
-                        ++fed;
-                        --b.pending;
-                    }
-                    emit(b, out + produced * b.channels);
-                }
-                while (fed < in_frames) { // leftover input smaller than the next gap
-                    append_frame(b, in + fed * b.channels);
-                    ++fed;
-                    --b.pending;
-                }
-            }
-            close(b);
-            return produced;
-        }
-
-        /// Pull: produce exactly out_frames frames, drawing input through
-        /// pop(dst, max_frames) -> frames delivered (interleaved; fewer means
-        /// the source ran dry and the call returns short, resumable). Bit-
-        /// identical to process() on the same stream. PopFn must be noexcept.
-        template <typename PopFn>
-        TAP_SR_RATIONAL_NOINLINE std::size_t pull(S* out, std::size_t out_frames, PopFn&& pop) noexcept {
-            static_assert(std::is_nothrow_invocable_r_v<std::size_t, PopFn&, S*, std::size_t>,
-                          "pull() requires a noexcept PopFn: std::size_t(S*, std::size_t) noexcept");
-            switch (m_channels) { // the channel count as a constant, as process()
-            case 1:
-                return pull_block<1>(out, out_frames, pop);
-            case 2:
-                return pull_block<2>(out, out_frames, pop);
-            default:
-                return pull_block<0>(out, out_frames, pop);
-            }
-        }
-
-        template <std::size_t Ch, typename PopFn>
-        std::size_t pull_block(S* out, std::size_t out_frames, PopFn& pop) noexcept {
-            cursor b = open();
-            if constexpr (Ch != 0) {
-                b.channels = Ch;
-            }
-            for (std::size_t n = 0; n < out_frames; ++n) {
-                // The inputs the next output needs: the schedule's pending
-                // gap, or for a decimator the pushes up to and including the
-                // one at phase 0 (whose frame emits). Consumed one by one,
-                // so a dry source leaves the exact partial state behind.
-                std::size_t need = pending_inputs(b);
-                while (need != 0) {
-                    const std::size_t want = need < k_pop_chunk ? need : k_pop_chunk;
-                    const std::size_t got  = pop(m_scratch.data(), want);
-                    if (got == 0) {
-                        close(b);
-                        return n; // dry
-                    }
-                    for (std::size_t i = 0; i < got && i < want; ++i) {
-                        append_frame(b, m_scratch.data() + i * b.channels);
-                        consume_one(b);
-                        --need;
-                    }
-                }
-                emit(b, out + n * b.channels);
-            }
-            close(b);
-            return out_frames;
-        }
 
         /// Outputs the next in_frames inputs yield from the current position.
         std::size_t outputs_for(std::size_t in_frames) const noexcept {
@@ -405,62 +306,12 @@ namespace tap::sr::rational {
             }
         }
 
-        /// End of stream: feeds window_frames() zeros and writes the outputs
-        /// that become ready — flush_output_frames() of them. The stage is
-        /// left mid-stream in the zero-fed state; reset() before reuse.
-        TAP_SR_RATIONAL_NOINLINE std::size_t flush(S* out) noexcept {
-            switch (m_channels) { // the channel count as a constant, as process()
-            case 1:
-                return flush_block<1>(out);
-            case 2:
-                return flush_block<2>(out);
-            default:
-                return flush_block<0>(out);
-            }
-        }
-
-        template <std::size_t Ch>
-        std::size_t flush_block(S* out) noexcept {
-            const std::size_t zeros = window_frames();
-            std::size_t       fed   = 0;
-            std::size_t       made  = 0;
-            cursor            b     = open();
-            if constexpr (Ch != 0) {
-                b.channels = Ch;
-            }
-            if constexpr (k_is_decimator) {
-                for (; fed < zeros; ++fed) {
-                    append_silence(b);
-                    if (b.dphase == 0) {
-                        emit(b, out + made * b.channels);
-                        ++made;
-                    }
-                    b.dphase = b.dphase + 1 == k_down ? 0 : b.dphase + 1;
-                }
-            }
-            else {
-                for (;;) {
-                    while (b.pending != 0 && fed < zeros) {
-                        append_silence(b);
-                        ++fed;
-                        --b.pending;
-                    }
-                    if (b.pending != 0) {
-                        break;
-                    }
-                    emit(b, out + made * b.channels);
-                    ++made;
-                }
-            }
-            close(b);
-            return made;
-        }
-
         /// Frames flush() will write from the current position.
         std::size_t flush_output_frames() const noexcept { return outputs_for(window_frames()); }
 
-        /// Return to the zero-primed initial state.
-        void reset() noexcept {
+        /// Return to the zero-primed initial state (out of line: cold, and one
+        /// copy per format and ratio).
+        TAP_SR_RATIONAL_NOINLINE void reset() noexcept {
             for (auto& v : m_hist) {
                 v = tap::dsp::sample_traits<S>::silence();
             }
@@ -482,7 +333,6 @@ namespace tap::sr::rational {
             return latency_output_frames().value() / out_rate_hz;
         }
 
-        std::size_t channels() const noexcept { return m_channels; }
         std::size_t taps() const noexcept { return m_taps; }          ///< N, the Nyquist design's length
         std::size_t row_length() const noexcept { return m_row_len; } ///< T: taps per phase (per branch, decimating)
         std::size_t position() const noexcept { return m_pos; } ///< superblock position in [0, L) (L-phase machine)
@@ -514,7 +364,20 @@ namespace tap::sr::rational {
             return (t >= m_first[r] && t < m_first[r] + m_count[r]) ? m_rows[r * m_row_len + t] : static_cast<coeff>(0);
         }
 
-      private:
+      protected:
+        /// Designs the table and allocates the histories for `channels`
+        /// interleaved channels; setup time only, out of line (one copy per
+        /// format and ratio). Rejects what validate() rejects, with its text.
+        TAP_SR_RATIONAL_NOINLINE stage_base(std::size_t channels, const profile& p) {
+            const std::vector<double> h = design_stage<R>(p);
+            m_taps                      = h.size();
+            build_table(h);
+            m_hist_cap = m_row_len + k_hist_slack;
+            m_hist.assign(channels * k_lines * m_hist_cap, tap::dsp::sample_traits<S>::silence());
+            m_scratch.resize(k_pop_chunk * channels);
+            reset();
+        }
+
         static constexpr std::size_t k_hist_slack = 64; ///< appends between compactions
         static constexpr std::size_t k_pop_chunk  = 16; ///< pull()'s bulk-pop granularity
         /// Delay lines per channel: the M sub-lines of a decimator, else one.
@@ -614,6 +477,168 @@ namespace tap::sr::rational {
             m_count[r] = last - first;
         }
 
+        std::size_t                      m_taps     = 0; ///< N
+        std::size_t                      m_row_len  = 0; ///< T (per phase or per branch)
+        std::size_t                      m_hist_cap = 0;
+        std::vector<coeff>               m_rows;        ///< k_rows x T, tap-reversed
+        std::array<std::size_t, k_rows>  m_first{};     ///< nonzero span start per row
+        std::array<std::size_t, k_rows>  m_count{};     ///< nonzero span length per row
+        std::vector<S>                   m_hist;        ///< channels x k_lines planar lines of m_hist_cap each
+        std::array<std::size_t, k_lines> m_end{};       ///< newest sample index + 1 per sub-line
+        std::vector<S>                   m_scratch;     ///< interleaved staging for pull()
+        std::uint32_t                    m_pos     = 0; ///< superblock position in [0, L)
+        std::uint32_t                    m_pending = 1; ///< inputs before the next output (L-phase machine)
+        std::uint32_t                    m_dphase  = 0; ///< inputs since the last output (decimator)
+    };
+
+    /// One Nyquist stage at ratio R over sample format S, running Ch
+    /// interleaved channels (a compile-time count of at least 1); see the
+    /// file header. Its state and cold code are stage_base<S, R>'s.
+    template <tap::dsp::sample_type S, std::size_t Ch, rational_ratio R>
+    class basic_stage : public stage_base<S, R> {
+        static_assert(Ch >= 1, "tap::sr::rational: a stage's channel count is at least 1");
+        using base = stage_base<S, R>;
+
+      public:
+        using base::finalize_output;
+        using base::k_down;
+        using base::k_is_decimator;
+        using base::k_rows;
+        using base::k_table_gain;
+        using base::k_up;
+        using base::outputs_for;
+        using base::window_frames;
+        using typename base::coeff;
+
+        /// The channel count, the type's: tap::dsp::sync_stage reads it.
+        static constexpr std::size_t channels() noexcept { return Ch; }
+
+        /// Designs the table and allocates the histories; setup time only.
+        /// Rejects what validate() rejects, with its text.
+        explicit basic_stage(const profile& p = profile::economy())
+            : base(Ch, p) {}
+
+        /// Push-transform: consumes all in_frames interleaved frames, writes
+        /// outputs_for(in_frames) frames (out must hold them); returns that.
+        TAP_SR_RATIONAL_NOINLINE std::size_t process(const S* in, std::size_t in_frames, S* out) noexcept {
+            std::size_t produced = 0;
+            cursor      b        = open();
+            if constexpr (k_is_decimator) {
+                for (std::size_t i = 0; i < in_frames; ++i) {
+                    append_frame(b, in + i * Ch);
+                    if (b.dphase == 0) {
+                        emit(b, out + produced * Ch);
+                        ++produced;
+                    }
+                    b.dphase = b.dphase + 1 == k_down ? 0 : b.dphase + 1;
+                }
+            }
+            else {
+                const std::size_t total = outputs_for(in_frames);
+                std::size_t       fed   = 0;
+                for (; produced < total; ++produced) {
+                    while (b.pending != 0) { // never outruns in_frames: total is exact
+                        append_frame(b, in + fed * Ch);
+                        ++fed;
+                        --b.pending;
+                    }
+                    emit(b, out + produced * Ch);
+                }
+                while (fed < in_frames) { // leftover input smaller than the next gap
+                    append_frame(b, in + fed * Ch);
+                    ++fed;
+                    --b.pending;
+                }
+            }
+            close(b);
+            return produced;
+        }
+
+        /// Pull: produce exactly out_frames frames, drawing input through
+        /// pop(dst, max_frames) -> frames delivered (interleaved; fewer means
+        /// the source ran dry and the call returns short, resumable). Bit-
+        /// identical to process() on the same stream. PopFn must be noexcept.
+        template <typename PopFn>
+        TAP_SR_RATIONAL_NOINLINE std::size_t pull(S* out, std::size_t out_frames, PopFn&& pop) noexcept {
+            static_assert(std::is_nothrow_invocable_r_v<std::size_t, PopFn&, S*, std::size_t>,
+                          "pull() requires a noexcept PopFn: std::size_t(S*, std::size_t) noexcept");
+            cursor b = open();
+            for (std::size_t n = 0; n < out_frames; ++n) {
+                // The inputs the next output needs: the schedule's pending
+                // gap, or for a decimator the pushes up to and including the
+                // one at phase 0 (whose frame emits). Consumed one by one,
+                // so a dry source leaves the exact partial state behind.
+                std::size_t need = pending_inputs(b);
+                while (need != 0) {
+                    const std::size_t want = need < k_pop_chunk ? need : k_pop_chunk;
+                    const std::size_t got  = pop(m_scratch.data(), want);
+                    if (got == 0) {
+                        close(b);
+                        return n; // dry
+                    }
+                    for (std::size_t i = 0; i < got && i < want; ++i) {
+                        append_frame(b, m_scratch.data() + i * Ch);
+                        consume_one(b);
+                        --need;
+                    }
+                }
+                emit(b, out + n * Ch);
+            }
+            close(b);
+            return out_frames;
+        }
+
+        /// End of stream: feeds window_frames() zeros and writes the outputs
+        /// that become ready — flush_output_frames() of them. The stage is
+        /// left mid-stream in the zero-fed state; reset() before reuse.
+        TAP_SR_RATIONAL_NOINLINE std::size_t flush(S* out) noexcept {
+            const std::size_t zeros = window_frames();
+            std::size_t       fed   = 0;
+            std::size_t       made  = 0;
+            cursor            b     = open();
+            if constexpr (k_is_decimator) {
+                for (; fed < zeros; ++fed) {
+                    append_silence(b);
+                    if (b.dphase == 0) {
+                        emit(b, out + made * Ch);
+                        ++made;
+                    }
+                    b.dphase = b.dphase + 1 == k_down ? 0 : b.dphase + 1;
+                }
+            }
+            else {
+                for (;;) {
+                    while (b.pending != 0 && fed < zeros) {
+                        append_silence(b);
+                        ++fed;
+                        --b.pending;
+                    }
+                    if (b.pending != 0) {
+                        break;
+                    }
+                    emit(b, out + made * Ch);
+                    ++made;
+                }
+            }
+            close(b);
+            return made;
+        }
+
+      private:
+        using base::k_lines;
+        using base::k_pop_chunk;
+        using base::m_count;
+        using base::m_dphase;
+        using base::m_end;
+        using base::m_first;
+        using base::m_hist;
+        using base::m_hist_cap;
+        using base::m_pending;
+        using base::m_pos;
+        using base::m_row_len;
+        using base::m_rows;
+        using base::m_scratch;
+
         // ANCHOR: rational_cursor
         /// The hot loops' view of the stage for one call: the stream state
         /// (where each sub-line ends, the schedule position, the pending gap,
@@ -627,7 +652,6 @@ namespace tap::sr::rational {
         struct cursor {
             S*           hist;
             const coeff* rows;
-            std::size_t  channels;
             std::size_t  row_len;
             std::size_t  cap;
             /// The decimator's rows' nonzero spans (m_first / m_count), which
@@ -645,11 +669,10 @@ namespace tap::sr::rational {
 
         cursor open() noexcept {
             cursor b{};
-            b.hist     = m_hist.data();
-            b.rows     = m_rows.data();
-            b.channels = m_channels;
-            b.row_len  = m_row_len;
-            b.cap      = m_hist_cap;
+            b.hist    = m_hist.data();
+            b.rows    = m_rows.data();
+            b.row_len = m_row_len;
+            b.cap     = m_hist_cap;
             if constexpr (k_is_decimator) {
                 b.first = m_first;
                 b.count = m_count;
@@ -668,18 +691,6 @@ namespace tap::sr::rational {
             m_dphase  = b.dphase;
         }
         // ANCHOR_END: rational_cursor
-
-        /// Inputs to push before the next output: the schedule's pending gap,
-        /// or for a decimator the pushes through the one at phase 0 (which
-        /// emits): 1 + (M - phase) mod M.
-        std::size_t pending_inputs() const noexcept {
-            if constexpr (k_is_decimator) {
-                return 1 + (k_down - m_dphase) % k_down;
-            }
-            else {
-                return m_pending;
-            }
-        }
 
         static std::size_t pending_inputs(const cursor& b) noexcept {
             if constexpr (k_is_decimator) {
@@ -712,7 +723,7 @@ namespace tap::sr::rational {
             if (b.end[sub] == b.cap) {
                 compact(b, sub);
             }
-            for (std::size_t c = 0; c < b.channels; ++c) {
+            for (std::size_t c = 0; c < Ch; ++c) {
                 line(b, c, sub)[b.end[sub]] = frame[c];
             }
             ++b.end[sub];
@@ -723,7 +734,7 @@ namespace tap::sr::rational {
             if (b.end[sub] == b.cap) {
                 compact(b, sub);
             }
-            for (std::size_t c = 0; c < b.channels; ++c) {
+            for (std::size_t c = 0; c < Ch; ++c) {
                 line(b, c, sub)[b.end[sub]] = tap::dsp::sample_traits<S>::silence();
             }
             ++b.end[sub];
@@ -733,7 +744,7 @@ namespace tap::sr::rational {
         /// of every channel's line (in place).
         static void compact(cursor& b, std::size_t sub) noexcept {
             const std::size_t keep = b.row_len - 1;
-            for (std::size_t c = 0; c < b.channels; ++c) {
+            for (std::size_t c = 0; c < Ch; ++c) {
                 S* l = line(b, c, sub);
                 std::memmove(l, l + (b.end[sub] - keep), keep * sizeof(S));
             }
@@ -743,10 +754,10 @@ namespace tap::sr::rational {
         // ANCHOR: rational_emit
         /// One output frame at the current position; advances the schedule
         /// (the decimator's phase advances in process / pull / flush).
-        void emit(cursor& b, S* out) const noexcept {
+        TAP_SR_RATIONAL_ALWAYS_INLINE void emit(cursor& b, S* out) const noexcept {
             using tr = tap::dsp::sample_traits<S>;
             if constexpr (k_is_decimator) {
-                for (std::size_t c = 0; c < b.channels; ++c) {
+                for (std::size_t c = 0; c < Ch; ++c) {
                     typename tr::accum acc{};
                     for (std::size_t j = 0; j < k_rows; ++j) {
                         const std::size_t sub    = (k_down - j) % k_down;
@@ -761,7 +772,7 @@ namespace tap::sr::rational {
                 const coeff*            row    = b.rows + step.phase * b.row_len + m_first[step.phase];
                 const std::size_t       count  = m_count[step.phase];
                 const S*                window = line(b, 0, 0) + b.end[0] - b.row_len + m_first[step.phase];
-                for (std::size_t c = 0; c < b.channels; ++c, window += b.cap) {
+                for (std::size_t c = 0; c < Ch; ++c, window += b.cap) {
                     if constexpr (k_table_gain != 1) {
                         out[c] = finalize_output(tap::dsp::accumulate_row<S>(typename tr::accum{}, row, window, count));
                     }
@@ -774,25 +785,11 @@ namespace tap::sr::rational {
             }
         }
         // ANCHOR_END: rational_emit
-
-        std::size_t                      m_channels;
-        std::size_t                      m_taps     = 0; ///< N
-        std::size_t                      m_row_len  = 0; ///< T (per phase or per branch)
-        std::size_t                      m_hist_cap = 0;
-        std::vector<coeff>               m_rows;        ///< k_rows x T, tap-reversed
-        std::array<std::size_t, k_rows>  m_first{};     ///< nonzero span start per row
-        std::array<std::size_t, k_rows>  m_count{};     ///< nonzero span length per row
-        std::vector<S>                   m_hist;        ///< channels x k_lines planar lines of m_hist_cap each
-        std::array<std::size_t, k_lines> m_end{};       ///< newest sample index + 1 per sub-line
-        std::vector<S>                   m_scratch;     ///< interleaved staging for pull()
-        std::uint32_t                    m_pos     = 0; ///< superblock position in [0, L)
-        std::uint32_t                    m_pending = 1; ///< inputs before the next output (L-phase machine)
-        std::uint32_t                    m_dphase  = 0; ///< inputs since the last output (decimator)
     };
     // ANCHOR_END: rational_stage
 
-    static_assert(tap::dsp::sync_stage<basic_stage<float, ratio<2, 1>>>);
-    static_assert(tap::dsp::sync_stage<basic_stage<double, ratio<1, 3>>>);
-    static_assert(tap::dsp::sync_stage<basic_stage<std::int16_t, ratio<2, 3>>>);
+    static_assert(tap::dsp::sync_stage<basic_stage<float, 1, ratio<2, 1>>>);
+    static_assert(tap::dsp::sync_stage<basic_stage<double, 2, ratio<1, 3>>>);
+    static_assert(tap::dsp::sync_stage<basic_stage<std::int16_t, 1, ratio<2, 3>>>);
 
 } // namespace tap::sr::rational

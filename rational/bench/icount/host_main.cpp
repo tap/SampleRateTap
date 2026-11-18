@@ -31,9 +31,9 @@
 namespace {
 
 #if TAP_SR_RATIONAL_HC_DIR == 0
-    using converter = tap::sr::rational::converter<tap::sr::rational::up_2>;
+    using converter = tap::sr::rational::converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::up_2>;
 #else
-    using converter = tap::sr::rational::converter<tap::sr::rational::down_2>;
+    using converter = tap::sr::rational::converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::down_2>;
 #endif
 
     constexpr std::size_t k_ch     = TAP_SR_RATIONAL_HC_CH;
@@ -56,7 +56,7 @@ extern "C" [[gnu::noinline]] double tap_sr_host_counted(converter& c, const floa
 }
 
 int main() {
-    converter c(k_ch);
+    converter c;
 
     constexpr std::size_t k_input_frames = 12000; // cycled
     std::vector<float>    input(k_input_frames * k_ch);

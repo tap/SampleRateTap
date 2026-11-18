@@ -25,6 +25,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.13 | 2026-10-08 | The host-vs-target table difference of v0.11 traced to its cause and fixed at the root (tap/DspTap#56): `nyquist.h`'s per-branch normalization summed mirror branches in opposite orders, so their gains could differ by an ulp (equal under glibc, unequal under newlib for the third-band m = 8 design) and a mirrored pair in one quantized row tied only by luck; the designer now copies its second half from the first, bit for bit. The 2^-34 snap of `stage.h` is removed; every Q15 pin holds, and two Q31 pins move on the host (↓6 `balanced`, 3/4 `economy`: one LSB between the members of a mirror pair, the two designs where glibc's gains differed), the tables now identical on the host and the Cortex-M legs |
 | v0.14 | 2026-10-08 | The siblings adopt this ABI's shape: `async`'s and `bridge`'s C ABIs carry Q15 and Q31 the same way (`create_format`, `_format`, the `_q15` / `_q31` entry points, hidden visibility, each format pinned bit for bit against the engine's `basic_converter`); the family keeps fixed point at every engine's C boundary rather than moving to a separate uniform ABI |
 | v0.15 | 2026-10-10 | The thirteen streaming ratchet rows re-recorded on all three targets with their reason (section 6: `ratio23_q15_eco` +1.93 % on the M55 is v0.11's stated move, the rest a sub-0.02 % construction-side residue from v0.13's designer and tap/DspTap#57), the first in-band re-record of this engine; `bridge` and `async` re-measure exact on every target |
+| v0.16 | 2026-11-18 | A13b: the channel count is the type's (R17, the family's D18): `basic_stage<S, Ch, R>` over `stage_base<S, R>`, `basic_chain<S, Ch, R...>`, the aliases `converter<Ch, R>` and the named chains count-first, zero channels a compile error; the C ABI one and two channels native and any other count a fan-out of one-channel converters; DspTap pinned at `v0.2.0` (the chain takes its count from its stages). The ratchet re-recorded on every target and the ceilings on the three, with the M55's `ratio23_q15_eco` gated at the midpoint of its two builds (section 6, the A13 record) |
 
 **Status.** This draft is the reviewed-plan deliverable that the family
 plan's "Next — `rational` (separate plan)" entry asks for
@@ -118,6 +119,7 @@ The boundaries are identity, not policy, as `bridge`'s are
 | R14 | **Dipping rows are flagged** (decision 3): every row of 3.5/3.6 whose `bridge` stage runs — its output rate — at ≥ 2× the chain's output rate carries ⚑ in a trailing column, "covered, not recommended". Documentation only: the flag dispatches nothing and D12 is untouched | In such a row `bridge` alone costs ≥ 116 MACs per output at `economy` (≥ 368 at `transparent`), 2–4× a within-family chain's total; a consumer who reads the matrix sees the price before choosing. 38 rows carry it |
 | R15 | **384 kHz stays** (decision 5): the family plan's 14 rates are settled (`../PLAN.md:100-101`) | Its cost is 16 generated rows, the ↑8 / ↓8 stages already in the vocabulary and the 64 / 128 kHz intermediates; no new stage kind |
 | R16 | **The C ABI exposes the named within-family chains** of 3.3/3.4 as its `chain` enumerators (decision 9; 28 of them on the pinned lengths, v0.7 — the union of the two tables' chain columns) — chains, not rates, and not the single-stage ratios alone | D12 at the C boundary: an enumerator names what the caller composes, as `bridge`'s `int direction` does; the binding and the notebook then need no chain arithmetic of their own (4.4) |
+| R17 | **The channel count is the type's** (2026-11-17, the family's A13 and D18): `Ch`, a compile-time constant of at least 1, is `basic_stage<S, Ch, R>`'s and `basic_chain<S, Ch, R...>`'s second template parameter and the aliases' first; the count-independent state and cold code live in `stage_base<S, R>`, built once per format and ratio; `process`, `pull` and `flush` are each the out-of-line block for their count; the C ABI serves one and two channels natively and any other count as a fan-out of one-channel converters | The maintainer's decision that every count is known at compile time; the base keeps an image that runs a type at several counts from paying for its construction code per count (the plan's audit, design-2); the placement is gate 0's option 3, its three rows above the rule accepted (section 6) |
 
 ### 2.1 Stage factoring: the arithmetic behind R3
 
@@ -674,13 +676,13 @@ rational/
 │   ├── rational.h          umbrella: TAP_SR_VERSION_* (R11), includes the five below
 │   ├── ratio.h             ratio<L, M>, ratio_traits, the 2^a·3^b / gcd static_asserts (R1)
 │   ├── design.h            profile (R5), design_stage<R>(profile) over tap::dsp::nyquist.h
-│   ├── stage.h             basic_stage<S, R>: table (per phase or per decimating branch, trimmed to the nonzero span;
+│   ├── stage.h             basic_stage<S, Ch, R> over stage_base<S, R> (A13): table (per phase or per decimating branch, trimmed to the nonzero span;
 │   │                       symmetry halving measured out after M6: section 6, the levers), the
 │   │                       schedule, process/pull/flush/reset, the exact-rational latency
-│   ├── chain.h             basic_chain<S, R...>: tap::dsp::chain over basic_stage, each stage at its design
+│   ├── chain.h             basic_chain<S, Ch, R...>: tap::dsp::chain over basic_stage, each stage at its design
 │   │                       divisor (3.1); the 20 named multi-stage chains of 3.3 / 3.4 (up_2_up_2 … down_3_down_8_down_2)
-│   └── converter.h         basic_converter<S, R> = basic_stage<S, R> under the family's converter name, with the
-│                           float / Q15 / Q31 aliases (converter<R>, converter_q15<R>, converter_q31<R>)
+│   └── converter.h         basic_converter<S, Ch, R> = basic_stage<S, Ch, R> under the family's converter name, with the
+│                           float / Q15 / Q31 aliases (converter<Ch, R>, converter_q15<Ch, R>, converter_q31<Ch, R>)
 ├── tests/                  test_ratio, test_design, test_stage, test_chain, test_matrix, test_fixed_point,
 │   │                       test_output_hash, test_capi, bare_metal_main.cpp (no cross-validation test: section 5
 │   │                       says why the bridge-vs-async leg is not repeated here; struck by the 2026-10 audit, F18)
@@ -1098,6 +1100,67 @@ configurations apart again: the caller's register pressure); and
 `-fno-version-loops-for-strides` on the outlined entries (1.5 points: the
 versioning was not the bulk). The engine's cost is now a property of the
 engine; the ratchet's `main` no longer measures its own register allocation.
+
+**The channel count in the type (A13, 2026-11-18): gate 0's option 3, as
+shipped.** `Ch` is the type's (R17): the count-independent state and cold
+code are `stage_base<S, R>`'s (the constructor, `reset()` and the table,
+once per format and ratio), and `process`, `pull` and `flush` are each the
+out-of-line block for their count. Measured against gate 0's same-job
+reference (2ed199a) on every ratchet target in both configurations
+(`docs/channels/a13b_measurements.json`): every checksum equal; the
+streaming sums −2.93 % on the M55 (−3.08 % without exceptions), −0.17 % on
+the M33, −0.35 % on Hexagon and −2.33 % on the host; every row within gate
+0's rule but the three it accepted, which shipped at −2.62 % (the M55's
+`up2_q15_eco`), −3.70 % (`up3_q15_eco`) and +1.29 % (the M33's
+`down3_float_eco`). The rises above 0.1 % are traced: Hexagon's `up3_q15_eco`
++0.49 % and its float interpolators +0.11 … +0.14 %, the host's
+`down2_float_2ch` +0.31 %. Two findings on the way, each measured:
+
+- *`emit()` forced inline under clang only.* Once each block was a function
+  of its own, clang for Hexagon left `emit()` out of line in the float
+  stages, a call per output frame (+0.7 … +0.8 % on the float
+  interpolators); `TAP_SR_RATIONAL_ALWAYS_INLINE` brings them to the figures
+  above. GCC inlines it on its own, and forcing it there moved the M55's Q15
+  register allocation instead (`ratio23_q15_eco` +1.78 % with exceptions), so
+  the macro forces it under clang alone.
+- *One M55 row split between the builds.* The M55's `ratio23_q15_eco` runs
+  15,341,916 instructions with exceptions and 14,577,966 without (−0.71 and
+  −5.65 % against the reference's 15,451,527 in both), the one row of the
+  engine more than 0.1 % apart. The two builds' optimized GIMPLE for the block
+  is identical; they part in RTL PRE. GCC's `compute_can_copy` (`gcse.cc`)
+  runs once per translation unit, emitting a test insn per condition-code
+  mode (24 on Arm) into whichever function first reaches PRE: with
+  exceptions that is the out-of-line `~stage_base` that `main`'s cleanups
+  call, without them the block itself. Its UID counter then sizes PRE's
+  expression table differently (93 or 97 buckets), PRE hoists the block's
+  two loop invariants (`k_schedule`'s address and the schedule entry's stack
+  slot) in the opposite order, and the allocator, numbering the pseudos the
+  other way, spills the 64-bit Q15 accumulator in the build without
+  exceptions. Measured and declined: the entry's fields read from the table
+  (the gap 1.35 %, but Hexagon's Q15 interpolators +0.66 … +0.97 % and the
+  M33's `ratio23_q15_eco` +0.80 %: a Q15 output may alias the table, so a
+  field read after the stores is reloaded); both fields read into scalars
+  before the stores (the M55's floats a further −0.5 … −1.2 points, but
+  its Q15 interpolators 6.5 … 7 % apart); the destructor out of line in both builds (PRE then
+  identical, the block still apart downstream). The maintainer accepted the
+  row with its baseline at the midpoint of the two builds (14,959,941, each
+  within ±2.55 %), the second such row in the family after `bridge`'s
+  `down_q15_se` (A13's gate 0); re-record it at the midpoint of the two
+  builds' counts, never with `--update` from one of them.
+
+The footprint fell on all three targets: the probes' engine `.text`
+−15.6 … −34.1 %, their whole images −2.0 … −5.8 %, the M33's call stacks
+−16 … −56 B; the engine `.rodata` +54 B on the Arm targets is libstdc++'s
+length-error text (`vector::_M_default_append`), which the out-of-line
+constructor of each of the probe's two stages now carries. The multi-count
+probe (`docs/channels/multicount`, an up-2 and a down-2 stage at each count
+of a set in one object) against the reference: one count −11.3 … −39.7 %,
+counts 1 and 2 −22.1 … +1.6 % (the M33's `MinSizeRel` float the one rise),
+counts 1, 2 and 6 −4.1 … +15.0 % (Hexagon `Release` float +15.0 %, the Arm
+targets' `MinSizeRel` +10.4 … +12.0 %), below gate 0's K12 prototype in
+every row but one (Hexagon `Release` float at three counts, +84 B). The
+gain is measured in instructions only; the hardware confirmation waits for
+0.7.0 (`docs/CHANNELS_PLAN.md`, K11).
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2

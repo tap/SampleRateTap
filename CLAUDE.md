@@ -95,7 +95,9 @@ at ±3 % (`scripts/icount.py --engine async|bridge|rational --target m33|m55|hex
 `<engine>/bench/baselines.json`), built with exceptions and again without them or RTTI
 (`TAP_SR_NO_EXCEPTIONS_RTTI`) against the same baselines: the engines' hot paths are their own
 (A12), so the two builds count within the tolerance of each other (not identically on the QEMU
-targets: start-up differs, and one `bridge` row on the M55 by 2.5 %, A13's gate 0). A change that moves a count beyond tolerance re-records the
+targets: start-up differs, one `bridge` row on the M55 by 2.5 % (A13's gate 0), and one
+`rational` row on the M55 by 5 %, gated at the midpoint of its two builds: A13b,
+`rational/PLAN.md` section 6). A change that moves a count beyond tolerance re-records the
 baseline in the same PR; an improvement beyond tolerance fails too, by design. Guest markers
 (`SRT_ICOUNT_DONE`, `RATIO_ICOUNT_DONE`, `RATIONAL_ICOUNT_DONE`) are part of the counted binaries
 and never change. A `callmax_*` scenario is the worst single call instead of a total

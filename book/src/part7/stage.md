@@ -4,8 +4,13 @@
 >
 > — C. A. R. Hoare, Turing Award lecture, 1980
 
-`basic_stage<S, R>` is the engine's whole datapath: the table, the delay
-lines, the schedule, `process`, `pull`, `flush`, `reset`, and the latency.
+`basic_stage<S, Ch, R>` is the engine's whole datapath: the table, the delay
+lines, the schedule, `process`, `pull`, `flush`, `reset`, and the latency,
+for Ch interleaved channels — a compile-time count, like the ratio (A13).
+Everything that does not depend on the count, the table and its building,
+the histories' allocation, `validate()`, `reset()` and the accessors, is
+`stage_base<S, R>`'s, compiled once per format and ratio however many counts
+a program runs; only `process`, `pull` and `flush` are compiled per count.
 The ASRC's equivalent took three headers and two chapters, because the
 ASRC had a fractional position to track. Here the position is an integer
 that cycles through L values, so the resampler collapses into a lookup —
