@@ -5,7 +5,10 @@
 # runs that engine's tests runs them, plus D13's version-macro check under
 # every label. Nothing here links an engine to a sibling. The compile checks are built BY their
 # test (cmake --build of an EXCLUDE_FROM_ALL target), so a leaked include is
-# a failing test, not a broken build.
+# a failing test, not a broken build. Every such test builds the one build
+# tree, and two builds of one tree at once race on its regeneration and its
+# ninja log, so they share a RESOURCE_LOCK (tap_sr_build_tree): `ctest -j`
+# runs them one at a time and everything else in parallel.
 set(_family ${CMAKE_CURRENT_SOURCE_DIR}/family)
 set(_header_count_async 6)
 set(_header_count_bridge 5)
@@ -65,7 +68,8 @@ foreach(_engine IN LISTS _engines)
         add_test(NAME ${_engine}.Family.HeadersCompileWithoutExceptions
                  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG>
                          --target tap_sr_${_engine}_no_exceptions)
-        set_tests_properties(${_engine}.Family.HeadersCompileWithoutExceptions PROPERTIES LABELS ${_engine})
+        set_tests_properties(${_engine}.Family.HeadersCompileWithoutExceptions
+                             PROPERTIES LABELS ${_engine} RESOURCE_LOCK tap_sr_build_tree)
     endif()
 
     # 4. Header count, pinned: a header cannot appear or vanish unnoticed.
@@ -78,6 +82,7 @@ foreach(_engine IN LISTS _engines)
                          ${_engine}.Family.IncludesStayInEngine
                          ${_engine}.Family.HeaderCountIsPinned
                          PROPERTIES LABELS ${_engine})
+    set_tests_properties(${_engine}.Family.HeadersCompileInIsolation PROPERTIES RESOURCE_LOCK tap_sr_build_tree)
 endforeach()
 
 # 5. The C ABI's exported symbol set (when the libraries are built): nm on
@@ -137,7 +142,8 @@ foreach(_name IN ITEMS family async bridge rational)
     add_test(NAME ${_name}.Family.ReadmeQuickStartCompiles
              COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG>
                      --target tap_sr_readme_${_name})
-    set_tests_properties(${_name}.Family.ReadmeQuickStartCompiles PROPERTIES LABELS "${_labels}")
+    set_tests_properties(${_name}.Family.ReadmeQuickStartCompiles
+                         PROPERTIES LABELS "${_labels}" RESOURCE_LOCK tap_sr_build_tree)
 endforeach()
 
 # D13: TAP_SR_VERSION_* is defined in each of the three umbrella headers (no
@@ -152,4 +158,5 @@ target_compile_features(tap_sr_family_version PRIVATE cxx_std_20)
 add_test(NAME family.VersionMacrosAgree
          COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG>
                  --target tap_sr_family_version)
-set_tests_properties(family.VersionMacrosAgree PROPERTIES LABELS "async;bridge;rational")
+set_tests_properties(family.VersionMacrosAgree
+                     PROPERTIES LABELS "async;bridge;rational" RESOURCE_LOCK tap_sr_build_tree)
