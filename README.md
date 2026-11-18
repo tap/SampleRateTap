@@ -65,16 +65,16 @@ target_link_libraries(app PRIVATE tap::sr)           # all of them (the umbrella
 
 ```cpp
 #include <tap/sr/async/async.h>   // tap::sr::async::converter, converter_q15, converter_q31
-#include <tap/sr/bridge/ratio.h>  // tap::sr::bridge::converter_to_48k, converter_to_44k1, ...
+#include <tap/sr/bridge/ratio.h>  // tap::sr::bridge::converter_to_48k<Ch>, converter_to_44k1<Ch>, ...
 #include <tap/sr/rational/rational.h> // tap::sr::rational::converter<Ch, ratio<L, M>>, converter_q15, ...
 ```
 
 **Channel counts at compile time (A13, in progress; `docs/CHANNELS_PLAN.md`).**
-`rational`'s channel count is a template argument of every type, a
-compile-time constant of at least 1: `converter<2, down_2>` is a stereo
-converter, and a count of zero does not compile. `bridge` and `async` still
-take theirs at run time until their own A13 changes, after which the family
-moves to 0.7.0. The C ABIs keep a run-time count: one and two channels run the
+`rational`'s and `bridge`'s channel count is a template argument of every
+type, a compile-time constant of at least 1: `rational::converter<2, down_2>`
+and `bridge::converter_to_44k1<2>` are stereo converters, and a count of zero
+does not compile. `async` still takes its count at run time until its own A13
+change, after which the family moves to 0.7.0. The C ABIs keep a run-time count: one and two channels run the
 native types, any other count that many one-channel converters behind the
 handle, bit for bit the native type of that count.
 
@@ -82,8 +82,8 @@ handle, bit for bit the native type of that count.
 its arguments; processing is `noexcept`. Each engine states the rejection
 twice, in the same words: `validate(...)`, a `noexcept` precheck that returns
 the reason as a `const char*` (nullptr when the converter constructs) —
-`async::config::validate(cfg)`, `bridge::basic_converter<…>::validate(channels,
-profile)`, `rational::basic_stage<…>::validate(profile)` and
+`async::config::validate(cfg)`, `bridge::basic_converter<…>::validate(profile)`,
+`rational::basic_stage<…>::validate(profile)` and
 `basic_chain<…>::validate(profile)` — and the constructor, which
 raises that reason as `std::invalid_argument` (`std::runtime_error` for a
 `rational` spec no length meets) through `tap::dsp::raise`. Built with

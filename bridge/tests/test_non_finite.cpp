@@ -95,8 +95,8 @@ namespace {
 
     template <direction D>
     void burst_clears_after_one_window() {
-        using converter                   = tap::sr::bridge::basic_converter<float, D, 0>;
         constexpr std::size_t k_ch        = 2;
+        using converter                   = tap::sr::bridge::basic_converter<float, k_ch, D, 0>;
         constexpr std::size_t k_block     = 32;
         constexpr std::size_t k_blocks    = 400; // 12,800 input frames
         constexpr std::size_t k_burst_at  = 4000;
@@ -104,8 +104,8 @@ namespace {
         constexpr std::size_t k_up        = D == direction::up_to_48k ? 160 : 147;
         constexpr std::size_t k_down      = D == direction::up_to_48k ? 147 : 160;
 
-        converter          hit(k_ch);
-        converter          twin(k_ch);
+        converter          hit;
+        converter          twin;
         const std::size_t  taps = hit.table().taps();
         std::vector<float> in_hit(k_block * k_ch);
         std::vector<float> in_twin(k_block * k_ch);

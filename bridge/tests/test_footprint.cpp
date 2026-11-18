@@ -51,49 +51,47 @@ namespace {
         return heap_meter::allocator_request(n);
     }
 
-    template <typename S, direction D, unsigned K>
     struct formula {
         std::size_t held = 0;
         std::size_t peak = 0;
     };
 
-    template <typename S, direction D, unsigned K>
-    formula<S, D, K> footprint_formula(const basic_converter<S, D, K>& conv) {
-        using conv_t         = basic_converter<S, D, K>;
-        using coeff          = typename tap::dsp::sample_traits<S>::coeff;
-        const std::size_t L  = conv_t::k_phases;
-        const std::size_t R  = basic_phase_table<S, D, K>::k_stored;
-        const std::size_t T  = conv.taps();
-        const std::size_t c  = sizeof(coeff);
-        const std::size_t s  = sizeof(S);
-        const std::size_t ch = conv.channels();
-        const std::size_t q  = std::is_integral_v<S> ? 1 : 0;
-        formula<S, D, K>  f;
-        f.held = request(R * T * c) + ch * request((T + k_hist_slack) * s) + request(k_pop_chunk * ch * s)
-                 + request(ch * sizeof(std::vector<S>));
+    // The histories are a std::array of Ch vectors since A13 (K6): the
+    // outer vector's Ch * sizeof(std::vector) allocation is gone.
+    template <typename S, std::size_t Ch, direction D, unsigned K>
+    formula footprint_formula(const basic_converter<S, Ch, D, K>& conv) {
+        using conv_t        = basic_converter<S, Ch, D, K>;
+        using coeff         = typename tap::dsp::sample_traits<S>::coeff;
+        const std::size_t L = conv_t::k_phases;
+        const std::size_t R = basic_phase_table<S, D, K>::k_stored;
+        const std::size_t T = conv.taps();
+        const std::size_t c = sizeof(coeff);
+        const std::size_t s = sizeof(S);
+        const std::size_t q = std::is_integral_v<S> ? 1 : 0;
+        formula           f;
+        f.held = request(R * T * c) + Ch * request((T + k_hist_slack) * s) + request(k_pop_chunk * Ch * s);
         f.peak = std::max(f.held, request(R * T * c) + request(8 * L * T) + request(8 * T) + q * request(8 * T));
         return f;
     }
 
-    template <typename S, direction D, unsigned K>
-    void check(const char* name, const profile& p, std::size_t ch) {
-        using conv_t = basic_converter<S, D, K>;
+    template <typename S, std::size_t Ch, direction D, unsigned K>
+    void check(const char* name, const profile& p) {
+        using conv_t = basic_converter<S, Ch, D, K>;
         std::unique_ptr<conv_t> conv;
         heap_stats              st;
         {
             const heap_meter meter;
-            conv = std::make_unique<conv_t>(ch, p);
+            conv = std::make_unique<conv_t>(p);
             st   = meter.stats();
         }
         // The converter object is on the heap here; the formulas are what it owns.
         st.live_bytes -= sizeof(conv_t);
         st.peak_bytes -= sizeof(conv_t);
         const auto f = footprint_formula(*conv);
-        EXPECT_EQ(st.live_bytes, f.held) << name << ' ' << ch << " ch";
-        EXPECT_EQ(st.peak_bytes, f.peak) << name << ' ' << ch << " ch";
-        std::printf("[ measured ] bridge %-22s %2zu ch: L %zu T %2zu, %6zu B held, %7zu B peak in construction "
-                    "(sizeof(std::vector) %zu)\n",
-                    name, ch, conv_t::k_phases, conv->taps(), st.live_bytes, st.peak_bytes, sizeof(std::vector<S>));
+        EXPECT_EQ(st.live_bytes, f.held) << name << ' ' << Ch << " ch";
+        EXPECT_EQ(st.peak_bytes, f.peak) << name << ' ' << Ch << " ch";
+        std::printf("[ measured ] bridge %-22s %2zu ch: L %zu T %2zu, %6zu B held, %7zu B peak in construction\n", name,
+                    Ch, conv_t::k_phases, conv->taps(), st.live_bytes, st.peak_bytes);
     }
 
     struct named_profile {
@@ -109,12 +107,12 @@ namespace {
                                         {"balanced", profile::balanced()},
                                         {"transparent", profile::transparent()}};
         for (const auto& np : ladder) {
-            if (!basic_converter<S, D, K>::validate(1, np.p)) {
-                for (const std::size_t ch : {std::size_t{1}, std::size_t{2}, std::size_t{8}}) {
-                    char name[64];
-                    std::snprintf(name, sizeof name, "%s %s", pair, np.name);
-                    check<S, D, K>(name, np.p, ch);
-                }
+            if (!basic_converter<S, 1, D, K>::validate(np.p)) {
+                char name[64];
+                std::snprintf(name, sizeof name, "%s %s", pair, np.name);
+                check<S, 1, D, K>(name, np.p);
+                check<S, 2, D, K>(name, np.p);
+                check<S, 8, D, K>(name, np.p);
             }
         }
     }
@@ -144,10 +142,10 @@ namespace {
     }
 
     TEST(Footprint, ProcessingAllocatesNothing) {
-        converter_to_48k   conv(2);
-        std::vector<float> in(441 * 2, 0.25F);
-        std::vector<float> out((conv.outputs_for(441) + 1) * 2);
-        const heap_meter   meter;
+        converter_to_48k<2> conv;
+        std::vector<float>  in(441 * 2, 0.25F);
+        std::vector<float>  out((conv.outputs_for(441) + 1) * 2);
+        const heap_meter    meter;
         for (int i = 0; i < 100; ++i) {
             static_cast<void>(conv.process(in.data(), 441, out.data()));
         }

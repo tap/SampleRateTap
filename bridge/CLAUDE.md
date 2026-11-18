@@ -28,6 +28,15 @@ cross-validation design).
   choosing a type.
 - **Speed-first.** Direction is compile-time. Every quality-vs-speed trade that is inaudible goes
   to speed in the default profile; the pristine profile exists behind the same design path.
+- **The channel count is the type's (A13, `docs/CHANNELS_PLAN.md`).** `Ch`, a compile-time
+  constant of at least 1, is `basic_converter<S, Ch, D, K>`'s second parameter and the aliases'
+  only one (`converter_to_44k1<2>`); zero fails to compile
+  (`bridge.Converter.ZeroChannelsFailToCompileWithTheMessage`). The table and the stream
+  position are `converter_base<S, D, K>`'s, designed once per format, direction and rate scale
+  (K12); the histories are a `std::array` of `Ch` vectors (K6), and the walk is out of line per
+  trip count (gate 0). The C ABI keeps a run-time count, one and two channels native and any
+  other a fan-out of one-channel converters, pinned bit for bit
+  (`CApi.FanOutIsTheNativeConverterBitForBit`).
 - **Correctness before optimization.** Exhaustive phase coverage (all 147 and all 160 phases), an
   independent golden reference (the committed scipy vectors under `tests/reference/`), and the
   pinned-eps cross-validation against `async` gate every optimization. The cross-validation's
@@ -38,7 +47,10 @@ cross-validation design).
   bridge`, `bench/baselines.json`, ten streaming workloads and two construct-only legs on
   M33/M55/Hexagon) gates every change two-sided at ±3 %; a change that moves a count beyond
   tolerance re-records the baselines in the same PR, and an improvement beyond tolerance fails
-  too, by design (the family rule, root `CLAUDE.md`).
+  too, by design (the family rule, root `CLAUDE.md`). Both configurations, with and without
+  exceptions, count against the one set of baselines; five M55 Q15 rows split about 2 %
+  between them (GCC's register allocation, A13c), so their baselines are the midpoint of the two
+  builds: re-record those at the midpoint, never with `--update` from one build (PLAN.md M7g).
   Remaining levers that change the output contract stay deferred until a consumer pulls them
   (PLAN.md section 7).
 

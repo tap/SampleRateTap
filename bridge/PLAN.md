@@ -90,7 +90,7 @@ policy:
 | Schedule | Precomputed L-entry `(phase, input_advance)` table; advance ∈ {0,1} up, {1,2} down |
 | Prototype design | Two independent prototypes (directions are asymmetric; do not transpose one). Designed **at construction time** in double via `tap::dsp` kaiser math, per the family's runtime-design philosophy. Row-sum-preserving quantization for fixed-point tables via the shared DspTap utility |
 | Hot loop | `tap::dsp` dot kernels: `dot_row` (planar / SMLALD path) and `dot_rows_frame_major` (channel-parallel) — inherited, not rebuilt |
-| Channels | Runtime count, one converter instance per stream; per-frame coefficient row shared across channels |
+| Channels | The type's, a compile-time constant of at least 1 with no default (`basic_converter<S, Ch, D, K>`, since A13: the family's D18, `docs/CHANNELS_PLAN.md`); one converter instance per stream; per-frame coefficient row shared across channels. The C ABI keeps a run-time count: one and two channels native, any other a fan-out of one-channel converters |
 | RT contract | Constructor allocates and designs (may throw); processing is `noexcept`, lock-free, allocation-free |
 | Repeatability | Bit-exact: same input → same output, per sample type, on every platform (integer paths exactly; float path via fixed accumulation order) |
 
@@ -385,6 +385,37 @@ executed (it measures the shipping C++, not a Python re-implementation).
     −211 instructions on every Q15/Q31 workload and −242 on every float one; M33 and M55 exact (+0) on every workload. Hexagon
     baselines re-recorded (`async/docs/PERFORMANCE.md` has the inlining
     finding from the same measurement).
+
+  - **M7g — the channel count in the type (A13c, 2026-11-18; the family's
+    D18, `docs/CHANNELS_PLAN.md`).** `basic_converter<S, Ch, D, K>`: the
+    count is the type's second parameter, at least 1 and with no default,
+    and the aliases take it alone (`converter_to_44k1<2>`). The table and
+    the stream position are `converter_base<S, D, K>`'s, its constructor
+    out of line (K12: one design per format, direction and rate scale);
+    the histories are a `std::array` of `Ch` vectors (K6, one allocation
+    fewer: the footprint's `ch sizeof(std::vector)` term is gone); the
+    channel dispatch is gone, the mono and stereo bodies stay under
+    `if constexpr`, and the walk is out of line per trip count (gate 0's
+    placement). The C ABI keeps a run-time count, one and two channels
+    native and any other a fan-out of one-channel converters
+    (`CApi.FanOutIsTheNativeConverterBitForBit`). Measured against gate 0's
+    same-job reference (2ed199a) on every target in both configurations,
+    every checksum equal: M55 rows −5.83 … +0.11 % (streaming sum −1.12 %
+    with exceptions, −0.81 % without), M33 −1.37 … +0.01 % (−0.04 %),
+    Hexagon −0.64 … −0.04 % (−0.07 %), host −1.42 … +0.37 % (−1.01 %; the
+    two stereo rows +0.26 and +0.37 %, traced). Five M55 Q15 rows
+    (`down_q15_eco`, `up_q15_eco`, `up_q15_se` and both Q15 `callmax`
+    rows) count 1.9 … 2.3 % more without exceptions than with them: the
+    exceptions build fell 2 … 4 % and the other stayed at the reference
+    (+0.11 % at most), the walk's code the same until GCC's register
+    allocation (`process_walk<58>` 8 bytes apart; the mechanism is
+    `rational`'s PLAN.md section 6, A13 record). The maintainer accepted
+    them with each baseline at the midpoint of the two builds (both within
+    ±1.2 %); the M33's splits (0.1 … 0.6 %) are recorded from the
+    exceptions build as every other row. Re-record the five at the
+    midpoint, never with `--update` from one build. The ceilings fell on
+    all three targets: engine `.text` −49.0 … −59.5 %, the probes' images
+    −15.0 … −26.8 %, the M33's call stacks −8 … −136 B.
 
 v0.1 ships at M6. Nothing in M7+ blocks it. **v0.3 (2026-08-07): the
 profile-ladder re-pin.** economy moved to the 18 kHz/58/38 design (the

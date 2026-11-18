@@ -60,6 +60,12 @@ typedef struct tap_sr_bridge_converter tap_sr_bridge_converter;
 /// direction: 0 = up (44.1 -> 48), 1 = down (48 -> 44.1).
 /// profile:   0 = economy (default tier), 1 = transparent, 2 = balanced,
 ///            3 = super_economy (the voice/comms tier).
+/// channels:  at least 1. In C++ the count is a converter's type; here one and
+///            two channels run those types natively, and any other count runs
+///            that many one-channel converters behind the handle, the frames
+///            split to each and their outputs interleaved back: bit for bit the
+///            type of that count, since the channels share only the schedule
+///            (SampleRateTap's A13, CHANNELS_PLAN.md K8, option (b)).
 /// Returns NULL on invalid arguments. A float converter.
 TAP_SR_BRIDGE_API tap_sr_bridge_converter* tap_sr_bridge_create(int direction, int profile, unsigned channels);
 /// As tap_sr_bridge_create in a stated format (TAP_SR_BRIDGE_FORMAT_*); NULL

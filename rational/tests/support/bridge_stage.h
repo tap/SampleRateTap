@@ -24,18 +24,19 @@ namespace rational_test {
     template <tap::dsp::sample_type S, tap::sr::bridge::direction D, unsigned K>
     class bridge_stage {
       public:
-        using sample = S;
-        using traits = tap::sr::bridge::ratio_traits<D, K>;
+        using sample    = S;
+        using traits    = tap::sr::bridge::ratio_traits<D, K>;
+        using converter = tap::sr::bridge::basic_converter<S, 1, D, K>;
 
         static constexpr std::size_t k_up         = traits::k_phases;     ///< L
         static constexpr std::size_t k_down       = traits::k_decimation; ///< M
         static constexpr unsigned    k_rate_scale = K;
-        /// One channel: every matrix row is mono, and bridge's converter
-        /// takes its count at run time until its own A13 change.
-        static constexpr std::size_t channels() noexcept { return 1; }
+        /// bridge's own count (every matrix row is mono): since A13 the
+        /// converter's type carries it, and the adapter forwards it.
+        static constexpr std::size_t channels() noexcept { return converter::channels(); }
 
         explicit bridge_stage(const tap::sr::bridge::profile& p = tap::sr::bridge::profile::economy())
-            : m_converter(1, p) {}
+            : m_converter(p) {}
 
         std::size_t process(const S* in, std::size_t in_frames, S* out) noexcept {
             return m_converter.process(in, in_frames, out);
@@ -56,7 +57,7 @@ namespace rational_test {
         std::size_t taps() const noexcept { return m_converter.taps(); }
 
       private:
-        tap::sr::bridge::basic_converter<S, D, K> m_converter;
+        converter m_converter;
     };
 
     static_assert(tap::dsp::sync_stage<bridge_stage<float, tap::sr::bridge::direction::down_to_44k1, 0>>);

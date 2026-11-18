@@ -41,10 +41,10 @@ namespace {
 #else
     using sample = std::int32_t;
 #endif
-    using up_converter   = tap::sr::bridge::basic_converter<sample, tap::sr::bridge::direction::up_to_48k, 0>;
-    using down_converter = tap::sr::bridge::basic_converter<sample, tap::sr::bridge::direction::down_to_44k1, 0>;
+    constexpr std::size_t k_ch = 2;
+    using up_converter   = tap::sr::bridge::basic_converter<sample, k_ch, tap::sr::bridge::direction::up_to_48k, 0>;
+    using down_converter = tap::sr::bridge::basic_converter<sample, k_ch, tap::sr::bridge::direction::down_to_44k1, 0>;
 
-    constexpr std::size_t k_ch     = 2;
     constexpr std::size_t k_block  = 32;
     constexpr std::size_t k_blocks = 1500;
     constexpr std::size_t k_room   = k_block + 4; // outputs_for(32) <= 32 * 160 / 147 + 1
@@ -75,8 +75,8 @@ namespace {
 } // namespace
 
 int main() {
-    up_converter   up(k_ch);
-    down_converter down(k_ch);
+    up_converter   up;
+    down_converter down;
     for (std::size_t i = 0; i < k_block * k_ch; ++i) {
         g_in[i] = triangle<sample>(i);
     }

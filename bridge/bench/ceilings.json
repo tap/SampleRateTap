@@ -7,12 +7,12 @@
           "recorded": 1228
         },
         "engine_text": {
-          "ceiling": 96064,
-          "recorded": 93212
+          "ceiling": 39232,
+          "recorded": 38088
         },
         "image": {
-          "ceiling": 380608,
-          "recorded": 369520
+          "ceiling": 323712,
+          "recorded": 314240
         }
       },
       "q15": {
@@ -21,12 +21,12 @@
           "recorded": 1228
         },
         "engine_text": {
-          "ceiling": 100672,
-          "recorded": 97712
+          "ceiling": 41280,
+          "recorded": 40052
         },
         "image": {
-          "ceiling": 385856,
-          "recorded": 374608
+          "ceiling": 326400,
+          "recorded": 316832
         }
       },
       "q31": {
@@ -35,12 +35,12 @@
           "recorded": 1228
         },
         "engine_text": {
-          "ceiling": 100224,
-          "recorded": 97284
+          "ceiling": 40640,
+          "recorded": 39440
         },
         "image": {
-          "ceiling": 385472,
-          "recorded": 374192
+          "ceiling": 325632,
+          "recorded": 316128
         }
       }
     }
@@ -53,12 +53,12 @@
           "recorded": 1544
         },
         "engine_text": {
-          "ceiling": 32064,
-          "recorded": 31080
+          "ceiling": 15680,
+          "recorded": 15164
         },
         "image": {
-          "ceiling": 67072,
-          "recorded": 65097
+          "ceiling": 50688,
+          "recorded": 49185
         }
       },
       "q15": {
@@ -67,12 +67,12 @@
           "recorded": 1544
         },
         "engine_text": {
-          "ceiling": 33728,
-          "recorded": 32688
+          "ceiling": 17152,
+          "recorded": 16620
         },
         "image": {
-          "ceiling": 68928,
-          "recorded": 66897
+          "ceiling": 52352,
+          "recorded": 50825
         }
       },
       "q31": {
@@ -81,12 +81,12 @@
           "recorded": 1544
         },
         "engine_text": {
-          "ceiling": 32896,
-          "recorded": 31876
+          "ceiling": 16768,
+          "recorded": 16264
         },
         "image": {
-          "ceiling": 68096,
-          "recorded": 66089
+          "ceiling": 52032,
+          "recorded": 50473
         }
       }
     },
@@ -94,66 +94,66 @@
       "f32": {
         "down": {
           "measured": {
-            "ceiling": 224,
-            "recorded": 216
+            "ceiling": 200,
+            "recorded": 192
           },
           "static": {
-            "ceiling": 344,
-            "recorded": 328
+            "ceiling": 200,
+            "recorded": 192
           }
         },
         "up": {
           "measured": {
-            "ceiling": 224,
-            "recorded": 216
+            "ceiling": 200,
+            "recorded": 192
           },
           "static": {
-            "ceiling": 336,
-            "recorded": 320
+            "ceiling": 200,
+            "recorded": 192
           }
         }
       },
       "q15": {
         "down": {
           "measured": {
-            "ceiling": 280,
-            "recorded": 268
+            "ceiling": 168,
+            "recorded": 156
           },
           "static": {
-            "ceiling": 304,
-            "recorded": 288
+            "ceiling": 184,
+            "recorded": 176
           }
         },
         "up": {
           "measured": {
-            "ceiling": 280,
-            "recorded": 268
+            "ceiling": 168,
+            "recorded": 156
           },
           "static": {
-            "ceiling": 304,
-            "recorded": 288
+            "ceiling": 184,
+            "recorded": 176
           }
         }
       },
       "q31": {
         "down": {
           "measured": {
-            "ceiling": 184,
-            "recorded": 172
+            "ceiling": 168,
+            "recorded": 156
           },
           "static": {
-            "ceiling": 288,
-            "recorded": 272
+            "ceiling": 176,
+            "recorded": 168
           }
         },
         "up": {
           "measured": {
-            "ceiling": 184,
-            "recorded": 172
+            "ceiling": 176,
+            "recorded": 164
           },
           "static": {
-            "ceiling": 288,
-            "recorded": 272
+            "ceiling": 176,
+            "recorded": 168
           }
         }
       }
@@ -167,12 +167,12 @@
           "recorded": 1544
         },
         "engine_text": {
-          "ceiling": 28992,
-          "recorded": 28136
+          "ceiling": 13184,
+          "recorded": 12776
         },
         "image": {
-          "ceiling": 63552,
-          "recorded": 61689
+          "ceiling": 47744,
+          "recorded": 46345
         }
       },
       "q15": {
@@ -181,12 +181,12 @@
           "recorded": 1544
         },
         "engine_text": {
-          "ceiling": 37952,
-          "recorded": 36840
+          "ceiling": 18432,
+          "recorded": 17876
         },
         "image": {
-          "ceiling": 72832,
-          "recorded": 70705
+          "ceiling": 53312,
+          "recorded": 51745
         }
       },
       "q31": {
@@ -195,12 +195,12 @@
           "recorded": 1544
         },
         "engine_text": {
-          "ceiling": 32512,
-          "recorded": 31520
+          "ceiling": 16128,
+          "recorded": 15600
         },
         "image": {
-          "ceiling": 67392,
-          "recorded": 65377
+          "ceiling": 51008,
+          "recorded": 49465
         }
       }
     }

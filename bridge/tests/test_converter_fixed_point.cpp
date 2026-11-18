@@ -43,8 +43,8 @@ namespace {
     // fixed-point path without fixed-point vectors of its own.
     template <direction D>
     void check_q31_parity(const profile& p) {
-        basic_converter<float, D>        cf(1, p);
-        basic_converter<std::int32_t, D> cq(1, p);
+        basic_converter<float, 1, D>        cf(p);
+        basic_converter<std::int32_t, 1, D> cq(p);
 
         const auto&               n_in = ratio_ref::k_input;
         std::vector<std::int32_t> xq(n_in.size());
@@ -79,11 +79,11 @@ namespace {
     // fit and subtract the fundamental, everything left is the residual.
     template <typename S, direction D>
     double measure_sine_snr_db(const profile& p, double freq_hz, double amp) {
-        basic_converter<S, D> c(1, p);
-        constexpr double      fs_in  = tap::sr::bridge::ratio_traits<D>::k_input_rate_hz;
-        constexpr double      fs_out = tap::sr::bridge::ratio_traits<D>::k_output_rate_hz;
-        const std::size_t     n_in   = 1 << 16;
-        std::vector<S>        x(n_in);
+        basic_converter<S, 1, D> c(p);
+        constexpr double         fs_in  = tap::sr::bridge::ratio_traits<D>::k_input_rate_hz;
+        constexpr double         fs_out = tap::sr::bridge::ratio_traits<D>::k_output_rate_hz;
+        const std::size_t        n_in   = 1 << 16;
+        std::vector<S>           x(n_in);
         for (std::size_t i = 0; i < n_in; ++i) {
             const double v = amp * std::sin(2.0 * std::numbers::pi * freq_hz / fs_in * static_cast<double>(i));
             if constexpr (std::is_floating_point_v<S>) {
@@ -141,10 +141,10 @@ namespace {
     // through Q15 keeps the second difference at the analytic bound for a
     // clean sine — wraparound would blow it up by orders of magnitude.
     TEST(FixedPoint, FullScaleSineDoesNotWrapQ15) {
-        basic_converter<std::int16_t, direction::down_to_44k1> c(1);
-        const std::size_t                                      n_in = 1 << 15;
-        const double                                           nu   = 1000.0 / 48000.0;
-        std::vector<std::int16_t>                              x(n_in);
+        basic_converter<std::int16_t, 1, direction::down_to_44k1> c;
+        const std::size_t                                         n_in = 1 << 15;
+        const double                                              nu   = 1000.0 / 48000.0;
+        std::vector<std::int16_t>                                 x(n_in);
         for (std::size_t i = 0; i < n_in; ++i) {
             x[i] = tap::dsp::detail::round_sat<std::int16_t>(
                 0.99 * 32767.0 * std::sin(2.0 * std::numbers::pi * nu * static_cast<double>(i)));
@@ -166,12 +166,12 @@ namespace {
     // EVERY phase of the superblock (after the fill transient).
     template <typename S, direction D>
     void check_dc_every_phase() {
-        basic_converter<S, D> c(1);
-        constexpr std::size_t l    = tap::sr::bridge::ratio_traits<D>::k_phases;
-        const std::size_t     n_in = c.taps() + 2 * l + 8;
-        std::vector<S>        x(n_in, std::numeric_limits<S>::max());
-        std::vector<S>        y(c.outputs_for(n_in));
-        const std::size_t     made = c.process(x.data(), n_in, y.data());
+        basic_converter<S, 1, D> c;
+        constexpr std::size_t    l    = tap::sr::bridge::ratio_traits<D>::k_phases;
+        const std::size_t        n_in = c.taps() + 2 * l + 8;
+        std::vector<S>           x(n_in, std::numeric_limits<S>::max());
+        std::vector<S>           y(c.outputs_for(n_in));
+        const std::size_t        made = c.process(x.data(), n_in, y.data());
         ASSERT_GT(made, c.outputs_for(c.taps()) + l);
         // After the window fills with full-scale DC, every subsequent output
         // (covering at least one full superblock: all L phases) sits within
@@ -205,10 +205,10 @@ namespace {
     template <typename S, direction D>
     void check_ties_round_half_up(S amplitude) {
         using tr = tap::dsp::sample_traits<S>;
-        basic_converter<S, D> c(1, profile::economy());
-        const std::size_t     taps = c.taps();
-        const std::size_t     n_in = taps + 4;
-        std::vector<S>        x(n_in, tr::silence());
+        basic_converter<S, 1, D> c(profile::economy());
+        const std::size_t        taps = c.taps();
+        const std::size_t        n_in = taps + 4;
+        std::vector<S>           x(n_in, tr::silence());
         x[0] = amplitude;
         std::vector<S> y(c.outputs_for(n_in));
         ASSERT_EQ(c.process(x.data(), n_in, y.data()), y.size());
@@ -250,13 +250,13 @@ namespace {
         for (std::size_t i = 0; i < x.size(); ++i) {
             x[i] = tap::dsp::detail::round_sat<std::int16_t>(static_cast<double>(ratio_ref::k_input[i]) * 32767.0);
         }
-        basic_converter<std::int16_t, direction::down_to_44k1> a(1);
-        std::vector<std::int16_t>                              ya(a.outputs_for(x.size()));
+        basic_converter<std::int16_t, 1, direction::down_to_44k1> a;
+        std::vector<std::int16_t>                                 ya(a.outputs_for(x.size()));
         a.process(x.data(), x.size(), ya.data());
 
-        basic_converter<std::int16_t, direction::down_to_44k1> b(1);
-        std::size_t                                            fed  = 0;
-        std::size_t                                            call = 0;
+        basic_converter<std::int16_t, 1, direction::down_to_44k1> b;
+        std::size_t                                               fed  = 0;
+        std::size_t                                               call = 0;
         auto pop = [&](std::int16_t* dst, std::size_t max_frames) noexcept -> std::size_t {
             const std::size_t dribble = 1 + (call++ % 3);
             std::size_t       n       = 0;

@@ -94,12 +94,12 @@ namespace {
 
     template <class S, direction D>
     void hash_one(const char* profile_name, const profile& p) {
-        basic_converter<S, D> conv(k_channels, p);
-        const double          fs = D == direction::up_to_48k ? 44100.0 : 48000.0;
-        const std::vector<S>  x  = multitone<S>(fs);
-        std::vector<S>        y(static_cast<std::size_t>(conv.outputs_for(k_in_frames) + conv.flush_output_frames())
-                                * k_channels);
-        std::size_t           n = conv.process(x.data(), k_in_frames, y.data());
+        basic_converter<S, k_channels, D> conv(p);
+        const double                      fs = D == direction::up_to_48k ? 44100.0 : 48000.0;
+        const std::vector<S>              x  = multitone<S>(fs);
+        std::vector<S> y(static_cast<std::size_t>(conv.outputs_for(k_in_frames) + conv.flush_output_frames())
+                         * k_channels);
+        std::size_t    n = conv.process(x.data(), k_in_frames, y.data());
         n += conv.flush(y.data() + n * k_channels);
         y.resize(n * k_channels);
         ASSERT_GT(n, 0u);

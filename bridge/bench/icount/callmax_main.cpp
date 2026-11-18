@@ -50,7 +50,7 @@ namespace {
     constexpr std::size_t k_block = 32;
 
     template <typename S>
-    [[gnu::noinline]] std::size_t measured_process(tap::sr::bridge::basic_converter<S, k_dir>& c, const S* in,
+    [[gnu::noinline]] std::size_t measured_process(tap::sr::bridge::basic_converter<S, k_ch, k_dir>& c, const S* in,
                                                    S* out) noexcept {
         tap_sr_call_begin();
         const std::size_t made = c.process(in, k_block, out);
@@ -60,7 +60,7 @@ namespace {
 
     template <typename S>
     double run() {
-        tap::sr::bridge::basic_converter<S, k_dir> conv(k_ch, tap::sr::bridge::profile::economy());
+        tap::sr::bridge::basic_converter<S, k_ch, k_dir> conv(tap::sr::bridge::profile::economy());
 
         // 0.25 s of input, cycled block-aligned, as icount_main.cpp's stream.
         std::vector<S> input(12000 * k_ch);

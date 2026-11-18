@@ -6,8 +6,9 @@ recommended, K2 no default, K8 option (b), K10 four PRs, K11 deferred). Gate 0 r
 of line, `rational` does not pass on the M55 and M33 in any placement measured. The
 maintainer chose option 3 the same day: `rational`'s per-count blocks out of line in
 every stage, its three rises accepted (section 3, "Decided"). A13a (DspTap) is tap/DspTap#64;
-A13b (`rational`) is measured (2026-11-18), one M55 row split between the two builds and
-accepted with a midpoint baseline (section 3, "Decided").**
+A13b (`rational`, SampleRateTap#98) merged 2026-11-18, one M55 row split between the two
+builds and accepted with a midpoint baseline; A13c (`bridge`) is measured the same day, five
+M55 Q15 rows split about 2 % and accepted the same way (section 3, "Decided").**
 v1 (2026-11-13, 45a22a0) was adversarially audited the same day
 ([`CHANNELS_PLAN_AUDIT.md`](CHANNELS_PLAN_AUDIT.md): four independent reviewers, a
 skeptic per reviewer, 52 of 53 findings surviving). This version answers every surviving
@@ -415,6 +416,13 @@ states it.
   of the two builds (14,959,941, each within ±2.55 %), re-recorded at the midpoint, never with
   `--update` from one build. *Declined:* a baseline per build in the ratchet (exact, but
   infrastructure for all three engines), and searching further (each variant moved the split).
+- **Five rows, at A13c (decided by the maintainer 2026-11-18).** `bridge`'s M55 Q15 rows
+  `down_q15_eco`, `up_q15_eco`, `up_q15_se`, `callmax_down_q15` and `callmax_up_q15` count
+  1.9 … 2.3 % more without exceptions than with them: the exceptions build fell 2 … 4 % and the
+  other stayed at the reference (+0.11 % at most). The same kind of divergence as `rational`'s
+  row, in the same code until GCC's register allocation; each baseline is the midpoint of the
+  two builds (both within ±1.2 %), the M33's smaller splits (0.1 … 0.6 %) recorded from the
+  exceptions build (`bridge/PLAN.md` M7g).
 
 ## 4. The pull requests, in order
 

@@ -46,7 +46,7 @@ quantization, measurement instruments).
 ```cpp
 #include <tap/sr/bridge/ratio.h>
 
-tap::sr::bridge::converter_to_44k1 down(2);        // 48 -> 44.1, stereo, economy
+tap::sr::bridge::converter_to_44k1<2> down;        // 48 -> 44.1, stereo, economy
 // profiles: economy() (default, 18 kHz passband) | balanced() (19 kHz,
 // the pre-v0.3 default) | transparent() (120 dB pristine tier) |
 // super_economy() (16 kHz voice/comms tier — audible top-octave shelf)
@@ -57,14 +57,17 @@ std::vector<float> tail(down.flush_output_frames() * 2);
 down.flush(tail.data());
 ```
 
-Construction rejects zero channels and a profile the designer refuses
-(`std::invalid_argument`); `converter_to_44k1::validate(channels, profile)`
-is the same verdict as a `noexcept` `const char*` reason (nullptr when it
+The channel count is the type's (`converter_to_44k1<2>`: a compile-time
+constant of at least 1, with no default; zero fails to compile, the family's
+A13). Construction rejects a profile the designer refuses
+(`std::invalid_argument`); `converter_to_44k1<2>::validate(profile)` is the
+same verdict as a `noexcept` `const char*` reason (nullptr when it
 constructs), the family's error model (root README, "Errors") — what a
 build without exceptions calls before constructing.
 
-Direction is a compile-time type (`converter_to_48k` / `converter_to_44k1`,
-plus `_q15` / `_q31` fixed-point variants), and so is the rate scale: the
+Direction is a compile-time type (`converter_to_48k<Ch>` / `converter_to_44k1<Ch>`,
+plus `_q15` / `_q31` fixed-point variants; `basic_converter<S, Ch, D, K>`
+underneath), and so is the rate scale: the
 pair at 2× and 4× is `converter_to_96k` / `converter_to_88k2` and
 `converter_to_192k` / `converter_to_176k4` (with the same fixed-point
 variants), the same machine with every Hz times 2^K and the same profiles,
@@ -166,36 +169,46 @@ python3 scripts/icount.py --engine bridge --target m55 --build-dir build-m55 \
       --plugin libinsncount.so
 ```
 
+The channel count moved into the type at A13 (`docs/CHANNELS_PLAN.md`), and its gain is
+measured in instructions only: no cycle counts on hardware yet (K11, deferred to 0.7.0).
+Against the baselines before it, every row held gate 0's rule, the streaming sums fell on
+every target, and the engine `.text` fell 49 … 60 %. Five Cortex-M55 rows are gated at a
+midpoint: `down_q15_eco`, `up_q15_eco`, `up_q15_se`, `callmax_down_q15` and
+`callmax_up_q15` count about 2 % more without exceptions than with them, the code the same
+until GCC's register allocation (`PLAN.md`, M7g), so each baseline is the midpoint of the
+two builds' counts and both sit within ±1.2 % of it. Re-record those rows at the midpoint,
+never with `--update` from one build.
+
 <!-- ICOUNT:BEGIN -->
 Executed instructions per fixed workload (`bridge/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `bridge/bench/baselines.json`. A `callmax_` row is the worst single call instead of a total: the most instructions one call executes over that stream (`bench/icount/callmax_main.cpp`):
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `callmax_down_float` | 544,727 | 23,948 | 108,885 |
-| `callmax_down_q15` | 12,984 | 6,616 | 7,629 |
-| `callmax_up_float` | 416,124 | 19,183 | 81,626 |
-| `callmax_up_q15` | 11,011 | 6,037 | 6,209 |
-| `construct_down_q15_eco` | 136,279,322 | 4,260,534 | 24,941,141 |
-| `construct_up_q15_eco` | 104,011,630 | 3,470,962 | 20,108,264 |
-| `down_float_eco` | 1,720,707,553 | 73,794,800 | 304,636,182 |
-| `down_float_tr` | 5,473,297,976 | 214,977,684 | 944,365,072 |
-| `down_q15_eco` | 173,755,176 | 22,404,812 | 45,676,947 |
-| `down_q15_se` | 130,967,926 | 17,749,381 | 33,235,098 |
-| `down_q31_eco` | 244,985,862 | 96,697,327 | 45,622,550 |
-| `up_float_eco` | 1,231,730,349 | 55,451,902 | 220,214,287 |
-| `up_float_tr` | 3,110,380,470 | 126,303,581 | 533,810,335 |
-| `up_q15_eco` | 133,914,472 | 19,095,905 | 35,990,378 |
-| `up_q15_se` | 103,390,933 | 17,493,186 | 27,424,077 |
-| `up_q31_eco` | 184,954,171 | 72,647,042 | 36,007,820 |
+| `callmax_down_float` | 544,858 | 23,687 | 108,834 |
+| `callmax_down_q15` | 12,904 | 6,555 | 7,594 |
+| `callmax_up_float` | 416,269 | 18,827 | 81,575 |
+| `callmax_up_q15` | 10,934 | 5,862 | 6,169 |
+| `construct_down_q15_eco` | 136,278,807 | 4,259,966 | 24,938,675 |
+| `construct_up_q15_eco` | 104,011,144 | 3,470,314 | 20,103,575 |
+| `down_float_eco` | 1,720,700,517 | 72,960,268 | 304,480,111 |
+| `down_float_tr` | 5,473,027,607 | 213,941,893 | 944,034,530 |
+| `down_q15_eco` | 173,490,049 | 22,199,151 | 45,571,406 |
+| `down_q15_se` | 130,702,831 | 16,706,945 | 33,123,379 |
+| `down_q31_eco` | 244,091,594 | 96,803,300 | 45,467,724 |
+| `up_float_eco` | 1,231,719,777 | 54,398,609 | 220,063,952 |
+| `up_float_tr` | 3,110,077,618 | 125,024,952 | 533,608,001 |
+| `up_q15_eco` | 133,676,365 | 18,589,538 | 35,881,082 |
+| `up_q15_se` | 102,394,732 | 16,993,343 | 27,248,312 |
+| `up_q31_eco` | 184,167,773 | 72,774,401 | 35,849,684 |
 
 On the host, the float converter in 128-frame blocks at 2 and 12 channels (`bridge/bench/icount/host_main.cpp`): instructions executed by the streaming loop alone, counted under callgrind on x86-64 with GCC 13 (`scripts/icount.py --target host`), gated the same way:
 
 | Workload | x86-64 |
 |---|---:|
-| `down_float_12ch` | 593,181,679 |
-| `down_float_2ch` | 99,664,796 |
-| `up_float_12ch` | 470,621,528 |
-| `up_float_2ch` | 79,352,295 |
+| `down_float_12ch` | 586,852,336 |
+| `down_float_2ch` | 99,767,151 |
+| `up_float_12ch` | 464,083,929 |
+| `up_float_2ch` | 79,463,088 |
 <!-- ICOUNT:END -->
 
 ## Footprint
@@ -208,7 +221,6 @@ R = ceil(L / 2) stored rows, since the mirror half is not held; T taps from `tap
 held = R T c                  half phase table
      + (T + 64) ch s          history, 64 frames of append slack
      + 16 ch s                pull()'s pop scratch
-     + ch sizeof(std::vector)
 peak = max(held, R T c + 8 L T + 8 T + q 8 T)
        the design: the table, the double prototype, one double row,
        and the fixed-point quantizer's remainder (q = 1 for Q15 and Q31)
@@ -216,19 +228,20 @@ peak = max(held, R T c + 8 L T + 8 T + q 8 T)
 
 | profile | direction | T | f32 held | f32 peak | Q15 held | Q15 peak | Q31 held | Q31 peak |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| `super_economy` | 44k1 → 48k | 28 | 9,872 | 45,024 | 4,960 | 40,768 | 9,872 | 45,248 |
-| `super_economy` | 48k → 44k1 | 40 | 12,848 | 59,200 | 6,448 | 53,600 | 12,848 | 59,520 |
-| `economy` | 44k1 → 48k | 38 | 13,152 | 61,104 | 6,600 | 55,328 | 13,152 | 61,408 |
-| `economy` | 48k → 44k1 | 58 | 18,320 | 85,840 | 9,184 | 77,720 | 18,320 | 86,304 |
-| `balanced` | 44k1 → 48k | 44 | 15,120 | 70,752 | 7,584 | 64,064 | 15,120 | 71,104 |
-| `balanced` | 48k → 44k1 | 78 | 24,400 | 115,440 | 12,224 | 104,520 | 24,400 | 116,064 |
-| `transparent` | 44k1 → 48k | 96 | 32,176 | 154,368 | 16,112 | 139,776 | 32,176 | 155,136 |
-| `transparent` | 48k → 44k1 | 184 | 56,624 | 272,320 | 28,336 | 246,560 | 56,624 | 273,792 |
+| `super_economy` | 44k1 → 48k | 28 | 9,824 | 45,024 | 4,912 | 40,768 | 9,824 | 45,248 |
+| `super_economy` | 48k → 44k1 | 40 | 12,800 | 59,200 | 6,400 | 53,600 | 12,800 | 59,520 |
+| `economy` | 44k1 → 48k | 38 | 13,104 | 61,104 | 6,552 | 55,328 | 13,104 | 61,408 |
+| `economy` | 48k → 44k1 | 58 | 18,272 | 85,840 | 9,136 | 77,720 | 18,272 | 86,304 |
+| `balanced` | 44k1 → 48k | 44 | 15,072 | 70,752 | 7,536 | 64,064 | 15,072 | 71,104 |
+| `balanced` | 48k → 44k1 | 78 | 24,352 | 115,440 | 12,176 | 104,520 | 24,352 | 116,064 |
+| `transparent` | 44k1 → 48k | 96 | 32,128 | 154,368 | 16,064 | 139,776 | 32,128 | 155,136 |
+| `transparent` | 48k → 44k1 | 184 | 56,576 | 272,320 | 28,288 | 246,560 | 56,576 | 273,792 |
 
 The doubled and quadrupled rates (K = 1, 2) are the same machine and hold the same
-bytes. The figures are bytes on a 64-bit host, stereo; a 32-bit target holds
-`sizeof(std::vector)` (12 instead of 24) less per history vector and nothing else
-changes. `tests/test_footprint.cpp` pins each formula against DspTap's heap meter
+bytes. The figures are bytes, stereo, and the formula has no pointer-sized term:
+since A13 the histories are a `std::array` of `ch` vectors in the object (K6), where
+before them an outer vector held them (`ch sizeof(std::vector)` more), so a 32-bit
+target holds the same. `tests/test_footprint.cpp` pins each formula against DspTap's heap meter
 (`tap/dsp/analysis/heap_meter.h`) exactly, on the hosted legs (not under ASan or TSan, whose runtime owns the allocator) and on Hexagon
 (32-bit), and checks that processing allocates nothing. On Windows x64 the allocator asks for more than the formula: MSVC's `std::allocator` pads every
 request of 4096 bytes or more by 39 bytes to align it to 32 bytes, and the test counts each
@@ -263,24 +276,24 @@ same PR, with the reason.
 <!-- ceilings:begin (scripts/ceilings.py docs; do not edit by hand) -->
 | target | format | engine `.text` (bytes) | ceiling | engine `.rodata` (bytes) | ceiling | image (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|--:|--:|
-| m33 | f32 | 31,080 | 32,064 | 1,544 | 1,600 | 65,097 | 67,072 |
-| m33 | q15 | 32,688 | 33,728 | 1,544 | 1,600 | 66,897 | 68,928 |
-| m33 | q31 | 31,876 | 32,896 | 1,544 | 1,600 | 66,089 | 68,096 |
-| m55 | f32 | 28,136 | 28,992 | 1,544 | 1,600 | 61,689 | 63,552 |
-| m55 | q15 | 36,840 | 37,952 | 1,544 | 1,600 | 70,705 | 72,832 |
-| m55 | q31 | 31,520 | 32,512 | 1,544 | 1,600 | 65,377 | 67,392 |
-| hexagon | f32 | 93,212 | 96,064 | 1,228 | 1,280 | 369,520 | 380,608 |
-| hexagon | q15 | 97,712 | 100,672 | 1,228 | 1,280 | 374,608 | 385,856 |
-| hexagon | q31 | 97,284 | 100,224 | 1,228 | 1,280 | 374,192 | 385,472 |
+| m33 | f32 | 15,164 | 15,680 | 1,544 | 1,600 | 49,185 | 50,688 |
+| m33 | q15 | 16,620 | 17,152 | 1,544 | 1,600 | 50,825 | 52,352 |
+| m33 | q31 | 16,264 | 16,768 | 1,544 | 1,600 | 50,473 | 52,032 |
+| m55 | f32 | 12,776 | 13,184 | 1,544 | 1,600 | 46,345 | 47,744 |
+| m55 | q15 | 17,876 | 18,432 | 1,544 | 1,600 | 51,745 | 53,312 |
+| m55 | q31 | 15,600 | 16,128 | 1,544 | 1,600 | 49,465 | 51,008 |
+| hexagon | f32 | 38,088 | 39,232 | 1,228 | 1,280 | 314,240 | 323,712 |
+| hexagon | q15 | 40,052 | 41,280 | 1,228 | 1,280 | 316,832 | 326,400 |
+| hexagon | q31 | 39,440 | 40,640 | 1,228 | 1,280 | 316,128 | 325,632 |
 
 | M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|
-| `up` | f32 | 320 | 336 | 216 | 224 |
-| `up` | q15 | 288 | 304 | 268 | 280 |
-| `up` | q31 | 272 | 288 | 172 | 184 |
-| `down` | f32 | 328 | 344 | 216 | 224 |
-| `down` | q15 | 288 | 304 | 268 | 280 |
-| `down` | q31 | 272 | 288 | 172 | 184 |
+| `up` | f32 | 192 | 200 | 192 | 200 |
+| `up` | q15 | 176 | 184 | 156 | 168 |
+| `up` | q31 | 168 | 176 | 164 | 176 |
+| `down` | f32 | 192 | 200 | 192 | 200 |
+| `down` | q15 | 176 | 184 | 156 | 168 |
+| `down` | q31 | 168 | 176 | 156 | 168 |
 <!-- ceilings:end -->
 
 ## Non-finite input and denormals

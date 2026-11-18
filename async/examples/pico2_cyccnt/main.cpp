@@ -24,10 +24,10 @@
 // each process() of 32 input frames. Their QEMU M33 steady states, from the
 // committed baselines less their construct-only legs (2 s of stereo):
 //
-//   bridge down_q15_eco (48 -> 44.1)  (173,755,176 - 136,279,322) / 88,200
-//                                     = 424.9 insns per output frame
-//   bridge up_q15_eco   (44.1 -> 48)  (133,914,472 - 104,011,630) / 96,000
-//                                     = 311.5 insns per output frame
+//   bridge down_q15_eco (48 -> 44.1)  (173,490,049 - 136,278,807) / 88,200
+//                                     = 421.9 insns per output frame
+//   bridge up_q15_eco   (44.1 -> 48)  (133,676,365 - 104,011,144) / 96,000
+//                                     = 309.0 insns per output frame
 //
 // rational's construct leg is its chain's (down2_down2_q15_eco), so its
 // single-stage totals still carry their own construction; the firmware's
@@ -176,36 +176,12 @@ namespace {
     /// One synchronous engine (bridge or rational) streaming 32-frame input
     /// blocks through process(), timed per call. The cost is stated per output
     /// frame and as one stream's share of the core at the engine's output rate.
-    /// An engine whose type carries its channel count (rational since A13) is
-    /// checked and built from the profile alone; one that takes the count at
-    /// run time (bridge until its A13 change) from the count.
+    /// Both engines carry their channel count in the type (A13), so the case
+    /// is checked and built from the profile alone.
     template <typename Engine>
-    constexpr bool kCountInType = requires { Engine::channels(); };
-
-    template <typename Engine>
-    const char* validateFor(std::size_t channels) {
-        if constexpr (kCountInType<Engine>) {
-            return channels == Engine::channels() ? Engine::validate() : "channel count is not the type's";
-        }
-        else {
-            return Engine::validate(channels);
-        }
-    }
-
-    template <typename Engine>
-    std::unique_ptr<Engine> makeEngine(std::size_t channels) {
-        if constexpr (kCountInType<Engine>) {
-            static_cast<void>(channels);
-            return std::make_unique<Engine>();
-        }
-        else {
-            return std::make_unique<Engine>(channels);
-        }
-    }
-
-    template <typename Engine>
-    void runSyncCase(const char* engineName, const char* caseName, std::size_t channels, double outRateHz) {
-        if (const char* why = validateFor<Engine>(channels)) {
+    void runSyncCase(const char* engineName, const char* caseName, double outRateHz) {
+        constexpr std::size_t channels = Engine::channels();
+        if (const char* why = Engine::validate()) {
             std::printf("%-8s %-8s %3u  SKIP (%s)\n", engineName, caseName, static_cast<unsigned>(channels), why);
             return;
         }
@@ -216,7 +192,7 @@ namespace {
         const std::size_t outCap = (3 * kBlockFrames + 8) * channels;
 #if TAP_DSP_HAS_EXCEPTIONS
         try {
-            conv  = makeEngine<Engine>(channels);
+            conv  = std::make_unique<Engine>();
             input = sineBlock<std::int16_t>(kInputFrames * channels, 997.0, 0.5);
             out.resize(outCap);
         }
@@ -225,7 +201,7 @@ namespace {
             return;
         }
 #else
-        conv  = makeEngine<Engine>(channels);
+        conv  = std::make_unique<Engine>();
         input = sineBlock<std::int16_t>(kInputFrames * channels, 997.0, 0.5);
         out.resize(outCap);
 #endif
@@ -307,13 +283,13 @@ int main() {
     std::printf("\n%-8s %-8s %3s  %10s %10s %10s %10s %9s\n", "engine", "case", "ch", "mean/call", "p99/call",
                 "max/call", "cyc/out", "%core");
     using tap::sr::bridge::direction;
-    runSyncCase<tap::sr::bridge::basic_converter<std::int16_t, direction::down_to_44k1, 0>>("bridge", "48>44.1", 2,
-                                                                                            44100.0);
-    runSyncCase<tap::sr::bridge::basic_converter<std::int16_t, direction::up_to_48k, 0>>("bridge", "44.1>48", 2,
-                                                                                         48000.0);
-    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::up_2>>("rational", "up2", 2, 48000.0);
-    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::down_2>>("rational", "down2", 2, 24000.0);
-    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::ratio_2_3>>("rational", "2/3", 2, 32000.0);
+    runSyncCase<tap::sr::bridge::basic_converter<std::int16_t, 2, direction::down_to_44k1, 0>>("bridge", "48>44.1",
+                                                                                               44100.0);
+    runSyncCase<tap::sr::bridge::basic_converter<std::int16_t, 2, direction::up_to_48k, 0>>("bridge", "44.1>48",
+                                                                                            48000.0);
+    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::up_2>>("rational", "up2", 48000.0);
+    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::down_2>>("rational", "down2", 24000.0);
+    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::ratio_2_3>>("rational", "2/3", 32000.0);
 
     std::printf("TAP_SR_PICO2_DONE\n");
     while (true)

@@ -200,7 +200,11 @@ gated on shipping.
   (−2.9 % on the M55, −0.2 % on the M33, −0.4 % on Hexagon, −2.3 % on the host), the probes'
   engine `.text` −16 … −34 %; one M55 row (`ratio23_q15_eco`) 5 % apart between the builds
   with and without exceptions (GCC's register allocation, the code identical before it),
-  accepted by the maintainer with its baseline at the midpoint of the two.*
+  accepted by the maintainer with its baseline at the midpoint of the two; merged as
+  SampleRateTap#98. A13c (`bridge`) measured the same day: every checksum equal, the streaming
+  sums down on every target (−1.1 % on the M55, −0.04 % on the M33, −0.07 % on Hexagon, −1.0 %
+  on the host), the engine `.text` −49 … −60 %; five M55 Q15 rows about 2 % apart between the
+  builds, accepted at the midpoint the same way.*
 
 ## 4. Block B (weeks 3–8): the hardware campaign
 

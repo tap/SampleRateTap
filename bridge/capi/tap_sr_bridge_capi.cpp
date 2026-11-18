@@ -5,10 +5,13 @@
 
 #include "tap_sr_bridge_capi.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include "tap/dsp/detail/expects.h"
 #include "tap/sr/bridge/ratio.h"
@@ -45,11 +48,11 @@ namespace {
                                                  : TAP_SR_BRIDGE_FORMAT_Q31;
     }
 
-    template <typename S, br::direction D>
+    template <typename S, br::direction D, std::size_t Ch>
     class converter_engine final : public engine {
       public:
-        converter_engine(unsigned channels, const br::profile& p)
-            : m_c(channels, p) {}
+        explicit converter_engine(const br::profile& p)
+            : m_c(p) {}
 
         int         format() const override { return format_of<S>(); }
         std::size_t process(const float* in, std::size_t n, float* out) override { return run(in, n, out); }
@@ -90,15 +93,130 @@ namespace {
             }
         }
 
-        br::basic_converter<S, D> m_c;
+        br::basic_converter<S, Ch, D> m_c;
     };
+
+    /// Any channel count but one and two (A13's K8, option (b)): that many
+    /// one-channel converters behind one handle, the interleaved input split
+    /// to each and their outputs interleaved back, a chunk at a time. Bit for
+    /// bit the converter type of that count, since its channels share only
+    /// the schedule (pinned by CApi.FanOutIsTheNativeConverterBitForBit).
+    template <typename S>
+    class fan_out_engine final : public engine {
+      public:
+        explicit fan_out_engine(std::vector<std::unique_ptr<engine>> monos)
+            : m_monos(std::move(monos))
+            , m_in(k_chunk)
+            , m_out(2 * k_chunk + 8)
+            , m_flush(static_cast<std::size_t>(m_monos.front()->flush_output_frames()) + 8) {}
+
+        int         format() const override { return m_monos.front()->format(); }
+        std::size_t process(const float* in, std::size_t n, float* out) override { return run(in, n, out); }
+        std::size_t process(const std::int16_t* in, std::size_t n, std::int16_t* out) override {
+            return run(in, n, out);
+        }
+        std::size_t process(const std::int32_t* in, std::size_t n, std::int32_t* out) override {
+            return run(in, n, out);
+        }
+        std::size_t   flush(float* out) override { return drain(out); }
+        std::size_t   flush(std::int16_t* out) override { return drain(out); }
+        std::size_t   flush(std::int32_t* out) override { return drain(out); }
+        std::uint64_t outputs_for(std::uint64_t n) const override { return m_monos.front()->outputs_for(n); }
+        std::uint64_t frames_needed(std::uint64_t k) const override { return m_monos.front()->frames_needed(k); }
+        std::uint64_t flush_output_frames() const override { return m_monos.front()->flush_output_frames(); }
+        void          reset() override {
+            for (auto& m : m_monos) {
+                m->reset();
+            }
+        }
+        double      latency_input_frames() const override { return m_monos.front()->latency_input_frames(); }
+        std::size_t taps() const override { return m_monos.front()->taps(); }
+
+      private:
+        /// Input frames staged per pass; at most 160/147 outputs per input, so
+        /// a chunk's outputs fit twice its length.
+        static constexpr std::size_t k_chunk = 256;
+
+        template <typename T>
+        std::size_t run(const T* in, std::size_t n, T* out) {
+            if constexpr (!std::is_same_v<T, S>) {
+                return 0; // another format's converter
+            }
+            else {
+                const std::size_t ch   = m_monos.size();
+                std::size_t       made = 0;
+                while (n > 0) {
+                    const std::size_t take     = std::min(n, k_chunk);
+                    std::size_t       produced = 0;
+                    for (std::size_t c = 0; c < ch; ++c) {
+                        for (std::size_t i = 0; i < take; ++i) {
+                            m_in[i] = in[i * ch + c];
+                        }
+                        produced = m_monos[c]->process(m_in.data(), take, m_out.data());
+                        for (std::size_t k = 0; k < produced; ++k) {
+                            out[(made + k) * ch + c] = m_out[k];
+                        }
+                    }
+                    made += produced;
+                    in += take * ch;
+                    n -= take;
+                }
+                return made;
+            }
+        }
+
+        template <typename T>
+        std::size_t drain(T* out) {
+            if constexpr (!std::is_same_v<T, S>) {
+                return 0;
+            }
+            else {
+                const std::size_t ch   = m_monos.size();
+                const auto        need = static_cast<std::size_t>(flush_output_frames());
+                if (need > m_flush.size()) {
+                    m_flush.resize(need); // end of stream, not the streaming path
+                }
+                std::size_t made = 0;
+                for (std::size_t c = 0; c < ch; ++c) {
+                    made = m_monos[c]->flush(m_flush.data());
+                    for (std::size_t k = 0; k < made; ++k) {
+                        out[k * ch + c] = m_flush[k];
+                    }
+                }
+                return made;
+            }
+        }
+
+        std::vector<std::unique_ptr<engine>> m_monos;
+        std::vector<S>                       m_in;
+        std::vector<S>                       m_out;
+        std::vector<S>                       m_flush;
+    };
+
+    /// The native one- and two-channel converters, and the fan-out for any
+    /// other count (K8, option (b)).
+    template <typename S, br::direction D>
+    std::unique_ptr<engine> make_direction(const br::profile& p, unsigned channels) {
+        if (channels == 1) {
+            return std::make_unique<converter_engine<S, D, 1>>(p);
+        }
+        if (channels == 2) {
+            return std::make_unique<converter_engine<S, D, 2>>(p);
+        }
+        std::vector<std::unique_ptr<engine>> monos;
+        monos.reserve(channels);
+        for (unsigned c = 0; c < channels; ++c) {
+            monos.push_back(std::make_unique<converter_engine<S, D, 1>>(p));
+        }
+        return std::make_unique<fan_out_engine<S>>(std::move(monos));
+    }
 
     template <typename S>
     std::unique_ptr<engine> make(int direction, const br::profile& p, unsigned channels) {
         if (direction == 0) {
-            return std::make_unique<converter_engine<S, br::direction::up_to_48k>>(channels, p);
+            return make_direction<S, br::direction::up_to_48k>(p, channels);
         }
-        return std::make_unique<converter_engine<S, br::direction::down_to_44k1>>(channels, p);
+        return make_direction<S, br::direction::down_to_44k1>(p, channels);
     }
 
 } // namespace
@@ -123,9 +241,8 @@ tap_sr_bridge_converter* tap_sr_bridge_create_format(int direction, int profile,
     // The constructor's own precheck (the profile's validity does not depend
     // on the sample format): a rejection is NULL here, never a throw — and,
     // built without exceptions, never a terminate.
-    const char* const why = direction == 0
-                                ? br::basic_converter<float, br::direction::up_to_48k>::validate(channels, p)
-                                : br::basic_converter<float, br::direction::down_to_44k1>::validate(channels, p);
+    const char* const why = direction == 0 ? br::basic_converter<float, 1, br::direction::up_to_48k>::validate(p)
+                                           : br::basic_converter<float, 1, br::direction::down_to_44k1>::validate(p);
     if (why != nullptr) {
         return nullptr;
     }
