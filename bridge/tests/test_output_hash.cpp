@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <limits>
 #include <numbers>
+#include <span>
 #include <type_traits>
 #include <vector>
 
@@ -101,17 +102,21 @@ namespace {
                          * k_channels);
         std::size_t    n = conv.process(x.data(), k_in_frames, y.data());
         n += conv.flush(y.data() + n * k_channels);
-        y.resize(n * k_channels);
         ASSERT_GT(n, 0u);
+        ASSERT_LE(n * k_channels, y.size());
+        // The frames written, read through a span: shrinking y with resize()
+        // let GCC 15 follow resize()'s growth path into a memset it judged
+        // out of bounds (-Warray-bounds, a false positive).
+        const std::span<const S> out(y.data(), n * k_channels);
 
         double energy = 0.0;
-        for (const S v : y) {
+        for (const S v : out) {
             energy += static_cast<double>(v) * static_cast<double>(v);
         }
         EXPECT_GT(energy, 0.0) << "silent output would hash stably";
 
         std::printf("[ measured ] hash %s/%s/%s %016llx\n", D == direction::up_to_48k ? "up" : "down", format_name<S>(),
-                    profile_name, static_cast<unsigned long long>(fnv1a64(y.data(), y.size() * sizeof(S))));
+                    profile_name, static_cast<unsigned long long>(fnv1a64(out.data(), out.size_bytes())));
     }
 
     void hash_profile(const char* profile_name, const profile& p) {
