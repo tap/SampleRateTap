@@ -82,7 +82,7 @@ jobs:
       # (examples/alsa_bridge.cpp, the roadmap's A11) and run its checks.
       - name: Install ALSA headers
         if: runner.os == 'Linux'
-        run: sudo apt-get update -q && sudo apt-get install -y -q libasound2-dev
+        run: scripts/apt_install.sh libasound2-dev
 
       - name: Configure
         env:
@@ -423,23 +423,29 @@ jobs:
       # The Arm toolchain is ~600 MB of .debs (libstdc++-arm-none-eabi-newlib
       # alone is 463 MB). A throttled apt mirror turned that into 40-minute
       # installs three times on 2026-09-30, cancelling jobs whose tests take
-      # 27 min; cached .debs make the install an index refresh.
+      # 27 min; cached .debs make the install an index refresh, and
+      # scripts/apt_install.sh bounds every download and moves to the next
+      # mirror when one is throttled (77 kB/s on 2026-11-18).
       - name: Runner image (for the package cache key)
         id: apt-image
-        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "family=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
       - name: Cache the Arm toolchain packages
         if: matrix.target != 'hexagon'
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/apt-archives
           key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
+          # A new runner image starts from the last image's .debs: apt reuses
+          # every one whose version is still the candidate and downloads the
+          # rest, instead of every job fetching all 600 MB at once.
+          restore-keys: apt-arm-toolchain-${{ steps.apt-image.outputs.family }}-
       - name: Install Arm toolchain and QEMU
         if: matrix.target != 'hexagon'
-        run: |
-          mkdir -p ~/apt-archives
-          sudo apt-get update -q
-          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi qemu-system-arm
-          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
+        run: >
+          scripts/apt_install.sh --archives "$HOME/apt-archives" --no-install-recommends
+          gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib qemu-system-arm
 
       - name: Cache Hexagon toolchain
         if: matrix.target == 'hexagon'
@@ -469,7 +475,7 @@ jobs:
           if [ -n "$qemu" ]; then
             echo "$(dirname "$qemu")" >> "$GITHUB_PATH"
           else
-            sudo apt-get update -q && sudo apt-get install -y -q qemu-user
+            scripts/apt_install.sh qemu-user
           fi
 
       - name: Record image and toolchain versions
@@ -577,21 +583,27 @@ jobs:
       # The Arm toolchain is ~600 MB of .debs (libstdc++-arm-none-eabi-newlib
       # alone is 463 MB). A throttled apt mirror turned that into 40-minute
       # installs three times on 2026-09-30, cancelling jobs whose tests take
-      # 27 min; cached .debs make the install an index refresh.
+      # 27 min; cached .debs make the install an index refresh, and
+      # scripts/apt_install.sh bounds every download and moves to the next
+      # mirror when one is throttled (77 kB/s on 2026-11-18).
       - name: Runner image (for the package cache key)
         id: apt-image
-        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "family=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
       - name: Cache the Arm toolchain packages
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/apt-archives
           key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
+          # A new runner image starts from the last image's .debs: apt reuses
+          # every one whose version is still the candidate and downloads the
+          # rest, instead of every job fetching all 600 MB at once.
+          restore-keys: apt-arm-toolchain-${{ steps.apt-image.outputs.family }}-
       - name: Install toolchains and QEMU
-        run: |
-          mkdir -p ~/apt-archives
-          sudo apt-get update -q
-          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi qemu-system-arm libglib2.0-dev ninja-build meson flex bison
-          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
+        run: >
+          scripts/apt_install.sh --archives "$HOME/apt-archives"
+          gcc-arm-none-eabi qemu-system-arm libglib2.0-dev ninja-build meson flex bison
 
       - name: Build counting plugin
         run: |
@@ -782,9 +794,7 @@ jobs:
           submodules: recursive
 
       - name: Install valgrind
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q valgrind ninja-build
+        run: scripts/apt_install.sh valgrind ninja-build
 
       # What produced the counts: the image, the compiler and the C library.
       - name: Record image and toolchain versions
@@ -910,21 +920,26 @@ jobs:
 
       # Same cached Arm toolchain as the QEMU and Pico jobs (and the same
       # key): the uncached 463 MB newlib .deb hit the 20-minute timeout on
-      # 2026-10-01 from the throttled mirror.
+      # 2026-10-01 from the throttled mirror (scripts/apt_install.sh now
+      # bounds each download and moves to the next mirror).
       - name: Runner image (for the package cache key)
         id: apt-image
-        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "family=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
       - name: Cache the Arm toolchain packages
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/apt-archives
           key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
+          # A new runner image starts from the last image's .debs: apt reuses
+          # every one whose version is still the candidate and downloads the
+          # rest, instead of every job fetching all 600 MB at once.
+          restore-keys: apt-arm-toolchain-${{ steps.apt-image.outputs.family }}-
       - name: Install dependencies
-        run: |
-          mkdir -p ~/apt-archives
-          sudo apt-get update -q
-          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" libsamplerate0-dev libsoxr-dev gcc-arm-none-eabi
-          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
+        run: >
+          scripts/apt_install.sh --archives "$HOME/apt-archives"
+          libsamplerate0-dev libsoxr-dev gcc-arm-none-eabi
 
       - name: Build host comparison bench
         run: >
@@ -965,21 +980,27 @@ jobs:
       # The Arm toolchain is ~600 MB of .debs (libstdc++-arm-none-eabi-newlib
       # alone is 463 MB). A throttled apt mirror turned that into 40-minute
       # installs three times on 2026-09-30, cancelling jobs whose tests take
-      # 27 min; cached .debs make the install an index refresh.
+      # 27 min; cached .debs make the install an index refresh, and
+      # scripts/apt_install.sh bounds every download and moves to the next
+      # mirror when one is throttled (77 kB/s on 2026-11-18).
       - name: Runner image (for the package cache key)
         id: apt-image
-        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "family=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
       - name: Cache the Arm toolchain packages
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/apt-archives
           key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
+          # A new runner image starts from the last image's .debs: apt reuses
+          # every one whose version is still the candidate and downloads the
+          # rest, instead of every job fetching all 600 MB at once.
+          restore-keys: apt-arm-toolchain-${{ steps.apt-image.outputs.family }}-
       - name: Install toolchain
-        run: |
-          mkdir -p ~/apt-archives
-          sudo apt-get update -q
-          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi
-          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
+        run: >
+          scripts/apt_install.sh --archives "$HOME/apt-archives" --no-install-recommends
+          gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
 
       - name: Build pico2_cyccnt
         run: >
@@ -1105,7 +1126,7 @@ jobs:
       # are its input); book-pages.yml publishes it from main.
       - name: API reference (Doxygen)
         run: |
-          sudo apt-get update -q && sudo apt-get install -y -q doxygen graphviz
+          scripts/apt_install.sh doxygen graphviz
           doxygen docs/Doxyfile
           test -s docs/html/index.html || { echo "::error::Doxygen produced no index.html"; exit 1; }
           n=$(find docs/html -name '*.html' | wc -l)
