@@ -1,6 +1,8 @@
 # <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icon-dark.svg"><img src=".github/icon-light.svg" width="40" height="40" alt="" align="top"></picture> SampleRateTap — the `tap::sr` sample-rate family
 
 [![CI](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml/badge.svg)](https://github.com/tap/SampleRateTap/actions/workflows/ci.yml)
+[![CI arm64](https://github.com/tap/SampleRateTap/actions/workflows/ci-arm64.yml/badge.svg)](https://github.com/tap/SampleRateTap/actions/workflows/ci-arm64.yml)
+[![Tap House Style](https://github.com/tap/SampleRateTap/actions/workflows/style.yml/badge.svg)](https://github.com/tap/SampleRateTap/actions/workflows/style.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 
