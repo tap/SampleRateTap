@@ -56,7 +56,7 @@ jobs:
           submodules: recursive
 
       - name: Install Doxygen + Graphviz
-        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+        run: scripts/apt_install.sh doxygen graphviz
 
       - name: Install mdBook (pinned)
         run: |

@@ -41,21 +41,24 @@ jobs:
 
       # The Arm toolchain is ~600 MB of .debs; a throttled apt mirror turned
       # the install into 40-minute jobs on 2026-09-30 (see ci.yml). Cached
-      # .debs make it an index refresh.
+      # .debs make it an index refresh; scripts/apt_install.sh bounds each
+      # download and moves to the next mirror when one is throttled.
       - name: Runner image (for the package cache key)
         id: apt-image
-        run: echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "os=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "family=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
       - name: Cache the Arm toolchain packages
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/apt-archives
           key: apt-arm-toolchain-${{ steps.apt-image.outputs.os }}-1
+          # A new image starts from the last image's .debs (see ci.yml).
+          restore-keys: apt-arm-toolchain-${{ steps.apt-image.outputs.family }}-
       - name: Install toolchains and QEMU
-        run: |
-          mkdir -p ~/apt-archives
-          sudo apt-get update -q
-          sudo apt-get install -y -q -o Dir::Cache::Archives="$HOME/apt-archives" gcc-arm-none-eabi qemu-system-arm libglib2.0-dev ninja-build meson flex bison
-          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives && rm -rf ~/apt-archives/partial ~/apt-archives/lock
+        run: >
+          scripts/apt_install.sh --archives "$HOME/apt-archives"
+          gcc-arm-none-eabi qemu-system-arm libglib2.0-dev ninja-build meson flex bison
 
       # What produced the counts: the runner image and the toolchain
       # packages (the counts move when either does). Harvested below.
