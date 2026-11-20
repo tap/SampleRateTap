@@ -58,15 +58,15 @@ namespace {
     }
 
 #define HB(tag, nc, p, d)                                                                                              \
-    {                                                                                                                  \
+    do {                                                                                                               \
         static constexpr auto cx = iir_cx::halfband<nc>(0.5 - (p) / (d));                                              \
         print_hb(tag, cx, iir_cx::halfband<nc, iir_cx::libm_policy>(0.5 - (p) / (d)));                                 \
-    }
+    } while (0)
 #define C2(tag, o, p, A, g)                                                                                            \
-    {                                                                                                                  \
+    do {                                                                                                               \
         static constexpr auto cx = iir_cx::cheby2<o>((p), (A), 0.01, (g));                                             \
         print_c2<o>(tag, cx, iir_cx::cheby2<o, iir_cx::libm_policy>((p), (A), 0.01, (g)));                             \
-    }
+    } while (0)
 
 } // namespace
 
@@ -74,37 +74,54 @@ int main() {
     constexpr double se = 1.0 / 3.0, ec = 3.0 / 8.0, ba = 19.0 / 48.0, tr = 5.0 / 12.0;
 #if IIR_CX_WHICH == 0
     // the nonlinear tables (the fewest coefficients per divisor, gen_designs.py)
-    HB("super_economy/1", 4, se, 1)
-    HB("super_economy/2", 2, se, 2) HB("super_economy/4", 2, se, 4) HB("super_economy/8", 1, se, 8)
-        HB("economy/1", 4, ec, 1) HB("economy/2", 2, ec, 2) HB("economy/4", 2, ec, 4) HB("economy/8", 1, ec, 8)
-            HB("balanced/1", 4, ba, 1) HB("balanced/2", 2, ba, 2) HB("balanced/4", 2, ba, 4) HB("balanced/8", 1, ba, 8)
-                HB("transparent/1", 8, tr, 1) HB("transparent/2", 4, tr, 2) HB("transparent/4", 3, tr, 4)
-                    HB("transparent/8", 2, tr, 8) C2("super_economy/3", 3, se, 70, k_grid)
-                        C2("super_economy/5", 5, se, 70, k_grid) C2("super_economy/7", 7, se, 70, k_grid)
-                            C2("super_economy/9", 9, se, 70, k_grid) C2("super_economy/11", 11, se, 70, k_grid)
-                                C2("economy/3", 3, ec, 70, k_grid) C2("economy/5", 5, ec, 70, k_grid)
-                                    C2("economy/7", 7, ec, 70, k_grid) C2("economy/9", 9, ec, 70, k_grid)
-                                        C2("economy/11", 11, ec, 70, k_grid) C2("balanced/3", 3, ba, 70, k_grid)
-                                            C2("balanced/5", 5, ba, 70, k_grid) C2("balanced/7", 7, ba, 70, k_grid)
-                                                C2("balanced/9", 9, ba, 70, k_grid)
-                                                    C2("balanced/11", 11, ba, 70, k_grid)
-                                                        C2("transparent/3", 3, tr, 120, k_grid)
-                                                            C2("transparent/5", 5, tr, 120, k_grid)
-                                                                C2("transparent/7", 7, tr, 120, k_grid)
-                                                                    C2("transparent/9", 9, tr, 120, k_grid)
-                                                                        C2("transparent/11", 11, tr, 120, k_grid)
+    HB("super_economy/1", 4, se, 1);
+    HB("super_economy/2", 2, se, 2);
+    HB("super_economy/4", 2, se, 4);
+    HB("super_economy/8", 1, se, 8);
+    HB("economy/1", 4, ec, 1);
+    HB("economy/2", 2, ec, 2);
+    HB("economy/4", 2, ec, 4);
+    HB("economy/8", 1, ec, 8);
+    HB("balanced/1", 4, ba, 1);
+    HB("balanced/2", 2, ba, 2);
+    HB("balanced/4", 2, ba, 4);
+    HB("balanced/8", 1, ba, 8);
+    HB("transparent/1", 8, tr, 1);
+    HB("transparent/2", 4, tr, 2);
+    HB("transparent/4", 3, tr, 4);
+    HB("transparent/8", 2, tr, 8);
+    C2("super_economy/3", 3, se, 70, k_grid);
+    C2("super_economy/5", 5, se, 70, k_grid);
+    C2("super_economy/7", 7, se, 70, k_grid);
+    C2("super_economy/9", 9, se, 70, k_grid);
+    C2("super_economy/11", 11, se, 70, k_grid);
+    C2("economy/3", 3, ec, 70, k_grid);
+    C2("economy/5", 5, ec, 70, k_grid);
+    C2("economy/7", 7, ec, 70, k_grid);
+    C2("economy/9", 9, ec, 70, k_grid);
+    C2("economy/11", 11, ec, 70, k_grid);
+    C2("balanced/3", 3, ba, 70, k_grid);
+    C2("balanced/5", 5, ba, 70, k_grid);
+    C2("balanced/7", 7, ba, 70, k_grid);
+    C2("balanced/9", 9, ba, 70, k_grid);
+    C2("balanced/11", 11, ba, 70, k_grid);
+    C2("transparent/3", 3, tr, 120, k_grid);
+    C2("transparent/5", 5, tr, 120, k_grid);
+    C2("transparent/7", 7, tr, 120, k_grid);
+    C2("transparent/9", 9, tr, 120, k_grid);
+    C2("transparent/11", 11, tr, 120, k_grid);
 #elif IIR_CX_WHICH == 1
-    HB("transparent/1", 8, tr, 1)
+    HB("transparent/1", 8, tr, 1);
 #elif IIR_CX_WHICH == 2
-    HB("economy/1", 4, ec, 1)
+    HB("economy/1", 4, ec, 1);
 #elif IIR_CX_WHICH == 3
-    C2("transparent/11", 11, tr, 120, k_grid)
+    C2("transparent/11", 11, tr, 120, k_grid);
 #elif IIR_CX_WHICH == 4
-    C2("economy/5", 5, ec, 70, k_grid)
+    C2("economy/5", 5, ec, 70, k_grid);
 #elif IIR_CX_WHICH == 5
-    C2("transparent/11-unity", 11, tr, 120, 0)
+    C2("transparent/11-unity", 11, tr, 120, 0);
 #endif
-                                                                            (void) se;
+    (void)se;
     (void)ec;
     (void)ba;
     (void)tr;
