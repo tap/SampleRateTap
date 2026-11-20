@@ -73,6 +73,7 @@ def write_header(out):
         "// spike's designs as doubles. Do not edit; regenerate.",
         "#pragma once",
         "",
+        "// clang-format off: generated tables, kept one array per line",
         "#include <array>",
         "#include <cstddef>",
         "#include <span>",
@@ -130,7 +131,7 @@ def write_header(out):
             g_rows.append(f'        {{"{name}", {order}, {e["stop_edge"]:.17g}, k_g_{tag}_sos}},')
     lines += ["", f"    inline constexpr nonlinear_design k_nonlinear[] = {{"] + nl_rows + ["    };"]
     lines += [f"    inline constexpr near_linear_design k_near_linear[] = {{"] + nr_rows + ["    };"]
-    lines += [f"    inline constexpr guard_design k_guard[] = {{"] + g_rows + ["    };", "", "} // namespace iir_spike", ""]
+    lines += [f"    inline constexpr guard_design k_guard[] = {{"] + g_rows + ["    };", "", "} // namespace iir_spike", "", "// clang-format on", ""]
     CPP.mkdir(exist_ok=True)
     (CPP / "designs.h").write_text("\n".join(lines))
 

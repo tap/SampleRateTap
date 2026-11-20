@@ -16,9 +16,9 @@ instructions per call (Hexagon: packets, as the ratchet counts them), per
 its text. Writes ../outputs/targets.json and ../outputs/targets.md.
 
 Needs on PATH: arm-none-eabi-gcc and qemu-system-arm; for Hexagon the
-toolchain's clang (HEXAGON_BIN, default the CI layout under /root/hexagon)
+toolchain's clang (HEXAGON_BIN, default under ~/hexagon, where ci.yml unpacks it)
 and a plugin-enabled qemu-hexagon (QEMU_HEXAGON, default
-/root/qemu-hexagon-plugins/qemu-hexagon, built as ci.yml's icount job does).
+~/qemu-hexagon-plugins/qemu-hexagon, built as ci.yml's icount job does).
 """
 import argparse
 import json
@@ -31,8 +31,11 @@ import subprocess
 HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parents[4]
 OUT = HERE.parent / "outputs"
-HEX_BIN = os.environ.get("HEXAGON_BIN", "/root/hexagon/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl/x86_64-linux-gnu/bin")
-QEMU_HEX = os.environ.get("QEMU_HEXAGON", "/root/qemu-hexagon-plugins/qemu-hexagon")
+HEX_BIN = os.environ.get(
+    "HEXAGON_BIN",
+    os.path.expanduser("~/hexagon/clang+llvm-19.1.5-cross-hexagon-unknown-linux-musl/x86_64-linux-gnu/bin"),
+)
+QEMU_HEX = os.environ.get("QEMU_HEXAGON", os.path.expanduser("~/qemu-hexagon-plugins/qemu-hexagon"))
 
 TARGETS = {
     "host": {"tc": None},

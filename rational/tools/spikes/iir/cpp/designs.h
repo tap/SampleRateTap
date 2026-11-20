@@ -4,6 +4,7 @@
 // spike's designs as doubles. Do not edit; regenerate.
 #pragma once
 
+// clang-format off: generated tables, kept one array per line
 #include <array>
 #include <cstddef>
 #include <span>
@@ -176,3 +177,5 @@ namespace iir_spike {
     };
 
 } // namespace iir_spike
+
+// clang-format on
