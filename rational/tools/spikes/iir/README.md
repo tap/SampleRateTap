@@ -1,7 +1,8 @@
 # IIR-0: the design spike for recursive stages in `rational`
 
-The first pull request of the IIR plan (`IIR_PLAN.md` v8, section 5 item 1, to move to
-`docs/IIR_PLAN.md` on approval): it **measures**, commits its programs and outputs as a durable record,
+The first pull request of the IIR plan ([`docs/IIR_PLAN.md`](../../../../docs/IIR_PLAN.md), the v8
+draft, section 5 item 1; its audit is [`docs/PLANS_AUDIT_2026-11.md`](../../../../docs/PLANS_AUDIT_2026-11.md),
+whose findings and gaps this spike answers): it **measures**, commits its programs and outputs as a durable record,
 and returns go/no-go verdicts. Nothing here ships, and nothing here is in a build CI runs: the
 library, its tests, baselines, ceilings and workflows are untouched. The notebook
 [`../../../notebooks/iir_spike.ipynb`](../../../notebooks/iir_spike.ipynb) redraws every result and is
