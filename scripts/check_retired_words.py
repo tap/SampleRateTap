@@ -7,7 +7,8 @@ Scans every git-tracked text file. Notebooks are scanned by source cell
 (their executed outputs are a record, not prose). Lines that carry a
 retired word in an allowed sense are listed in ALLOWED below, as regexes
 matched against the whole line; the files in HISTORY are records and are
-skipped entirely. Exit 1 on any hit, with file:line.
+skipped entirely (an entry ending in "/" skips the directory under it).
+Exit 1 on any hit, with file:line.
 
     python3 scripts/check_retired_words.py            # the whole tree
     python3 scripts/check_retired_words.py path ...   # a subset
@@ -31,6 +32,13 @@ HISTORY = (
     "async/PLAN.md",
     "bridge/PLAN.md",
     "rational/PLAN.md",
+    "docs/CHANNELS_PLAN.md",              # A13's plan, its audit and gate 0's probe: records
+    "docs/CHANNELS_PLAN_AUDIT.md",        # that spell rational's names before X0 (the probe
+    "docs/channels/multicount/CMakeLists.txt",  # compiles against the reference headers too)
+    "docs/X4_X8_PLAN.md",                 # X0's plan and its audit spell the names X-a1 retired
+    "docs/PLANS_AUDIT_2026-11.md",
+    "rational/tools/spikes/x4x8/",        # spikes measured against an older tree, kept as run
+    "rational/tools/spikes/iir/",
     "scripts/retired_words.txt",
     "scripts/check_retired_words.py",
     ".git-blame-ignore-revs",
@@ -42,7 +50,9 @@ ALLOWED = [
     r"r8brain|CDSPResampler|136 dB preset|24-bit preset|16-bit preset",  # another library's own presets
     r"VISIBILITY_PRESET|visibility preset",
     r"`preset` retired|preset retires|retired name|preset\b.*retired",  # the retirement itself, stated
+    r"ratio_[0-9]_[0-9]\.cpp",          # the charter's compile-fail fixtures: rejected ratios, not retired names
 ]
+HISTORY_DIRS = tuple(h for h in HISTORY if h.endswith("/"))
 TEXT_SUFFIXES = {".md", ".h", ".hpp", ".c", ".cpp", ".py", ".yml", ".yaml", ".txt", ".cmake", ".sh", ".ipynb", ".in", ".json"}
 
 
@@ -85,7 +95,8 @@ def main(argv):
     hits = 0
     for path in tracked_files(argv or ["."]):
         rel = path.relative_to(ROOT).as_posix()
-        if rel in HISTORY or rel.startswith("submodules/") or path.suffix not in TEXT_SUFFIXES:
+        if (rel in HISTORY or rel.startswith(HISTORY_DIRS) or rel.startswith("submodules/")
+                or path.suffix not in TEXT_SUFFIXES):
             continue
         if path.name == "CMakeLists.txt" or path.suffix in TEXT_SUFFIXES:
             for where, line in lines_of(path):
