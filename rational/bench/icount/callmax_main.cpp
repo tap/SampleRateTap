@@ -92,13 +92,13 @@ namespace {
 
 int main() {
 #if TAP_SR_RATIONAL_SC == 0
-    const double checksum = run<float, rat::up_2>();
+    const double checksum = run<float, rat::up2>();
 #elif TAP_SR_RATIONAL_SC == 1
-    const double checksum = run<float, rat::down_2>();
+    const double checksum = run<float, rat::down2>();
 #elif TAP_SR_RATIONAL_SC == 2
-    const double checksum = run<std::int16_t, rat::up_2>();
+    const double checksum = run<std::int16_t, rat::up2>();
 #else
-    const double checksum = run<std::int16_t, rat::down_2>();
+    const double checksum = run<std::int16_t, rat::down2>();
 #endif
     const bool ok = checksum == checksum; // NaN check
     // The marker line is part of the count; its format string's alignment is

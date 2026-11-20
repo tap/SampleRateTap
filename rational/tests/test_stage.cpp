@@ -75,7 +75,7 @@ namespace {
     // finalize_output(), so a stage that rounds ties the wrong way fails.
     // `ties` counts the products whose discarded bits were exactly one half.
     // The one path whose oracle is the shipping code: Q15 divided by a
-    // non-power-of-two G (down_3, down_6), the multiply-back whose
+    // non-power-of-two G (down3, down6), the multiply-back whose
     // deviation from the exact quotient near a boundary sample_traits.h
     // documents.
     template <typename S, rational_ratio R>
@@ -197,33 +197,33 @@ namespace {
     }
 
     TYPED_TEST(stage_test, ImpulseTiesRoundHalfUp) {
-        check_ties_round_half_up<TypeParam, up_2>(profile::economy());
-        check_ties_round_half_up<TypeParam, up_3>(profile::economy());
-        check_ties_round_half_up<TypeParam, ratio_3_2>(profile::economy());
-        check_ties_round_half_up<TypeParam, down_2>(profile::economy());     // Q15: divided by 2
-        check_ties_round_half_up<TypeParam, down_8>(profile::economy());     // Q15: divided by 8
-        check_ties_round_half_up<TypeParam, ratio_2_3>(profile::economy());  // Q15: rows at gain 2
-        check_ties_round_half_up<TypeParam, ratio_3_8>(profile::economy());  // Q15: rows at gain 4
-        check_ties_round_half_up<TypeParam, down_3>(profile::transparent()); // Q31 through finalize; Q15 multiply-back
+        check_ties_round_half_up<TypeParam, up2>(profile::economy());
+        check_ties_round_half_up<TypeParam, up3>(profile::economy());
+        check_ties_round_half_up<TypeParam, ratio3over2>(profile::economy());
+        check_ties_round_half_up<TypeParam, down2>(profile::economy());       // Q15: divided by 2
+        check_ties_round_half_up<TypeParam, down8>(profile::economy());       // Q15: divided by 8
+        check_ties_round_half_up<TypeParam, ratio2over3>(profile::economy()); // Q15: rows at gain 2
+        check_ties_round_half_up<TypeParam, ratio3over8>(profile::economy()); // Q15: rows at gain 4
+        check_ties_round_half_up<TypeParam, down3>(profile::transparent());   // Q31 through finalize; Q15 multiply-back
     }
 
     TYPED_TEST(stage_test, ImpulseReproducesTableEveryRatio) {
-        check_impulse_reproduces_table<TypeParam, up_2>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, down_2>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, up_3>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, down_3>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, up_6>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, down_6>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, up_8>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, down_8>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, ratio_3_2>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, ratio_2_3>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, ratio_4_3>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, ratio_3_4>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, ratio_8_3>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, ratio_3_8>(profile::economy());
-        check_impulse_reproduces_table<TypeParam, down_2>(profile::transparent());
-        check_impulse_reproduces_table<TypeParam, up_3>(profile::super_economy());
+        check_impulse_reproduces_table<TypeParam, up2>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, down2>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, up3>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, down3>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, up6>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, down6>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, up8>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, down8>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, ratio3over2>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, ratio2over3>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, ratio4over3>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, ratio3over4>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, ratio8over3>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, ratio3over8>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, down2>(profile::transparent());
+        check_impulse_reproduces_table<TypeParam, up3>(profile::super_economy());
     }
 
     // The table IS the design: going up the phases are design_stage's
@@ -234,8 +234,8 @@ namespace {
         using sample = TypeParam;
         using tr     = tap::dsp::sample_traits<sample>;
         {
-            basic_stage<sample, 1, up_3> c;
-            const std::vector<double>    h = design_stage<up_3>(profile::economy());
+            basic_stage<sample, 1, up3> c;
+            const std::vector<double>   h = design_stage<up3>(profile::economy());
             for (std::size_t p = 0; p < 3; ++p) {
                 for (std::size_t t = 0; t < c.row_length(); ++t) {
                     const std::size_t i = p + (c.row_length() - 1 - t) * 3;
@@ -250,8 +250,8 @@ namespace {
             }
         }
         if constexpr (tr::k_is_fixed_point) {
-            const auto                   unity = static_cast<std::int64_t>(tr::k_coeff_scale);
-            basic_stage<sample, 1, up_2> up;
+            const auto                  unity = static_cast<std::int64_t>(tr::k_coeff_scale);
+            basic_stage<sample, 1, up2> up;
             for (std::size_t p = 0; p < 2; ++p) {
                 std::int64_t sum = 0;
                 for (std::size_t t = 0; t < up.row_length(); ++t) {
@@ -259,17 +259,17 @@ namespace {
                 }
                 EXPECT_EQ(sum, unity) << "up phase " << p;
             }
-            basic_stage<sample, 1, ratio_2_3> mixed;
+            basic_stage<sample, 1, ratio2over3> mixed;
             for (std::size_t p = 0; p < 2; ++p) {
                 std::int64_t sum = 0;
                 for (std::size_t t = 0; t < mixed.row_length(); ++t) {
                     sum += mixed.coefficient(p, t);
                 }
-                EXPECT_EQ(sum, unity * static_cast<std::int64_t>(basic_stage<sample, 1, ratio_2_3>::k_table_gain))
+                EXPECT_EQ(sum, unity * static_cast<std::int64_t>(basic_stage<sample, 1, ratio2over3>::k_table_gain))
                     << "mixed phase " << p;
             }
-            basic_stage<sample, 1, down_3> down;
-            std::int64_t                   whole = 0;
+            basic_stage<sample, 1, down3> down;
+            std::int64_t                  whole = 0;
             for (std::size_t j = 0; j < 3; ++j) {
                 for (std::size_t t = 0; t < down.row_length(); ++t) {
                     whole += down.coefficient(j, t);
@@ -277,9 +277,9 @@ namespace {
             }
             // A Q15 decimator holds each branch at unity (its finalize
             // divides by M); the other formats hold the whole filter at it.
-            EXPECT_EQ(whole, unity * static_cast<std::int64_t>(basic_stage<sample, 1, down_3>::k_table_gain))
+            EXPECT_EQ(whole, unity * static_cast<std::int64_t>(basic_stage<sample, 1, down3>::k_table_gain))
                 << "decimator, all branches";
-            if constexpr (basic_stage<sample, 1, down_3>::k_branch_quantized) {
+            if constexpr (basic_stage<sample, 1, down3>::k_branch_quantized) {
                 for (std::size_t j = 0; j < 3; ++j) {
                     std::int64_t branch = 0;
                     for (std::size_t t = 0; t < down.row_length(); ++t) {
@@ -313,26 +313,26 @@ namespace {
 
     TYPED_TEST(golden_test, MatchesScipyEveryRatioEconomy) {
         using sample = TypeParam;
-        check_matches_scipy<sample, up_2>(rational_ref::k_up_2, profile::economy());
-        check_matches_scipy<sample, down_2>(rational_ref::k_down_2, profile::economy());
-        check_matches_scipy<sample, up_3>(rational_ref::k_up_3, profile::economy());
-        check_matches_scipy<sample, down_3>(rational_ref::k_down_3, profile::economy());
-        check_matches_scipy<sample, up_6>(rational_ref::k_up_6, profile::economy());
-        check_matches_scipy<sample, down_6>(rational_ref::k_down_6, profile::economy());
-        check_matches_scipy<sample, up_8>(rational_ref::k_up_8, profile::economy());
-        check_matches_scipy<sample, down_8>(rational_ref::k_down_8, profile::economy());
-        check_matches_scipy<sample, ratio_3_2>(rational_ref::k_ratio_3_2, profile::economy());
-        check_matches_scipy<sample, ratio_2_3>(rational_ref::k_ratio_2_3, profile::economy());
-        check_matches_scipy<sample, ratio_4_3>(rational_ref::k_ratio_4_3, profile::economy());
-        check_matches_scipy<sample, ratio_3_4>(rational_ref::k_ratio_3_4, profile::economy());
-        check_matches_scipy<sample, ratio_8_3>(rational_ref::k_ratio_8_3, profile::economy());
-        check_matches_scipy<sample, ratio_3_8>(rational_ref::k_ratio_3_8, profile::economy());
+        check_matches_scipy<sample, up2>(rational_ref::k_up2, profile::economy());
+        check_matches_scipy<sample, down2>(rational_ref::k_down2, profile::economy());
+        check_matches_scipy<sample, up3>(rational_ref::k_up3, profile::economy());
+        check_matches_scipy<sample, down3>(rational_ref::k_down3, profile::economy());
+        check_matches_scipy<sample, up6>(rational_ref::k_up6, profile::economy());
+        check_matches_scipy<sample, down6>(rational_ref::k_down6, profile::economy());
+        check_matches_scipy<sample, up8>(rational_ref::k_up8, profile::economy());
+        check_matches_scipy<sample, down8>(rational_ref::k_down8, profile::economy());
+        check_matches_scipy<sample, ratio3over2>(rational_ref::k_ratio3over2, profile::economy());
+        check_matches_scipy<sample, ratio2over3>(rational_ref::k_ratio2over3, profile::economy());
+        check_matches_scipy<sample, ratio4over3>(rational_ref::k_ratio4over3, profile::economy());
+        check_matches_scipy<sample, ratio3over4>(rational_ref::k_ratio3over4, profile::economy());
+        check_matches_scipy<sample, ratio8over3>(rational_ref::k_ratio8over3, profile::economy());
+        check_matches_scipy<sample, ratio3over8>(rational_ref::k_ratio3over8, profile::economy());
     }
 
     TYPED_TEST(golden_test, MatchesScipyHalfBandTransparent) {
         using sample = TypeParam;
-        check_matches_scipy<sample, up_2>(rational_ref::k_up_2_transparent, profile::transparent());
-        check_matches_scipy<sample, down_2>(rational_ref::k_down_2_transparent, profile::transparent());
+        check_matches_scipy<sample, up2>(rational_ref::k_up2_transparent, profile::transparent());
+        check_matches_scipy<sample, down2>(rational_ref::k_down2_transparent, profile::transparent());
     }
 
     // ------------------------------------------------------------------
@@ -433,15 +433,15 @@ namespace {
     }
 
     TEST(Stage, AccountingExactFromEveryPosition) {
-        check_accounting_from_every_position<up_2>();
-        check_accounting_from_every_position<down_2>();
-        check_accounting_from_every_position<up_3>();
-        check_accounting_from_every_position<down_3>();
-        check_accounting_from_every_position<down_8>();
-        check_accounting_from_every_position<ratio_3_2>();
-        check_accounting_from_every_position<ratio_2_3>();
-        check_accounting_from_every_position<ratio_3_8>();
-        check_accounting_from_every_position<ratio_8_3>();
+        check_accounting_from_every_position<up2>();
+        check_accounting_from_every_position<down2>();
+        check_accounting_from_every_position<up3>();
+        check_accounting_from_every_position<down3>();
+        check_accounting_from_every_position<down8>();
+        check_accounting_from_every_position<ratio3over2>();
+        check_accounting_from_every_position<ratio2over3>();
+        check_accounting_from_every_position<ratio3over8>();
+        check_accounting_from_every_position<ratio8over3>();
     }
 
     // ------------------------------------------------------------------
@@ -479,10 +479,10 @@ namespace {
         for (std::size_t i = 0; i < x.size(); ++i) {
             x[i] = to_sample<sample>(rational_ref::k_input[i]);
         }
-        check_chunking<sample, up_3>(x);
-        check_chunking<sample, down_3>(x);
-        check_chunking<sample, ratio_2_3>(x);
-        check_chunking<sample, ratio_8_3>(x);
+        check_chunking<sample, up3>(x);
+        check_chunking<sample, down3>(x);
+        check_chunking<sample, ratio2over3>(x);
+        check_chunking<sample, ratio8over3>(x);
     }
 
     template <rational_ratio R>
@@ -511,25 +511,25 @@ namespace {
     }
 
     TEST(Stage, PullMatchesProcessBitExact) {
-        check_pull_matches_process<up_2>();
-        check_pull_matches_process<down_2>();
-        check_pull_matches_process<down_3>();
-        check_pull_matches_process<ratio_3_2>();
-        check_pull_matches_process<ratio_2_3>();
-        check_pull_matches_process<ratio_3_8>();
+        check_pull_matches_process<up2>();
+        check_pull_matches_process<down2>();
+        check_pull_matches_process<down3>();
+        check_pull_matches_process<ratio3over2>();
+        check_pull_matches_process<ratio2over3>();
+        check_pull_matches_process<ratio3over8>();
     }
 
     TEST(Stage, PullShortReturnsOnDryThenResumes) {
-        const auto&             x = rational_ref::k_input;
-        converter<1, ratio_2_3> a;
-        std::vector<float>      ya(a.outputs_for(x.size()));
+        const auto&               x = rational_ref::k_input;
+        converter<1, ratio2over3> a;
+        std::vector<float>        ya(a.outputs_for(x.size()));
         a.process(x.data(), x.size(), ya.data());
 
-        converter<1, ratio_2_3> b;
-        std::vector<float>      yb(ya.size());
-        std::size_t             fed   = 0;
-        std::size_t             limit = 101;
-        auto                    pop   = [&](float* dst, std::size_t max_frames) noexcept -> std::size_t {
+        converter<1, ratio2over3> b;
+        std::vector<float>        yb(ya.size());
+        std::size_t               fed   = 0;
+        std::size_t               limit = 101;
+        auto                      pop   = [&](float* dst, std::size_t max_frames) noexcept -> std::size_t {
             std::size_t n = 0;
             while (n < max_frames && fed < limit) {
                 dst[n++] = x[fed++];
@@ -546,7 +546,7 @@ namespace {
     }
 
     // Both machines: the L-phase schedule (3/4) and the decimator's phase
-    // (down_3, left at phase 1 of 3 by 124 frames); the audit's F12.
+    // (down3, left at phase 1 of 3 by 124 frames); the audit's F12.
     template <typename S, rational_ratio R>
     void check_reset_reproduces(const std::vector<S>& x) {
         basic_stage<S, 1, R> c;
@@ -566,9 +566,9 @@ namespace {
         for (std::size_t i = 0; i < x.size(); ++i) {
             x[i] = to_sample<sample>(rational_ref::k_input[i]);
         }
-        check_reset_reproduces<sample, ratio_3_4>(x);
-        check_reset_reproduces<sample, down_3>(x);
-        check_reset_reproduces<sample, down_8>(x);
+        check_reset_reproduces<sample, ratio3over4>(x);
+        check_reset_reproduces<sample, down3>(x);
+        check_reset_reproduces<sample, down8>(x);
     }
 
     // ------------------------------------------------------------------
@@ -606,12 +606,12 @@ namespace {
     }
 
     TEST(Stage, FlushDrainsTailAndEqualsZeroPadding) {
-        check_flush<up_2>();
-        check_flush<down_2>();
-        check_flush<down_3>();
-        check_flush<ratio_3_2>();
-        check_flush<ratio_2_3>();
-        check_flush<ratio_3_8>();
+        check_flush<up2>();
+        check_flush<down2>();
+        check_flush<down3>();
+        check_flush<ratio3over2>();
+        check_flush<ratio2over3>();
+        check_flush<ratio3over8>();
     }
 
     // ------------------------------------------------------------------
@@ -652,18 +652,18 @@ namespace {
     }
 
     TEST(Stage, LatencyIsTheExactRationalAndMatchesTheImpulse) {
-        check_latency_by_impulse<up_2>();
-        check_latency_by_impulse<down_2>();
-        check_latency_by_impulse<up_3>();
-        check_latency_by_impulse<down_3>();
-        check_latency_by_impulse<up_8>();
-        check_latency_by_impulse<down_8>();
-        check_latency_by_impulse<ratio_3_2>();
-        check_latency_by_impulse<ratio_2_3>();
-        check_latency_by_impulse<ratio_4_3>();
-        check_latency_by_impulse<ratio_3_4>();
-        check_latency_by_impulse<ratio_8_3>();
-        check_latency_by_impulse<ratio_3_8>();
+        check_latency_by_impulse<up2>();
+        check_latency_by_impulse<down2>();
+        check_latency_by_impulse<up3>();
+        check_latency_by_impulse<down3>();
+        check_latency_by_impulse<up8>();
+        check_latency_by_impulse<down8>();
+        check_latency_by_impulse<ratio3over2>();
+        check_latency_by_impulse<ratio2over3>();
+        check_latency_by_impulse<ratio4over3>();
+        check_latency_by_impulse<ratio3over4>();
+        check_latency_by_impulse<ratio8over3>();
+        check_latency_by_impulse<ratio3over8>();
     }
 
     // ------------------------------------------------------------------
@@ -690,16 +690,16 @@ namespace {
                 }
             }
         };
-        basic_stage<sample, 1, up_2>      a;
-        basic_stage<sample, 1, down_3>    b;
-        basic_stage<sample, 1, ratio_2_3> d;
-        basic_stage<sample, 1, ratio_3_2> e;
-        basic_stage<sample, 1, down_8>    f;
-        check(a, "up_2");
-        check(b, "down_3");
-        check(d, "ratio_2_3");
-        check(e, "ratio_3_2");
-        check(f, "down_8");
+        basic_stage<sample, 1, up2>         a;
+        basic_stage<sample, 1, down3>       b;
+        basic_stage<sample, 1, ratio2over3> d;
+        basic_stage<sample, 1, ratio3over2> e;
+        basic_stage<sample, 1, down8>       f;
+        check(a, "up2");
+        check(b, "down3");
+        check(d, "ratio2over3");
+        check(e, "ratio3over2");
+        check(f, "down8");
     }
 
     // ------------------------------------------------------------------
@@ -707,25 +707,25 @@ namespace {
     // the design's nonzero count for every interpolator and decimator; a
     // mixed stage pays its T per output less the padding.
     TEST(Stage, MacsPerOutputAreTheNonzeroCounts) {
-        converter<1, up_2> u2;
+        converter<1, up2> u2;
         EXPECT_EQ(u2.macs_per_superblock(), 23u); // 2 m + 1, m = 11
         EXPECT_DOUBLE_EQ(u2.macs_per_output(), 11.5);
-        converter<1, down_2> d2;
+        converter<1, down2> d2;
         EXPECT_EQ(d2.macs_per_superblock(), 23u);
         EXPECT_DOUBLE_EQ(d2.macs_per_output(), 23.0); // of 43 taps: the half-band's half
-        converter<1, down_3> d3;
+        converter<1, down3> d3;
         EXPECT_EQ(d3.macs_per_superblock(), 45u); // 2 m (M - 1) + 1
-        converter<1, up_8> u8;
+        converter<1, up8> u8;
         EXPECT_EQ(u8.macs_per_superblock(), 169u); // 2 * 12 * 7 + 1
-        converter<1, down_8> d8;
+        converter<1, down8> d8;
         EXPECT_EQ(d8.macs_per_superblock(), 169u);
-        converter<1, ratio_2_3> m23;
+        converter<1, ratio2over3> m23;
         EXPECT_EQ(m23.macs_per_superblock(), 65u); // N over 2 phases: 33 + 32
         EXPECT_DOUBLE_EQ(m23.macs_per_output(), 32.5);
-        converter<1, ratio_3_8> m38;
+        converter<1, ratio3over8> m38;
         EXPECT_EQ(m38.macs_per_superblock(), 191u);
-        EXPECT_EQ(m38.row_length(), stage_taps_per_phase<ratio_3_8>(profile::economy()));
-        converter<1, up_2> tr(profile::transparent());
+        EXPECT_EQ(m38.row_length(), stage_taps_per_phase<ratio3over8>(profile::economy()));
+        converter<1, up2> tr(profile::transparent());
         EXPECT_EQ(tr.taps(), 123u);
         EXPECT_EQ(tr.macs_per_superblock(), 63u);
     }
@@ -756,9 +756,9 @@ namespace {
                 ASSERT_EQ(ys[2 * n + 1], yb[n]) << n;
             }
         };
-        run_pair(up_3{});
-        run_pair(down_3{});
-        run_pair(ratio_3_8{});
+        run_pair(up3{});
+        run_pair(down3{});
+        run_pair(ratio3over8{});
     }
 
     // ------------------------------------------------------------------
@@ -812,13 +812,13 @@ namespace {
     // else the text the constructor's exception carries. A build without
     // exceptions calls it first; this build checks the two agree.
     TEST(Stage, ValidateAgreesWithTheConstructor) {
-        using stage = basic_stage<float, 1, up_2>;
+        using stage = basic_stage<float, 1, up2>;
         static_assert(noexcept(stage::validate(profile::economy())));
         for (const profile& p :
              {profile::super_economy(), profile::economy(), profile::balanced(), profile::transparent()}) {
             EXPECT_EQ(stage::validate(p), nullptr);
-            EXPECT_EQ((basic_stage<std::int16_t, 2, ratio_2_3>::validate(p)), nullptr);
-            EXPECT_EQ((basic_stage<double, 4, down_8>::validate(p.relaxed({3, 2}))), nullptr);
+            EXPECT_EQ((basic_stage<std::int16_t, 2, ratio2over3>::validate(p)), nullptr);
+            EXPECT_EQ((basic_stage<double, 4, down8>::validate(p.relaxed({3, 2}))), nullptr);
         }
         profile bad       = profile::economy();
         bad.passband_frac = 0.5; // the lower rate's Nyquist: no transition band
@@ -833,7 +833,7 @@ namespace {
     // searches outlast the job on the Cortex-M33 and the per-test timeout
     // under qemu-hexagon).
     TEST(Stage, ValidateAgreesWithTheConstructorOnAnUnmeetableSpec) {
-        using stage              = basic_stage<float, 1, up_2>;
+        using stage              = basic_stage<float, 1, up2>;
         const profile unmeetable = {
             .passband_frac = 0.4999, .stopband_atten_db = 160.0, .taps_per_branch = {0, 0, 0, 0, 0}};
         EXPECT_STREQ(stage::validate(unmeetable), k_unmeetable_spec_reason);

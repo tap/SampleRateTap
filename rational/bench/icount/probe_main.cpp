@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 // The size and stack probes (README, "Footprint"; scripts/ceilings.py): the
-// by-2 pair in one format at the default profile (economy), stereo, an up_2
-// stage and a down_2 stage each streaming 32-frame blocks through process(). Bare-metal targets have no argv, so the
+// by-2 pair in one format at the default profile (economy), stereo, an up2
+// stage and a down2 stage each streaming 32-frame blocks through process(). Bare-metal targets have no argv, so the
 // format is chosen at compile time.
 //
 // TAP_SR_PROBE_TYPE:  0 = float, 1 = Q15, 2 = Q31
@@ -42,8 +42,8 @@ namespace {
 #endif
 
     constexpr std::size_t k_ch     = 2;
-    using up_stage                 = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::up_2>;
-    using down_stage               = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::down_2>;
+    using up_stage                 = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::up2>;
+    using down_stage               = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::down2>;
     constexpr std::size_t k_block  = 32;
     constexpr std::size_t k_blocks = 1500;
     constexpr std::size_t k_room   = 2 * k_block + 2; // outputs_for(n) <= floor(n L / M) + 2

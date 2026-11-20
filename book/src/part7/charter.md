@@ -148,11 +148,11 @@ compare it against a measured rate.
 
 ## The named vocabulary
 
-The header closes with aliases — `up_2`, `down_2`, `up_3`, … `ratio_3_8` —
-and nothing else. There is no `ratio_4_1` alias for a stage, because none
-ships; there is no `ratio_5_1`, because it would not compile. The aliases
+The header closes with aliases — `up2`, `down2`, `up3`, … `ratio3over8` —
+and nothing else. There is no `up4` alias for a stage, because none
+ships; there is no `up5`, because it would not compile. The aliases
 are the engine's public vocabulary, the C ABI's chain constants are spelled
-from them (`TAP_SR_RATIONAL_RATIO_2_3`, `TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2`),
+from them (`TAP_SR_RATIONAL_RATIO2OVER3`, `TAP_SR_RATIONAL_DOWN3_DOWN8_DOWN2`),
 and the coverage matrix two chapters from now is written entirely in them.
 
 A reader coming from the ASRC chapters may miss the `config` struct, the

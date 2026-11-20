@@ -103,24 +103,24 @@ RELAXED_ECONOMY = {1: {2: 11, 3: 11, 4: 11, 6: 12, 8: 12}, 2: {2: 7, 3: 5, 4: 5,
 # (chain.h), each stage's output cut to its streaming prefix before the
 # next, which is exactly what the C++ chain feeds forward.
 CHAINS = [  # tag, input frames (the prefix of k_input), [(L, M, divisor), ...]
-    ("chain_up_2_up_2", 96, [(2, 1, 1), (2, 1, 2)]),
-    ("chain_down_3_down_2", 480, [(1, 3, 2), (1, 2, 1)]),
-    ("chain_ratio_3_4_down_2", 480, [(3, 4, 2), (1, 2, 1)]),
-    ("chain_up_2_ratio_4_3", 96, [(2, 1, 1), (4, 3, 2)]),
-    ("chain_up_2_up_8_up_3", 96, [(2, 1, 1), (8, 1, 2), (3, 1, 16)]),
-    ("chain_down_3_down_8_down_2", 480, [(1, 3, 16), (1, 8, 2), (1, 2, 1)]),
-    ("chain_ratio_3_8_down_3", 480, [(3, 8, 3), (1, 3, 1)]),
+    ("chain_up2_up2", 96, [(2, 1, 1), (2, 1, 2)]),
+    ("chain_down3_down2", 480, [(1, 3, 2), (1, 2, 1)]),
+    ("chain_ratio3over4_down2", 480, [(3, 4, 2), (1, 2, 1)]),
+    ("chain_up2_ratio4over3", 96, [(2, 1, 1), (4, 3, 2)]),
+    ("chain_up2_up8_up3", 96, [(2, 1, 1), (8, 1, 2), (3, 1, 16)]),
+    ("chain_down3_down8_down2", 480, [(1, 3, 16), (1, 8, 2), (1, 2, 1)]),
+    ("chain_ratio3over8_down3", 480, [(3, 8, 3), (1, 3, 1)]),
 ]
 
 CASES = [  # tag, L, M, profile
-    ("up_2", 2, 1, "economy"), ("down_2", 1, 2, "economy"),
-    ("up_3", 3, 1, "economy"), ("down_3", 1, 3, "economy"),
-    ("up_6", 6, 1, "economy"), ("down_6", 1, 6, "economy"),
-    ("up_8", 8, 1, "economy"), ("down_8", 1, 8, "economy"),
-    ("ratio_3_2", 3, 2, "economy"), ("ratio_2_3", 2, 3, "economy"),
-    ("ratio_4_3", 4, 3, "economy"), ("ratio_3_4", 3, 4, "economy"),
-    ("ratio_8_3", 8, 3, "economy"), ("ratio_3_8", 3, 8, "economy"),
-    ("up_2_transparent", 2, 1, "transparent"), ("down_2_transparent", 1, 2, "transparent"),
+    ("up2", 2, 1, "economy"), ("down2", 1, 2, "economy"),
+    ("up3", 3, 1, "economy"), ("down3", 1, 3, "economy"),
+    ("up6", 6, 1, "economy"), ("down6", 1, 6, "economy"),
+    ("up8", 8, 1, "economy"), ("down8", 1, 8, "economy"),
+    ("ratio3over2", 3, 2, "economy"), ("ratio2over3", 2, 3, "economy"),
+    ("ratio4over3", 4, 3, "economy"), ("ratio3over4", 3, 4, "economy"),
+    ("ratio8over3", 8, 3, "economy"), ("ratio3over8", 3, 8, "economy"),
+    ("up2_transparent", 2, 1, "transparent"), ("down2_transparent", 1, 2, "transparent"),
 ]
 
 N_IN = 480  # divisible by every M of the vocabulary: whole superblocks

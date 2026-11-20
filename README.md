@@ -74,7 +74,7 @@ target_link_libraries(app PRIVATE tap::sr)           # all of them (the umbrella
 **Channel counts at compile time (A13, since 0.7.0; `docs/CHANNELS_PLAN.md`).**
 Every engine's channel count is a template argument of every type, a
 compile-time constant of at least 1: `async::converter<2>`,
-`bridge::converter_to_44k1<2>` and `rational::converter<2, down_2>` are
+`bridge::converter_to_44k1<2>` and `rational::converter<2, down2>` are
 stereo converters, and a count of zero does not compile. A program that
 learns its count at run time switches over the counts it serves
 (`async/examples/alsa_bridge.cpp`'s `--channels`). The C ABIs keep a run-time

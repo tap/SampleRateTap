@@ -468,7 +468,7 @@ def rows_header():
                 else:
                     fr = F(v, u)
                     L, M = fr.numerator, fr.denominator
-                    types.append(f"up_{L}" if M == 1 else f"down_{M}" if L == 1 else f"ratio_{L}_{M}")
+                    types.append(f"up{L}" if M == 1 else f"down{M}" if L == 1 else f"ratio{L}over{M}")
                     divs.append(f"d({dv.numerator}, {dv.denominator})")
             cells = []
             for prof in PROFILES:

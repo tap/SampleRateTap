@@ -154,34 +154,34 @@ namespace {
     }
 
     TEST(CApi, EveryChainEnumeratorIsItsNamedChain) {
-        expect_named<up_2>(TAP_SR_RATIONAL_UP_2, "up_2");
-        expect_named<down_2>(TAP_SR_RATIONAL_DOWN_2, "down_2");
-        expect_named<up_3>(TAP_SR_RATIONAL_UP_3, "up_3");
-        expect_named<down_3>(TAP_SR_RATIONAL_DOWN_3, "down_3");
-        expect_named<ratio_3_2>(TAP_SR_RATIONAL_RATIO_3_2, "ratio_3_2");
-        expect_named<ratio_2_3>(TAP_SR_RATIONAL_RATIO_2_3, "ratio_2_3");
-        expect_named<ratio_4_3>(TAP_SR_RATIONAL_RATIO_4_3, "ratio_4_3");
-        expect_named<ratio_3_4>(TAP_SR_RATIONAL_RATIO_3_4, "ratio_3_4");
-        expect_named<up_2, up_2>(TAP_SR_RATIONAL_UP_2_UP_2, "up_2_up_2");
-        expect_named<up_2, up_3>(TAP_SR_RATIONAL_UP_2_UP_3, "up_2_up_3");
-        expect_named<up_2, ratio_4_3, up_3>(TAP_SR_RATIONAL_UP_2_RATIO_4_3_UP_3, "up_2_ratio_4_3_up_3");
-        expect_named<up_3, ratio_8_3>(TAP_SR_RATIONAL_UP_3_RATIO_8_3, "up_3_ratio_8_3");
-        expect_named<up_2, up_6>(TAP_SR_RATIONAL_UP_2_UP_6, "up_2_up_6");
-        expect_named<up_2, up_8>(TAP_SR_RATIONAL_UP_2_UP_8, "up_2_up_8");
-        expect_named<up_2, up_6, up_2>(TAP_SR_RATIONAL_UP_2_UP_6_UP_2, "up_2_up_6_up_2");
-        expect_named<up_2, up_8, up_2>(TAP_SR_RATIONAL_UP_2_UP_8_UP_2, "up_2_up_8_up_2");
-        expect_named<up_2, up_8, up_3>(TAP_SR_RATIONAL_UP_2_UP_8_UP_3, "up_2_up_8_up_3");
-        expect_named<up_2, ratio_4_3>(TAP_SR_RATIONAL_UP_2_RATIO_4_3, "up_2_ratio_4_3");
-        expect_named<ratio_3_4, down_2>(TAP_SR_RATIONAL_RATIO_3_4_DOWN_2, "ratio_3_4_down_2");
-        expect_named<down_2, down_2>(TAP_SR_RATIONAL_DOWN_2_DOWN_2, "down_2_down_2");
-        expect_named<down_3, down_2>(TAP_SR_RATIONAL_DOWN_3_DOWN_2, "down_3_down_2");
-        expect_named<down_3, ratio_3_4, down_2>(TAP_SR_RATIONAL_DOWN_3_RATIO_3_4_DOWN_2, "down_3_ratio_3_4_down_2");
-        expect_named<ratio_3_8, down_3>(TAP_SR_RATIONAL_RATIO_3_8_DOWN_3, "ratio_3_8_down_3");
-        expect_named<down_6, down_2>(TAP_SR_RATIONAL_DOWN_6_DOWN_2, "down_6_down_2");
-        expect_named<down_8, down_2>(TAP_SR_RATIONAL_DOWN_8_DOWN_2, "down_8_down_2");
-        expect_named<down_2, down_6, down_2>(TAP_SR_RATIONAL_DOWN_2_DOWN_6_DOWN_2, "down_2_down_6_down_2");
-        expect_named<down_2, down_8, down_2>(TAP_SR_RATIONAL_DOWN_2_DOWN_8_DOWN_2, "down_2_down_8_down_2");
-        expect_named<down_3, down_8, down_2>(TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2, "down_3_down_8_down_2");
+        expect_named<up2>(TAP_SR_RATIONAL_UP2, "up2");
+        expect_named<down2>(TAP_SR_RATIONAL_DOWN2, "down2");
+        expect_named<up3>(TAP_SR_RATIONAL_UP3, "up3");
+        expect_named<down3>(TAP_SR_RATIONAL_DOWN3, "down3");
+        expect_named<ratio3over2>(TAP_SR_RATIONAL_RATIO3OVER2, "ratio3over2");
+        expect_named<ratio2over3>(TAP_SR_RATIONAL_RATIO2OVER3, "ratio2over3");
+        expect_named<ratio4over3>(TAP_SR_RATIONAL_RATIO4OVER3, "ratio4over3");
+        expect_named<ratio3over4>(TAP_SR_RATIONAL_RATIO3OVER4, "ratio3over4");
+        expect_named<up2, up2>(TAP_SR_RATIONAL_UP2_UP2, "up2_up2");
+        expect_named<up2, up3>(TAP_SR_RATIONAL_UP2_UP3, "up2_up3");
+        expect_named<up2, ratio4over3, up3>(TAP_SR_RATIONAL_UP2_RATIO4OVER3_UP3, "up2_ratio4over3_up3");
+        expect_named<up3, ratio8over3>(TAP_SR_RATIONAL_UP3_RATIO8OVER3, "up3_ratio8over3");
+        expect_named<up2, up6>(TAP_SR_RATIONAL_UP2_UP6, "up2_up6");
+        expect_named<up2, up8>(TAP_SR_RATIONAL_UP2_UP8, "up2_up8");
+        expect_named<up2, up6, up2>(TAP_SR_RATIONAL_UP2_UP6_UP2, "up2_up6_up2");
+        expect_named<up2, up8, up2>(TAP_SR_RATIONAL_UP2_UP8_UP2, "up2_up8_up2");
+        expect_named<up2, up8, up3>(TAP_SR_RATIONAL_UP2_UP8_UP3, "up2_up8_up3");
+        expect_named<up2, ratio4over3>(TAP_SR_RATIONAL_UP2_RATIO4OVER3, "up2_ratio4over3");
+        expect_named<ratio3over4, down2>(TAP_SR_RATIONAL_RATIO3OVER4_DOWN2, "ratio3over4_down2");
+        expect_named<down2, down2>(TAP_SR_RATIONAL_DOWN2_DOWN2, "down2_down2");
+        expect_named<down3, down2>(TAP_SR_RATIONAL_DOWN3_DOWN2, "down3_down2");
+        expect_named<down3, ratio3over4, down2>(TAP_SR_RATIONAL_DOWN3_RATIO3OVER4_DOWN2, "down3_ratio3over4_down2");
+        expect_named<ratio3over8, down3>(TAP_SR_RATIONAL_RATIO3OVER8_DOWN3, "ratio3over8_down3");
+        expect_named<down6, down2>(TAP_SR_RATIONAL_DOWN6_DOWN2, "down6_down2");
+        expect_named<down8, down2>(TAP_SR_RATIONAL_DOWN8_DOWN2, "down8_down2");
+        expect_named<down2, down6, down2>(TAP_SR_RATIONAL_DOWN2_DOWN6_DOWN2, "down2_down6_down2");
+        expect_named<down2, down8, down2>(TAP_SR_RATIONAL_DOWN2_DOWN8_DOWN2, "down2_down8_down2");
+        expect_named<down3, down8, down2>(TAP_SR_RATIONAL_DOWN3_DOWN8_DOWN2, "down3_down8_down2");
         EXPECT_EQ(TAP_SR_RATIONAL_CHAIN_COUNT, 28);
     }
 
@@ -190,9 +190,9 @@ namespace {
         const profile ps[]   = {profile::economy(), profile::transparent(), profile::balanced(),
                                 profile::super_economy()};
         for (std::size_t i = 0; i < 4; ++i) {
-            tap_sr_rational_converter* c = tap_sr_rational_create(TAP_SR_RATIONAL_DOWN_2, tags[i], 1);
+            tap_sr_rational_converter* c = tap_sr_rational_create(TAP_SR_RATIONAL_DOWN2, tags[i], 1);
             ASSERT_NE(c, nullptr);
-            EXPECT_EQ(tap_sr_rational_stage_taps(c, 0), (basic_stage<float, 1, down_2>(ps[i]).taps())) << i;
+            EXPECT_EQ(tap_sr_rational_stage_taps(c, 0), (basic_stage<float, 1, down2>(ps[i]).taps())) << i;
             tap_sr_rational_destroy(c);
         }
     }
@@ -212,16 +212,16 @@ namespace {
     }
 
     TEST(CApi, StageConstructorIsTheStageAtTheDivisor) {
-        expect_stage<up_2>(2, 1, 0, profile::economy(), exact_ratio{147, 160}); // 48 -> 88.2's up 2 after bridge
-        expect_stage<down_2>(1, 2, 1, profile::transparent(), exact_ratio{2, 1});
-        expect_stage<up_8>(8, 1, 0, profile::economy(), exact_ratio{2, 1});
-        expect_stage<ratio_3_4>(3, 4, 0, profile::economy(), exact_ratio{2, 1});
-        expect_stage<ratio_2_3>(2, 3, 2, profile::balanced(), exact_ratio{1, 1});
-        expect_stage<down_6>(1, 6, 3, profile::super_economy(), exact_ratio{9, 1}); // a searched divisor
-        expect_stage<ratio_3_4, std::int16_t>(3, 4, 0, profile::economy(), exact_ratio{2, 1});
-        expect_stage<down_6, std::int16_t>(1, 6, 0, profile::economy(), exact_ratio{1, 1});
-        expect_stage<up_8, std::int32_t>(8, 1, 1, profile::transparent(), exact_ratio{2, 1});
-        expect_stage<ratio_3_8, std::int32_t>(3, 8, 0, profile::economy(), exact_ratio{1, 1});
+        expect_stage<up2>(2, 1, 0, profile::economy(), exact_ratio{147, 160}); // 48 -> 88.2's up 2 after bridge
+        expect_stage<down2>(1, 2, 1, profile::transparent(), exact_ratio{2, 1});
+        expect_stage<up8>(8, 1, 0, profile::economy(), exact_ratio{2, 1});
+        expect_stage<ratio3over4>(3, 4, 0, profile::economy(), exact_ratio{2, 1});
+        expect_stage<ratio2over3>(2, 3, 2, profile::balanced(), exact_ratio{1, 1});
+        expect_stage<down6>(1, 6, 3, profile::super_economy(), exact_ratio{9, 1}); // a searched divisor
+        expect_stage<ratio3over4, std::int16_t>(3, 4, 0, profile::economy(), exact_ratio{2, 1});
+        expect_stage<down6, std::int16_t>(1, 6, 0, profile::economy(), exact_ratio{1, 1});
+        expect_stage<up8, std::int32_t>(8, 1, 1, profile::transparent(), exact_ratio{2, 1});
+        expect_stage<ratio3over8, std::int32_t>(3, 8, 0, profile::economy(), exact_ratio{1, 1});
         // create_stage is create_stage_format in float.
         tap_sr_rational_converter* c = tap_sr_rational_create_stage(2, 1, 0, 1, 1, 1);
         ASSERT_NE(c, nullptr);
@@ -308,13 +308,13 @@ namespace {
 
     template <typename S, std::size_t N>
     void expect_fan_out_at() {
-        expect_fan_out_chain<S, N, up_2>(TAP_SR_RATIONAL_UP_2, "up_2");
-        expect_fan_out_chain<S, N, ratio_2_3>(TAP_SR_RATIONAL_RATIO_2_3, "ratio_2_3");
-        expect_fan_out_chain<S, N, down_3, down_2>(TAP_SR_RATIONAL_DOWN_3_DOWN_2, "down_3_down_2");
+        expect_fan_out_chain<S, N, up2>(TAP_SR_RATIONAL_UP2, "up2");
+        expect_fan_out_chain<S, N, ratio2over3>(TAP_SR_RATIONAL_RATIO2OVER3, "ratio2over3");
+        expect_fan_out_chain<S, N, down3, down2>(TAP_SR_RATIONAL_DOWN3_DOWN2, "down3_down2");
         // The stage constructor: up 2 at the 147/160 divisor.
-        tap::dsp::chain<basic_stage<S, N, up_2>> ref(basic_stage<S, N, up_2>(profile::economy().relaxed({147, 160})));
+        tap::dsp::chain<basic_stage<S, N, up2>> ref(basic_stage<S, N, up2>(profile::economy().relaxed({147, 160})));
         expect_fan_out_is_native<S, N>(tap_sr_rational_create_stage_format(2, 1, 0, 147, 160, format_tag<S>(), N), ref,
-                                       "stage up_2 at 147/160");
+                                       "stage up2 at 147/160");
     }
 
     TEST(CApi, FanOutIsTheNativeConverterBitForBit) {

@@ -28,9 +28,9 @@ namespace {
 
     TEST(Ratio, TheCharterAcceptsTheVocabulary) {
         // Compile-time: every named ratio instantiates (PLAN.md section 1).
-        static_assert(up_2::k_up == 2 && up_2::k_down == 1);
-        static_assert(down_8::k_up == 1 && down_8::k_down == 8);
-        static_assert(ratio_3_8::k_up == 3 && ratio_3_8::k_down == 8);
+        static_assert(up2::k_up == 2 && up2::k_down == 1);
+        static_assert(down8::k_up == 1 && down8::k_down == 8);
+        static_assert(ratio3over8::k_up == 3 && ratio3over8::k_down == 8);
         static_assert(is_ratio<ratio<16, 1>>::value); // the 44.1 family's by-16 chain, named by it
         static_assert(is_ratio<ratio<4, 1>>::value);  // the by-4 chain (two half-bands, R3)
         static_assert(is_ratio<ratio<32, 1>>::value); // 12 -> 384 kHz
@@ -38,12 +38,12 @@ namespace {
         static_assert(is_ratio<ratio<1, 48>>::value);
         static_assert(is_ratio<ratio<9, 8>>::value); // 2^a 3^b with b = 2 is in the form (not among the 14 rates)
         static_assert(!is_ratio<int>::value);
-        static_assert(rational_ratio<up_3> && !rational_ratio<double>);
+        static_assert(rational_ratio<up3> && !rational_ratio<double>);
         SUCCEED();
     }
 
     TEST(Ratio, TraitsOfAnInterpolator) {
-        using t = ratio_traits<up_3>;
+        using t = ratio_traits<up3>;
         static_assert(t::k_up == 3 && t::k_down == 1);
         static_assert(t::k_is_up && t::k_is_interpolator && !t::k_is_decimator && !t::k_is_mixed);
         static_assert(t::k_band == 3);
@@ -54,7 +54,7 @@ namespace {
     }
 
     TEST(Ratio, TraitsOfADecimator) {
-        using t = ratio_traits<down_6>;
+        using t = ratio_traits<down6>;
         static_assert(!t::k_is_up && !t::k_is_interpolator && t::k_is_decimator && !t::k_is_mixed);
         static_assert(t::k_band == 6);
         static_assert(t::k_composite_factor == 1); // the filter runs at the input rate
@@ -65,16 +65,16 @@ namespace {
 
     TEST(Ratio, TraitsOfTheMixedRatios) {
         // 3/2 up: the lower rate is the input, the band is L = 3 at 3 f_in.
-        using u = ratio_traits<ratio_3_2>;
+        using u = ratio_traits<ratio3over2>;
         static_assert(u::k_is_up && u::k_is_mixed && u::k_band == 3 && u::k_composite_factor == 3);
         static_assert(u::k_lower_rate_num == 1 && u::k_lower_rate_den == 1);
         // 2/3 down: the lower rate is the output, 2/3 f_in; the composite
         // rate 2 f_in is 3 times it: an M-th band (R2).
-        using d = ratio_traits<ratio_2_3>;
+        using d = ratio_traits<ratio2over3>;
         static_assert(!d::k_is_up && d::k_is_mixed && d::k_band == 3 && d::k_composite_factor == 2);
         static_assert(d::k_lower_rate_num == 2 && d::k_lower_rate_den == 3);
         // 3/8 down (128 -> 48 kHz): band 8 at 3 f_in = 8 * (3/8 f_in).
-        using e = ratio_traits<ratio_3_8>;
+        using e = ratio_traits<ratio3over8>;
         static_assert(e::k_band == 8 && e::k_composite_factor == 3 && e::k_lower_rate_num == 3
                       && e::k_lower_rate_den == 8);
         static_assert(e::k_pow2_down == 3 && e::k_pow3_up == 1);

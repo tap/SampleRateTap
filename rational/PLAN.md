@@ -680,7 +680,7 @@ rational/
 │   │                       symmetry halving measured out after M6: section 6, the levers), the
 │   │                       schedule, process/pull/flush/reset, the exact-rational latency
 │   ├── chain.h             basic_chain<S, Ch, R...>: tap::dsp::chain over basic_stage, each stage at its design
-│   │                       divisor (3.1); the 20 named multi-stage chains of 3.3 / 3.4 (up_2_up_2 … down_3_down_8_down_2)
+│   │                       divisor (3.1); the 20 named multi-stage chains of 3.3 / 3.4 (up2_up2 … down3_down8_down2)
 │   └── converter.h         basic_converter<S, Ch, R> = basic_stage<S, Ch, R> under the family's converter name, with the
 │                           float / Q15 / Q31 aliases (converter<Ch, R>, converter_q15<Ch, R>, converter_q31<Ch, R>)
 ├── tests/                  test_ratio, test_design, test_stage, test_chain, test_matrix, test_fixed_point,
@@ -728,8 +728,8 @@ Six public headers (`tests/CMakeLists.txt:10-11` gains
 channels)`, where `chain` is an enumerator naming one of **the 28
 within-family chains** of 3.3/3.4 — the 26 of the 48 family and the two
 the 44.1 family adds (its 8/1 and 1/8), one enumerator per distinct chain
-(`TAP_SR_RATIONAL_UP_2`, `TAP_SR_RATIONAL_UP_2_UP_2`,
-`TAP_SR_RATIONAL_RATIO_2_3`, `TAP_SR_RATIONAL_DOWN_8_DOWN_2`, …; the set is
+(`TAP_SR_RATIONAL_UP2`, `TAP_SR_RATIONAL_UP2_UP2`,
+`TAP_SR_RATIONAL_RATIO2OVER3`, `TAP_SR_RATIONAL_DOWN8_DOWN2`, …; the set is
 the union of the two tables' chain columns: 8 one-stage, 20 multi-stage,
 the 20 `chain.h` names as types; v0.2 counted 34 before the union was
 taken) — a

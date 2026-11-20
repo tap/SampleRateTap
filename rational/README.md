@@ -50,7 +50,7 @@ sample-format traits, the dot kernels and the row-sum quantization).
 
 using namespace tap::sr::rational;
 
-converter<2, down_2> down;                 // 96 -> 48 kHz (any by-2), stereo, economy
+converter<2, down2> down;                  // 96 -> 48 kHz (any by-2), stereo, economy
 // profiles: economy() (default, 3/8 of the lower rate flat) | balanced() |
 // transparent() (120 dB) | super_economy()
 std::vector<float> out(down.outputs_for(n_in) * 2);
@@ -58,19 +58,19 @@ std::size_t made = down.process(in, n_in, out.data());   // noexcept, alloc-free
 std::vector<float> tail(down.flush_output_frames() * 2);
 down.flush(tail.data());                                 // end of stream
 
-converter<1, ratio_2_3> to_32k;            // 48 -> 32 kHz: one mixed stage, 32.5 MACs per output
+converter<1, ratio2over3> to_32k;          // 48 -> 32 kHz: one mixed stage, 32.5 MACs per output
 auto lat = to_32k.latency_output_frames(); // exact: {32, 3} output frames = 32 / 3
 
-down_3_down_8_down_2<float, 1> to_8k;      // 384 -> 8 kHz: the matrix's 1/48 chain, 373 MACs per output
+down3_down8_down2<float, 1> to_8k;         // 384 -> 8 kHz: the matrix's 1/48 chain, 373 MACs per output
 // each stage designed at its own rate: divisors 16, 2, 1 of the chain's lowest rate (PLAN.md 3.1)
 static_assert(to_8k.k_divisors[0] == tap::dsp::exact_ratio{16, 1});
-chain<2, up_2, ratio_4_3> to_32k_from_12k; // 12 -> 32 kHz: 8/3 as the matrix factors it, stereo
+chain<2, up2, ratio4over3> to_32k_from_12k; // 12 -> 32 kHz: 8/3 as the matrix factors it, stereo
 ```
 
 The ratio is a compile-time type (`ratio<L, M>`, L and M of the form
 2^a · 3^b in lowest terms: anything else fails to compile with the charter's
 message). The channel count is the type's too, the first template argument
-of the aliases (`converter<2, down_2>`, `chain<2, up_2, ratio_4_3>`) and the
+of the aliases (`converter<2, down2>`, `chain<2, up2, ratio4over3>`) and the
 second of `basic_stage<S, Ch, R>` / `basic_chain<S, Ch, R...>`: a
 compile-time constant of at least 1, never a constructor argument, and a
 count of zero fails to compile (A13, `docs/CHANNELS_PLAN.md`). Construction
@@ -110,9 +110,9 @@ chain's `validate` are the same verdict as a `noexcept` `const char*` reason
   relaxation tables of `design.h`); `chain<Ch, R...>` / `chain_q15` /
   `chain_q31`; `macs_per_output_exact()` the MACs per output as a reduced rational and
   `macs_per_output()` its double; and the 20 named multi-stage
-  chains of the coverage matrix (`up_2_up_2<S, Ch>` … `down_3_down_8_down_2<S, Ch>`).
+  chains of the coverage matrix (`up2_up2<S, Ch>` … `down3_down8_down2<S, Ch>`).
 - `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.7.0 since A13; 0.6.0 from the audit response, 0.5.0 from M6);
-  the named ratios of the vocabulary (`up_2` … `ratio_3_8`) are `ratio.h`'s.
+  the named ratios of the vocabulary (`up2` … `ratio3over8`) are `ratio.h`'s.
 
 Against the general-purpose resampler libraries at four ratios of the
 vocabulary — ↑2, ↓2, 3/2 and 2/3, against libsamplerate, soxr,
@@ -208,7 +208,7 @@ fixed-point profiles (`tap_sr_rational_process_q15` / `_q31` and the matching
 flush; a call in another format than the converter's returns 0 and touches
 nothing — the shape the siblings' ABIs share). `tap_sr_rational_create(chain, profile, channels)` takes
 one of the 28 named within-family chains of the coverage matrix as a
-constant (`TAP_SR_RATIONAL_UP_2` … `TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2`),
+constant (`TAP_SR_RATIONAL_UP2` … `TAP_SR_RATIONAL_DOWN3_DOWN8_DOWN2`),
 never a rate; `tap_sr_rational_create_stage(L, M, profile, divisor_num,
 divisor_den, channels)` is one stage of the vocabulary at a stated design
 divisor, what a chain through `bridge` composes. Each converter reports its
@@ -314,25 +314,25 @@ which C++ leaves unspecified, so the test reports it and does not pin it. Stages
 
 | stage | N | f32 held | f32 peak | Q15 held | Q15 peak | Q31 held | Q31 peak |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `up_2` | 43 | 992 | 1,336 | 496 | 840 | 992 | 1,336 |
-| `down_2` | 43 | 1,680 | 2,024 | 840 | 1,184 | 1,680 | 2,024 |
-| `up_3` | 65 | 1,080 | 1,600 | 540 | 1,060 | 1,080 | 1,600 |
-| `down_3` | 65 | 2,456 | 2,976 | 1,228 | 1,748 | 2,456 | 2,976 |
-| `up_6` | 143 | 1,408 | 2,552 | 704 | 1,864 | 1,408 | 2,552 |
-| `down_6` | 143 | 4,928 | 6,072 | 2,464 | 3,608 | 4,928 | 6,072 |
-| `up_8` | 191 | 1,600 | 3,128 | 800 | 2,344 | 1,600 | 3,128 |
-| `down_8` | 191 | 6,528 | 8,056 | 3,264 | 4,792 | 6,528 | 8,056 |
-| `ratio_3_2` | 65 | 1,080 | 1,600 | 540 | 1,060 | 1,080 | 1,600 |
-| `ratio_2_3` | 65 | 1,168 | 1,688 | 584 | 1,246 | 1,168 | 1,688 |
-| `ratio_4_3` | 87 | 1,168 | 1,864 | 584 | 1,280 | 1,168 | 1,864 |
-| `ratio_3_4` | 87 | 1,220 | 1,916 | 610 | 1,392 | 1,220 | 1,916 |
-| `ratio_8_3` | 191 | 1,600 | 3,128 | 800 | 2,344 | 1,600 | 3,128 |
-| `ratio_3_8` | 191 | 1,920 | 3,448 | 960 | 3,064 | 1,920 | 3,576 |
+| `up2` | 43 | 992 | 1,336 | 496 | 840 | 992 | 1,336 |
+| `down2` | 43 | 1,680 | 2,024 | 840 | 1,184 | 1,680 | 2,024 |
+| `up3` | 65 | 1,080 | 1,600 | 540 | 1,060 | 1,080 | 1,600 |
+| `down3` | 65 | 2,456 | 2,976 | 1,228 | 1,748 | 2,456 | 2,976 |
+| `up6` | 143 | 1,408 | 2,552 | 704 | 1,864 | 1,408 | 2,552 |
+| `down6` | 143 | 4,928 | 6,072 | 2,464 | 3,608 | 4,928 | 6,072 |
+| `up8` | 191 | 1,600 | 3,128 | 800 | 2,344 | 1,600 | 3,128 |
+| `down8` | 191 | 6,528 | 8,056 | 3,264 | 4,792 | 6,528 | 8,056 |
+| `ratio3over2` | 65 | 1,080 | 1,600 | 540 | 1,060 | 1,080 | 1,600 |
+| `ratio2over3` | 65 | 1,168 | 1,688 | 584 | 1,246 | 1,168 | 1,688 |
+| `ratio4over3` | 87 | 1,168 | 1,864 | 584 | 1,280 | 1,168 | 1,864 |
+| `ratio3over4` | 87 | 1,220 | 1,916 | 610 | 1,392 | 1,220 | 1,916 |
+| `ratio8over3` | 191 | 1,600 | 3,128 | 800 | 2,344 | 1,600 | 3,128 |
+| `ratio3over8` | 191 | 1,920 | 3,448 | 960 | 3,064 | 1,920 | 3,576 |
 
-Across the profiles a stage grows with its pins: `up_2` f32 stereo holds 928 / 992 /
+Across the profiles a stage grows with its pins: `up2` f32 stereo holds 928 / 992 /
 1,056 / 1,632 bytes at `super_economy` / `economy` / `balanced` / `transparent`, and
-`down_2` 1,584 / 1,680 / 1,776 / 2,640. The named chains hold 3.4 KB (`up_2_up_3`) to
-12.7 KB (`up_2_up_8_up_3`) at `economy`, f32 stereo, and up to 14.1 KB at
+`down2` 1,584 / 1,680 / 1,776 / 2,640. The named chains hold 3.4 KB (`up2_up3`) to
+12.7 KB (`up2_up8_up3`) at `economy`, f32 stereo, and up to 14.1 KB at
 `transparent`.
 
 The figures are bytes, and the formula has no pointer-sized term (the history is one
@@ -350,7 +350,7 @@ allocation through DspTap's model of that (`heap_meter::allocator_request`).
 The code a deployment links and the stack each call needs are gated beside the
 instruction counts, by `scripts/ceilings.py` against `bench/ceilings.json`, on one
 probe per format (`bench/icount/probe_main.cpp`): the by-2 pair at the default
-profile, stereo, an `up_2` stage and a `down_2` stage each streaming 32-frame blocks
+profile, stereo, an `up2` stage and a `down2` stage each streaming 32-frame blocks
 through `process()` (the `up` and `down` calls), built Release in the ratchet's tree.
 
 - **Engine `.text` and `.rodata`** are the probe's own translation unit, from its

@@ -31,9 +31,9 @@
 namespace {
 
 #if TAP_SR_RATIONAL_HC_DIR == 0
-    using converter = tap::sr::rational::converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::up_2>;
+    using converter = tap::sr::rational::converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::up2>;
 #else
-    using converter = tap::sr::rational::converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::down_2>;
+    using converter = tap::sr::rational::converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::down2>;
 #endif
 
     constexpr std::size_t k_ch     = TAP_SR_RATIONAL_HC_CH;

@@ -30,15 +30,15 @@ namespace {
     std::vector<double> design_stage_for_band(std::size_t band, const profile& p) {
         switch (band) {
         case 2:
-            return design_stage<up_2>(p);
+            return design_stage<up2>(p);
         case 3:
-            return design_stage<up_3>(p);
+            return design_stage<up3>(p);
         case 4:
             return design_stage<ratio<4, 1>>(p);
         case 6:
-            return design_stage<up_6>(p);
+            return design_stage<up6>(p);
         default:
-            return design_stage<up_8>(p);
+            return design_stage<up8>(p);
         }
     }
 
@@ -114,9 +114,9 @@ namespace {
             EXPECT_EQ(taps_per_branch_for(row.band, row.p), row.m) << "band " << row.band;
             EXPECT_EQ(tap::dsp::nyquist_length(row.band, row.m), row.n) << "band " << row.band;
         }
-        EXPECT_EQ(design_stage<up_2>(profile::economy()).size(), 43u);
-        EXPECT_EQ(design_stage<up_3>(profile::transparent()).size(), 149u);
-        EXPECT_EQ(design_stage<down_8>(profile::transparent()).size(), 399u);
+        EXPECT_EQ(design_stage<up2>(profile::economy()).size(), 43u);
+        EXPECT_EQ(design_stage<up3>(profile::transparent()).size(), 149u);
+        EXPECT_EQ(design_stage<down8>(profile::transparent()).size(), 399u);
         // The nonzero counts the plan states beside the lengths: 2m(L - 1) + 1.
         EXPECT_EQ(tap::dsp::nyquist_nonzero_taps(2, 11), 23u);
         EXPECT_EQ(tap::dsp::nyquist_nonzero_taps(3, 11), 45u);
@@ -172,20 +172,20 @@ namespace {
     // (the M2 table's last row): the MACs per output of a mixed stage.
     TEST(Design, MixedStagesTapsPerPhaseAreTheM2Table) {
         const profile eco = profile::economy(), tr = profile::transparent();
-        EXPECT_EQ(stage_taps_per_phase<ratio_3_2>(eco), 22u); // N = 65 over 3 phases
-        EXPECT_EQ(stage_taps_per_phase<ratio_2_3>(eco), 33u); // N = 65 over 2
-        EXPECT_EQ(stage_taps_per_phase<ratio_4_3>(eco), 22u); // N = 87 over 4
-        EXPECT_EQ(stage_taps_per_phase<ratio_3_4>(eco), 29u); // N = 87 over 3
-        EXPECT_EQ(stage_taps_per_phase<ratio_8_3>(eco), 24u); // N = 191 over 8
-        EXPECT_EQ(stage_taps_per_phase<ratio_3_8>(eco), 64u); // N = 191 over 3
-        EXPECT_EQ(stage_taps_per_phase<ratio_3_2>(tr), 50u);
-        EXPECT_EQ(stage_taps_per_phase<ratio_2_3>(tr), 75u);
-        EXPECT_EQ(stage_taps_per_phase<ratio_4_3>(tr), 50u);
-        EXPECT_EQ(stage_taps_per_phase<ratio_3_4>(tr), 67u);
-        EXPECT_EQ(stage_taps_per_phase<ratio_8_3>(tr), 50u);
-        EXPECT_EQ(stage_taps_per_phase<ratio_3_8>(tr), 133u);
-        EXPECT_EQ(stage_taps_per_phase<ratio_3_2>(profile::super_economy()), 16u);
-        EXPECT_EQ(stage_taps_per_phase<ratio_3_8>(profile::balanced()), 75u);
+        EXPECT_EQ(stage_taps_per_phase<ratio3over2>(eco), 22u); // N = 65 over 3 phases
+        EXPECT_EQ(stage_taps_per_phase<ratio2over3>(eco), 33u); // N = 65 over 2
+        EXPECT_EQ(stage_taps_per_phase<ratio4over3>(eco), 22u); // N = 87 over 4
+        EXPECT_EQ(stage_taps_per_phase<ratio3over4>(eco), 29u); // N = 87 over 3
+        EXPECT_EQ(stage_taps_per_phase<ratio8over3>(eco), 24u); // N = 191 over 8
+        EXPECT_EQ(stage_taps_per_phase<ratio3over8>(eco), 64u); // N = 191 over 3
+        EXPECT_EQ(stage_taps_per_phase<ratio3over2>(tr), 50u);
+        EXPECT_EQ(stage_taps_per_phase<ratio2over3>(tr), 75u);
+        EXPECT_EQ(stage_taps_per_phase<ratio4over3>(tr), 50u);
+        EXPECT_EQ(stage_taps_per_phase<ratio3over4>(tr), 67u);
+        EXPECT_EQ(stage_taps_per_phase<ratio8over3>(tr), 50u);
+        EXPECT_EQ(stage_taps_per_phase<ratio3over8>(tr), 133u);
+        EXPECT_EQ(stage_taps_per_phase<ratio3over2>(profile::super_economy()), 16u);
+        EXPECT_EQ(stage_taps_per_phase<ratio3over8>(profile::balanced()), 75u);
     }
 
     // A custom profile without pins is searched on the same grid, so it
@@ -194,22 +194,22 @@ namespace {
         profile custom         = profile::balanced();
         custom.taps_per_branch = {0, 0, 0, 0, 0};
         EXPECT_EQ(taps_per_branch_for(4, custom), 14u);
-        EXPECT_TRUE(design_stage<ratio_4_3>(custom) == design_stage<ratio_4_3>(profile::balanced()));
+        EXPECT_TRUE(design_stage<ratio4over3>(custom) == design_stage<ratio4over3>(profile::balanced()));
         profile unknown_band = profile::economy();
         EXPECT_EQ(unknown_band.pinned_taps_per_branch(5), 0u); // not a band of the vocabulary
     }
 
     TEST(Design, UpAndDownOfOneBandAreTheSamePrototype) {
         // The plan's M2 table relies on it: one pin serves both directions.
-        EXPECT_TRUE(design_stage<up_2>(profile::economy()) == design_stage<down_2>(profile::economy()));
-        EXPECT_TRUE(design_stage<up_3>(profile::transparent()) == design_stage<down_3>(profile::transparent()));
-        EXPECT_TRUE(design_stage<up_6>(profile::economy()) == design_stage<down_6>(profile::economy()));
+        EXPECT_TRUE(design_stage<up2>(profile::economy()) == design_stage<down2>(profile::economy()));
+        EXPECT_TRUE(design_stage<up3>(profile::transparent()) == design_stage<down3>(profile::transparent()));
+        EXPECT_TRUE(design_stage<up6>(profile::economy()) == design_stage<down6>(profile::economy()));
         // And a mixed ratio's band is its larger factor (R2): 2/3 and 3/2
         // are third-band designs at the same lower-rate fraction, so they
         // are the third-band design.
-        EXPECT_TRUE(design_stage<ratio_2_3>(profile::economy()) == design_stage<up_3>(profile::economy()));
-        EXPECT_TRUE(design_stage<ratio_3_2>(profile::economy()) == design_stage<up_3>(profile::economy()));
-        EXPECT_TRUE(design_stage<ratio_3_8>(profile::economy()) == design_stage<up_8>(profile::economy()));
+        EXPECT_TRUE(design_stage<ratio2over3>(profile::economy()) == design_stage<up3>(profile::economy()));
+        EXPECT_TRUE(design_stage<ratio3over2>(profile::economy()) == design_stage<up3>(profile::economy()));
+        EXPECT_TRUE(design_stage<ratio3over8>(profile::economy()) == design_stage<up8>(profile::economy()));
     }
 
     template <rational_ratio R>
@@ -240,43 +240,43 @@ namespace {
     }
 
     TEST(Design, EveryBandOfTheVocabularyMeetsTheSpecWithTheMargin) {
-        expect_nyquist_structure<up_2>(profile::economy());
-        expect_nyquist_structure<down_3>(profile::economy());
-        expect_nyquist_structure<up_6>(profile::economy());
-        expect_nyquist_structure<down_8>(profile::economy());
-        expect_nyquist_structure<ratio_4_3>(profile::economy()); // band 4: the mixed ratio's design
-        expect_nyquist_structure<down_2>(profile::super_economy());
-        expect_nyquist_structure<up_3>(profile::balanced());
+        expect_nyquist_structure<up2>(profile::economy());
+        expect_nyquist_structure<down3>(profile::economy());
+        expect_nyquist_structure<up6>(profile::economy());
+        expect_nyquist_structure<down8>(profile::economy());
+        expect_nyquist_structure<ratio4over3>(profile::economy()); // band 4: the mixed ratio's design
+        expect_nyquist_structure<down2>(profile::super_economy());
+        expect_nyquist_structure<up3>(profile::balanced());
     }
 
     TEST(Design, TransparentMeetsTheSpecWithTheMargin) {
-        expect_nyquist_structure<up_2>(profile::transparent());
-        expect_nyquist_structure<down_3>(profile::transparent());
+        expect_nyquist_structure<up2>(profile::transparent());
+        expect_nyquist_structure<down3>(profile::transparent());
     }
 
     TEST(Design, BadProfilesThrow) {
         profile p       = profile::economy();
         p.passband_frac = 0.5; // the lower rate's Nyquist: no transition band
-        TAP_SR_EXPECT_REJECTED((design_stage<up_2>(p)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((design_stage<up2>(p)), std::invalid_argument);
         p.passband_frac = 0.0;
-        TAP_SR_EXPECT_REJECTED((design_stage<up_2>(p)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((design_stage<up2>(p)), std::invalid_argument);
         p.passband_frac = -0.1;
-        TAP_SR_EXPECT_REJECTED((design_stage<up_2>(p)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((design_stage<up2>(p)), std::invalid_argument);
         profile q           = profile::economy();
         q.stopband_atten_db = 0.0;
-        TAP_SR_EXPECT_REJECTED((design_stage<up_2>(q)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((design_stage<up2>(q)), std::invalid_argument);
         q.stopband_atten_db = std::numeric_limits<double>::quiet_NaN();
-        TAP_SR_EXPECT_REJECTED((design_stage<up_2>(q)), std::invalid_argument);
+        TAP_SR_EXPECT_REJECTED((design_stage<up2>(q)), std::invalid_argument);
         // And the good ones do not.
-        TAP_SR_EXPECT_ACCEPTED((design_stage<up_2>(profile::economy())));
-        TAP_SR_EXPECT_ACCEPTED((design_stage<up_2>(profile::transparent())));
+        TAP_SR_EXPECT_ACCEPTED((design_stage<up2>(profile::economy())));
+        TAP_SR_EXPECT_ACCEPTED((design_stage<up2>(profile::transparent())));
         // validate() is the same verdict as a noexcept reason (A3): the text the
         // throw carries, or nullptr.
         static_assert(noexcept(validate(p)));
         EXPECT_NE(validate(p), nullptr);
         EXPECT_NE(validate(q), nullptr);
         EXPECT_EQ(validate(profile::economy()), nullptr);
-        TAP_SR_EXPECT_REJECTED_WITH((design_stage<up_2>(q)), std::invalid_argument, validate(q));
+        TAP_SR_EXPECT_REJECTED_WITH((design_stage<up2>(q)), std::invalid_argument, validate(q));
     }
 
     // A spec no length within the search bound meets (no pin: searched to
@@ -321,7 +321,7 @@ namespace {
     TEST(Design, UnmeetableSpecThrows) {
         const profile r = {.passband_frac = 0.4999, .stopband_atten_db = 160.0, .taps_per_branch = {0, 0, 0, 0, 0}};
         // One search, not two: the text is the throw's (the designer's reason).
-        TAP_SR_EXPECT_REJECTED_WITH((design_stage<up_2>(r)), std::runtime_error, k_unmeetable_spec_reason);
+        TAP_SR_EXPECT_REJECTED_WITH((design_stage<up2>(r)), std::runtime_error, k_unmeetable_spec_reason);
     }
 
 } // namespace
