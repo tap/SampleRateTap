@@ -47,9 +47,11 @@ decimators' per-branch quantization shipped (a Q15 decimator's table is its band
 table, the 1 / M in `tap::dsp::finalize_divided`; `basic_stage::k_table_gain` and
 `finalize_output()` state it; a Q15 mixed ratio going down holds its rows at a power-of-two
 gain the same way, so every Q15 stage of the vocabulary attains the 70 dB tier at its own rate; the
-relaxed designs a chain runs are measured separately, and the `economy` half-band relaxed to the
-147/160 divisor attains −67.6 dB, PLAN.md section 6), the sparse rows and the
-symmetry-halved table were declined on their numbers.
+relaxed designs a chain runs are measured separately, and since X17 every one of them attains it too,
+PLAN.md section 6), the sparse rows and the symmetry-halved table were declined on their numbers.
+Since X17 (`docs/X4_X8_PLAN.md`, PLAN.md section 6, "The designer's β, X17") every design takes
+its Kaiser β for A + 4 dB: every pin, table and count moved once, and the matrix's chains are
+v0.7's selection, frozen for that one pull request and regenerated in X-a3.
 
 ## The charter constraints (load-bearing)
 
@@ -62,9 +64,10 @@ symmetry-halved table were declined on their numbers.
   coverage matrix in PLAN.md documents chains; it dispatches nothing.
 - **Speed-first, like `bridge`.** The ratio is a compile-time type, so every trip count and
   schedule is a compile-time fact; the stage factoring is chosen by MACs on the measured lengths
-  (R3: ↑4 is two half-bands, never one 4th-band stage; on the pinned lengths a relaxed
-  half-band saturates at m = 7, so third-band and mixed stages win where the transition is wide,
-  PLAN.md 2.1 and the S1 ledger); every inaudible quality-vs-speed trade goes to speed in the
+  (R3: ↑4 is two half-bands, never one 4th-band stage; on v0.7's pins a relaxed half-band
+  stayed at m = 7, which X17 traced to the designer's β, not a floor of the Kaiser fit, so
+  third-band and mixed stages won where the transition is wide, PLAN.md 2.1 and the S1 ledger; the
+  selection is frozen at those chains until X-a3, PLAN.md 3.1); every inaudible quality-vs-speed trade goes to speed in the
   default `economy` profile. A chain's stages are each designed at their own rate: the design
   divisor (PLAN.md 3.1), computed by `chain.h` at compile time, with pinned lengths per divisor.
   Change the matrix only through the generator, then regenerate the rows header and the plan's
@@ -113,7 +116,8 @@ symmetry-halved table were declined on their numbers.
 (stopband A, passband edge as a fraction of the chain's lowest rate): 70 dB at 1/3, 3/8, 19/48
 and 120 dB at 5/12, which are `bridge`'s 16 / 18 / 19 / 20 kHz at 48 kHz. Each carries the
 pinned taps per branch m for the bands 2, 3, 4, 6, 8 (N = 2mB − 1; `design.h`'s table): a pin
-is the smallest m meeting the stopband with ≥ 1 dB margin on the 16384-point design grid, and
+is the smallest m whose design, its Kaiser β taken for A + 4 dB (X17, `k_design_beta_offset_db`),
+meets the stopband A with ≥ 1 dB margin on the 16384-point design grid, and
 the grid is part of the pin — the designer's 1024-point default under-pins two rows. Tests are typed over
 `float` / `int16_t` / `int32_t` from M3 with `double` as the oracle; measured numbers are stated
 in comments with their provenance.

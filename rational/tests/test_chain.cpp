@@ -106,20 +106,20 @@ namespace {
         const profile e2 = profile::economy().relaxed(exact_ratio{2, 1});
         EXPECT_DOUBLE_EQ(e2.passband_frac, 3.0 / 16.0);
         EXPECT_EQ(e2.stopband_atten_db, 70.0);
-        EXPECT_EQ(e2.pinned_taps_per_branch(2), 7u);
-        EXPECT_EQ(e2.pinned_taps_per_branch(3), 5u);
+        EXPECT_EQ(e2.pinned_taps_per_branch(2), 5u);
+        EXPECT_EQ(e2.pinned_taps_per_branch(3), 4u);
         EXPECT_TRUE(e2.relaxations.empty());
         const profile tb = profile::transparent().relaxed(exact_ratio{147, 160});
         EXPECT_DOUBLE_EQ(tb.passband_frac, 5.0 / 12.0 * 160.0 / 147.0);
-        EXPECT_EQ(tb.pinned_taps_per_branch(2), 45u);
-        EXPECT_EQ(tb.pinned_taps_per_branch(8), 46u);
+        EXPECT_EQ(tb.pinned_taps_per_branch(2), 44u);
+        EXPECT_EQ(tb.pinned_taps_per_branch(8), 44u);
         // A divisor without a row: no pins, the search.
         const profile e5 = profile::economy().relaxed(exact_ratio{5, 1});
         EXPECT_EQ(e5.pinned_taps_per_branch(2), 0u);
         EXPECT_DOUBLE_EQ(e5.passband_frac, 3.0 / 40.0);
         // relaxed(1) is the profile itself, pins and tables included.
         const profile e1 = profile::balanced().relaxed(exact_ratio{1, 1});
-        EXPECT_EQ(e1.pinned_taps_per_branch(4), 14u);
+        EXPECT_EQ(e1.pinned_taps_per_branch(4), 12u);
         EXPECT_EQ(e1.relaxations.size(), k_balanced_relaxations.size());
         // A custom profile relaxes to a search at the scaled passband.
         profile custom         = profile::economy();
@@ -423,17 +423,16 @@ namespace {
     }
 
     TEST(Chain, LatencyIsTheExactRationalSumAndMatchesTheImpulse) {
-        // Economy: up 2 (N = 43: 21 frames at 2 r) then up 8 at divisor 2
-        // (m = 4, N = 63: 31 at 16 r) then up 3 at divisor 16 (m = 3,
-        // N = 17: 8 at 48 r): 21 * 24 + 31 * 3 + 8 = 605... measured 629
-        // with the relaxation table's m (up 8 at 2: m = 5, N = 79: 39 at
-        // 16 r -> 39 * 3 = 117; 504 + 117 + 8 = 629).
-        check_latency_by_impulse<up2_up8_up3<float, 1>>(exact_ratio{629, 1}, 384000.0);
-        check_latency_by_impulse<down3_down8_down2<float, 1>>(exact_ratio{629, 48}, 8000.0);
-        check_latency_by_impulse<ratio3over8_down3<float, 1>>(exact_ratio{295, 24}, 11025.0);
-        check_latency_by_impulse<up3_ratio8over3<float, 1>>(exact_ratio{295, 3}, 88200.0);
-        check_latency_by_impulse<up2_up2<float, 1>>(exact_ratio{55, 1}, 32000.0);
-        check_latency_by_impulse<down2_down2<float, 1>>(exact_ratio{55, 4}, 8000.0);
+        // Economy, the relaxation tables' m (X17's pins): up 2 (m = 10,
+        // N = 39: 19 frames at 2 r) then up 8 at divisor 2 (m = 5, N = 79:
+        // 39 at 16 r) then up 3 at divisor 16 (m = 3, N = 17: 8 at 48 r):
+        // 19 * 24 + 39 * 3 + 8 = 456 + 117 + 8 = 581.
+        check_latency_by_impulse<up2_up8_up3<float, 1>>(exact_ratio{581, 1}, 384000.0);
+        check_latency_by_impulse<down3_down8_down2<float, 1>>(exact_ratio{581, 48}, 8000.0);
+        check_latency_by_impulse<ratio3over8_down3<float, 1>>(exact_ratio{271, 24}, 11025.0);
+        check_latency_by_impulse<up3_ratio8over3<float, 1>>(exact_ratio{271, 3}, 88200.0);
+        check_latency_by_impulse<up2_up2<float, 1>>(exact_ratio{47, 1}, 32000.0);
+        check_latency_by_impulse<down2_down2<float, 1>>(exact_ratio{47, 4}, 8000.0);
     }
 
     // ------------------------------------------------------------------
@@ -442,14 +441,14 @@ namespace {
     // every row, this pins the shape of the sum).
     TEST(Chain, MacsPerOutputIsTheStagesSumAtTheOutputRate) {
         up2_up8_up3<float, 1> up;
-        // 23/2 per output at 2 r (over 24 for the chain's rate) + (2 * 5 * 7 + 1) / 8 at 16 r (over 3) + (2 * 3 * 2 +
+        // 21/2 per output at 2 r (over 24 for the chain's rate) + (2 * 5 * 7 + 1) / 8 at 16 r (over 3) + (2 * 3 * 2 +
         // 1) / 3
-        EXPECT_EQ(up.macs_per_output_exact(), (exact_ratio{373, 48}));
-        EXPECT_DOUBLE_EQ(up.macs_per_output(), 373.0 / 48.0);
+        EXPECT_EQ(up.macs_per_output_exact(), (exact_ratio{371, 48}));
+        EXPECT_DOUBLE_EQ(up.macs_per_output(), 371.0 / 48.0);
         down3_down8_down2<float, 1> down;
-        EXPECT_EQ(down.macs_per_output_exact(), (exact_ratio{373, 1})); // 13 * 16 + 71 * 2 + 23
+        EXPECT_EQ(down.macs_per_output_exact(), (exact_ratio{371, 1})); // 13 * 16 + 71 * 2 + 21
         basic_chain<float, 1, up2> one;
-        EXPECT_EQ(one.macs_per_output_exact(), (exact_ratio{23, 2}));
+        EXPECT_EQ(one.macs_per_output_exact(), (exact_ratio{21, 2}));
         EXPECT_DOUBLE_EQ(one.macs_per_output(), (basic_stage<float, 1, up2>().macs_per_output()));
     }
 

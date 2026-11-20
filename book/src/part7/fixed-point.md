@@ -26,22 +26,25 @@ code at all.
   row-sum preservation, applied to the stored row (`FixedPoint.EveryRowSumsToExactUnityInBothFormats`). Consequence: full-scale DC of either sign
   comes out at exactly full scale from every phase
   (`FullScaleDcIsExactFromEveryPhase`), and ±full-scale noise lands within
-  8.8 × 10⁻⁴ (Q15) and 1.6 × 10⁻⁸ (Q31) of the clamped double model —
+  5.0 × 10⁻⁴ (Q15) and 1.5 × 10⁻⁸ (Q31) of the clamped double model —
   saturation, never a wrap.
 - **The tables are bit-pinned**: an FNV-1a-64 hash per (ratio, profile,
   format), 112 pins at M5. A change that moves a pin is a numeric change
   to the fixed-point datapath, by definition, and the plan says so.
 - **Q15 is format-limited and stated per stage.** At `economy` the
   attained stopband — the quantized Q1.14 table's worst response on the
-  16,384-point design grid — is between −70.0 and −72.3 dB, RMS deviation
-  from double −92 to −99 dBFS. At `transparent` it is −76 to −83 dB, not
+  16,384-point design grid — is between −70.6 and −73.9 dB, RMS deviation
+  from double −92 to −99 dBFS. At `transparent` it is −74 to −82 dB, not
   120: the outer taps of a long design round to zero in Q1.14 and are
-  trimmed, so Q15 MACs fall *below* float's (55 of 63 for ↑2). The 120 dB
+  trimmed, so Q15 MACs fall *below* float's (43 of 51 for ↑2). The 120 dB
   promise is float's and Q31's; at Q15, `economy` is the pairing, as
   `bridge`'s battery concluded before this engine existed.
 
-Those are the numbers after the two limits were lifted. Here is how they
-looked before, and what lifting them cost.
+Those are the numbers after the two limits were lifted, on the designs
+the designer's re-tuned β gives (X17, the nyquist chapter: every table
+moved once, and every relaxed Q15 design a chain runs now attains the
+70 dB tier too). Here is how they looked before the levers, on the designs
+of their day, and what lifting them cost.
 
 ## Limit one: a decimator's row is M times too small
 

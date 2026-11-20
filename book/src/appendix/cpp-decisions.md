@@ -826,8 +826,8 @@ are closed-form integer arithmetic from the current position. The rejected
 alternative, a `double` with a tolerance, is what the asynchronous engine
 *must* use, because its ratio moves; the sync engines do not have to, and a
 number that can be compared with `==` is a pin that drift cannot hide
-behind. The 182-row matrix test compares `373/1` and `49/1`, not
-`373.0 ± ε`; a chain's latency is a sum of rationals that never rounds.
+behind. The 182-row matrix test compares `371/1` and `125/3`, not
+`371.0 ± ε`; a chain's latency is a sum of rationals that never rounds.
 
 | Decision | Rejected | Reason | Evidence |
 |---|---|---|---|

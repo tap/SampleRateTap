@@ -11,7 +11,8 @@ expected output is scipy.signal.upfirdn(h, x, up=L, down=M) in float64 over
 the stage's table — the L-th-band design from the same published math as
 tap::dsp::design_nyquist (DspTap nyquist.h: Kaiser-windowed sinc with cutoff
 pi / B, the centre exactly 1, the structural zeros exactly 0, every B-branch
-at DC gain 1) with the stage's gain rule (stage.h): going up the table is
+at DC gain 1), its window's beta for A + 4 dB as design.h takes it (X17,
+k_design_beta_offset_db), with the stage's gain rule (stage.h): going up the table is
 the design; a decimator's is h / M; a mixed ratio going down has each of its
 L phases normalized to sum 1. Cast to float32.
 
@@ -39,6 +40,10 @@ import numpy as np
 from scipy import signal
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+
+# design.h's k_design_beta_offset_db (X17): every design takes beta for A + 4 dB.
+BETA_OFFSET_DB = 4.0
 
 
 def kaiser_beta(atten_db):
@@ -91,12 +96,12 @@ def xorshift_f32(count, seed):
 
 
 # The pinned taps per branch (design.h's table): economy and transparent.
-PINS = {"economy": {2: 11, 3: 11, 4: 11, 6: 12, 8: 12}, "transparent": {2: 31, 3: 25, 4: 25, 6: 25, 8: 25}}
+PINS = {"economy": {2: 10, 3: 10, 4: 10, 6: 10, 8: 10}, "transparent": {2: 25, 3: 25, 4: 25, 6: 25, 8: 25}}
 ATTEN = {"economy": 70.0, "transparent": 120.0}
 # economy's relaxation rows (design.h k_economy_relaxations): the pins of a
 # stage whose lower rate is `divisor` times the chain's lowest (M4).
-RELAXED_ECONOMY = {1: {2: 11, 3: 11, 4: 11, 6: 12, 8: 12}, 2: {2: 7, 3: 5, 4: 5, 6: 5, 8: 5},
-                   3: {2: 7, 3: 5, 4: 5, 6: 5, 8: 5}, 16: {2: 3, 3: 3, 4: 3, 6: 4, 8: 4}}
+RELAXED_ECONOMY = {1: {2: 10, 3: 10, 4: 10, 6: 10, 8: 10}, 2: {2: 5, 3: 4, 4: 4, 6: 5, 8: 5},
+                   3: {2: 4, 3: 4, 4: 4, 6: 5, 8: 5}, 16: {2: 3, 3: 3, 4: 3, 6: 3, 8: 3}}
 
 # The chain vectors (M4): the stages' upfirdn applied in sequence, each
 # stage at the chain's economy profile relaxed by its design divisor
@@ -154,7 +159,7 @@ out.append("")
 
 for tag, L, M, prof in CASES:
     B = max(L, M)
-    h = stage_table(L, M, PINS[prof][B], kaiser_beta(ATTEN[prof]))
+    h = stage_table(L, M, PINS[prof][B], kaiser_beta(ATTEN[prof] + BETA_OFFSET_DB))
     y = signal.upfirdn(h, x.astype(np.float64), up=L, down=M)
     # Outputs whose newest input, x[floor(nM/L)], has arrived; the rest is
     # the flush territory.
@@ -179,7 +184,7 @@ def streaming_prefix(y, n_in, L, M):
 for tag, n_in, stages in CHAINS:
     y = x[:n_in].astype(np.float64)
     for L, M, d in stages:
-        h = stage_table(L, M, RELAXED_ECONOMY[d][max(L, M)], kaiser_beta(ATTEN["economy"]))
+        h = stage_table(L, M, RELAXED_ECONOMY[d][max(L, M)], kaiser_beta(ATTEN["economy"] + BETA_OFFSET_DB))
         y = streaming_prefix(signal.upfirdn(h, y, up=L, down=M), len(y), L, M)
     y = y.astype(np.float32)
     out.append(f"inline constexpr std::array<float, {len(y)}> k_{tag} = {{")

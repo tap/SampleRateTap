@@ -7,12 +7,12 @@
           "recorded": 428
         },
         "engine_text": {
-          "ceiling": 20288,
-          "recorded": 19636
+          "ceiling": 20352,
+          "recorded": 19700
         },
         "image": {
-          "ceiling": 305920,
-          "recorded": 296984
+          "ceiling": 305984,
+          "recorded": 297048
         }
       },
       "q15": {
@@ -21,12 +21,12 @@
           "recorded": 428
         },
         "engine_text": {
-          "ceiling": 22656,
-          "recorded": 21944
+          "ceiling": 22720,
+          "recorded": 22008
         },
         "image": {
-          "ceiling": 308928,
-          "recorded": 299928
+          "ceiling": 308992,
+          "recorded": 299992
         }
       },
       "q31": {
@@ -35,12 +35,12 @@
           "recorded": 428
         },
         "engine_text": {
-          "ceiling": 21504,
-          "recorded": 20824
+          "ceiling": 21568,
+          "recorded": 20888
         },
         "image": {
-          "ceiling": 307840,
-          "recorded": 298840
+          "ceiling": 307904,
+          "recorded": 298904
         }
       }
     }
@@ -53,12 +53,12 @@
           "recorded": 1050
         },
         "engine_text": {
-          "ceiling": 9536,
-          "recorded": 9240
+          "ceiling": 9600,
+          "recorded": 9288
         },
         "image": {
-          "ceiling": 45120,
-          "recorded": 43801
+          "ceiling": 45184,
+          "recorded": 43849
         }
       },
       "q15": {
@@ -67,12 +67,12 @@
           "recorded": 1050
         },
         "engine_text": {
-          "ceiling": 11072,
-          "recorded": 10728
+          "ceiling": 11136,
+          "recorded": 10776
         },
         "image": {
           "ceiling": 46912,
-          "recorded": 45497
+          "recorded": 45545
         }
       },
       "q31": {
@@ -82,11 +82,11 @@
         },
         "engine_text": {
           "ceiling": 10816,
-          "recorded": 10444
+          "recorded": 10492
         },
         "image": {
-          "ceiling": 46592,
-          "recorded": 45201
+          "ceiling": 46656,
+          "recorded": 45249
         }
       }
     },
@@ -167,12 +167,12 @@
           "recorded": 1050
         },
         "engine_text": {
-          "ceiling": 8320,
-          "recorded": 8052
+          "ceiling": 8384,
+          "recorded": 8084
         },
         "image": {
           "ceiling": 45184,
-          "recorded": 43825
+          "recorded": 43857
         }
       },
       "q15": {
@@ -182,11 +182,11 @@
         },
         "engine_text": {
           "ceiling": 9792,
-          "recorded": 9448
+          "recorded": 9480
         },
         "image": {
-          "ceiling": 46912,
-          "recorded": 45529
+          "ceiling": 46976,
+          "recorded": 45561
         }
       },
       "q31": {
@@ -195,12 +195,12 @@
           "recorded": 1050
         },
         "engine_text": {
-          "ceiling": 9536,
-          "recorded": 9228
+          "ceiling": 9600,
+          "recorded": 9260
         },
         "image": {
           "ceiling": 46720,
-          "recorded": 45313
+          "recorded": 45345
         }
       }
     }

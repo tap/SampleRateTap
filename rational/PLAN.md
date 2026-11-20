@@ -26,6 +26,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.14 | 2026-10-08 | The siblings adopt this ABI's shape: `async`'s and `bridge`'s C ABIs carry Q15 and Q31 the same way (`create_format`, `_format`, the `_q15` / `_q31` entry points, hidden visibility, each format pinned bit for bit against the engine's `basic_converter`); the family keeps fixed point at every engine's C boundary rather than moving to a separate uniform ABI |
 | v0.15 | 2026-10-10 | The thirteen streaming ratchet rows re-recorded on all three targets with their reason (section 6: `ratio23_q15_eco` +1.93 % on the M55 is v0.11's stated move, the rest a sub-0.02 % construction-side residue from v0.13's designer and tap/DspTap#57), the first in-band re-record of this engine; `bridge` and `async` re-measure exact on every target |
 | v0.16 | 2026-11-18 | A13b: the channel count is the type's (R17, the family's D18): `basic_stage<S, Ch, R>` over `stage_base<S, R>`, `basic_chain<S, Ch, R...>`, the aliases `converter<Ch, R>` and the named chains count-first, zero channels a compile error; the C ABI one and two channels native and any other count a fan-out of one-channel converters; DspTap pinned at `v0.2.0` (the chain takes its count from its stages). The ratchet re-recorded on every target and the ceilings on the three, with the M55's `ratio23_q15_eco` gated at the midpoint of its two builds (section 6, the A13 record) |
+| v0.17 | 2026-11-20 | X17 (`docs/X4_X8_PLAN.md`, X-a2): the designer's Kaiser β for A + 4 dB, accepted at A + 1 dB as before (`k_design_beta_offset_db`, no DspTap change); x = 4 chosen over 3 on the measured Q15 / Q31 floors and ripple; every pin, relaxation table, Q15 / Q31 table and scipy vector re-pinned, the matrix re-costed with its chains frozen for one PR (R3 suspended until X-a3, 3.1), every ratchet row and the probes' ceilings re-recorded with the reason (section 6, "The designer's β, X17") |
 
 **Status.** This draft is the reviewed-plan deliverable that the family
 plan's "Next — `rational` (separate plan)" entry asks for
@@ -167,15 +168,29 @@ fewer stages is chosen (R3, decision 2) and the matrix test pins it; the
 search's pick is recorded next to it where it differs (3.2, 3.3).
 
 **On the pinned lengths (M4, v0.7)** the rules stand but eleven of the 26
-within-48 ratios factor differently from this arithmetic, because a
-relaxed stage saturates: a half-band at a passband below 3/16 of its
-lower rate stays at m = 7 (N = 27, 7.5 MACs per output) however wide the
-transition — the Kaiser fit's floor for the 70 dB tier — while a
-third-band stage there is m = 5 (N = 29, 7 per output) and serves three
-times the rate, so the "by-2 at the low-rate end" chains lose to
-third-band and mixed stages (8/1 is ↑2 · 4/3 · ↑3, 12/1 is ↑2 · ↑6, 1/8 is
-↓3 · 3/4 · ↓2). Section 3 holds the measured result; the ledger is in
-section 8, S1.
+within-48 ratios factor differently from this arithmetic, because on
+those pins a relaxed half-band at a passband below 3/16 of its lower rate
+stayed at m = 7 (N = 27, 7.5 MACs per output) at the divisors 2 to 4,
+while a third-band stage there was m = 5 (N = 29, 7 per output) and
+serves three times the rate, so the "by-2 at the low-rate end" chains
+lost to third-band and mixed stages (8/1 is ↑2 · 4/3 · ↑3, 12/1 is
+↑2 · ↑6, 1/8 is ↓3 · 3/4 · ↓2). Section 3 holds the measured result; the
+ledger is in section 8, S1.
+
+**That floor was the designer's, not the Kaiser fit's (X17, v0.17).** The
+designer took its window's β for A dB while the pin search accepts a
+design only at A + 1 dB, and a short windowed sinc with β tuned for 70 dB
+has sidelobes at −68 to −70.6 dB, so it missed the margin until m = 7 —
+and the search was not even monotone in m. With β for A + 4 dB (X17,
+`design.h`'s `k_design_beta_offset_db`) the relaxed `economy` half-band is
+m = 5 at divisor 2 and m = 4 at divisors 3 to 12 (N = 19 and 15), and on
+these pins three half-bands cost less than the third-band and mixed chains
+above: 1/8 as ↓2 · ↓2 · ↓2 is 79 MACs per output against ↓3 · 3/4 · ↓2's
+87, 8/1 as ↑2 · ↑2 · ↑2 9.88 against 10.38. The chains in section 3 are
+still v0.7's: X-a2 (X17) re-pinned the lengths and froze the selection for
+one pull request, and X-a3 regenerates it under the new designer with the
+4th-band stage admitted (`docs/X4_X8_PLAN.md` X3; section 6, "The
+designer's β, X17", lists the 26 rows the rule would move now).
 
 ### 2.2 The Nyquist (L-th-band) design: the math behind R4
 
@@ -199,7 +214,9 @@ The designer:
   (`decimate.h:22-23`'s convention);
 - searches m upward until the stopband spec holds with ≥ 1 dB margin on a
   fine grid (the `bridge` criterion, `design.h:79-82`), so tap counts step
-  by 2L.
+  by 2L; since X17 (v0.17) every candidate's window takes Kaiser's β for
+  A + 4 dB, not for A (`design.h`'s `k_design_beta_offset_db`; section 6,
+  "The designer's β, X17").
 
 Consequences that the tests pin:
 
@@ -225,35 +242,41 @@ Consequences that the tests pin:
 
 | Profile | A (dB) | p = f_pass / r_min | at r_min = 48 kHz | half-band N / nonzero (worst stop) | third-band N / nonzero (worst stop) |
 |---|---|---|---|---|---|
-| `super_economy` | 70 | 1/3 | 16 kHz | 35 / 19 (−72.8 dB); *est.* 27 / 15 | 47 / 33 (−71.2 dB); *est.* 41 / 29 |
-| `economy` (default) | 70 | 3/8 | 18 kHz | 43 / 23 (−71.9 dB); *est.* 35 / 19 | 65 / 45 (−71.3 dB); *est.* 53 / 37 |
-| `balanced` | 70 | 19/48 | 19 kHz | 51 / 27 (−71.5 dB); *est.* 43 / 23 | 77 / 53 (−71.2 dB); *est.* 65 / 45 |
-| `transparent` | 120 | 5/12 | 20 kHz | 123 / 63 (−121.7 dB); *est.* 95 / 49 | 149 / 101 (−121.1 dB); *est.* 143 / 97 |
+| `super_economy` | 70 | 1/3 | 16 kHz | 31 / 17 (−72.4 dB); *est.* 27 / 15 | 47 / 33 (−73.6 dB); *est.* 41 / 29 |
+| `economy` (default) | 70 | 3/8 | 18 kHz | 39 / 21 (−73.1 dB); *est.* 35 / 19 | 59 / 41 (−72.5 dB); *est.* 53 / 37 |
+| `balanced` | 70 | 19/48 | 19 kHz | 47 / 25 (−72.5 dB); *est.* 43 / 23 | 71 / 49 (−72.4 dB); *est.* 65 / 45 |
+| `transparent` | 120 | 5/12 | 20 kHz | 99 / 51 (−122.2 dB); *est.* 95 / 49 | 149 / 101 (−122.8 dB); *est.* 143 / 97 |
 
 The first number of each cell is **measured and pinned** (v0.3 found
-them, v0.5's M2 spike confirmed them and filled the other bands, section
-6): the smallest m whose design meets the stopband with ≥ 1 dB margin on
-a **16384-point grid** from the stopband edge to F_hi / 2, by
+them, v0.5's M2 spike confirmed them and filled the other bands, v0.17
+re-pinned them under X17's rule, section 6): the smallest m whose design,
+its window's β taken for A + 4 dB, meets the stopband A with ≥ 1 dB margin
+on a **16384-point grid** from the stopband edge to F_hi / 2, by
 `tap::dsp::search_nyquist_m` on the shipped designer (DspTap `nyquist.h`),
 the next-shorter length missing the spec; `design.h`'s `profile` carries
 the pins per band and `test_design.cpp` enforces every row. The grid is
-stated because it matters: `nyquist.h`'s 1024-point default steps over a
-sidelobe of the long designs — the 8th-band `transparent` candidate reads
-−121.7 dB on 1024 points and −119.3 dB on 8192 — and under-pins two rows
-of the full table (band 4 `balanced` 103 → 111, band 8 `transparent`
-383 → 399); 16384 points agree with 65536 within 0.003 dB for every design
-up to N = 399, and tap/DspTap#50 made the search's grid a parameter. The
-harris estimates (*est.*) are kept beside the measured counts: the Kaiser
-fit needs 2–8 more taps per branch than the estimate at the half band, 1–7
-at the third; M4 regenerated section 3 from the pinned counts (v0.7). The
+stated because it mattered: with β for A, `nyquist.h`'s 1024-point
+default stepped over a sidelobe of the long designs — the 8th-band
+`transparent` candidate read −121.7 dB on 1024 points and −119.3 dB on
+8192 — and under-pinned two rows of the full table (band 4 `balanced`
+103 → 111, band 8 `transparent` 383 → 399); 16384 points agree with 65536
+within 0.003 dB for every design up to N = 399, and tap/DspTap#50 made the
+search's grid a parameter. Under X17's rule the 1024-point grid happens to
+find every pin of the tables (measured 2026-11-20), and the grid stays
+part of the criterion. The harris estimates (*est.*) are kept beside the
+measured counts: with β for A + 4 dB the Kaiser fit needs exactly one more
+tap per branch than the estimate at the half and third bands, every
+profile (with β for A it needed one to seven more); M4 regenerated
+section 3 from the pinned counts (v0.7). The
 counts are for the stage adjacent to r_min (the narrowest transition in a
 chain); stages further up a chain are shorter, designed at their design
 divisor (3.1) with the pins of `design.h`'s relaxation tables. `bridge`'s experience says a pinned count can also move
 non-monotonically with the spec (`design.h:79-82`, the 38-vs-40 quirk in
 `../bridge/PLAN.md` §4), which is why every (band, profile) was pinned
 from the designer rather than extrapolated. Ripple, measured per stage on
-a 2000-point passband grid: ≤ 0.0025 dB at the 70 dB tiers and
-≤ 0.00001 dB at `transparent`, inside the candidates for 2.1(c) — ±0.01 dB
+a 2000-point passband grid: ≤ 0.0024 dB at the 70 dB tiers and
+≤ 0.00001 dB at `transparent` (≤ 0.0025 and ≤ 0.00001 with β for A; the
+relaxed designs ≤ 0.0043 and ≤ 0.000011 dB), inside the candidates for 2.1(c) — ±0.01 dB
 per 70 dB stage, ±0.0001 dB per transparent stage (`bridge` measures
 ±0.003 / ±0.00001, `../bridge/PLAN.md` §4) — which `test_design.cpp` now
 holds as bounds; the chain's δ is the sum (2.1(c)), pinned per pair by the
@@ -368,10 +391,25 @@ stages, +0.5 %), their mirrors 1/12 (↓6 · ↓2, +5.0 %), 1/24 (+3.0 %) and
 1/48 (+0.5 %), 16 → 11.025 / 22.05 / 44.1 / 88.2 / 176.4 (↑3 for
 ↑2 · 3/2 ahead of `bridge`, +0.6–2.3 % on the rational part), and in the
 44.1 family 8/1 (↑3 · 8/3 for ↑2 · ↑2 · ↑2, +2.7 %) and 1/8 (3/8 · ↓3 for
-three half-bands, +9.7 %); `tools/coverage/matrix.py rule` prints the
-list. Within-family chains have no `bridge`, so
+three half-bands, +9.7 %), and `tools/coverage/matrix.py rule` printed
+the list (since X17 it prints the rule's rows on the current pins, 22 of
+them). Within-family chains have no `bridge`, so
 the rule there is simply 10 % of the chain. The `transparent` columns
 cost the same chains at `transparent`, not a second search.
+
+**The selection, frozen for one pull request (X17, v0.17).** X-a2
+re-tuned the designer's β (2.2, section 6) and kept every row's chain as
+the rule chose it on v0.7's pins: the generator's `FROZEN_SELECTION`, one
+line per ordered pair, replaces `best_chain` for the 182 rows, and the
+tables, `matrix_rows.h` and the relaxation pins are regenerated from it on
+the new pins (the same chains, the same design divisors, the same named
+chains and C ABI constants; every number re-costed). **R3's selection is
+suspended for that one PR:** on the new pins the rule would move 26 rows
+at `economy`, 20 within the families and 6 across, retiring eight named
+chains and naming six (`matrix.py frozen` lists them; section 6, "The
+designer's β, X17"). X-a3 regenerates the selection under the new designer
+with the 4th-band stage admitted and removes the table, so the chain set
+changes once (`docs/X4_X8_PLAN.md` X17, X3).
 
 **Chains that dip.** A pair below 44.1/48 in different families (8–32 kHz
 ↔ 11.025/22.05) can only cross through the k = 0 pair, so its chain climbs
@@ -405,8 +443,9 @@ Lengths are harris estimates (*est.*) at `economy` unless marked `tr`
 derivation. The measured chains and numbers are 3.3–3.6 (v0.7); four of
 the six cases below are the measured chain too, and two chose differently
 on the pinned lengths — 384 → 44.1 is ↓3 · 3/4 · ↓2 · `bridge`↓ k = 0
-(172.3 MACs per output) and 8 → 192 is ↑2 · ↑6 · ↑2 (8.7) — for the reason
-2.1 ends with.
+(172.3 MACs per output at v0.7, 152.7 on X17's pins) and 8 → 192 is
+↑2 · ↑6 · ↑2 (8.7, now 9.6) — for the reason 2.1 ends with (both are rows
+the frozen selection keeps, 3.1).
 
 - **176.4 → 48** (`../PLAN.md:93-95`): r_min = 48, f_pass = 18 kHz
   (`tr`: 20 kHz). Chain ↓2 · ↓2 · `bridge`↑ k = 0.
@@ -471,53 +510,62 @@ on the pinned lengths — 384 → 44.1 is ↓3 · 3/4 · ↓2 · `bridge`↓ k =
 
 Chains at `economy` (the `transparent` columns use the same chains);
 MAC/out = MACs per output frame at the chain's output rate; latency in
-output frames. **Measured** (v0.7): every number is the shipping chain's,
+output frames. **Measured** (v0.7; re-costed on X17's pins at v0.17, the
+chains frozen as 3.1 says): every number is the shipping chain's,
 generated by `tools/coverage/matrix.py` from the pinned lengths and pinned
 exactly — as a rational — per row by `tests/test_matrix.cpp`.
 
 | Ratio L/M | Pairs (from → to, kHz) | Chain | MAC/out eco | Latency eco (out) | MAC/out tr | Latency tr (out) |
 |---|---|---|---|---|---|---|
-| 4/3 | 12→16, 24→32 | 4/3 | 16.8 | 14.3 | 37.8 | 33.0 |
-| 3/2 | 8→12, 16→24, 32→48 | 3/2 | 15.0 | 16.0 | 33.7 | 37.0 |
-| 2/1 | 8→16, 12→24, 16→32, 24→48, 48→96, 96→192, 192→384 | ↑2 | 11.5 | 21.0 | 31.5 | 61.0 |
-| 8/3 | 12→32 | ↑2 · 4/3 | 16.4 | 34.3 | 43.4 | 98.3 |
-| 3/1 | 8→24, 16→48, 32→96 | ↑3 | 15.0 | 32.0 | 33.7 | 74.0 |
-| 4/1 | 8→32, 12→48, 24→96, 48→192, 96→384 | ↑2 · ↑2 | 13.2 | 55.0 | 26.2 | 141.0 |
-| 6/1 | 8→48, 16→96, 32→192 | ↑2 · ↑3 | 10.8 | 77.0 | 21.5 | 206.0 |
-| 8/1 | 12→96, 24→192, 48→384 | ↑2 · 4/3 · ↑3 | 12.5 | 117.0 | 25.5 | 318.0 |
-| 12/1 | 8→96, 16→192, 32→384 | ↑2 · ↑6 | 10.4 | 155.0 | 27.1 | 443.0 |
-| 16/1 | 12→192, 24→384 | ↑2 · ↑8 | 10.3 | 207.0 | 26.8 | 591.0 |
-| 24/1 | 8→192, 16→384 | ↑2 · ↑6 · ↑2 | 8.7 | 315.0 | 22.0 | 901.0 |
-| 32/1 | 12→384 | ↑2 · ↑8 · ↑2 | 8.7 | 419.0 | 20.9 | 1195.0 |
-| 48/1 | 8→384 | ↑2 · ↑8 · ↑3 | 7.8 | 629.0 | 18.6 | 1793.0 |
-| 3/4 | 16→12, 32→24 | 3/4 | 29.0 | 10.8 | 66.3 | 24.8 |
-| 2/3 | 12→8, 24→16, 48→32 | 2/3 | 32.5 | 10.7 | 74.5 | 24.7 |
-| 1/2 | 16→8, 24→12, 32→16, 48→24, 96→48, 192→96, 384→192 | ↓2 | 23.0 | 10.5 | 63.0 | 30.5 |
-| 3/8 | 32→12 | 3/4 · ↓2 | 49.0 | 12.9 | 131.7 | 36.9 |
-| 1/3 | 24→8, 48→16, 96→32 | ↓3 | 45.0 | 10.7 | 101.0 | 24.7 |
-| 1/4 | 32→8, 48→12, 96→24, 192→48, 384→96 | ↓2 · ↓2 | 53.0 | 13.8 | 105.0 | 35.2 |
-| 1/6 | 48→8, 96→16, 192→32 | ↓3 · ↓2 | 65.0 | 12.8 | 129.0 | 34.3 |
-| 1/8 | 96→12, 192→24, 384→48 | ↓3 · 3/4 · ↓2 | 105.0 | 14.6 | 219.7 | 39.8 |
-| 1/12 | 96→8, 192→16, 384→32 | ↓6 · ↓2 | 125.0 | 12.9 | 325.0 | 36.9 |
-| 1/16 | 192→12, 384→24 | ↓8 · ↓2 | 165.0 | 12.9 | 429.0 | 36.9 |
-| 1/24 | 192→8, 384→16 | ↓2 · ↓6 · ↓2 | 209.0 | 13.1 | 529.0 | 37.5 |
-| 1/32 | 384→12 | ↓2 · ↓8 · ↓2 | 277.0 | 13.1 | 669.0 | 37.3 |
-| 1/48 | 384→8 | ↓3 · ↓8 · ↓2 | 373.0 | 13.1 | 893.0 | 37.4 |
+| 4/3 | 12→16, 24→32 | 4/3 | 15.2 | 13.0 | 37.8 | 33.0 |
+| 3/2 | 8→12, 16→24, 32→48 | 3/2 | 13.7 | 14.5 | 33.7 | 37.0 |
+| 2/1 | 8→16, 12→24, 16→32, 24→48, 48→96, 96→192, 192→384 | ↑2 | 10.5 | 19.0 | 25.5 | 49.0 |
+| 8/3 | 12→32 | ↑2 · 4/3 | 14.1 | 30.3 | 31.4 | 75.7 |
+| 3/1 | 8→24, 16→48, 32→96 | ↑3 | 13.7 | 29.0 | 33.7 | 74.0 |
+| 4/1 | 8→32, 12→48, 24→96, 48→192, 96→384 | ↑2 · ↑2 | 10.8 | 47.0 | 22.2 | 115.0 |
+| 6/1 | 8→48, 16→96, 32→192 | ↑2 · ↑3 | 9.2 | 68.0 | 19.5 | 170.0 |
+| 8/1 | 12→96, 24→192, 48→384 | ↑2 · 4/3 · ↑3 | 10.4 | 102.0 | 21.5 | 250.0 |
+| 12/1 | 8→96, 16→192, 32→384 | ↑2 · ↑6 | 10.2 | 143.0 | 17.8 | 341.0 |
+| 16/1 | 12→192, 24→384 | ↑2 · ↑8 | 10.2 | 191.0 | 17.3 | 455.0 |
+| 24/1 | 8→192, 16→384 | ↑2 · ↑6 · ↑2 | 9.6 | 293.0 | 15.4 | 693.0 |
+| 32/1 | 12→384 | ↑2 · ↑8 · ↑2 | 8.6 | 387.0 | 15.2 | 921.0 |
+| 48/1 | 8→384 | ↑2 · ↑8 · ↑3 | 7.7 | 581.0 | 15.4 | 1385.0 |
+| 3/4 | 16→12, 32→24 | 3/4 | 26.3 | 9.8 | 66.3 | 24.8 |
+| 2/3 | 12→8, 24→16, 48→32 | 2/3 | 29.5 | 9.7 | 74.5 | 24.7 |
+| 1/2 | 16→8, 24→12, 32→16, 48→24, 96→48, 192→96, 384→192 | ↓2 | 21.0 | 9.5 | 51.0 | 24.5 |
+| 3/8 | 32→12 | 3/4 · ↓2 | 41.7 | 11.4 | 93.0 | 28.4 |
+| 1/3 | 24→8, 48→16, 96→32 | ↓3 | 41.0 | 9.7 | 101.0 | 24.7 |
+| 1/4 | 32→8, 48→12, 96→24, 192→48, 384→96 | ↓2 · ↓2 | 43.0 | 11.8 | 89.0 | 28.8 |
+| 1/6 | 48→8, 96→16, 192→32 | ↓3 · ↓2 | 55.0 | 11.3 | 117.0 | 28.3 |
+| 1/8 | 96→12, 192→24, 384→48 | ↓3 · 3/4 · ↓2 | 87.0 | 12.8 | 181.0 | 31.2 |
+| 1/12 | 96→8, 192→16, 384→32 | ↓6 · ↓2 | 123.0 | 11.9 | 213.0 | 28.4 |
+| 1/16 | 192→12, 384→24 | ↓8 · ↓2 | 163.0 | 11.9 | 277.0 | 28.4 |
+| 1/24 | 192→8, 384→16 | ↓2 · ↓6 · ↓2 | 231.0 | 12.2 | 369.0 | 28.9 |
+| 1/32 | 384→12 | ↓2 · ↓8 · ↓2 | 275.0 | 12.1 | 485.0 | 28.8 |
+| 1/48 | 384→8 | ↓3 · ↓8 · ↓2 | 371.0 | 12.1 | 741.0 | 28.9 |
 
-What the pinned lengths changed (the v0.2 arithmetic is in 2.1 and its
-ledger in section 8, S1): a relaxed half-band saturates at m = 7 (7.5 MACs
-per output, 15 per output as a decimator), so the chains that used to end
-in a run of half-bands now put a third-band, 4th-band or mixed stage where
-the transition is wide — 8/1 is ↑2 · 4/3 · ↑3 (12.5 against 14.1 for three
-half-bands), 1/8 is ↓3 · 3/4 · ↓2 (105 against 113), 12/1 is ↑2 · ↑6 and
-1/12 is ↓6 · ↓2 (the fewer-stages rule, +5 % over ↑2 · ↑3 · ↑2 / ↓2 · ↓3 ·
-↓2), and the ↑8 / ↓8 stage moves from the high-rate end to the middle
-(24/1 is ↑2 · ↑6 · ↑2, 32/1 is ↑2 · ↑8 · ↑2, 1/32 is ↓2 · ↓8 · ↓2, 1/48 is
-↓3 · ↓8 · ↓2): at a divisor of 16 the 8th-band stage is m = 4 (N = 63, 57
-nonzero) and a half-band above it m = 3 (N = 11, 3.5 per output), cheaper
-than ↓8 at the top. Decision 6 still keeps the single 4th-band stage out
-(1/16 is ↓8 · ↓2 at 165; 16/1 is ↑2 · ↑8 at 10.3). The `transparent`
-columns cost the same chains (3.1).
+What the pinned lengths changed at v0.7 (the v0.2 arithmetic is in 2.1
+and its ledger in section 8, S1): on those pins a relaxed half-band stayed
+at m = 7 (7.5 MACs per output, 15 per output as a decimator) at the
+divisors 2 to 4, so the chains that used to end in a run of half-bands put
+a third-band, 4th-band or mixed stage where the transition is wide — 8/1
+is ↑2 · 4/3 · ↑3 (12.5 against 14.1 for three half-bands), 1/8 is
+↓3 · 3/4 · ↓2 (105 against 113), 12/1 is ↑2 · ↑6 and 1/12 is ↓6 · ↓2 (the
+fewer-stages rule, +5 % over ↑2 · ↑3 · ↑2 / ↓2 · ↓3 · ↓2), and the ↑8 / ↓8
+stage moved from the high-rate end to the middle (24/1 is ↑2 · ↑6 · ↑2,
+32/1 is ↑2 · ↑8 · ↑2, 1/32 is ↓2 · ↓8 · ↓2, 1/48 is ↓3 · ↓8 · ↓2): at a
+divisor of 16 the 8th-band stage was m = 4 (N = 63, 57 nonzero) and a
+half-band above it m = 3 (N = 11, 3.5 per output), cheaper than ↓8 at the
+top. Decision 6 still keeps the single 4th-band stage out (1/16 is
+↓8 · ↓2, 165 at v0.7 and 163 now; 16/1 is ↑2 · ↑8, 10.3 and 10.2). The
+`transparent` columns cost the same chains (3.1). **Since X17 (v0.17)**
+the chains are v0.7's, frozen (3.1), and costed on the new pins: the
+half-band's floor at m = 7 was the designer's β (2.1), and on these pins
+the rule would choose differently for 20 of these 72 + 20 rows — 1/8 and
+8/1 as three half-bands (79 against 87 MACs per output, 9.88 against
+10.38), 12/1 and 1/12 as ↑2 · ↑3 · ↑2 / ↓2 · ↓3 · ↓2, 24/1 and 1/24 as four
+stages, and the 44.1 family's 8/1 and 1/8 as the 48 family's three
+half-bands — which X-a3 revisits, with the 4th-band stage admitted.
 
 ### 3.4 Within the 44.1 kHz family (20 ordered pairs, 8 ratios)
 
@@ -530,14 +578,14 @@ two more named chains.
 
 | Ratio L/M | Pairs (from → to, kHz) | Chain | MAC/out eco | Latency eco (out) | MAC/out tr | Latency tr (out) |
 |---|---|---|---|---|---|---|
-| 2/1 | 11.025→22.05, 22.05→44.1, 44.1→88.2, 88.2→176.4 | ↑2 | 11.5 | 21.0 | 31.5 | 61.0 |
-| 4/1 | 11.025→44.1, 22.05→88.2, 44.1→176.4 | ↑2 · ↑2 | 13.2 | 55.0 | 26.2 | 141.0 |
-| 8/1 | 11.025→88.2, 22.05→176.4 | ↑3 · 8/3 | 14.5 | 98.3 | 33.8 | 229.0 |
-| 16/1 | 11.025→176.4 | ↑2 · ↑8 | 10.3 | 207.0 | 26.8 | 591.0 |
-| 1/2 | 22.05→11.025, 44.1→22.05, 88.2→44.1, 176.4→88.2 | ↓2 | 23.0 | 10.5 | 63.0 | 30.5 |
-| 1/4 | 44.1→11.025, 88.2→22.05, 176.4→44.1 | ↓2 · ↓2 | 53.0 | 13.8 | 105.0 | 35.2 |
-| 1/8 | 88.2→11.025, 176.4→22.05 | 3/8 · ↓3 | 124.0 | 12.3 | 292.0 | 28.6 |
-| 1/16 | 176.4→11.025 | ↓8 · ↓2 | 165.0 | 12.9 | 429.0 | 36.9 |
+| 2/1 | 11.025→22.05, 22.05→44.1, 44.1→88.2, 88.2→176.4 | ↑2 | 10.5 | 19.0 | 25.5 | 49.0 |
+| 4/1 | 11.025→44.1, 22.05→88.2, 44.1→176.4 | ↑2 · ↑2 | 10.8 | 47.0 | 22.2 | 115.0 |
+| 8/1 | 11.025→88.2, 22.05→176.4 | ↑3 · 8/3 | 14.0 | 90.3 | 25.0 | 215.7 |
+| 16/1 | 11.025→176.4 | ↑2 · ↑8 | 10.2 | 191.0 | 17.3 | 455.0 |
+| 1/2 | 22.05→11.025, 44.1→22.05, 88.2→44.1, 176.4→88.2 | ↓2 | 21.0 | 9.5 | 51.0 | 24.5 |
+| 1/4 | 44.1→11.025, 88.2→22.05, 176.4→44.1 | ↓2 · ↓2 | 43.0 | 11.8 | 89.0 | 28.8 |
+| 1/8 | 88.2→11.025, 176.4→22.05 | 3/8 · ↓3 | 120.0 | 11.3 | 212.0 | 27.0 |
+| 1/16 | 176.4→11.025 | ↓8 · ↓2 | 163.0 | 11.9 | 277.0 | 28.4 |
 
 ### 3.5 48 kHz family → 44.1 kHz family (45 ordered pairs)
 
@@ -553,101 +601,101 @@ r_min (48 → 88.2's ↑2, 96 → 44.1's ↓2 and their k > 0 twins).
 
 | From → To | Chain | f_pass eco (kHz) | MAC/out eco | Latency eco (ms) | MAC/out tr | Latency tr (ms) | ⚑ |
 |---|---|---|---|---|---|---|---|
-| 8 → 11.025 | ↑2 · ↑3 · bridge↓k0 · ↓2 · ↓2 | 3.000 | 332.2 | 3.46 | 934.6 | 9.41 | ⚑ |
-| 8 → 22.05 | ↑2 · ↑3 · bridge↓k0 · ↓2 | 3.000 | 154.6 | 2.50 | 435.8 | 6.64 | ⚑ |
-| 8 → 44.1 | ↑2 · ↑3 · bridge↓k0 | 3.000 | 69.8 | 2.21 | 207.4 | 6.21 |  |
-| 8 → 88.2 | ↑2 · ↑3 · bridge↓k0 · ↑2 | 3.000 | 42.4 | 2.36 | 113.2 | 6.40 |  |
-| 8 → 176.4 | ↑2 · ↑3 · bridge↓k0 · ↑2 · ↑2 | 3.000 | 25.7 | 2.40 | 65.1 | 6.49 |  |
-| 12 → 11.025 | ↑2 · ↑2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 342.7 | 3.00 | 955.3 | 8.05 | ⚑ |
-| 12 → 22.05 | ↑2 · ↑2 · bridge↓k0 · ↓2 | 4.500 | 167.8 | 2.23 | 488.1 | 6.24 | ⚑ |
-| 12 → 44.1 | ↑2 · ↑2 · bridge↓k0 | 4.500 | 72.4 | 1.75 | 212.6 | 4.85 |  |
-| 12 → 88.2 | ↑2 · ↑2 · bridge↓k0 · ↑2 | 4.500 | 43.7 | 1.90 | 115.8 | 5.05 |  |
-| 12 → 176.4 | ↑2 · ↑2 · bridge↓k0 · ↑2 · ↑2 | 4.500 | 26.4 | 1.94 | 67.4 | 5.14 |  |
-| 16 → 11.025 | ↑3 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 350.3 | 2.52 | 987.6 | 6.66 | ⚑ |
-| 16 → 22.05 | ↑3 · bridge↓k0 · ↓2 | 6.000 | 171.7 | 1.75 | 504.3 | 4.84 | ⚑ |
-| 16 → 44.1 | ↑3 · bridge↓k0 | 6.000 | 74.3 | 1.27 | 220.6 | 3.46 |  |
-| 16 → 88.2 | ↑3 · bridge↓k0 · ↑2 | 6.000 | 44.7 | 1.42 | 120.8 | 3.67 |  |
-| 16 → 176.4 | ↑3 · bridge↓k0 · ↑2 · ↑2 | 6.000 | 29.8 | 1.49 | 69.9 | 3.77 |  |
-| 24 → 11.025 | ↑2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 317.7 | 2.12 | 886.7 | 5.51 | ⚑ |
-| 24 → 22.05 | ↑2 · bridge↓k0 · ↓2 | 8.269 | 164.0 | 1.52 | 499.6 | 4.57 | ⚑ |
-| 24 → 44.1 | ↑2 · bridge↓k0 | 9.000 | 70.5 | 1.04 | 218.3 | 3.19 |  |
-| 24 → 88.2 | ↑2 · bridge↓k0 · ↑2 | 9.000 | 46.8 | 1.28 | 140.6 | 3.88 |  |
-| 24 → 176.4 | ↑2 · bridge↓k0 · ↑2 · ↑2 | 9.000 | 30.9 | 1.35 | 79.8 | 3.98 |  |
-| 32 → 11.025 | 3/2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 315.5 | 2.00 | 888.9 | 5.35 | ⚑ |
-| 32 → 22.05 | 3/2 · bridge↓k0 · ↓2 | 8.269 | 171.7 | 1.41 | 504.3 | 4.07 | ⚑ |
-| 32 → 44.1 | 3/2 · bridge↓k0 | 12.000 | 74.3 | 0.94 | 220.6 | 2.69 |  |
-| 32 → 88.2 | 3/2 · bridge↓k0 · ↑2 | 12.000 | 48.7 | 1.18 | 141.8 | 3.38 |  |
-| 32 → 176.4 | 3/2 · bridge↓k0 · ↑2 · ↑2 | 12.000 | 31.8 | 1.25 | 81.4 | 3.49 |  |
-| 48 → 11.025 | bridge↓k0 · ↓2 · ↓2 | 4.134 | 285.0 | 1.85 | 841.0 | 5.11 | ⚑ |
-| 48 → 22.05 | bridge↓k0 · ↓2 | 8.269 | 139.0 | 1.08 | 431.0 | 3.30 | ⚑ |
+| 8 → 11.025 | ↑2 · ↑3 · bridge↓k0 · ↓2 · ↓2 | 3.000 | 314.9 | 3.09 | 909.9 | 8.07 | ⚑ |
+| 8 → 22.05 | ↑2 · ↑3 · bridge↓k0 · ↓2 | 3.000 | 147.0 | 2.22 | 429.4 | 5.84 | ⚑ |
+| 8 → 44.1 | ↑2 · ↑3 · bridge↓k0 | 3.000 | 68.0 | 2.02 | 205.2 | 5.46 |  |
+| 8 → 88.2 | ↑2 · ↑3 · bridge↓k0 · ↑2 | 3.000 | 38.5 | 2.10 | 112.1 | 5.65 |  |
+| 8 → 176.4 | ↑2 · ↑3 · bridge↓k0 · ↑2 · ↑2 | 3.000 | 23.7 | 2.14 | 64.6 | 5.74 |  |
+| 12 → 11.025 | ↑2 · ↑2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 321.8 | 2.65 | 921.9 | 6.92 | ⚑ |
+| 12 → 22.05 | ↑2 · ↑2 · bridge↓k0 · ↓2 | 4.500 | 160.4 | 2.01 | 467.4 | 5.42 | ⚑ |
+| 12 → 44.1 | ↑2 · ↑2 · bridge↓k0 | 4.500 | 69.7 | 1.58 | 208.2 | 4.31 |  |
+| 12 → 88.2 | ↑2 · ↑2 · bridge↓k0 · ↑2 | 4.500 | 39.4 | 1.66 | 113.6 | 4.51 |  |
+| 12 → 176.4 | ↑2 · ↑2 · bridge↓k0 · ↑2 · ↑2 | 4.500 | 24.2 | 1.70 | 66.3 | 4.60 |  |
+| 16 → 11.025 | ↑3 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 334.5 | 2.27 | 971.6 | 6.07 | ⚑ |
+| 16 → 22.05 | ↑3 · bridge↓k0 · ↓2 | 6.000 | 166.8 | 1.64 | 492.3 | 4.57 | ⚑ |
+| 16 → 44.1 | ↑3 · bridge↓k0 | 6.000 | 72.9 | 1.21 | 220.6 | 3.46 |  |
+| 16 → 88.2 | ↑3 · bridge↓k0 · ↑2 | 6.000 | 41.9 | 1.31 | 119.8 | 3.65 |  |
+| 16 → 176.4 | ↑3 · bridge↓k0 · ↑2 · ↑2 | 6.000 | 25.5 | 1.35 | 69.4 | 3.75 |  |
+| 24 → 11.025 | ↑2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 298.9 | 1.86 | 866.4 | 4.88 | ⚑ |
+| 24 → 22.05 | ↑2 · bridge↓k0 · ↓2 | 8.269 | 159.9 | 1.43 | 474.5 | 4.05 | ⚑ |
+| 24 → 44.1 | ↑2 · bridge↓k0 | 9.000 | 69.4 | 1.00 | 211.8 | 2.94 |  |
+| 24 → 88.2 | ↑2 · bridge↓k0 · ↑2 | 9.000 | 45.2 | 1.22 | 131.4 | 3.49 |  |
+| 24 → 176.4 | ↑2 · bridge↓k0 · ↑2 · ↑2 | 9.000 | 27.1 | 1.26 | 75.2 | 3.59 |  |
+| 32 → 11.025 | 3/2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 299.7 | 1.78 | 872.9 | 4.76 | ⚑ |
+| 32 → 22.05 | 3/2 · bridge↓k0 · ↓2 | 8.269 | 166.8 | 1.34 | 492.3 | 3.80 | ⚑ |
+| 32 → 44.1 | 3/2 · bridge↓k0 | 12.000 | 72.9 | 0.91 | 220.6 | 2.69 |  |
+| 32 → 88.2 | 3/2 · bridge↓k0 · ↑2 | 12.000 | 46.9 | 1.12 | 135.8 | 3.24 |  |
+| 32 → 176.4 | 3/2 · bridge↓k0 · ↑2 · ↑2 | 12.000 | 29.0 | 1.17 | 77.4 | 3.34 |  |
+| 48 → 11.025 | bridge↓k0 · ↓2 · ↓2 | 4.134 | 275.0 | 1.67 | 825.0 | 4.52 | ⚑ |
+| 48 → 22.05 | bridge↓k0 · ↓2 | 8.269 | 137.0 | 1.03 | 419.0 | 3.03 | ⚑ |
 | 48 → 44.1 | bridge↓k0 | 16.538 | 58.0 | 0.60 | 184.0 | 1.92 |  |
-| 48 → 88.2 | bridge↓k0 · ↑2 | 18.000 | 44.5 | 0.93 | 137.5 | 2.93 |  |
-| 48 → 176.4 | bridge↓k0 · ↑2 · ↑2 | 18.000 | 33.8 | 1.05 | 100.2 | 3.27 |  |
-| 96 → 11.025 | ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 350.3 | 1.99 | 923.7 | 5.29 | ⚑ |
-| 96 → 22.05 | ↓2 · bridge↓k0 · ↓2 | 8.269 | 171.7 | 1.22 | 476.7 | 3.50 | ⚑ |
-| 96 → 44.1 | ↓2 · bridge↓k0 | 16.538 | 83.0 | 0.82 | 252.6 | 2.55 |  |
+| 48 → 88.2 | bridge↓k0 · ↑2 | 18.000 | 42.5 | 0.89 | 136.5 | 2.90 |  |
+| 48 → 176.4 | bridge↓k0 · ↑2 · ↑2 | 18.000 | 31.8 | 1.00 | 93.8 | 3.18 |  |
+| 96 → 11.025 | ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 314.2 | 1.74 | 907.7 | 4.70 | ⚑ |
+| 96 → 22.05 | ↓2 · bridge↓k0 · ↓2 | 8.269 | 160.9 | 1.13 | 460.4 | 3.20 | ⚑ |
+| 96 → 44.1 | ↓2 · bridge↓k0 | 16.538 | 80.9 | 0.80 | 239.5 | 2.43 |  |
 | 96 → 88.2 | bridge↓k1 | 33.075 | 58.0 | 0.30 | 184.0 | 0.96 |  |
-| 96 → 176.4 | bridge↓k1 · ↑2 | 36.000 | 44.5 | 0.47 | 137.5 | 1.46 |  |
-| 192 → 11.025 | ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 428.7 | 2.02 | 1089.2 | 5.38 | ⚑ |
-| 192 → 22.05 | ↓3 · 3/4 · bridge↓k0 · ↓2 | 8.269 | 228.3 | 1.25 | 601.5 | 3.69 | ⚑ |
-| 192 → 44.1 | ↓2 · ↓2 · bridge↓k0 | 16.538 | 115.7 | 0.89 | 298.3 | 2.65 |  |
-| 192 → 88.2 | ↓2 · bridge↓k1 | 33.075 | 83.0 | 0.41 | 252.6 | 1.28 |  |
+| 96 → 176.4 | bridge↓k1 · ↑2 | 36.000 | 42.5 | 0.44 | 136.5 | 1.45 |  |
+| 192 → 11.025 | ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 392.6 | 1.78 | 1073.2 | 4.79 | ⚑ |
+| 192 → 22.05 | ↓3 · 3/4 · bridge↓k0 · ↓2 | 8.269 | 208.8 | 1.17 | 560.5 | 3.31 | ⚑ |
+| 192 → 44.1 | ↓2 · ↓2 · bridge↓k0 | 16.538 | 104.8 | 0.85 | 280.9 | 2.52 |  |
+| 192 → 88.2 | ↓2 · bridge↓k1 | 33.075 | 80.9 | 0.40 | 239.5 | 1.21 |  |
 | 192 → 176.4 | bridge↓k2 | 66.150 | 58.0 | 0.15 | 184.0 | 0.48 |  |
-| 384 → 11.025 | ↓2 · ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 550.6 | 2.04 | 1350.4 | 5.41 | ⚑ |
-| 384 → 22.05 | ↓8 · bridge↓k0 · ↓2 | 8.269 | 293.6 | 1.18 | 829.4 | 3.57 | ⚑ |
-| 384 → 44.1 | ↓3 · 3/4 · ↓2 · bridge↓k0 | 16.538 | 172.3 | 0.91 | 423.1 | 2.74 |  |
-| 384 → 88.2 | ↓2 · ↓2 · bridge↓k1 | 33.075 | 115.7 | 0.45 | 298.3 | 1.33 |  |
-| 384 → 176.4 | ↓2 · bridge↓k2 | 66.150 | 83.0 | 0.21 | 252.6 | 0.64 |  |
+| 384 → 11.025 | ↓2 · ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2 | 4.134 | 514.5 | 1.79 | 1299.6 | 4.82 | ⚑ |
+| 384 → 22.05 | ↓8 · bridge↓k0 · ↓2 | 8.269 | 291.6 | 1.14 | 665.0 | 3.19 | ⚑ |
+| 384 → 44.1 | ↓3 · 3/4 · ↓2 · bridge↓k0 | 16.538 | 152.7 | 0.87 | 381.0 | 2.57 |  |
+| 384 → 88.2 | ↓2 · ↓2 · bridge↓k1 | 33.075 | 104.8 | 0.42 | 280.9 | 1.26 |  |
+| 384 → 176.4 | ↓2 · bridge↓k2 | 66.150 | 80.9 | 0.20 | 239.5 | 0.61 |  |
 
 ### 3.6 44.1 kHz family → 48 kHz family (45 ordered pairs)
 
 | From → To | Chain | f_pass eco (kHz) | MAC/out eco | Latency eco (ms) | MAC/out tr | Latency tr (ms) | ⚑ |
 |---|---|---|---|---|---|---|---|
-| 11.025 → 8 | ↑2 · ↑2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 366.0 | 3.28 | 849.7 | 8.58 | ⚑ |
-| 11.025 → 12 | ↑2 · ↑2 · bridge↑k0 · ↓2 · ↓2 | 4.134 | 253.7 | 2.82 | 585.5 | 7.22 | ⚑ |
-| 11.025 → 16 | ↑2 · ↑2 · bridge↑k0 · ↓3 | 4.134 | 195.5 | 2.34 | 461.4 | 5.83 | ⚑ |
-| 11.025 → 24 | ↑2 · ↑2 · bridge↑k0 · ↓2 | 4.134 | 115.3 | 1.95 | 261.2 | 4.68 | ⚑ |
-| 11.025 → 32 | ↑2 · ↑2 · bridge↑k0 · 2/3 | 4.134 | 89.8 | 1.82 | 203.7 | 4.53 |  |
-| 11.025 → 48 | ↑2 · ↑2 · bridge↑k0 | 4.134 | 50.2 | 1.68 | 120.1 | 4.29 |  |
-| 11.025 → 96 | ↑2 · ↑2 · bridge↑k0 · ↑2 | 4.134 | 32.6 | 1.81 | 69.6 | 4.46 |  |
-| 11.025 → 192 | ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 | 4.134 | 20.8 | 1.85 | 44.3 | 4.55 |  |
-| 11.025 → 384 | ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 · ↑2 | 4.134 | 13.9 | 1.86 | 29.6 | 4.59 |  |
-| 22.05 → 8 | ↑2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 334.3 | 2.33 | 762.9 | 5.81 | ⚑ |
-| 22.05 → 12 | ↑2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 247.3 | 2.05 | 604.8 | 5.41 | ⚑ |
-| 22.05 → 16 | ↑2 · bridge↑k0 · ↓3 | 6.000 | 190.7 | 1.57 | 475.8 | 4.01 | ⚑ |
-| 22.05 → 24 | ↑2 · bridge↑k0 · ↓2 | 8.269 | 120.1 | 1.34 | 312.9 | 3.74 | ⚑ |
-| 22.05 → 32 | ↑2 · bridge↑k0 · 2/3 | 8.269 | 105.3 | 1.24 | 261.9 | 3.24 |  |
-| 22.05 → 48 | ↑2 · bridge↑k0 | 8.269 | 48.6 | 0.91 | 124.9 | 2.47 |  |
-| 22.05 → 96 | ↑2 · bridge↑k0 · ↑2 | 8.269 | 31.8 | 1.04 | 73.0 | 2.67 |  |
-| 22.05 → 192 | ↑2 · bridge↑k0 · 4/3 · ↑3 | 8.269 | 21.7 | 1.08 | 48.8 | 2.86 |  |
-| 22.05 → 384 | ↑2 · bridge↑k0 · ↑8 | 8.269 | 14.9 | 1.01 | 38.5 | 2.74 |  |
-| 44.1 → 8 | bridge↑k0 · ↓3 · ↓2 | 3.000 | 293.0 | 2.03 | 705.0 | 5.38 | ⚑ |
-| 44.1 → 12 | bridge↑k0 · ↓2 · ↓2 | 4.500 | 205.0 | 1.58 | 489.0 | 4.03 | ⚑ |
-| 44.1 → 16 | bridge↑k0 · ↓3 | 6.000 | 159.0 | 1.10 | 389.0 | 2.63 | ⚑ |
-| 44.1 → 24 | bridge↑k0 · ↓2 | 9.000 | 99.0 | 0.87 | 255.0 | 2.36 | ⚑ |
-| 44.1 → 32 | bridge↑k0 · 2/3 | 12.000 | 89.5 | 0.76 | 218.5 | 1.86 |  |
+| 11.025 → 8 | ↑2 · ↑2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 342.3 | 2.91 | 815.7 | 7.24 | ⚑ |
+| 11.025 → 12 | ↑2 · ↑2 · bridge↑k0 · ↓2 · ↓2 | 4.134 | 234.5 | 2.48 | 554.8 | 6.09 | ⚑ |
+| 11.025 → 16 | ↑2 · ↑2 · bridge↑k0 · ↓3 | 4.134 | 184.6 | 2.10 | 450.3 | 5.24 | ⚑ |
+| 11.025 → 24 | ↑2 · ↑2 · bridge↑k0 · ↓2 | 4.134 | 106.8 | 1.68 | 251.9 | 4.05 | ⚑ |
+| 11.025 → 32 | ↑2 · ↑2 · bridge↑k0 · 2/3 | 4.134 | 83.3 | 1.61 | 198.2 | 3.94 |  |
+| 11.025 → 48 | ↑2 · ↑2 · bridge↑k0 | 4.134 | 47.9 | 1.50 | 116.4 | 3.70 |  |
+| 11.025 → 96 | ↑2 · ↑2 · bridge↑k0 · ↑2 | 4.134 | 28.4 | 1.57 | 67.7 | 3.87 |  |
+| 11.025 → 192 | ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 | 4.134 | 18.7 | 1.61 | 43.4 | 3.96 |  |
+| 11.025 → 384 | ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 · ↑2 | 4.134 | 12.9 | 1.62 | 28.2 | 3.99 |  |
+| 22.05 → 8 | ↑2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 313.3 | 2.05 | 745.4 | 5.02 | ⚑ |
+| 22.05 → 12 | ↑2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 233.6 | 1.84 | 566.7 | 4.60 | ⚑ |
+| 22.05 → 16 | ↑2 · bridge↑k0 · ↓3 | 6.000 | 183.9 | 1.47 | 459.3 | 3.74 | ⚑ |
+| 22.05 → 24 | ↑2 · bridge↑k0 · ↓2 | 8.269 | 116.3 | 1.26 | 289.9 | 3.22 | ⚑ |
+| 22.05 → 32 | ↑2 · bridge↑k0 · 2/3 | 8.269 | 101.0 | 1.16 | 253.6 | 2.97 |  |
+| 22.05 → 48 | ↑2 · bridge↑k0 | 8.269 | 47.6 | 0.86 | 119.4 | 2.20 |  |
+| 22.05 → 96 | ↑2 · bridge↑k0 · ↑2 | 8.269 | 29.3 | 0.96 | 69.2 | 2.38 |  |
+| 22.05 → 192 | ↑2 · bridge↑k0 · 4/3 · ↑3 | 8.269 | 19.7 | 1.00 | 44.9 | 2.48 |  |
+| 22.05 → 384 | ↑2 · bridge↑k0 · ↑8 | 8.269 | 14.8 | 0.96 | 29.1 | 2.36 |  |
+| 44.1 → 8 | bridge↑k0 · ↓3 · ↓2 | 3.000 | 283.0 | 1.85 | 693.0 | 4.63 | ⚑ |
+| 44.1 → 12 | bridge↑k0 · ↓2 · ↓2 | 4.500 | 195.0 | 1.41 | 473.0 | 3.48 | ⚑ |
+| 44.1 → 16 | bridge↑k0 · ↓3 | 6.000 | 155.0 | 1.03 | 389.0 | 2.63 | ⚑ |
+| 44.1 → 24 | bridge↑k0 · ↓2 | 9.000 | 97.0 | 0.83 | 243.0 | 2.11 | ⚑ |
+| 44.1 → 32 | bridge↑k0 · 2/3 | 12.000 | 86.5 | 0.73 | 218.5 | 1.86 |  |
 | 44.1 → 48 | bridge↑k0 | 16.538 | 38.0 | 0.43 | 96.0 | 1.09 |  |
-| 44.1 → 96 | bridge↑k0 · ↑2 | 16.538 | 30.5 | 0.65 | 79.5 | 1.72 |  |
-| 44.1 → 192 | bridge↑k0 · ↑2 · ↑2 | 16.538 | 22.8 | 0.72 | 50.2 | 1.82 |  |
-| 44.1 → 384 | bridge↑k0 · ↑2 · 4/3 · ↑3 | 16.538 | 17.2 | 0.74 | 37.5 | 1.92 |  |
-| 88.2 → 8 | ↓2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 375.7 | 2.18 | 809.7 | 5.57 | ⚑ |
-| 88.2 → 12 | ↓2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 260.1 | 1.72 | 558.8 | 4.22 | ⚑ |
-| 88.2 → 16 | ↓2 · bridge↑k0 · ↓3 | 6.000 | 200.3 | 1.24 | 446.9 | 2.85 | ⚑ |
-| 88.2 → 24 | ↓2 · bridge↑k0 · ↓2 | 9.000 | 141.3 | 1.11 | 370.8 | 3.05 | ⚑ |
-| 88.2 → 32 | ↓2 · bridge↑k0 · 2/3 | 12.000 | 121.2 | 1.00 | 305.3 | 2.55 |  |
-| 88.2 → 48 | ↓2 · bridge↑k0 | 18.000 | 66.5 | 0.76 | 179.6 | 2.10 |  |
+| 44.1 → 96 | bridge↑k0 · ↑2 | 16.538 | 29.5 | 0.63 | 73.5 | 1.60 |  |
+| 44.1 → 192 | bridge↑k0 · ↑2 · ↑2 | 16.538 | 20.2 | 0.68 | 46.2 | 1.69 |  |
+| 44.1 → 384 | bridge↑k0 · ↑2 · 4/3 · ↑3 | 16.538 | 15.1 | 0.70 | 33.5 | 1.74 |  |
+| 88.2 → 8 | ↓2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 332.6 | 1.93 | 797.7 | 4.82 | ⚑ |
+| 88.2 → 12 | ↓2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 228.1 | 1.49 | 542.8 | 3.68 | ⚑ |
+| 88.2 → 16 | ↓2 · bridge↑k0 · ↓3 | 6.000 | 185.3 | 1.14 | 441.4 | 2.82 | ⚑ |
+| 88.2 → 24 | ↓2 · bridge↑k0 · ↓2 | 9.000 | 135.6 | 1.04 | 336.7 | 2.66 | ⚑ |
+| 88.2 → 32 | ↓2 · bridge↑k0 · 2/3 | 12.000 | 115.4 | 0.95 | 288.8 | 2.41 |  |
+| 88.2 → 48 | ↓2 · bridge↑k0 | 18.000 | 62.8 | 0.71 | 177.8 | 2.07 |  |
 | 88.2 → 96 | bridge↑k1 | 33.075 | 38.0 | 0.22 | 96.0 | 0.54 |  |
-| 88.2 → 192 | bridge↑k1 · ↑2 | 33.075 | 30.5 | 0.32 | 79.5 | 0.86 |  |
-| 88.2 → 384 | bridge↑k1 · ↑2 · ↑2 | 33.075 | 22.8 | 0.36 | 50.2 | 0.91 |  |
-| 176.4 → 8 | ↓2 · ↓2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 474.9 | 2.22 | 997.2 | 5.66 | ⚑ |
-| 176.4 → 12 | ↓2 · ↓2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 326.3 | 1.76 | 698.5 | 4.31 | ⚑ |
-| 176.4 → 16 | ↓2 · ↓2 · bridge↑k0 · ↓3 | 6.000 | 283.0 | 1.32 | 551.6 | 2.94 | ⚑ |
-| 176.4 → 24 | ↓2 · ↓2 · bridge↑k0 · ↓2 | 9.000 | 196.4 | 1.18 | 440.6 | 3.15 | ⚑ |
-| 176.4 → 32 | ↓2 · ↓2 · bridge↑k0 · 2/3 | 12.000 | 162.5 | 1.08 | 363.2 | 2.66 |  |
-| 176.4 → 48 | ↓2 · ↓2 · bridge↑k0 | 18.000 | 108.7 | 0.88 | 295.4 | 2.44 |  |
-| 176.4 → 96 | ↓2 · bridge↑k1 | 36.000 | 66.5 | 0.38 | 179.6 | 1.05 |  |
+| 88.2 → 192 | bridge↑k1 · ↑2 | 33.075 | 29.5 | 0.31 | 73.5 | 0.80 |  |
+| 88.2 → 384 | bridge↑k1 · ↑2 · ↑2 | 33.075 | 20.2 | 0.34 | 46.2 | 0.84 |  |
+| 176.4 → 8 | ↓2 · ↓2 · bridge↑k0 · ↓3 · ↓2 | 3.000 | 431.8 | 1.97 | 985.2 | 4.91 | ⚑ |
+| 176.4 → 12 | ↓2 · ↓2 · bridge↑k0 · ↓2 · ↓2 | 4.500 | 294.2 | 1.53 | 682.5 | 3.77 | ⚑ |
+| 176.4 → 16 | ↓2 · ↓2 · bridge↑k0 · ↓3 | 6.000 | 234.9 | 1.18 | 546.1 | 2.92 | ⚑ |
+| 176.4 → 24 | ↓2 · ↓2 · bridge↑k0 · ↓2 | 9.000 | 168.7 | 1.08 | 406.5 | 2.76 | ⚑ |
+| 176.4 → 32 | ↓2 · ↓2 · bridge↑k0 · 2/3 | 12.000 | 145.8 | 1.00 | 341.2 | 2.51 |  |
+| 176.4 → 48 | ↓2 · ↓2 · bridge↑k0 | 18.000 | 101.4 | 0.82 | 271.5 | 2.35 |  |
+| 176.4 → 96 | ↓2 · bridge↑k1 | 36.000 | 62.8 | 0.36 | 177.8 | 1.04 |  |
 | 176.4 → 192 | bridge↑k2 | 66.150 | 38.0 | 0.11 | 96.0 | 0.27 |  |
-| 176.4 → 384 | bridge↑k2 · ↑2 | 66.150 | 30.5 | 0.16 | 79.5 | 0.43 |  |
+| 176.4 → 384 | bridge↑k2 · ↑2 | 66.150 | 29.5 | 0.16 | 73.5 | 0.40 |  |
 
 Count: 72 + 20 + 45 + 45 = 182 = 14 × 13 ordered pairs, every one covered
 and measured; 38 carry ⚑. The generator, `rational/tools/coverage/matrix.py`
@@ -655,15 +703,18 @@ and measured; 38 carry ⚑. The generator, `rational/tools/coverage/matrix.py`
 each family's base as intermediates (b ≤ 3; without a single 4th-band
 stage, decision 6), the stage lengths from the numpy search on the
 16384-point grid at each stage's design divisor (the same criterion as the
-M2 pins; its `pins` mode prints `design.h`'s relaxation tables), the MACs
-per output as `stage.h` trims its rows, the same selection (the MAC
-minimum, then the fewest stages whose rational part is within 10 % of its
-rational part around the same `bridge` stage, then latency), the same
-flag rule. `matrix.py md` prints 3.3–3.6, `rows` writes
+M2 pins, each design's β for A + 4 dB since X17; its `pins` mode prints
+`design.h`'s relaxation tables), the MACs per output as `stage.h` trims
+its rows, the same selection (the MAC minimum, then the fewest stages
+whose rational part is within 10 % of its rational part around the same
+`bridge` stage, then latency; frozen at v0.7's chains until X-a3, 3.1),
+the same flag rule. `matrix.py md` prints 3.3–3.6, `rows` writes
 `tests/coverage/matrix_rows.h` (the 182 rows as an X-macro with every
 stage's divisor and the exact MACs and latency per profile, which
 `test_matrix.cpp` pins), `diff` lists the rows that differ from this
-file's tables, `rule` the rows where the fewest-stages rule bit.
+file's tables, `rule` the rows where the fewest-stages rule bites on the
+current pins, `frozen` the rows the rule would move from the frozen
+selection.
 
 ## 4. Layout
 
@@ -840,18 +891,20 @@ Plus:
 
 **The M2 table, measured** (N = 2mB − 1 per band × profile, the worst
 stopband on the 16384-point grid in parentheses; the harris estimates the
-v0.2 plan carried are struck through beside the first two rows and were
-2–8 taps per branch low; `design.h`'s `profile` docstring repeats the
-table as m):
+v0.2 plan carried are struck through beside the first two rows; `design.h`'s
+`profile` docstring repeats the table as m). Since v0.17 the table is
+X17's re-pin, the designer's β for A + 4 dB (section 6, "The designer's β,
+X17"), where the estimates are one tap per branch low; M2's own pins, with
+β for A, were 2–8 taps per branch above them:
 
 | Ratio (band B) | super_economy | economy | balanced | transparent |
 |---|---|---|---|---|
-| ↑2 / ↓2 (2) | **35** / 19 nonzero (−72.8 dB); ~~27~~ | **43** / 23 (−71.9 dB); ~~35~~ | **51** / 27 (−71.5 dB); ~~43~~ | **123** / 63 (−121.7 dB); ~~95~~ |
-| ↑3 / ↓3 (3) | **47** / 33 (−71.2 dB); ~~41~~ | **65** / 45 (−71.3 dB); ~~53~~ | **77** / 53 (−71.2 dB); ~~65~~ | **149** / 101 (−121.1 dB); ~~143~~ |
-| ↑4 / ↓4 (4; not shipped as one stage, decision 6 — the design serves 4/3 and 3/4) | **63** / 49 (−71.4 dB) | **87** / 67 (−71.1 dB) | **111** / 85 (−72.3 dB) | **199** / 151 (−121.4 dB) |
-| ↑6 / ↓6 (6) | **95** / 81 (−71.5 dB) | **143** / 121 (−72.1 dB) | **167** / 141 (−72.2 dB) | **299** / 251 (−121.3 dB) |
-| ↑8 / ↓8 (8) | **127** / 113 (−71.5 dB) | **191** / 169 (−72.1 dB) | **223** / 197 (−72.1 dB) | **399** / 351 (−121.2 dB) |
-| 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 (T = ⌈N / L⌉ per phase over the band's design) | **16 / 24 / 16 / 21 / 16 / 43** | **22 / 33 / 22 / 29 / 24 / 64** | **26 / 39 / 28 / 37 / 28 / 75** | **50 / 75 / 50 / 67 / 50 / 133** |
+| ↑2 / ↓2 (2) | **31** / 17 nonzero (−72.4 dB); ~~27~~ | **39** / 21 (−73.1 dB); ~~35~~ | **47** / 25 (−72.5 dB); ~~43~~ | **99** / 51 (−122.2 dB); ~~95~~ |
+| ↑3 / ↓3 (3) | **47** / 33 (−73.6 dB); ~~41~~ | **59** / 41 (−72.5 dB); ~~53~~ | **71** / 49 (−72.4 dB); ~~65~~ | **149** / 101 (−122.8 dB); ~~143~~ |
+| ↑4 / ↓4 (4; not shipped as one stage, decision 6 — the design serves 4/3 and 3/4) | **63** / 49 (−74.4 dB) | **79** / 61 (−72.5 dB) | **95** / 73 (−72.5 dB) | **199** / 151 (−122.9 dB) |
+| ↑6 / ↓6 (6) | **83** / 71 (−71.9 dB) | **119** / 101 (−72.6 dB) | **143** / 121 (−72.6 dB) | **299** / 251 (−123.0 dB) |
+| ↑8 / ↓8 (8) | **111** / 99 (−72.1 dB) | **159** / 141 (−72.7 dB) | **191** / 169 (−72.7 dB) | **399** / 351 (−123.1 dB) |
+| 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 (T = ⌈N / L⌉ per phase over the band's design) | **16 / 24 / 16 / 21 / 14 / 37** | **20 / 30 / 20 / 27 / 20 / 53** | **24 / 36 / 24 / 32 / 24 / 64** | **50 / 75 / 50 / 67 / 50 / 133** |
 
 The ↑ and ↓ designs of one ratio are the same prototype (a Nyquist filter
 is its own transpose up to the gain convention), so one pin serves both —
@@ -861,33 +914,36 @@ M2 verified that claim (`Design.UpAndDownOfOneBandAreTheSamePrototype`:
 the vectors are bit-identical) before relying on it, and a mixed ratio's
 design is its larger factor's band (2/3 and 3/2 share the third-band
 design; `test_design.cpp` pins it). The mixed stages' MACs per output are
-their trimmed rows' lengths over L — a 2/3 stage at `economy` costs 32.5,
-not the 26 the v0.2 arithmetic in 2.1 estimated — and the matrix's figures
+their trimmed rows' lengths over L — a 2/3 stage at `economy` cost 32.5
+on M2's pins (29.5 on X17's), not the 26 the v0.2 arithmetic in 2.1
+estimated — and the matrix's figures
 were regenerated from these counts at M4 (v0.7, section 3; risk S1).
 
 **The fixed-point profiles, measured** (M5, `test_fixed_point.cpp`; the
 reference noise, 480 frames at peak 0.9; Q15's attained stopband is the
 quantized Q1.14 table's worst response on the 16384-point design grid;
 Q31's equals the design's within 0.1 dB at every stage and profile, and its
-worst deviation from double is 3.4e−9; Q15 / float MACs are the counted
-MACs per superblock):
+worst deviation from double is 2.5e−9 (3.4e−9 at M5); Q15 / float MACs are
+the counted MACs per superblock). The table is X17's re-measure (v0.17,
+the designer's β for A + 4 dB; the M5 table and the levers' numbers below
+are the designs of their day):
 
 | Stage | Q15 stopband eco (dB) | Q15 RMS vs double eco (dBFS) | Q15 / float MACs eco | Q15 stopband tr (dB) | Q15 RMS tr (dBFS) | Q15 / float MACs tr |
 |---|---|---|---|---|---|---|
-| ↑2 | -72.3 | -95.8 | 23 / 23 | -77.3 | -93.4 | 55 / 63 |
-| ↓2 | -72.3 | -97.5 | 23 / 23 | -77.3 | -95.7 | 55 / 63 |
-| ↑3 | -70.2 | -93.5 | 45 / 45 | -76.1 | -91.2 | 89 / 101 |
-| ↓3 | -70.2 | -96.8 | 45 / 45 | -76.1 | -95.7 | 89 / 101 |
-| ↑6 | -71.5 | -92.4 | 121 / 121 | -78.5 | -90.7 | 219 / 251 |
-| ↓6 | -71.5 | -98.6 | 121 / 121 | -78.5 | -98.3 | 219 / 251 |
-| ↑8 | -71.7 | -92.3 | 169 / 169 | -78.2 | -90.2 | 303 / 351 |
-| ↓8 | -71.7 | -97.9 | 169 / 169 | -78.2 | -99.5 | 303 / 351 |
-| 3/2 | -70.2 | -93.4 | 45 / 45 | -76.1 | -91.1 | 89 / 101 |
-| 2/3 | -70.5 | -95.9 | 65 / 65 | -78.2 | -94.6 | 131 / 149 |
-| 4/3 | -71.7 | -93.6 | 67 / 67 | -77.2 | -90.6 | 131 / 151 |
-| 3/4 | -70.0 | -96.8 | 87 / 87 | -78.3 | -94.3 | 175 / 199 |
-| 8/3 | -71.7 | -92.2 | 169 / 169 | -78.2 | -90.4 | 303 / 351 |
-| 3/8 | -71.8 | -97.8 | 191 / 191 | -83.1 | -96.6 | 349 / 399 |
+| ↑2 | -70.6 | -95.3 | 21 / 21 | -77.1 | -92.0 | 43 / 51 |
+| ↓2 | -70.6 | -97.2 | 21 / 21 | -77.1 | -94.4 | 43 / 51 |
+| ↑3 | -71.8 | -95.4 | 41 / 41 | -74.2 | -90.5 | 87 / 101 |
+| ↓3 | -71.8 | -97.7 | 41 / 41 | -74.2 | -95.6 | 87 / 101 |
+| ↑6 | -71.8 | -93.5 | 101 / 101 | -77.8 | -90.8 | 215 / 251 |
+| ↓6 | -71.8 | -98.6 | 101 / 101 | -77.8 | -97.5 | 215 / 251 |
+| ↑8 | -72.9 | -92.6 | 141 / 141 | -77.9 | -90.0 | 299 / 351 |
+| ↓8 | -72.9 | -99.4 | 141 / 141 | -77.9 | -100.5 | 299 / 351 |
+| 3/2 | -71.8 | -95.5 | 41 / 41 | -74.2 | -90.5 | 87 / 101 |
+| 2/3 | -73.6 | -96.3 | 59 / 59 | -79.1 | -94.4 | 131 / 149 |
+| 4/3 | -73.9 | -93.3 | 61 / 61 | -78.1 | -91.0 | 131 / 151 |
+| 3/4 | -73.3 | -96.5 | 79 / 79 | -80.7 | -94.6 | 171 / 199 |
+| 8/3 | -72.9 | -92.3 | 141 / 141 | -77.9 | -90.1 | 299 / 351 |
+| 3/8 | -73.4 | -97.4 | 159 / 159 | -81.5 | -95.5 | 349 / 399 |
 
 Two limits, stated rather than papered over (both pinned by the battery):
 
@@ -903,9 +959,11 @@ Two limits, stated rather than papered over (both pinned by the battery):
   Q15 decimator's table bit for bit the Q15 interpolator's of the same band
   (`FixedPoint.Q15DecimatorTableIsTheInterpolatorsTable`), and the 1 / M
   rides the single rounding: a 15- or 17-bit shift for ↓2 and ↓8, an
-  exact-at-DC multiply-back for ↓3 and ↓6. The table above is measured
-  after it: every decimator attains its band's interpolator stopband (↓6
-  −71.5 dB, ↓8 −71.7 dB at `economy`; −76 … −79 dB at `transparent`), the
+  exact-at-DC multiply-back for ↓3 and ↓6. Measured after it, on the
+  designs of the day: every decimator attains its band's interpolator
+  stopband (↓6 −71.5 dB, ↓8 −71.7 dB at `economy`; −76 … −79 dB at
+  `transparent`; on X17's designs, the table above, −71.8 and −72.9 dB, and
+  −74.2 … −77.9 dB), the
   Q15 RMS deviation from double fell by 5–12 dB, full-scale DC is still
   exact, and ↓3 at `economy` moved from −72.4 to −70.2 dB (still the 70 dB
   tier). Q31 and float are unchanged. The mixed ratios going down had the
@@ -914,21 +972,26 @@ Two limits, stated rather than papered over (both pinned by the battery):
   −68.2 … −69.7 dB at the 70 dB tiers — and the same remedy at a
   power-of-two gain followed: their Q15 rows sum to G x unity, G the
   largest power of two with G L / M < 2 (2/3 and 3/4: 2, 3/8: 4), shifted
-  back out exactly in the rounding (`k_table_gain`). Measured after it
-  (the table above), every Q15 stage attains the 70 dB tier at every 70 dB
-  profile: the mixed ratios going down −70.0 … −72.4 dB (3/4 at `economy`
-  moved from −72.8 to −70.0, its tightest; 3/4 at `balanced` from −68.2 to
-  −72.4), their Q15 RMS from double 4–10 dB lower. What remains
-  format-limited in Q15 is `transparent` (−76 … −83 dB, not 120; the outer
-  taps of its long designs round to zero and are trimmed: Q15 MACs below
-  float's), so at Q15 `economy` is the pairing, as `bridge` found
+  back out exactly in the rounding (`k_table_gain`). Measured after it,
+  every Q15 stage attains the 70 dB tier at every 70 dB profile: the mixed
+  ratios going down −70.0 … −72.4 dB (3/4 at `economy` moved from −72.8 to
+  −70.0, its tightest; 3/4 at `balanced` from −68.2 to −72.4), their Q15
+  RMS from double 4–10 dB lower. On X17's designs (the table above) it
+  still holds, with more margin: every Q15 stage −70.4 … −73.9 dB at the
+  70 dB profiles, the mixed ratios going down −71.8 … −73.8 dB (β for
+  A + 3 dB, the other offset measured, would have put ↑3 / ↓3 / 3/2 at
+  `economy` at −69.9 dB). What remains format-limited in Q15 is
+  `transparent` (−74 … −82 dB on X17's designs, −76 … −83 dB before; not
+  120: the outer taps of its long designs round to zero and are trimmed,
+  Q15 MACs below float's), so at Q15 `economy` is the pairing, as `bridge` found
   (`../bridge/tests/test_converter_fixed_point.cpp`). The 120 dB promise of
   2.3 and section 3 is float's and Q31's.
 - **A mixed ratio going down multiplies its band's structural zeros.** 2/3,
   3/4 and 3/8 run the L-phase machine over a band-M design: the zeros stride
   by M, the rows by L, so every row crosses every M-th zero and the trimmed
   dot holds them — 20 of 65 MACs per superblock for 2/3 at `economy`, 20 of
-  87 for 3/4, 22 of 191 for 3/8. Interpolators, decimators and the mixed
+  87 for 3/4, 22 of 191 for 3/8 (on X17's designs 18 of 59, 18 of 79 and 18
+  of 159). Interpolators, decimators and the mixed
   ratios going up (band L, every zero in the centre phase) multiply none.
   The sparse-row lever was built and measured after M6, and declined: input
   i on sub-line i mod M makes each row's M residue classes of lag
@@ -946,13 +1009,17 @@ Two limits, stated rather than papered over (both pinned by the battery):
   are measured separately** (`FixedPoint.RelaxedQ15TablesStopbandsAreStated`,
   2026-10-09, the audit's F05): every (profile, divisor, band) of the
   relaxation tables in Q15, the worst per profile pinned within 0.5 dB.
-  Super_economy −70.5 dB, economy −67.6 dB, balanced −70.0 dB, transparent
-  −72.3 dB, each at the 147/160 divisor (the stage at `bridge`'s rate, the
-  widest transition the tables relax to). So "every Q15 stage attains the
-  70 dB tier" holds for the vocabulary at its own rate; the `economy`
-  half-band relaxed to 147/160 misses it by 2.4 dB, and a chain through
-  `bridge` at Q15 `economy` carries that number. At `super_economy`,
-  `balanced` and `transparent` every relaxed Q15 design attains 70 dB.
+  With β for A: super_economy −70.5 dB, economy −67.6 dB, balanced
+  −70.0 dB, transparent −72.3 dB, each at the 147/160 divisor (the stage
+  at `bridge`'s rate, the widest transition the tables relax to), so
+  "every Q15 stage attains the 70 dB tier" held for the vocabulary at its
+  own rate and the `economy` half-band relaxed to 147/160 missed it by
+  2.4 dB. **With β for A + 4 dB (X17, v0.17) every relaxed Q15 design
+  attains the 70 dB tier**, pinned since (`EXPECT_LE` −70 dB per profile):
+  super_economy −70.5 dB (↑6 at divisor 4), economy −70.4 dB (↑3 at 2),
+  balanced −70.1 dB (↑2 at 147/160), transparent −72.7 dB (↑2 at 147/160);
+  the `economy` half-band at 147/160 now attains −72.1 dB, so a chain
+  through `bridge` at Q15 `economy` keeps the tier.
 
 **The icount baselines, measured** (M6, `bench/icount/`: 2 s of stereo at
 48 kHz streamed in 32-frame blocks, counted under QEMU by the family's
@@ -1162,6 +1229,176 @@ every row but one (Hexagon `Release` float at three counts, +84 B). The
 gain is measured in instructions only; the hardware confirmation waits for
 0.7.0 (`docs/CHANNELS_PLAN.md`, K11).
 
+**The designer's β, X17 (2026-11-20, v0.17).** `docs/X4_X8_PLAN.md` X17,
+decided by the maintainer on spike X-0's numbers
+(`rational/tools/spikes/x4x8/`, its section 2), landed as X-a2. The
+designer took its window's Kaiser β for A dB while the pin search accepts
+a design only at A + 1 dB; a short design's sidelobes then sit at −68 to
+−70.6 dB, inside the margin, and the search runs long (2.1). X17 takes β
+for A + x dB, x fixed, the acceptance unchanged. X-0 measured x = 1 … 4
+for MACs and pins; the offset was chosen here between 3 and 4 on what X-0
+did not measure: the Q15 / Q31 attained stopbands and floors per stage and
+the passband ripple of each design. **x = 4.**
+
+*Where it lives, with no DspTap change.* `design.h`'s
+`k_design_beta_offset_db` (4.0) and `design_beta(p)` (`kaiser_beta(A + 4)`)
+design every stage; an unpinned profile is searched by DspTap's
+`search_nyquist_m(band, p, A + 4, 1 − 4, …)`, which designs with β for
+A + 4 and accepts at −(A + 1) dB: the same m as a search with the β as its
+own argument at every key the matrix designs (X-0's `margin_trick`, re-run
+here for x = 0, 3 and 4 against `pins_beta`: 300 of 300 keys each).
+`matrix.py`'s `BETA_OFFSET_DB` and `make_reference_vectors.py`'s carry the
+same rule. 0.8.0 stays on DspTap 0.2.0; a β argument in DspTap 0.3.0 can
+retire the margin arithmetic.
+
+*The comparison* (x = 0 is the designer before; the pins from DspTap's
+designer through X-0's `pins_beta` on the 16384-point grid; the
+fixed-point and ripple numbers from `test_fixed_point.cpp`'s and
+`test_design.cpp`'s own measurement code built against each x's tables;
+GCC 13.3, x86-64; the per-stage numbers are the vocabulary at its own rate,
+divisor 1, every profile):
+
+| | β for A (before) | β for A + 3 dB | **β for A + 4 dB (chosen)** |
+|---|---|---|---|
+| relaxation pins moved, of 200 (`economy`'s, of 50) | — | 102 (23) | 127 (32) |
+| `economy`'s pins at divisor 1, bands 2 / 3 / 4 / 6 / 8 | 11 / 11 / 11 / 12 / 12 | 10 / 10 / 10 / 10 / 10 | 10 / 10 / 10 / 10 / 10 |
+| mean `economy` MAC/out over the 182 rows, the chains kept (what ships) | 93.66 | 89.45 (−4.5 %) | 87.76 (−6.3 %) |
+| the same with R3 re-selecting, decision 6 kept (X-0's column) | 93.66 | 88.30 (−5.7 %) | 86.37 (−7.8 %) |
+| rows R3 would move on the new pins (within the families) | 0 | 20 (14) | 26 (20) |
+| ×4: ↓2 · ↓2 / ↑2 · ↑2, MAC/out | 53 / 13.25 | 47 / 11.75 | 43 / 10.75 |
+| ×8, the matrix's chain (↓3 · 3/4 · ↓2 / ↑2 · 4/3 · ↑3) | 105 / 12.46 | 103 / 12.21 | 87 / 10.38 |
+| ×8, three half-bands; ↓4 · ↓2 / ↑2 · ↑4 (X-a3's) | 113 / 14.12; 85 / 10.62 | 83 / 10.38; 83 / 10.38 | 79 / 9.88; 71 / 8.88 |
+| ×16, ↓8 · ↓2 / ↑2 · ↑8 | 165 / 10.31 | 163 / 10.19 | 163 / 10.19 |
+| Q15 attained stopband, every stage, 70 dB profiles | −70.0 … −73.2 dB | **−69.9** … −74.1 dB | −70.4 … −73.9 dB |
+| Q15 attained stopband at `transparent` | −76.1 … −83.1 dB | −74.7 … −80.2 dB | −74.2 … −81.5 dB |
+| Q15 RMS from double on the reference noise | −90.2 … −99.8 dBFS | −89.8 … −99.7 dBFS | −90.0 … −100.5 dBFS |
+| Q31: worst from double; attained stopband against the design | 3.4e−9; within 0.05 dB | 3.7e−9; within 0.06 dB | 2.5e−9; within 0.05 dB |
+| float: worst from double (the test's bound 6e−8) | 5.1e−8 | 5.4e−8 | 5.7e−8 |
+| relaxed Q15 designs, worst per profile (se / eco / bal / tr) | −70.5 / **−67.6** / −70.0 / −72.3 dB | −70.7 / **−69.7** / −70.2 / −72.5 dB | −70.5 / −70.4 / −70.1 / −72.7 dB |
+| design's worst stopband at divisor 1 (70 dB; 120 dB) | −71.1 … −72.8; −121.1 … −121.7 dB | −71.2 … −73.8; −121.3 … −122.2 dB | −71.9 … −74.4; −122.2 … −123.1 dB |
+| passband ripple at divisor 1, worst (70 dB; 120 dB) | 0.0025; 0.000008 dB | 0.0026; 0.000007 dB | 0.0024; 0.000007 dB |
+| ripple of the 200 designs: better / worse / same | — | 152 / 42 / 6 | 141 / 52 / 7 |
+| ripple of the relaxed designs, worst (se / eco / bal / tr) | 0.0039 / 0.0039 / 0.0040 / 0.000014 dB | 0.0040 / 0.0031 / 0.0032 / 0.000011 dB | 0.0039 / 0.0039 / 0.0043 / 0.000011 dB |
+| Q15 chain floors, RMS: 1/48, 48/1, 1/8 (44.1); Q31 1/48 worst | −103.4 / −92.9 / −97.7 dBFS; 2.0e−10 | −102.6 / −92.8 / −99.6 dBFS; 2.8e−10 | −103.5 / −92.6 / −98.3 dBFS; 2.4e−10 |
+
+*The choice, by the rule the maintainer set:* x = 4 unless a contract
+point this plan or `rational/CLAUDE.md` states fails at 4 and holds at 3.
+None does. One fails at 3 and holds at 4: **"every Q15 stage of the
+vocabulary attains the 70 dB tier at its own rate"** — at x = 3 the
+third-band `economy` design (m = 10, the same length as at x = 4) leaves
+↑3, ↓3 and 3/2 at −69.87 dB, and 2/3 and 3/4 at `balanced` at −69.91 and
+−69.98 dB; at x = 4 the worst is 4/3 at `balanced`, −70.42 dB. x = 4 also
+lifts the limit the
+audit's F05 recorded: every relaxed Q15 design a chain runs attains the
+70 dB tier (the `economy` half-band at 147/160 −72.1 dB, from −67.6;
+x = 3 leaves the third band there at −69.7), now pinned
+(`FixedPoint.RelaxedQ15TablesStopbandsAreStated`, `EXPECT_LE` −70 dB). Q31
+holds the design within 0.05 dB and a decade under float's floor at either
+offset; float's worst against double rises to 5.7e−8, inside the test's
+6e−8.
+
+*Passband ripple does not improve everywhere.* At the stage's own rate the
+worst falls (0.0025 → 0.0024 dB at the 70 dB tiers, 0.000008 → 0.000007 dB
+at `transparent`), and 141 of the 200 designs of the tables are flatter.
+52 are not: 42 because the re-pin shortened them, and 10 at an unchanged
+length, all with little ripple to begin with (the 70 dB half-bands at
+divisors 12 and 16, 0.0006 → 0.0012 dB at `super_economy`'s 16; the
+`transparent` half- and third-bands at divisors 6 to 16, ≤ 0.00001 dB). The worst over the
+relaxed designs rises at `super_economy` (0.00385 → 0.00391 dB), `economy`
+(0.00385 → 0.00391) and `balanced` (0.00398 → 0.00426) and falls at
+`transparent`. Every design stays inside 2.3's bounds (0.01 / 0.0001 dB,
+which `test_design.cpp` holds at divisor 1), and the matrix's tone battery
+measures flatter chains than before: worst passband deviation 0.0077 dB at
+the 70 dB tiers (0.0087 before) and 0.00001 dB at `transparent`
+(0.00002), worst image or alias −71.7 dB at `super_economy`, −72.3 at
+`economy`, −72.8 at `balanced` and −123.0 at `transparent` (−71.8, −71.3,
+−71.5 and −121.6 before).
+
+*The chain selection, frozen for this one PR (the maintainer's decision).*
+On the new pins R3 would move 26 rows at `economy`, 20 within the families
+and 6 across (`matrix.py frozen`): 8/1 and 1/8 (both families) to three
+half-bands, 12/1 and 1/12 to ↑2 · ↑3 · ↑2 and ↓2 · ↓3 · ↓2, 24/1 and 1/24
+to ↑2 · ↑2 · ↑2 · ↑3 and ↓3 · ↓2 · ↓2 · ↓2, and 192 → 22.05,
+384 → 11.025, 384 → 44.1, 11.025 → 384, 22.05 → 192 and 44.1 → 384 across;
+eight named chains would leave the matrix (`up2_ratio4over3_up3`,
+`down3_ratio3over4_down2`, `up3_ratio8over3`, `ratio3over8_down3`,
+`up2_up6`, `down6_down2`, `up2_up6_up2`, `down2_down6_down2`) and six join
+(`up2_up2_up2`, `down2_down2_down2`, `up2_up3_up2`, `down2_down3_down2`,
+`up2_up2_up2_up3`, `down3_down2_down2_down2`). At x = 3 it would have been
+20 rows (14 within), six leaving and four joining (the same lists without
+`up2_up6`, `down6_down2`, `up2_up3_up2`, `down2_down3_down2`). X-a2 keeps
+every row's chain instead: `matrix.py`'s `FROZEN_SELECTION` is today's
+selection (v0.7 to v0.16), committed as data, the tables, `matrix_rows.h`
+and the relaxation pins are regenerated from it (the same design divisors,
+re-pinned), and the named chains, the C ABI's constants and
+`matrix.ipynb`'s rows are unchanged. **R3's selection is suspended for this
+PR only:** X-a3 regenerates it under the new designer with the 4th-band
+stage admitted, so the chain set changes once, with X7's stable values,
+before the 0.8.0 tag (`docs/X4_X8_PLAN.md` X17, X3, section 8).
+
+*What was regenerated, and how.* `design.h`'s pins and relaxation tables
+by `matrix.py pins`; `tests/coverage/matrix_rows.h` by `matrix.py rows`;
+3.3–3.6 by `matrix.py md` (`diff` against them: 0 rows); the scipy vectors
+by `tools/reference/make_reference_vectors.py` (`k_input` unchanged);
+`test_fixed_point.cpp`'s 56 rows (the FNV-1a-64 of every Q15 and Q31
+table, the MACs, the Q15 stopbands and RMS floors) and its stated floors
+by the test's own measurement code; `test_design.cpp`'s M2 table and the
+chain and stage pins from the shipping C++; the coverage figure by
+`scripts/book_figures.py coverage-matrix`. `design_spike.ipynb` is M2's
+record of the pins found then, with β for A, and stays as it was executed.
+
+*The ratchet, re-recorded (every `rational` row; `bridge`'s and `async`'s
+re-measure exact in the exceptions build on every target, and their
+ceilings equal).* Both builds were counted on every key, with the CI
+toolchains (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2 with the tree's plugin
+over the pinned `qemu-plugin.h`, CodeLinaro clang 19.1.5 and the
+plugin-enabled `qemu-hexagon`, GCC 13.3 and callgrind for the host). A row
+whose two builds agree within 0.1 % takes the exceptions build's count, as
+the file always has; the one row they split by more, the M55's
+`ratio23_q15_eco` (15,140,167 with exceptions, 14,312,206 without: 5.5 %
+apart, as at A13), is at their midpoint, 14,726,186, each build within
+±2.81 %. The counts fall with the MACs: the float rows −4.8 … −8.8 % at
+`economy` and −14.7 … −18.8 % at `transparent` (the half-band's m 31 →
+25), the Q15 rows −0.1 … −7.0 %, the host's −6.0 … −7.5 %. One row rises:
+Hexagon's `ratio23_q15_eco`, +3.12 % with 9 % fewer MACs (2/3 at `economy`
+is 30 taps a row, from 33); not investigated further.
+
+| Workload | Cortex-M33 | Cortex-M55 | Hexagon |
+|---|---:|---:|---:|
+| `callmax_down2_float` | 107,977 (-8.45 %) | 7,605 (-5.00 %) | 21,543 (-8.62 %) |
+| `callmax_down2_q15` | 6,685 (-3.69 %) | 5,624 (-1.13 %) | 3,763 (-6.56 %) |
+| `callmax_up2_float` | 210,879 (-8.55 %) | 12,524 (-5.83 %) | 40,873 (-8.65 %) |
+| `callmax_up2_q15` | 11,488 (-3.49 %) | 9,212 (-0.35 %) | 5,880 (-5.22 %) |
+| `construct_q15_eco` | 26,681,136 (-0.43 %) | 1,560,152 (-0.24 %) | 8,303,115 (-0.32 %) |
+| `down2_down2_q15_eco` | 52,537,300 (-3.12 %) | 24,216,725 (-0.50 %) | 19,567,759 (-6.99 %) |
+| `down2_float_eco` | 343,562,765 (-7.88 %) | 23,353,785 (-4.75 %) | 66,524,317 (-7.30 %) |
+| `down2_float_tr` | 790,228,053 (-18.49 %) | 40,912,993 (-14.65 %) | 142,826,681 (-17.77 %) |
+| `down2_q15_eco` | 45,602,994 (-1.42 %) | 16,879,879 (-0.28 %) | 16,905,026 (-2.79 %) |
+| `down3_float_eco` | 434,872,408 (-8.20 %) | 27,445,097 (-5.34 %) | 82,591,396 (-7.78 %) |
+| `down3_q15_eco` | 48,745,572 (-1.73 %) | 17,640,706 (-0.28 %) | 18,300,152 (-3.29 %) |
+| `ratio23_float_eco` | 538,739,305 (-8.78 %) | 30,545,005 (-7.02 %) | 115,766,432 (-7.78 %) |
+| `ratio23_q15_eco` | 48,128,267 (-2.57 %) | 14,726,186 (-1.56 %) | 19,232,880 (+3.12 %) |
+| `up2_float_eco` | 650,842,262 (-8.26 %) | 38,707,334 (-5.65 %) | 123,990,515 (-7.75 %) |
+| `up2_float_tr` | 1,542,330,040 (-18.83 %) | 73,546,460 (-15.93 %) | 275,750,044 (-18.21 %) |
+| `up2_q15_eco` | 61,032,738 (-1.98 %) | 28,687,571 (-0.17 %) | 25,064,644 (-3.37 %) |
+| `up3_float_eco` | 1,243,186,839 (-8.74 %) | 66,371,040 (-6.51 %) | 229,335,777 (-8.31 %) |
+| `up3_q15_eco` | 82,905,394 (-2.81 %) | 42,624,043 (-0.12 %) | 36,815,849 (-4.28 %) |
+
+The host key: `down2_float_12ch` 146,817,769 (−6.60 %), `down2_float_2ch`
+26,912,629 (−6.03 %), `up2_float_12ch` 256,387,855 (−7.48 %),
+`up2_float_2ch` 48,551,143 (−6.65 %), identical in both builds.
+
+*The ceilings, re-recorded (`ceilings.py measure --update`):* the probes'
+engine `.text` and their images grow by 48 B on the M33, 32 B on the M55
+and 64 B on Hexagon in every format, the β offset's two additions (the
+search's attenuation and the design's β for A + 4) in the
+construction-time design code — soft double on the Arm targets — that every
+probe links; `.rodata` and every stack figure are unchanged.
+
+*Counts for the next PRs* (band 4 admitted in scratch only, x = 4,
+against these tables) are in `docs/X4_X8_PLAN.md` X17, "What it does to
+X3 and X4".
+
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2
 follow-up landed before M4, so nothing waits for it. Every milestone's PR
@@ -1200,7 +1437,7 @@ carries its measurements, as `bridge`'s M7 entries do.
 
 | # | Risk | Mitigation |
 |---|---|---|
-| S1 | The harris estimates mislead the factoring policy (R3): a pinned N lands on the other side of a stage-count decision | M2 pins before M4 chooses; `matrix.py` is re-run on the pinned Ns and the matrix table is regenerated from measured lengths, not estimates; a flip is recorded in this plan's ledger. **Ledger (M4, v0.7): 35 of the 182 rows changed chain** (`matrix.py diff` against the v0.6 tables). Within the 48 family, eleven ratios: 8/1 ↑2 · ↑2 · ↑2 → ↑2 · 4/3 · ↑3; 12/1 ↑2 · ↑2 · ↑3 → ↑2 · ↑6; 16/1 ↑2 · ↑2 · ↑2 · ↑2 → ↑2 · ↑8; 24/1 ↑3 · ↑8 → ↑2 · ↑6 · ↑2; 32/1 ↑2 · ↑2 · ↑8 → ↑2 · ↑8 · ↑2; 48/1 ↑2 · ↑3 · ↑8 → ↑2 · ↑8 · ↑3; 1/8 ↓2 · ↓2 · ↓2 → ↓3 · 3/4 · ↓2; 1/12 ↓3 · ↓2 · ↓2 → ↓6 · ↓2; 1/16 unchanged; 1/24 ↓8 · ↓3 → ↓2 · ↓6 · ↓2; 1/32 ↓8 · ↓2 · ↓2 → ↓2 · ↓8 · ↓2; 1/48 ↓8 · ↓3 · ↓2 → ↓3 · ↓8 · ↓2 (22 rows). Within the 44.1 family, 8/1 ↑2 · ↑2 · ↑2 → ↑3 · 8/3, 16/1 ↑2 · ↑2 · ↑2 · ↑2 → ↑2 · ↑8 and 1/8 ↓2 · ↓2 · ↓2 → 3/8 · ↓3 (5 rows). Cross-family, eight rows: 192 → 22.05 (↓2 · ↓2 → ↓3 · 3/4 ahead of `bridge`), 384 → 11.025 (↓8 → ↓2 · ↓2 · ↓2), 384 → 22.05 (↓6 · 3/4 → ↓8), 384 → 44.1 (↓2 · ↓2 · ↓2 → ↓3 · 3/4 · ↓2), 11.025 → 384 (↑8 → ↑2 · ↑2 · ↑2 after `bridge`), 22.05 → 192 (↑2 · ↑2 → 4/3 · ↑3), 22.05 → 384 (4/3 · ↑6 → ↑8), 44.1 → 384 (↑2 · ↑2 · ↑2 → ↑2 · 4/3 · ↑3). The cause is 2.1's: a relaxed half-band saturates at m = 7 while a relaxed third-band stage is m = 5. The rules were not changed; a maintainer who prefers integer-factor chains at a few per cent adds a tie-break to `best_chain` and regenerates |
+| S1 | The harris estimates mislead the factoring policy (R3): a pinned N lands on the other side of a stage-count decision | M2 pins before M4 chooses; `matrix.py` is re-run on the pinned Ns and the matrix table is regenerated from measured lengths, not estimates; a flip is recorded in this plan's ledger. **Ledger (M4, v0.7): 35 of the 182 rows changed chain** (`matrix.py diff` against the v0.6 tables). Within the 48 family, eleven ratios: 8/1 ↑2 · ↑2 · ↑2 → ↑2 · 4/3 · ↑3; 12/1 ↑2 · ↑2 · ↑3 → ↑2 · ↑6; 16/1 ↑2 · ↑2 · ↑2 · ↑2 → ↑2 · ↑8; 24/1 ↑3 · ↑8 → ↑2 · ↑6 · ↑2; 32/1 ↑2 · ↑2 · ↑8 → ↑2 · ↑8 · ↑2; 48/1 ↑2 · ↑3 · ↑8 → ↑2 · ↑8 · ↑3; 1/8 ↓2 · ↓2 · ↓2 → ↓3 · 3/4 · ↓2; 1/12 ↓3 · ↓2 · ↓2 → ↓6 · ↓2; 1/16 unchanged; 1/24 ↓8 · ↓3 → ↓2 · ↓6 · ↓2; 1/32 ↓8 · ↓2 · ↓2 → ↓2 · ↓8 · ↓2; 1/48 ↓8 · ↓3 · ↓2 → ↓3 · ↓8 · ↓2 (22 rows). Within the 44.1 family, 8/1 ↑2 · ↑2 · ↑2 → ↑3 · 8/3, 16/1 ↑2 · ↑2 · ↑2 · ↑2 → ↑2 · ↑8 and 1/8 ↓2 · ↓2 · ↓2 → 3/8 · ↓3 (5 rows). Cross-family, eight rows: 192 → 22.05 (↓2 · ↓2 → ↓3 · 3/4 ahead of `bridge`), 384 → 11.025 (↓8 → ↓2 · ↓2 · ↓2), 384 → 22.05 (↓6 · 3/4 → ↓8), 384 → 44.1 (↓2 · ↓2 · ↓2 → ↓3 · 3/4 · ↓2), 11.025 → 384 (↑8 → ↑2 · ↑2 · ↑2 after `bridge`), 22.05 → 192 (↑2 · ↑2 → 4/3 · ↑3), 22.05 → 384 (4/3 · ↑6 → ↑8), 44.1 → 384 (↑2 · ↑2 · ↑2 → ↑2 · 4/3 · ↑3). The cause was 2.1's: on those pins a relaxed half-band stayed at m = 7 while a relaxed third-band stage was m = 5 — a floor X17 (v0.17) traced to the designer's β for A, not the Kaiser fit (2.1); with β for A + 4 dB the rule would move 26 of the rows back (20 within the families, the half-band runs among them; section 6, "The designer's β, X17"), which X-a3 makes with the 4th-band stage admitted, the selection frozen until then (3.1). The rules were not changed; a maintainer who prefers integer-factor chains at a few per cent adds a tie-break to `best_chain` and regenerates |
 | S2 | The exact-zero contract breaks under an accelerated kernel or a future compensated design (`design_prototype_compensated` convolves with a rect, `kaiser.h:200-216`, which fills the zeros) | The property test is in DspTap and runs on every leg; the compensated variant is explicitly outside R4 (an L-th-band design with k·fs zeros is a different filter and would be its own documented decision) |
 | S3 | Chain latency at low rates (1–2.5 ms at 8–11 kHz, 3.3) surprises a consumer expecting `bridge`'s 0.4–0.8 ms | Latency is a pinned number per pair (R7) and printed by the notebook; the minimum-phase lever stays deferred as `bridge`'s is, pulled by a latency need |
 | S4 | The dipping cross rows (3.1) are used as if they were cheap | Mitigated (decision 3, R14): the matrix carries MACs per output for every row and flags ⚑ the 38 rows whose `bridge` stage runs at ≥ 2× the output rate, "covered, not recommended"; the README and the notebook carry the same flag |
