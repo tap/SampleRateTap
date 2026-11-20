@@ -7,9 +7,9 @@ import: the build is incremental, and loading a library left over from an
 older checkout would silently measure old code.
 
     from tap_sr_rational_py import Chain, Stage
-    c = Chain("down_3_down_8_down_2", profile="economy")
+    c = Chain("down3_down8_down2", profile="economy")
     y = c.process(x)                    # float32 in, float32 out
-    q = Chain("down_2", fmt="q15")      # int16 (Q0.15) in and out; "q31": int32
+    q = Chain("down2", fmt="q15")       # int16 (Q0.15) in and out; "q31": int32
     s = Stage(2, 1, divisor=(147, 160))  # the up 2 after bridge in 48 -> 88.2
     c.latency_output_frames             # Fraction
     c.macs_per_output                   # Fraction
@@ -28,11 +28,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build_capi"
 
 CHAINS = [  # the TAP_SR_RATIONAL_* chain constants, in value order
-    "up_2", "down_2", "up_3", "down_3", "ratio_3_2", "ratio_2_3", "ratio_4_3", "ratio_3_4",
-    "up_2_up_2", "up_2_up_3", "up_2_ratio_4_3_up_3", "up_3_ratio_8_3", "up_2_up_6", "up_2_up_8",
-    "up_2_up_6_up_2", "up_2_up_8_up_2", "up_2_up_8_up_3", "up_2_ratio_4_3", "ratio_3_4_down_2",
-    "down_2_down_2", "down_3_down_2", "down_3_ratio_3_4_down_2", "ratio_3_8_down_3", "down_6_down_2",
-    "down_8_down_2", "down_2_down_6_down_2", "down_2_down_8_down_2", "down_3_down_8_down_2",
+    "up2", "down2", "up3", "down3", "ratio3over2", "ratio2over3", "ratio4over3", "ratio3over4",
+    "up2_up2", "up2_up3", "up2_ratio4over3_up3", "up3_ratio8over3", "up2_up6", "up2_up8",
+    "up2_up6_up2", "up2_up8_up2", "up2_up8_up3", "up2_ratio4over3", "ratio3over4_down2",
+    "down2_down2", "down3_down2", "down3_ratio3over4_down2", "ratio3over8_down3", "down6_down2",
+    "down8_down2", "down2_down6_down2", "down2_down8_down2", "down3_down8_down2",
 ]
 PROFILES = {"economy": 0, "transparent": 1, "balanced": 2, "super_economy": 3}
 FORMATS = {"float": 0, "q15": 1, "q31": 2}  # the TAP_SR_RATIONAL_FORMAT_* constants

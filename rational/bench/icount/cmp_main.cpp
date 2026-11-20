@@ -116,13 +116,13 @@ namespace {
 
     namespace rat = tap::sr::rational;
 #if TAP_SR_RATIONAL_CMP_RATIO == 0
-    using ratio_t = rat::up_2;
+    using ratio_t = rat::up2;
 #elif TAP_SR_RATIONAL_CMP_RATIO == 1
-    using ratio_t = rat::down_2;
+    using ratio_t = rat::down2;
 #elif TAP_SR_RATIONAL_CMP_RATIO == 2
-    using ratio_t = rat::ratio_3_2;
+    using ratio_t = rat::ratio3over2;
 #else
-    using ratio_t = rat::ratio_2_3;
+    using ratio_t = rat::ratio2over3;
 #endif
 
     double run() {

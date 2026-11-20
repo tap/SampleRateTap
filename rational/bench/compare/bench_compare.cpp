@@ -77,22 +77,22 @@ namespace {
     template <typename R>
     struct rates;
     template <>
-    struct rates<rat::up_2> {
+    struct rates<rat::up2> {
         static constexpr double k_in  = 48000.0;
         static constexpr double k_out = 96000.0;
     };
     template <>
-    struct rates<rat::down_2> {
+    struct rates<rat::down2> {
         static constexpr double k_in  = 96000.0;
         static constexpr double k_out = 48000.0;
     };
     template <>
-    struct rates<rat::ratio_3_2> {
+    struct rates<rat::ratio3over2> {
         static constexpr double k_in  = 32000.0;
         static constexpr double k_out = 48000.0;
     };
     template <>
-    struct rates<rat::ratio_2_3> {
+    struct rates<rat::ratio2over3> {
         static constexpr double k_in  = 48000.0;
         static constexpr double k_out = 32000.0;
     };
@@ -388,9 +388,9 @@ namespace {
     BENCHMARK(BM_##TAG##_SPEEX_Fixed_Q3);                                                                              \
     BENCHMARK(BM_##TAG##_SPEEX_Fixed_Q10);
 
-    TAP_SR_RATIONAL_CMP_RATIO(Up2, rat::up_2)
-    TAP_SR_RATIONAL_CMP_RATIO(Down2, rat::down_2)
-    TAP_SR_RATIONAL_CMP_RATIO(R32, rat::ratio_3_2)
-    TAP_SR_RATIONAL_CMP_RATIO(R23, rat::ratio_2_3)
+    TAP_SR_RATIONAL_CMP_RATIO(Up2, rat::up2)
+    TAP_SR_RATIONAL_CMP_RATIO(Down2, rat::down2)
+    TAP_SR_RATIONAL_CMP_RATIO(R32, rat::ratio3over2)
+    TAP_SR_RATIONAL_CMP_RATIO(R23, rat::ratio2over3)
 
 } // namespace

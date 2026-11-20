@@ -135,7 +135,7 @@ family's is 12·8/3 = 32 kHz) — named by their stages in order, because
 the name *is* the chain and a name that said "times 8" would be a
 lookup. A one-stage chain is the converter from the previous chapter.
 These names are the C ABI's enumerators, and they are the only things a
-foreign caller can construct: `TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2`, never
+foreign caller can construct: `TAP_SR_RATIONAL_DOWN3_DOWN8_DOWN2`, never
 `(384000, 8000)`.
 
 The coverage matrix is the plan's section 3: for every one of the 14 × 13

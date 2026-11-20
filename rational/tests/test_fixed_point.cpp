@@ -145,62 +145,62 @@ namespace {
     // fixed-point datapath.
     // clang-format off
 #define TAP_SR_RATIONAL_FIXED_POINT_ROWS(ROW) \
-        ROW(up_2, super_economy, 19, 19, 0x3cba7ba5bf0200f1ULL, 0x65cde4429b552ad1ULL, -71.1, -94.0) \
-        ROW(up_2, economy, 23, 23, 0x62302898b65a370dULL, 0xe57108ee5dcd11a5ULL, -72.3, -95.8) \
-        ROW(up_2, balanced, 27, 27, 0x597a9bff98e1d2fdULL, 0x35690983e0275251ULL, -71.1, -92.8) \
-        ROW(up_2, transparent, 63, 55, 0xcd3f2561c2e2d955ULL, 0x805ecb7ea3994265ULL, -77.3, -93.4) \
-        ROW(down_2, super_economy, 19, 19, 0x3cba7ba5bf0200f1ULL, 0x23868914d48461fdULL, -71.1, -96.7) \
-        ROW(down_2, economy, 23, 23, 0x62302898b65a370dULL, 0x8e72f5156b104145ULL, -72.3, -97.5) \
-        ROW(down_2, balanced, 27, 27, 0x597a9bff98e1d2fdULL, 0xecc3467d30d76709ULL, -71.1, -94.9) \
-        ROW(down_2, transparent, 63, 55, 0xcd3f2561c2e2d955ULL, 0x6ed3d49c1c32ca15ULL, -77.3, -95.7) \
-        ROW(up_3, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0xdb52b0963a9827a9ULL, -71.7, -94.3) \
-        ROW(up_3, economy, 45, 45, 0xf843d9f1da25e251ULL, 0xffcac366d1724905ULL, -70.2, -93.5) \
-        ROW(up_3, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xe9b4f733f5f69a49ULL, -71.5, -94.0) \
-        ROW(up_3, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x658e039e0cf17da1ULL, -76.1, -91.2) \
-        ROW(down_3, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0x0e531ee9e040c832ULL, -71.7, -97.2) \
-        ROW(down_3, economy, 45, 45, 0xf843d9f1da25e251ULL, 0x81e16a033f326f76ULL, -70.2, -96.8) \
-        ROW(down_3, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xc11d78c7a4530ef8ULL, -71.5, -97.7) \
-        ROW(down_3, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x6506baa7c5d51262ULL, -76.1, -95.7) \
-        ROW(up_6, super_economy, 81, 81, 0x7376502a75faf5f5ULL, 0x9d6e292d48601b85ULL, -73.2, -93.1) \
-        ROW(up_6, economy, 121, 121, 0x36e3c046fa633d21ULL, 0x39d801984353d381ULL, -71.5, -92.4) \
-        ROW(up_6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0x7c7d5cef3507c531ULL, -72.2, -92.3) \
-        ROW(up_6, transparent, 251, 219, 0xe46f033362196a39ULL, 0xb9fec6bbf1288489ULL, -78.5, -90.7) \
-        ROW(down_6, super_economy, 81, 81, 0x7376502a75faf5f5ULL, 0x782ec334d8cf342bULL, -73.2, -99.8) \
-        ROW(down_6, economy, 121, 121, 0x36e3c046fa633d21ULL, 0x92a24b5cea1909cfULL, -71.5, -98.6) \
-        ROW(down_6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0xe920f14d1d3d5a05ULL, -72.2, -99.6) \
-        ROW(down_6, transparent, 251, 219, 0xe46f033362196a39ULL, 0x6a3f54f3e1587481ULL, -78.5, -98.3) \
-        ROW(up_8, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -92.9) \
-        ROW(up_8, economy, 169, 169, 0xdc280c16130175d1ULL, 0x192bcfb9abf918edULL, -71.7, -92.3) \
-        ROW(up_8, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xbcda6fae5723088dULL, -72.6, -91.4) \
-        ROW(up_8, transparent, 351, 303, 0x4b96078b2928931dULL, 0x11b5febcf65e1475ULL, -78.2, -90.2) \
-        ROW(down_8, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0xc6ed1a337eadf041ULL, -72.0, -99.5) \
-        ROW(down_8, economy, 169, 169, 0xdc280c16130175d1ULL, 0x43d2f7ee82afa8c5ULL, -71.7, -97.9) \
-        ROW(down_8, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xdc5baf7a000445a9ULL, -72.6, -96.9) \
-        ROW(down_8, transparent, 351, 303, 0x4b96078b2928931dULL, 0x5a6e47c4d822ebb1ULL, -78.2, -99.5) \
-        ROW(ratio_3_2, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0xdb52b0963a9827a9ULL, -71.7, -94.4) \
-        ROW(ratio_3_2, economy, 45, 45, 0xf843d9f1da25e251ULL, 0xffcac366d1724905ULL, -70.2, -93.4) \
-        ROW(ratio_3_2, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xe9b4f733f5f69a49ULL, -71.5, -94.0) \
-        ROW(ratio_3_2, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x658e039e0cf17da1ULL, -76.1, -91.1) \
-        ROW(ratio_2_3, super_economy, 47, 47, 0x82be2b09b1e3e71cULL, 0x73dd9f039a900588ULL, -71.0, -96.9) \
-        ROW(ratio_2_3, economy, 65, 65, 0x6a10e7523141627cULL, 0xd990f930d9d2e66fULL, -70.5, -95.9) \
-        ROW(ratio_2_3, balanced, 77, 77, 0xfc4820b544115c9cULL, 0xe2019e0deca448ddULL, -72.1, -95.8) \
-        ROW(ratio_2_3, transparent, 149, 131, 0x4f5173a3477e3d44ULL, 0x174688556c046e2bULL, -78.2, -94.6) \
-        ROW(ratio_4_3, super_economy, 49, 49, 0xaba05cd262d404a9ULL, 0xf789914bb74deab5ULL, -70.6, -94.0) \
-        ROW(ratio_4_3, economy, 67, 67, 0x54b85d414b471985ULL, 0xf803f1ea55624179ULL, -71.7, -93.6) \
-        ROW(ratio_4_3, balanced, 85, 85, 0x441dab53737b273dULL, 0x088ccad6c8e4a9b9ULL, -70.4, -92.9) \
-        ROW(ratio_4_3, transparent, 151, 131, 0x2766dd02d84bd799ULL, 0x5491f247aa9ad425ULL, -77.2, -90.6) \
-        ROW(ratio_3_4, super_economy, 63, 63, 0x37e88d3e5f085cf7ULL, 0xcacc9866f85a1482ULL, -71.6, -96.5) \
-        ROW(ratio_3_4, economy, 87, 87, 0x75302a3d8b4e5354ULL, 0x692703f8c35bbdd1ULL, -70.0, -96.8) \
-        ROW(ratio_3_4, balanced, 111, 111, 0xb633f47c0bfc20e1ULL, 0xddc050765dd8bd23ULL, -72.4, -95.5) \
-        ROW(ratio_3_4, transparent, 199, 175, 0xe6f0871efac7d3f1ULL, 0x78b0ec09e7310bffULL, -78.3, -94.3) \
-        ROW(ratio_8_3, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -93.0) \
-        ROW(ratio_8_3, economy, 169, 169, 0xdc280c16130175d1ULL, 0x192bcfb9abf918edULL, -71.7, -92.2) \
-        ROW(ratio_8_3, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xbcda6fae5723088dULL, -72.6, -91.4) \
-        ROW(ratio_8_3, transparent, 351, 303, 0x4b96078b2928931dULL, 0x11b5febcf65e1475ULL, -78.2, -90.4) \
-        ROW(ratio_3_8, super_economy, 127, 127, 0xba84c60134e2ac09ULL, 0xca47a7f8e9a6c523ULL, -71.5, -98.9) \
-        ROW(ratio_3_8, economy, 191, 191, 0x6bd0306058cbe5adULL, 0x3cc9b1b3c17f0e3bULL, -71.8, -97.8) \
-        ROW(ratio_3_8, balanced, 223, 223, 0x0861406e06673615ULL, 0x3c098ec5243f25ecULL, -71.7, -97.0) \
-        ROW(ratio_3_8, transparent, 399, 349, 0xc39ffccbb8c18bd5ULL, 0x7e280258af2f97a4ULL, -83.1, -96.6)
+        ROW(up2, super_economy, 19, 19, 0x3cba7ba5bf0200f1ULL, 0x65cde4429b552ad1ULL, -71.1, -94.0) \
+        ROW(up2, economy, 23, 23, 0x62302898b65a370dULL, 0xe57108ee5dcd11a5ULL, -72.3, -95.8) \
+        ROW(up2, balanced, 27, 27, 0x597a9bff98e1d2fdULL, 0x35690983e0275251ULL, -71.1, -92.8) \
+        ROW(up2, transparent, 63, 55, 0xcd3f2561c2e2d955ULL, 0x805ecb7ea3994265ULL, -77.3, -93.4) \
+        ROW(down2, super_economy, 19, 19, 0x3cba7ba5bf0200f1ULL, 0x23868914d48461fdULL, -71.1, -96.7) \
+        ROW(down2, economy, 23, 23, 0x62302898b65a370dULL, 0x8e72f5156b104145ULL, -72.3, -97.5) \
+        ROW(down2, balanced, 27, 27, 0x597a9bff98e1d2fdULL, 0xecc3467d30d76709ULL, -71.1, -94.9) \
+        ROW(down2, transparent, 63, 55, 0xcd3f2561c2e2d955ULL, 0x6ed3d49c1c32ca15ULL, -77.3, -95.7) \
+        ROW(up3, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0xdb52b0963a9827a9ULL, -71.7, -94.3) \
+        ROW(up3, economy, 45, 45, 0xf843d9f1da25e251ULL, 0xffcac366d1724905ULL, -70.2, -93.5) \
+        ROW(up3, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xe9b4f733f5f69a49ULL, -71.5, -94.0) \
+        ROW(up3, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x658e039e0cf17da1ULL, -76.1, -91.2) \
+        ROW(down3, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0x0e531ee9e040c832ULL, -71.7, -97.2) \
+        ROW(down3, economy, 45, 45, 0xf843d9f1da25e251ULL, 0x81e16a033f326f76ULL, -70.2, -96.8) \
+        ROW(down3, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xc11d78c7a4530ef8ULL, -71.5, -97.7) \
+        ROW(down3, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x6506baa7c5d51262ULL, -76.1, -95.7) \
+        ROW(up6, super_economy, 81, 81, 0x7376502a75faf5f5ULL, 0x9d6e292d48601b85ULL, -73.2, -93.1) \
+        ROW(up6, economy, 121, 121, 0x36e3c046fa633d21ULL, 0x39d801984353d381ULL, -71.5, -92.4) \
+        ROW(up6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0x7c7d5cef3507c531ULL, -72.2, -92.3) \
+        ROW(up6, transparent, 251, 219, 0xe46f033362196a39ULL, 0xb9fec6bbf1288489ULL, -78.5, -90.7) \
+        ROW(down6, super_economy, 81, 81, 0x7376502a75faf5f5ULL, 0x782ec334d8cf342bULL, -73.2, -99.8) \
+        ROW(down6, economy, 121, 121, 0x36e3c046fa633d21ULL, 0x92a24b5cea1909cfULL, -71.5, -98.6) \
+        ROW(down6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0xe920f14d1d3d5a05ULL, -72.2, -99.6) \
+        ROW(down6, transparent, 251, 219, 0xe46f033362196a39ULL, 0x6a3f54f3e1587481ULL, -78.5, -98.3) \
+        ROW(up8, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -92.9) \
+        ROW(up8, economy, 169, 169, 0xdc280c16130175d1ULL, 0x192bcfb9abf918edULL, -71.7, -92.3) \
+        ROW(up8, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xbcda6fae5723088dULL, -72.6, -91.4) \
+        ROW(up8, transparent, 351, 303, 0x4b96078b2928931dULL, 0x11b5febcf65e1475ULL, -78.2, -90.2) \
+        ROW(down8, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0xc6ed1a337eadf041ULL, -72.0, -99.5) \
+        ROW(down8, economy, 169, 169, 0xdc280c16130175d1ULL, 0x43d2f7ee82afa8c5ULL, -71.7, -97.9) \
+        ROW(down8, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xdc5baf7a000445a9ULL, -72.6, -96.9) \
+        ROW(down8, transparent, 351, 303, 0x4b96078b2928931dULL, 0x5a6e47c4d822ebb1ULL, -78.2, -99.5) \
+        ROW(ratio3over2, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0xdb52b0963a9827a9ULL, -71.7, -94.4) \
+        ROW(ratio3over2, economy, 45, 45, 0xf843d9f1da25e251ULL, 0xffcac366d1724905ULL, -70.2, -93.4) \
+        ROW(ratio3over2, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xe9b4f733f5f69a49ULL, -71.5, -94.0) \
+        ROW(ratio3over2, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x658e039e0cf17da1ULL, -76.1, -91.1) \
+        ROW(ratio2over3, super_economy, 47, 47, 0x82be2b09b1e3e71cULL, 0x73dd9f039a900588ULL, -71.0, -96.9) \
+        ROW(ratio2over3, economy, 65, 65, 0x6a10e7523141627cULL, 0xd990f930d9d2e66fULL, -70.5, -95.9) \
+        ROW(ratio2over3, balanced, 77, 77, 0xfc4820b544115c9cULL, 0xe2019e0deca448ddULL, -72.1, -95.8) \
+        ROW(ratio2over3, transparent, 149, 131, 0x4f5173a3477e3d44ULL, 0x174688556c046e2bULL, -78.2, -94.6) \
+        ROW(ratio4over3, super_economy, 49, 49, 0xaba05cd262d404a9ULL, 0xf789914bb74deab5ULL, -70.6, -94.0) \
+        ROW(ratio4over3, economy, 67, 67, 0x54b85d414b471985ULL, 0xf803f1ea55624179ULL, -71.7, -93.6) \
+        ROW(ratio4over3, balanced, 85, 85, 0x441dab53737b273dULL, 0x088ccad6c8e4a9b9ULL, -70.4, -92.9) \
+        ROW(ratio4over3, transparent, 151, 131, 0x2766dd02d84bd799ULL, 0x5491f247aa9ad425ULL, -77.2, -90.6) \
+        ROW(ratio3over4, super_economy, 63, 63, 0x37e88d3e5f085cf7ULL, 0xcacc9866f85a1482ULL, -71.6, -96.5) \
+        ROW(ratio3over4, economy, 87, 87, 0x75302a3d8b4e5354ULL, 0x692703f8c35bbdd1ULL, -70.0, -96.8) \
+        ROW(ratio3over4, balanced, 111, 111, 0xb633f47c0bfc20e1ULL, 0xddc050765dd8bd23ULL, -72.4, -95.5) \
+        ROW(ratio3over4, transparent, 199, 175, 0xe6f0871efac7d3f1ULL, 0x78b0ec09e7310bffULL, -78.3, -94.3) \
+        ROW(ratio8over3, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -93.0) \
+        ROW(ratio8over3, economy, 169, 169, 0xdc280c16130175d1ULL, 0x192bcfb9abf918edULL, -71.7, -92.2) \
+        ROW(ratio8over3, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xbcda6fae5723088dULL, -72.6, -91.4) \
+        ROW(ratio8over3, transparent, 351, 303, 0x4b96078b2928931dULL, 0x11b5febcf65e1475ULL, -78.2, -90.4) \
+        ROW(ratio3over8, super_economy, 127, 127, 0xba84c60134e2ac09ULL, 0xca47a7f8e9a6c523ULL, -71.5, -98.9) \
+        ROW(ratio3over8, economy, 191, 191, 0x6bd0306058cbe5adULL, 0x3cc9b1b3c17f0e3bULL, -71.8, -97.8) \
+        ROW(ratio3over8, balanced, 223, 223, 0x0861406e06673615ULL, 0x3c098ec5243f25ecULL, -71.7, -97.0) \
+        ROW(ratio3over8, transparent, 399, 349, 0xc39ffccbb8c18bd5ULL, 0x7e280258af2f97a4ULL, -83.1, -96.6)
     // clang-format on
 
     struct pin_row {
@@ -305,13 +305,13 @@ namespace {
     }
 
     TEST(FixedPoint, Q15DecimatorTableIsTheInterpolatorsTable) {
-        expect_shared_q15_table<up_2, down_2>();
-        expect_shared_q15_table<up_3, down_3>();
-        expect_shared_q15_table<up_6, down_6>();
-        expect_shared_q15_table<up_8, down_8>();
-        static_assert(basic_stage<std::int16_t, 1, down_6>::k_table_gain == 6);
-        static_assert(basic_stage<std::int32_t, 1, down_6>::k_table_gain == 1);
-        static_assert(basic_stage<std::int16_t, 1, up_6>::k_table_gain == 1);
+        expect_shared_q15_table<up2, down2>();
+        expect_shared_q15_table<up3, down3>();
+        expect_shared_q15_table<up6, down6>();
+        expect_shared_q15_table<up8, down8>();
+        static_assert(basic_stage<std::int16_t, 1, down6>::k_table_gain == 6);
+        static_assert(basic_stage<std::int32_t, 1, down6>::k_table_gain == 1);
+        static_assert(basic_stage<std::int16_t, 1, up6>::k_table_gain == 1);
     }
 
     // ------------------------------------------------------------------
@@ -534,13 +534,13 @@ namespace {
                     continue; // the unrelaxed rows are the table above
                 }
                 const double bands[] = {
-                    row.taps_per_branch[0] ? relaxed_q15_stopband_db<up_2>(base, row) : -400.0,
-                    row.taps_per_branch[1] ? relaxed_q15_stopband_db<up_3>(base, row) : -400.0,
-                    row.taps_per_branch[2] ? relaxed_q15_stopband_db<ratio_4_3>(base, row) : -400.0,
-                    row.taps_per_branch[3] ? relaxed_q15_stopband_db<up_6>(base, row) : -400.0,
-                    row.taps_per_branch[4] ? relaxed_q15_stopband_db<up_8>(base, row) : -400.0,
+                    row.taps_per_branch[0] ? relaxed_q15_stopband_db<up2>(base, row) : -400.0,
+                    row.taps_per_branch[1] ? relaxed_q15_stopband_db<up3>(base, row) : -400.0,
+                    row.taps_per_branch[2] ? relaxed_q15_stopband_db<ratio4over3>(base, row) : -400.0,
+                    row.taps_per_branch[3] ? relaxed_q15_stopband_db<up6>(base, row) : -400.0,
+                    row.taps_per_branch[4] ? relaxed_q15_stopband_db<up8>(base, row) : -400.0,
                 };
-                static const char* const k_names[] = {"up_2", "up_3", "ratio_4_3", "up_6", "up_8"};
+                static const char* const k_names[] = {"up2", "up3", "ratio4over3", "up6", "up8"};
                 for (std::size_t b = 0; b < 5; ++b) {
                     std::printf("[ measured ] relaxed Q15 %s divisor %llu/%llu %s: %.1f dB\n", stated[i].profile,
                                 static_cast<unsigned long long>(row.divisor.num),
@@ -677,10 +677,10 @@ namespace {
 
     TEST(FixedPoint, ChainsStackTheFloorStageByStage) {
         const profile eco = profile::economy();
-        const auto    a   = chain_floor<down_3_down_8_down_2<std::int16_t, 1>, down_3_down_8_down_2<double, 1>>(eco);
-        const auto    b   = chain_floor<up_2_up_8_up_3<std::int16_t, 1>, up_2_up_8_up_3<double, 1>>(eco);
-        const auto    c   = chain_floor<ratio_3_8_down_3<std::int16_t, 1>, ratio_3_8_down_3<double, 1>>(eco);
-        const auto    d   = chain_floor<down_3_down_8_down_2<std::int32_t, 1>, down_3_down_8_down_2<double, 1>>(eco);
+        const auto    a   = chain_floor<down3_down8_down2<std::int16_t, 1>, down3_down8_down2<double, 1>>(eco);
+        const auto    b   = chain_floor<up2_up8_up3<std::int16_t, 1>, up2_up8_up3<double, 1>>(eco);
+        const auto    c   = chain_floor<ratio3over8_down3<std::int16_t, 1>, ratio3over8_down3<double, 1>>(eco);
+        const auto    d   = chain_floor<down3_down8_down2<std::int32_t, 1>, down3_down8_down2<double, 1>>(eco);
         std::printf("[ measured ] Q15 chains: 1/48 worst %.2e rms %.1f dBFS; 48/1 worst %.2e rms %.1f dBFS; 1/8 (44.1) "
                     "worst %.2e rms %.1f dBFS; Q31 1/48 worst %.2e\n",
                     a.first, a.second, b.first, b.second, c.first, c.second, d.first);

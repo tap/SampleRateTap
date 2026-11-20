@@ -291,62 +291,62 @@ namespace {
     std::unique_ptr<engine> make_named(int chain, const rat::profile& p, unsigned ch) {
         using namespace tap::sr::rational; // NOLINT(google-build-using-namespace)
         switch (chain) {
-        case TAP_SR_RATIONAL_UP_2:
-            return make_chain<S, up_2>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_2:
-            return make_chain<S, down_2>(p, ch);
-        case TAP_SR_RATIONAL_UP_3:
-            return make_chain<S, up_3>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_3:
-            return make_chain<S, down_3>(p, ch);
-        case TAP_SR_RATIONAL_RATIO_3_2:
-            return make_chain<S, ratio_3_2>(p, ch);
-        case TAP_SR_RATIONAL_RATIO_2_3:
-            return make_chain<S, ratio_2_3>(p, ch);
-        case TAP_SR_RATIONAL_RATIO_4_3:
-            return make_chain<S, ratio_4_3>(p, ch);
-        case TAP_SR_RATIONAL_RATIO_3_4:
-            return make_chain<S, ratio_3_4>(p, ch);
-        case TAP_SR_RATIONAL_UP_2_UP_2:
-            return make_chain<S, up_2, up_2>(p, ch);
-        case TAP_SR_RATIONAL_UP_2_UP_3:
-            return make_chain<S, up_2, up_3>(p, ch);
-        case TAP_SR_RATIONAL_UP_2_RATIO_4_3_UP_3:
-            return make_chain<S, up_2, ratio_4_3, up_3>(p, ch);
-        case TAP_SR_RATIONAL_UP_3_RATIO_8_3:
-            return make_chain<S, up_3, ratio_8_3>(p, ch);
-        case TAP_SR_RATIONAL_UP_2_UP_6:
-            return make_chain<S, up_2, up_6>(p, ch);
-        case TAP_SR_RATIONAL_UP_2_UP_8:
-            return make_chain<S, up_2, up_8>(p, ch);
-        case TAP_SR_RATIONAL_UP_2_UP_6_UP_2:
-            return make_chain<S, up_2, up_6, up_2>(p, ch);
-        case TAP_SR_RATIONAL_UP_2_UP_8_UP_2:
-            return make_chain<S, up_2, up_8, up_2>(p, ch);
-        case TAP_SR_RATIONAL_UP_2_UP_8_UP_3:
-            return make_chain<S, up_2, up_8, up_3>(p, ch);
-        case TAP_SR_RATIONAL_UP_2_RATIO_4_3:
-            return make_chain<S, up_2, ratio_4_3>(p, ch);
-        case TAP_SR_RATIONAL_RATIO_3_4_DOWN_2:
-            return make_chain<S, ratio_3_4, down_2>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_2_DOWN_2:
-            return make_chain<S, down_2, down_2>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_3_DOWN_2:
-            return make_chain<S, down_3, down_2>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_3_RATIO_3_4_DOWN_2:
-            return make_chain<S, down_3, ratio_3_4, down_2>(p, ch);
-        case TAP_SR_RATIONAL_RATIO_3_8_DOWN_3:
-            return make_chain<S, ratio_3_8, down_3>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_6_DOWN_2:
-            return make_chain<S, down_6, down_2>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_8_DOWN_2:
-            return make_chain<S, down_8, down_2>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_2_DOWN_6_DOWN_2:
-            return make_chain<S, down_2, down_6, down_2>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_2_DOWN_8_DOWN_2:
-            return make_chain<S, down_2, down_8, down_2>(p, ch);
-        case TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2:
-            return make_chain<S, down_3, down_8, down_2>(p, ch);
+        case TAP_SR_RATIONAL_UP2:
+            return make_chain<S, up2>(p, ch);
+        case TAP_SR_RATIONAL_DOWN2:
+            return make_chain<S, down2>(p, ch);
+        case TAP_SR_RATIONAL_UP3:
+            return make_chain<S, up3>(p, ch);
+        case TAP_SR_RATIONAL_DOWN3:
+            return make_chain<S, down3>(p, ch);
+        case TAP_SR_RATIONAL_RATIO3OVER2:
+            return make_chain<S, ratio3over2>(p, ch);
+        case TAP_SR_RATIONAL_RATIO2OVER3:
+            return make_chain<S, ratio2over3>(p, ch);
+        case TAP_SR_RATIONAL_RATIO4OVER3:
+            return make_chain<S, ratio4over3>(p, ch);
+        case TAP_SR_RATIONAL_RATIO3OVER4:
+            return make_chain<S, ratio3over4>(p, ch);
+        case TAP_SR_RATIONAL_UP2_UP2:
+            return make_chain<S, up2, up2>(p, ch);
+        case TAP_SR_RATIONAL_UP2_UP3:
+            return make_chain<S, up2, up3>(p, ch);
+        case TAP_SR_RATIONAL_UP2_RATIO4OVER3_UP3:
+            return make_chain<S, up2, ratio4over3, up3>(p, ch);
+        case TAP_SR_RATIONAL_UP3_RATIO8OVER3:
+            return make_chain<S, up3, ratio8over3>(p, ch);
+        case TAP_SR_RATIONAL_UP2_UP6:
+            return make_chain<S, up2, up6>(p, ch);
+        case TAP_SR_RATIONAL_UP2_UP8:
+            return make_chain<S, up2, up8>(p, ch);
+        case TAP_SR_RATIONAL_UP2_UP6_UP2:
+            return make_chain<S, up2, up6, up2>(p, ch);
+        case TAP_SR_RATIONAL_UP2_UP8_UP2:
+            return make_chain<S, up2, up8, up2>(p, ch);
+        case TAP_SR_RATIONAL_UP2_UP8_UP3:
+            return make_chain<S, up2, up8, up3>(p, ch);
+        case TAP_SR_RATIONAL_UP2_RATIO4OVER3:
+            return make_chain<S, up2, ratio4over3>(p, ch);
+        case TAP_SR_RATIONAL_RATIO3OVER4_DOWN2:
+            return make_chain<S, ratio3over4, down2>(p, ch);
+        case TAP_SR_RATIONAL_DOWN2_DOWN2:
+            return make_chain<S, down2, down2>(p, ch);
+        case TAP_SR_RATIONAL_DOWN3_DOWN2:
+            return make_chain<S, down3, down2>(p, ch);
+        case TAP_SR_RATIONAL_DOWN3_RATIO3OVER4_DOWN2:
+            return make_chain<S, down3, ratio3over4, down2>(p, ch);
+        case TAP_SR_RATIONAL_RATIO3OVER8_DOWN3:
+            return make_chain<S, ratio3over8, down3>(p, ch);
+        case TAP_SR_RATIONAL_DOWN6_DOWN2:
+            return make_chain<S, down6, down2>(p, ch);
+        case TAP_SR_RATIONAL_DOWN8_DOWN2:
+            return make_chain<S, down8, down2>(p, ch);
+        case TAP_SR_RATIONAL_DOWN2_DOWN6_DOWN2:
+            return make_chain<S, down2, down6, down2>(p, ch);
+        case TAP_SR_RATIONAL_DOWN2_DOWN8_DOWN2:
+            return make_chain<S, down2, down8, down2>(p, ch);
+        case TAP_SR_RATIONAL_DOWN3_DOWN8_DOWN2:
+            return make_chain<S, down3, down8, down2>(p, ch);
         default:
             return nullptr;
         }
@@ -370,33 +370,33 @@ namespace {
         const auto key = (static_cast<unsigned>(l) << 8) | m;
         switch (key) {
         case (2u << 8) | 1u:
-            return make_stage<S, up_2>(p, d, ch);
+            return make_stage<S, up2>(p, d, ch);
         case (1u << 8) | 2u:
-            return make_stage<S, down_2>(p, d, ch);
+            return make_stage<S, down2>(p, d, ch);
         case (3u << 8) | 1u:
-            return make_stage<S, up_3>(p, d, ch);
+            return make_stage<S, up3>(p, d, ch);
         case (1u << 8) | 3u:
-            return make_stage<S, down_3>(p, d, ch);
+            return make_stage<S, down3>(p, d, ch);
         case (6u << 8) | 1u:
-            return make_stage<S, up_6>(p, d, ch);
+            return make_stage<S, up6>(p, d, ch);
         case (1u << 8) | 6u:
-            return make_stage<S, down_6>(p, d, ch);
+            return make_stage<S, down6>(p, d, ch);
         case (8u << 8) | 1u:
-            return make_stage<S, up_8>(p, d, ch);
+            return make_stage<S, up8>(p, d, ch);
         case (1u << 8) | 8u:
-            return make_stage<S, down_8>(p, d, ch);
+            return make_stage<S, down8>(p, d, ch);
         case (3u << 8) | 2u:
-            return make_stage<S, ratio_3_2>(p, d, ch);
+            return make_stage<S, ratio3over2>(p, d, ch);
         case (2u << 8) | 3u:
-            return make_stage<S, ratio_2_3>(p, d, ch);
+            return make_stage<S, ratio2over3>(p, d, ch);
         case (4u << 8) | 3u:
-            return make_stage<S, ratio_4_3>(p, d, ch);
+            return make_stage<S, ratio4over3>(p, d, ch);
         case (3u << 8) | 4u:
-            return make_stage<S, ratio_3_4>(p, d, ch);
+            return make_stage<S, ratio3over4>(p, d, ch);
         case (8u << 8) | 3u:
-            return make_stage<S, ratio_8_3>(p, d, ch);
+            return make_stage<S, ratio8over3>(p, d, ch);
         case (3u << 8) | 8u:
-            return make_stage<S, ratio_3_8>(p, d, ch);
+            return make_stage<S, ratio3over8>(p, d, ch);
         default:
             return nullptr;
         }

@@ -19,14 +19,14 @@ int main() {
     constexpr double      in_hz    = 12000.0;
     constexpr std::size_t channels = 2;
 
-    chain<channels, up_2, ratio_4_3> to_32k; // economy: 3/8 of the lower rate flat, 70 dB
+    chain<channels, up2, ratio4over3> to_32k; // economy: 3/8 of the lower rate flat, 70 dB
     static_assert(decltype(to_32k)::k_up == 8 && decltype(to_32k)::k_down == 3);
-    static_assert(decltype(to_32k)::k_divisors[0] == tap::dsp::exact_ratio{1, 1}); // up_2 at the lowest rate
+    static_assert(decltype(to_32k)::k_divisors[0] == tap::dsp::exact_ratio{1, 1}); // up2 at the lowest rate
     static_assert(decltype(to_32k)::k_divisors[1] == tap::dsp::exact_ratio{2, 1}); // 4/3 at twice it
 
     const auto lat = to_32k.latency_output_frames();
     std::printf(
-        "12 kHz -> 32 kHz as up_2 . ratio_4_3: latency %llu/%llu output frames = %.3f ms, %.2f MACs per output\n",
+        "12 kHz -> 32 kHz as up2 . ratio4over3: latency %llu/%llu output frames = %.3f ms, %.2f MACs per output\n",
         static_cast<unsigned long long>(lat.num), static_cast<unsigned long long>(lat.den),
         1000.0 * to_32k.latency_seconds(in_hz * 8.0 / 3.0), to_32k.macs_per_output());
 

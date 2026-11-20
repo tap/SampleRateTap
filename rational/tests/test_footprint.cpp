@@ -160,20 +160,20 @@ namespace {
     template <typename S>
     void check_every_stage(const char* fmt) {
         ASSERT_TRUE(heap_meter::installed());
-        check_stage<S, up_2>(fmt, "up_2");
-        check_stage<S, down_2>(fmt, "down_2");
-        check_stage<S, up_3>(fmt, "up_3");
-        check_stage<S, down_3>(fmt, "down_3");
-        check_stage<S, up_6>(fmt, "up_6");
-        check_stage<S, down_6>(fmt, "down_6");
-        check_stage<S, up_8>(fmt, "up_8");
-        check_stage<S, down_8>(fmt, "down_8");
-        check_stage<S, ratio_3_2>(fmt, "ratio_3_2");
-        check_stage<S, ratio_2_3>(fmt, "ratio_2_3");
-        check_stage<S, ratio_4_3>(fmt, "ratio_4_3");
-        check_stage<S, ratio_3_4>(fmt, "ratio_3_4");
-        check_stage<S, ratio_8_3>(fmt, "ratio_8_3");
-        check_stage<S, ratio_3_8>(fmt, "ratio_3_8");
+        check_stage<S, up2>(fmt, "up2");
+        check_stage<S, down2>(fmt, "down2");
+        check_stage<S, up3>(fmt, "up3");
+        check_stage<S, down3>(fmt, "down3");
+        check_stage<S, up6>(fmt, "up6");
+        check_stage<S, down6>(fmt, "down6");
+        check_stage<S, up8>(fmt, "up8");
+        check_stage<S, down8>(fmt, "down8");
+        check_stage<S, ratio3over2>(fmt, "ratio3over2");
+        check_stage<S, ratio2over3>(fmt, "ratio2over3");
+        check_stage<S, ratio4over3>(fmt, "ratio4over3");
+        check_stage<S, ratio3over4>(fmt, "ratio3over4");
+        check_stage<S, ratio8over3>(fmt, "ratio8over3");
+        check_stage<S, ratio3over8>(fmt, "ratio3over8");
     }
 
     TEST(Footprint, StageHeapIsTheFormulaFloat) {
@@ -232,32 +232,32 @@ namespace {
 
     TEST(Footprint, ChainHeapIsItsStagesAndScratch) {
         ASSERT_TRUE(heap_meter::installed());
-        check_chain<up_2_up_2<float, 2>>("up_2_up_2");
-        check_chain<up_2_up_3<float, 2>>("up_2_up_3");
-        check_chain<up_2_ratio_4_3_up_3<float, 2>>("up_2_ratio_4_3_up_3");
-        check_chain<up_3_ratio_8_3<float, 2>>("up_3_ratio_8_3");
-        check_chain<up_2_up_6<float, 2>>("up_2_up_6");
-        check_chain<up_2_up_8<float, 2>>("up_2_up_8");
-        check_chain<up_2_up_6_up_2<float, 2>>("up_2_up_6_up_2");
-        check_chain<up_2_up_8_up_2<float, 2>>("up_2_up_8_up_2");
-        check_chain<up_2_up_8_up_3<float, 2>>("up_2_up_8_up_3");
-        check_chain<up_2_ratio_4_3<float, 2>>("up_2_ratio_4_3");
-        check_chain<ratio_3_4_down_2<float, 2>>("ratio_3_4_down_2");
-        check_chain<down_2_down_2<float, 2>>("down_2_down_2");
-        check_chain<down_3_down_2<float, 2>>("down_3_down_2");
-        check_chain<down_3_ratio_3_4_down_2<float, 2>>("down_3_ratio_3_4_down_2");
-        check_chain<ratio_3_8_down_3<float, 2>>("ratio_3_8_down_3");
-        check_chain<down_6_down_2<float, 2>>("down_6_down_2");
-        check_chain<down_8_down_2<float, 2>>("down_8_down_2");
-        check_chain<down_2_down_6_down_2<float, 2>>("down_2_down_6_down_2");
-        check_chain<down_2_down_8_down_2<float, 2>>("down_2_down_8_down_2");
-        check_chain<down_3_down_8_down_2<float, 2>>("down_3_down_8_down_2");
-        check_chain<down_3_down_2<std::int16_t, 2>>("down_3_down_2 (q15)");
-        check_chain<up_2_up_2<std::int32_t, 2>>("up_2_up_2 (q31)");
+        check_chain<up2_up2<float, 2>>("up2_up2");
+        check_chain<up2_up3<float, 2>>("up2_up3");
+        check_chain<up2_ratio4over3_up3<float, 2>>("up2_ratio4over3_up3");
+        check_chain<up3_ratio8over3<float, 2>>("up3_ratio8over3");
+        check_chain<up2_up6<float, 2>>("up2_up6");
+        check_chain<up2_up8<float, 2>>("up2_up8");
+        check_chain<up2_up6_up2<float, 2>>("up2_up6_up2");
+        check_chain<up2_up8_up2<float, 2>>("up2_up8_up2");
+        check_chain<up2_up8_up3<float, 2>>("up2_up8_up3");
+        check_chain<up2_ratio4over3<float, 2>>("up2_ratio4over3");
+        check_chain<ratio3over4_down2<float, 2>>("ratio3over4_down2");
+        check_chain<down2_down2<float, 2>>("down2_down2");
+        check_chain<down3_down2<float, 2>>("down3_down2");
+        check_chain<down3_ratio3over4_down2<float, 2>>("down3_ratio3over4_down2");
+        check_chain<ratio3over8_down3<float, 2>>("ratio3over8_down3");
+        check_chain<down6_down2<float, 2>>("down6_down2");
+        check_chain<down8_down2<float, 2>>("down8_down2");
+        check_chain<down2_down6_down2<float, 2>>("down2_down6_down2");
+        check_chain<down2_down8_down2<float, 2>>("down2_down8_down2");
+        check_chain<down3_down8_down2<float, 2>>("down3_down8_down2");
+        check_chain<down3_down2<std::int16_t, 2>>("down3_down2 (q15)");
+        check_chain<up2_up2<std::int32_t, 2>>("up2_up2 (q31)");
     }
 
     TEST(Footprint, ProcessingAllocatesNothing) {
-        up_2_ratio_4_3_up_3<float, 2> c;
+        up2_ratio4over3_up3<float, 2> c;
         std::vector<float>            in(256 * 2, 0.25F);
         std::vector<float>            out(c.outputs_for(256) * 2 + 64);
         const heap_meter              meter;

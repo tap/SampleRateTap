@@ -94,32 +94,32 @@ namespace {
         [[maybe_unused]] const rat::profile eco = rat::profile::economy();
         [[maybe_unused]] const rat::profile tr  = rat::profile::transparent();
 #if TAP_SR_RATIONAL_SC == 0
-        return stage_workload<float, rat::up_2>(eco);
+        return stage_workload<float, rat::up2>(eco);
 #elif TAP_SR_RATIONAL_SC == 1
-        return stage_workload<float, rat::down_2>(eco);
+        return stage_workload<float, rat::down2>(eco);
 #elif TAP_SR_RATIONAL_SC == 2
-        return stage_workload<float, rat::up_3>(eco);
+        return stage_workload<float, rat::up3>(eco);
 #elif TAP_SR_RATIONAL_SC == 3
-        return stage_workload<float, rat::down_3>(eco);
+        return stage_workload<float, rat::down3>(eco);
 #elif TAP_SR_RATIONAL_SC == 4
-        return stage_workload<std::int16_t, rat::up_2>(eco);
+        return stage_workload<std::int16_t, rat::up2>(eco);
 #elif TAP_SR_RATIONAL_SC == 5
-        return stage_workload<std::int16_t, rat::down_2>(eco);
+        return stage_workload<std::int16_t, rat::down2>(eco);
 #elif TAP_SR_RATIONAL_SC == 6
-        return stage_workload<std::int16_t, rat::up_3>(eco);
+        return stage_workload<std::int16_t, rat::up3>(eco);
 #elif TAP_SR_RATIONAL_SC == 7
-        return stage_workload<std::int16_t, rat::down_3>(eco);
+        return stage_workload<std::int16_t, rat::down3>(eco);
 #elif TAP_SR_RATIONAL_SC == 8
-        rat::down_2_down_2<std::int16_t, k_channels> conv(eco);
+        rat::down2_down2<std::int16_t, k_channels> conv(eco);
         return stream(conv);
 #elif TAP_SR_RATIONAL_SC == 9
-        return stage_workload<float, rat::up_2>(tr);
+        return stage_workload<float, rat::up2>(tr);
 #elif TAP_SR_RATIONAL_SC == 10
-        return stage_workload<float, rat::down_2>(tr);
+        return stage_workload<float, rat::down2>(tr);
 #elif TAP_SR_RATIONAL_SC == 12
-        return stage_workload<float, rat::ratio_2_3>(eco);
+        return stage_workload<float, rat::ratio2over3>(eco);
 #elif TAP_SR_RATIONAL_SC == 13
-        return stage_workload<std::int16_t, rat::ratio_2_3>(eco);
+        return stage_workload<std::int16_t, rat::ratio2over3>(eco);
 #else
         // The Q15 by-4 chain's workload (scenario 8) with its stream removed:
         // the chain's construction (two designs at pinned lengths, no search,
@@ -130,7 +130,7 @@ namespace {
         // (async's construct_q15, bridge's construct_*_q15_eco). The fixture
         // belongs here and not in the difference: its libm sin() calls are
         // soft-double on the M33.
-        using conv_t = rat::down_2_down_2<std::int16_t, k_channels>;
+        using conv_t = rat::down2_down2<std::int16_t, k_channels>;
         conv_t                    conv(eco);
         const auto                input   = sine_block<std::int16_t>(12000); // as stream()
         constexpr std::size_t     out_cap = k_block * conv_t::k_up / conv_t::k_down + conv_t::k_up + 2;

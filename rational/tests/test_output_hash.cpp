@@ -107,9 +107,9 @@ namespace {
     TYPED_TEST_SUITE(output_hash_test, sample_types, );
 
     TYPED_TEST(output_hash_test, PrintsHashes) {
-        hash_one<TypeParam, up_2>("up_2");
-        hash_one<TypeParam, down_3>("down_3");
-        hash_one<TypeParam, ratio_2_3>("ratio_2_3");
+        hash_one<TypeParam, up2>("up2");
+        hash_one<TypeParam, down3>("down3");
+        hash_one<TypeParam, ratio2over3>("ratio2over3");
     }
 
 } // namespace

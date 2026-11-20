@@ -290,9 +290,9 @@ int main() {
                                                                                                44100.0);
     runSyncCase<tap::sr::bridge::basic_converter<std::int16_t, 2, direction::up_to_48k, 0>>("bridge", "44.1>48",
                                                                                             48000.0);
-    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::up_2>>("rational", "up2", 48000.0);
-    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::down_2>>("rational", "down2", 24000.0);
-    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::ratio_2_3>>("rational", "2/3", 32000.0);
+    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::up2>>("rational", "up2", 48000.0);
+    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::down2>>("rational", "down2", 24000.0);
+    runSyncCase<tap::sr::rational::converter_q15<2, tap::sr::rational::ratio2over3>>("rational", "2/3", 32000.0);
 
     std::printf("TAP_SR_PICO2_DONE\n");
     while (true)
