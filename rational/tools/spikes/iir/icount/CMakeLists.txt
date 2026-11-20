@@ -17,7 +17,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 get_filename_component(_repo "${CMAKE_CURRENT_SOURCE_DIR}/../../../../.." ABSOLUTE)
-set(_inc ${CMAKE_CURRENT_SOURCE_DIR}/../cpp ${CMAKE_CURRENT_SOURCE_DIR}/../ftz ${_repo}/tools/probe)
+set(_inc ${CMAKE_CURRENT_SOURCE_DIR}/../cpp ${CMAKE_CURRENT_SOURCE_DIR}/../ftz ${_repo}/tools/probe
+         ${_repo}/rational/include ${_repo}/submodules/dsptap/include)
 
 # name:id, as workloads.cpp's IIR_SC switch
 set(_scenarios
@@ -26,7 +27,8 @@ set(_scenarios
     nr_dec_float:10 nr_dec_q15:11 int_float:12 int_q15:13
     tr_dec_float:14 tr_dec_double:15 tr_dec_float_flush:16 tr_dec_double_flush:17
     dec_q15_floor:18 dec_q31_floor:19 guard_none:40 dec_float_wrapper:41
-    dec_float_callflush:42 dec_float_offset:43)
+    dec_float_callflush:42 dec_float_offset:43
+    fir_dec_float:44 fir_dec_q15:45 fir_int_float:46 fir_int_q15:47)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cpp/fourpath_designs.h)
     list(APPEND _scenarios
          x4_hb_float:20 x4_fp_float:21 x8_hb_float:22 x8_fp_float:23 x16_hb_float:24 x16_fp_float:25 x16_fptop_float:26

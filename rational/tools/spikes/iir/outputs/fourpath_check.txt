@@ -1,0 +1,10 @@
+icount/workloads.cpp built for the host with -DIIR_SC=50 -DIIR_HAVE_FOURPATH: tones through economy's
+four-path stage at D = 2 (the C++ kernel) and the half-band pair; python/iir_design.py gives, at the same
+frequencies, -73.73 / -65.50 (0.20), -95.99 / -96.86 (0.28), -93.50 / -108.74 (0.48), -131.93 / -126.47 (0.499) dB.
+f = 0.0100 of the input rate: four-path -0.01 dB, half-band pair -0.01 dB
+f = 0.0400 of the input rate: four-path -0.01 dB, half-band pair -0.01 dB
+f = 0.2000 of the input rate: four-path -74.14 dB, half-band pair -65.51 dB
+f = 0.2500 of the input rate: four-path -242.84 dB, half-band pair -242.81 dB
+f = 0.2800 of the input rate: four-path -95.99 dB, half-band pair -96.87 dB
+f = 0.4800 of the input rate: four-path -93.51 dB, half-band pair -108.74 dB
+f = 0.4990 of the input rate: four-path -131.93 dB, half-band pair -126.47 dB

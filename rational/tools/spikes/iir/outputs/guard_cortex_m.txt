@@ -1,0 +1,50 @@
+The flush guard (ftz/flush_guard.h) around an empty call, as GCC 13.2 (arm-none-eabi, -O3) builds it for each
+target in icount/ (scenario guard_only_hostoff). M4 without an FPU: the guard is empty.
+== m4
+000001c8 <void (anonymous namespace)::guarded<float, (anonymous namespace)::nothing, true>((anonymous namespace)::nothing&, float const*, float*, int) [clone .constprop.0] [clone .isra.0]>:
+     1c8:	b.w	1bc <(anonymous namespace)::nothing::process(float const*, float*, int) [clone .constprop.0]>
+== m4f
+000001c8 <void (anonymous namespace)::guarded<float, (anonymous namespace)::nothing, true>((anonymous namespace)::nothing&, float const*, float*, int) [clone .constprop.0] [clone .isra.0]>:
+     1c8:	push	{r3, lr}
+     1ca:	vmrs	r3, fpscr
+     1ce:	lsls	r2, r3, #7
+     1d0:	bpl.n	1da <void (anonymous namespace)::guarded<float, (anonymous namespace)::nothing, true>((anonymous namespace)::nothing&, float const*, float*, int) [clone .constprop.0] [clone .isra.0]+0x12>
+     1d2:	ldmia.w	sp!, {r3, lr}
+     1d6:	b.w	1bc <(anonymous namespace)::nothing::process(float const*, float*, int) [clone .constprop.0]>
+     1da:	orr.w	r3, r3, #16777216	@ 0x1000000
+     1de:	vmsr	fpscr, r3
+     1e2:	bl	1bc <(anonymous namespace)::nothing::process(float const*, float*, int) [clone .constprop.0]>
+     1e6:	vmrs	r3, fpscr
+     1ea:	bic.w	r3, r3, #16777216	@ 0x1000000
+     1ee:	vmsr	fpscr, r3
+     1f2:	pop	{r3, pc}
+== m33
+100000d4 <void (anonymous namespace)::guarded<float, (anonymous namespace)::nothing, true>((anonymous namespace)::nothing&, float const*, float*, int) [clone .constprop.0] [clone .isra.0]>:
+100000d4:	push	{r3, lr}
+100000d6:	vmrs	r3, fpscr
+100000da:	lsls	r2, r3, #7
+100000dc:	bpl.n	100000e6 <void (anonymous namespace)::guarded<float, (anonymous namespace)::nothing, true>((anonymous namespace)::nothing&, float const*, float*, int) [clone .constprop.0] [clone .isra.0]+0x12>
+100000de:	ldmia.w	sp!, {r3, lr}
+100000e2:	b.w	100000c8 <(anonymous namespace)::nothing::process(float const*, float*, int) [clone .constprop.0]>
+100000e6:	orr.w	r3, r3, #16777216	@ 0x1000000
+100000ea:	vmsr	fpscr, r3
+100000ee:	bl	100000c8 <(anonymous namespace)::nothing::process(float const*, float*, int) [clone .constprop.0]>
+100000f2:	vmrs	r3, fpscr
+100000f6:	bic.w	r3, r3, #16777216	@ 0x1000000
+100000fa:	vmsr	fpscr, r3
+100000fe:	pop	{r3, pc}
+== m55
+01000094 <void (anonymous namespace)::guarded<float, (anonymous namespace)::nothing, true>((anonymous namespace)::nothing&, float const*, float*, int) [clone .constprop.0] [clone .isra.0]>:
+ 1000094:	push	{r3, lr}
+ 1000096:	vmrs	r3, fpscr
+ 100009a:	lsls	r2, r3, #7
+ 100009c:	bpl.n	10000a6 <void (anonymous namespace)::guarded<float, (anonymous namespace)::nothing, true>((anonymous namespace)::nothing&, float const*, float*, int) [clone .constprop.0] [clone .isra.0]+0x12>
+ 100009e:	ldmia.w	sp!, {r3, lr}
+ 10000a2:	b.w	1000088 <(anonymous namespace)::nothing::process(float const*, float*, int) [clone .constprop.0]>
+ 10000a6:	orr.w	r3, r3, #16777216	@ 0x1000000
+ 10000aa:	vmsr	fpscr, r3
+ 10000ae:	bl	1000088 <(anonymous namespace)::nothing::process(float const*, float*, int) [clone .constprop.0]>
+ 10000b2:	vmrs	r3, fpscr
+ 10000b6:	bic.w	r3, r3, #16777216	@ 0x1000000
+ 10000ba:	vmsr	fpscr, r3
+ 10000be:	pop	{r3, pc}

@@ -905,5 +905,23 @@
    "float": 1402,
    "double": 11293
   }
+ },
+ "quantized": {
+  "super_economy": {
+   "nonlinear": -89.96747975048196,
+   "near_linear": -75.4712666353252
+  },
+  "economy": {
+   "nonlinear": -77.5570877534114,
+   "near_linear": -77.48371021729359
+  },
+  "balanced": {
+   "nonlinear": -71.31079615238916,
+   "near_linear": -74.64564816011047
+  },
+  "transparent": {
+   "nonlinear": -127.88208967534345,
+   "near_linear": -121.18044270274028
+  }
  }
 }
