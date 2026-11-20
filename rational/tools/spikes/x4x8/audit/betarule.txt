@@ -1,0 +1,4 @@
+beta=kaiser_beta(A+0): m band2 div1/2/4 = 11/7/7, band4 div1/2 = 11/5, band8 div2 = 5 | x4: 2.2=53 one4=67 | x8: 4.2=85 2.2.2=113 (gap 33%) | x16 8.2=165
+beta=kaiser_beta(A+2): m band2 div1/2/4 = 11/6/4, band4 div1/2 = 11/5, band8 div2 = 5 | x4: 2.2=49 one4=67 | x8: 4.2=85 2.2.2=85 (gap 0%) | x16 8.2=165
+beta=kaiser_beta(A+3): m band2 div1/2/4 = 10/6/4, band4 div1/2 = 10/5, band8 div2 = 5 | x4: 2.2=47 one4=61 | x8: 4.2=83 2.2.2=83 (gap 0%) | x16 8.2=163
+beta=kaiser_beta(A+4): m band2 div1/2/4 = 10/5/4, band4 div1/2 = 10/4, band8 div2 = 5 | x4: 2.2=43 one4=61 | x8: 4.2=71 2.2.2=79 (gap 11%) | x16 8.2=163

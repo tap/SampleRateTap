@@ -1,0 +1,7 @@
+down4 alone macs/out 67.0000  window 86
+down4.down2 economy macs 85.0000 latency 12.8750
+down2.down4.down2 economy macs 157.0000 latency 13.3125
+A=70 p=0.3333  up_2 macs/out 9.50  down_2 macs/out 19.00
+A=70 p=0.3750  up_2 macs/out 11.50  down_2 macs/out 23.00
+A=70 p=0.3958  up_2 macs/out 13.50  down_2 macs/out 27.00
+A=120 p=0.4167  up_2 macs/out 31.50  down_2 macs/out 63.00

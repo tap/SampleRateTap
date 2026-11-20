@@ -1,0 +1,4 @@
+x4 economy down2.down2 (m7 div2, m11)    worst in-band removal residual -65.4 dB at 0.3750 r_min (best -214.3)
+x8 economy X3 down4.down2 (m5 div2, m11) worst in-band removal residual -61.3 dB at 0.2315 r_min (best -213.8)
+x16 economy down8.down2 (m5 div2, m11)   worst in-band removal residual -62.5 dB at 0.3591 r_min (best -218.4)
+x8 transparent 2.2.2 (m9 div4, m10 div2, m31) worst in-band removal residual -110.0 dB at 0.4084 r_min (best -249.4)

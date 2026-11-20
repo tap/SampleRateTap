@@ -1,0 +1,44 @@
+# x8 chains at economy, two channels, 32-frame blocks: instructions per output frame
+# target hexagon (TAP_SR_NO_EXCEPTIONS_RTTI=ON); (count at 3000 blocks - count at 1000) / (frames at 3000 - frames at 1000)
+| chain | format | insns / output frame | frames (3000 blocks) | count (3000 blocks) |
+|---|---|---:|---:|---:|
+| ↓4 · ↓2 | float | 5043.84 | 12000 | 68523545 |
+| ↓3 · 3/4 · ↓2 (48 matrix today) | float | 6267.38 | 12000 | 83267358 |
+| ↓2 · ↓2 · ↓2 | float | 6772.78 | 12000 | 89309117 |
+| 3/8 · ↓3 (44.1 matrix today) | float | 7030.86 | 12000 | 92485429 |
+| ↑2 · ↑4 | float | 620.02 | 768000 | 484177166 |
+| ↑2 · 4/3 · ↑3 (48 matrix today) | float | 734.39 | 768000 | 572074301 |
+| ↑2 · ↑2 · ↑2 | float | 835.23 | 768000 | 649492229 |
+| ↑3 · 8/3 (44.1 matrix today) | float | 832.73 | 768000 | 647648399 |
+| ↓4 · ↓2 | q15 | 864.10 | 12000 | 18719332 |
+| ↓3 · 3/4 · ↓2 (48 matrix today) | q15 | 1085.05 | 12000 | 21446548 |
+| ↓2 · ↓2 · ↓2 | q15 | 1211.67 | 12000 | 22941798 |
+| 3/8 · ↓3 (44.1 matrix today) | q15 | 857.17 | 12000 | 18771856 |
+| ↑2 · ↑4 | q15 | 96.45 | 768000 | 82427431 |
+| ↑2 · 4/3 · ↑3 (48 matrix today) | q15 | 124.84 | 768000 | 104298149 |
+| ↑2 · ↑2 · ↑2 | q15 | 144.21 | 768000 | 119150204 |
+| ↑3 · 8/3 (44.1 matrix today) | q15 | 120.00 | 768000 | 100632909 |
+
+# scripts/icount.py --engine rational --target hexagon on this build, against rational/bench/baselines.json: exit 0
+#   tap_sr_rational_icount_callmax_down2_float: worst call 1 of 3000: 23575 insns (mean 21258, whole run 71782750)
+#   callmax_down2_float: 23575 insns vs baseline 23575 (+0, +0.0000%) ok
+#   tap_sr_rational_icount_callmax_down2_q15: worst call 5 of 3000: 4027 insns (mean 3020, whole run 17417825)
+#   callmax_down2_q15: 4027 insns vs baseline 4027 (+0, +0.0000%) ok
+#   tap_sr_rational_icount_callmax_up2_float: worst call 1 of 3000: 44745 insns (mean 42140, whole run 134431663)
+#   callmax_up2_float: 44745 insns vs baseline 44745 (+0, +0.0000%) ok
+#   tap_sr_rational_icount_callmax_up2_q15: worst call 3 of 3000: 6204 insns (mean 5867, whole run 25963332)
+#   callmax_up2_q15: 6204 insns vs baseline 6204 (+0, +0.0000%) ok
+#   construct_q15_eco: 8336041 insns vs baseline 8330092 (+5949, +0.0714%) ok
+#   down2_down2_q15_eco: 21039099 insns vs baseline 21039350 (-251, -0.0012%) ok
+#   down2_float_eco: 71755250 insns vs baseline 71762029 (-6779, -0.0094%) ok
+#   down2_float_tr: 173687020 insns vs baseline 173693796 (-6776, -0.0039%) ok
+#   down2_q15_eco: 17389323 insns vs baseline 17391093 (-1770, -0.0102%) ok
+#   down3_float_eco: 89550606 insns vs baseline 89559636 (-9030, -0.0101%) ok
+#   down3_q15_eco: 18918923 insns vs baseline 18922927 (-4004, -0.0212%) ok
+#   ratio23_float_eco: 125523678 insns vs baseline 125532691 (-9013, -0.0072%) ok
+#   ratio23_q15_eco: 18646920 insns vs baseline 18650895 (-3975, -0.0213%) ok
+#   up2_float_eco: 134404163 insns vs baseline 134413185 (-9022, -0.0067%) ok
+#   up2_float_tr: 337128946 insns vs baseline 337137965 (-9019, -0.0027%) ok
+#   up2_q15_eco: 25934830 insns vs baseline 25938856 (-4026, -0.0155%) ok
+#   up3_float_eco: 250120390 insns vs baseline 250129415 (-9025, -0.0036%) ok
+#   up3_q15_eco: 38457521 insns vs baseline 38461134 (-3613, -0.0094%) ok

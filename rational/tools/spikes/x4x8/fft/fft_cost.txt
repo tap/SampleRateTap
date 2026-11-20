@@ -1,0 +1,18 @@
+
+real_fft (double): forward + inverse per hop at overlap 4
+| points | pair, fastest (us) | pair, median (us) | per full-rate sample at the host rate (us) |
+|---:|---:|---:|---:|
+| 4096 | 29.90 | 30.14 | 0.0292 |
+| 16384 | 159.09 | 190.02 | 0.0388 |
+| 32768 | 341.86 | 366.70 | 0.0417 |
+| 65536 | 756.56 | 850.78 | 0.0462 |
+4096 points after decimating by D, per full-rate sample (us, fastest):  D = 4: 0.00730  D = 8: 0.00365  D = 16: 0.00182
+
+real_fft32 (float): forward + inverse per hop at overlap 4
+| points | pair, fastest (us) | pair, median (us) | per full-rate sample at the host rate (us) |
+|---:|---:|---:|---:|
+| 4096 | 30.23 | 32.78 | 0.0295 |
+| 16384 | 147.53 | 155.80 | 0.0360 |
+| 32768 | 341.57 | 369.05 | 0.0417 |
+| 65536 | 755.57 | 987.55 | 0.0461 |
+4096 points after decimating by D, per full-rate sample (us, fastest):  D = 4: 0.00738  D = 8: 0.00369  D = 16: 0.00185

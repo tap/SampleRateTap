@@ -1,0 +1,21 @@
+1/16 (matrix: down_8 . down_2)
+  down_8 . down_2         165.00 MAC/out  latency 12.938 out
+  down_4 . down_4         191.00 MAC/out  latency 11.938 out
+  down_4 . down_2 . down_2  177.00 MAC/out  latency 14.938 out
+  down_2 . down_4 . down_2  157.00 MAC/out  latency 13.312 out
+  down_4 . down_3 . 3/4   213.00 MAC/out  latency 19.938 out
+16/1 (matrix: up_2 . up_8)
+  up_2 . up_8              10.31 MAC/out  latency 207.000 out
+  up_4 . up_4              11.94 MAC/out  latency 191.000 out
+  up_2 . up_2 . up_4       11.06 MAC/out  latency 239.000 out
+  up_2 . up_4 . up_2        9.81 MAC/out  latency 213.000 out
+1/32 (matrix: down_2 . down_8 . down_2)
+  down_2 . down_8 . down_2  277.00 MAC/out  latency 13.094 out
+  down_8 . down_4         351.00 MAC/out  latency 11.969 out
+  down_4 . down_4 . down_2  285.00 MAC/out  latency 13.344 out
+  down_2 . down_4 . down_4  303.00 MAC/out  latency 12.094 out
+1/24 (matrix: down_2 . down_6 . down_2)
+  down_2 . down_6 . down_2  209.00 MAC/out  latency 13.125 out
+  down_6 . down_4         271.00 MAC/out  latency 11.958 out
+  down_4 . down_3 . down_2  215.00 MAC/out  latency 13.458 out
+  down_3 . down_4 . down_2  221.00 MAC/out  latency 13.333 out

@@ -1,0 +1,12 @@
+-- profile passband 0.3750
+down_4 . down_2            85.00 MAC/out  latency   12.875 out frames
+down_3 . 3/4 . down_2     105.00 MAC/out  latency   14.625 out frames
+down_2 x3                 113.00 MAC/out  latency   15.375 out frames
+up_2 . up_4                10.62 MAC/out  latency  103.000 out frames
+up_2 . 4/3 . up_3          12.46 MAC/out  latency  117.000 out frames
+-- profile passband 0.4167
+down_4 . down_2           221.00 MAC/out  latency   36.875 out frames
+down_3 . 3/4 . down_2     219.67 MAC/out  latency   39.750 out frames
+down_2 x3                 181.00 MAC/out  latency   37.375 out frames
+up_2 . up_4                27.62 MAC/out  latency  295.000 out frames
+up_2 . 4/3 . up_3          25.46 MAC/out  latency  318.000 out frames

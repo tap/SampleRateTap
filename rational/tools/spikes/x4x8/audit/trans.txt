@@ -1,0 +1,8 @@
+economy last half-band at 0.45 r_low: -0.9 dB
+economy last half-band at 0.50 r_low: -6.0 dB
+economy last half-band at 0.55 r_low: -20.0 dB
+economy last half-band at 0.60 r_low: -62.3 dB
+transparent last half-band at 0.45 r_low: -0.0 dB
+transparent last half-band at 0.50 r_low: -6.0 dB
+transparent last half-band at 0.55 r_low: -57.4 dB
+transparent last half-band at 0.60 r_low: -127.1 dB

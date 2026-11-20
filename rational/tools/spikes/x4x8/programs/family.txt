@@ -1,0 +1,52 @@
+economy
+  down_3_ratio_3_4_down_2 (48 fam.)  MAC/out  105.00  latency 117/8 out frames
+  ratio_3_8_down_3 (44.1 fam.)       MAC/out  124.00  latency 295/24 out frames
+  down_2 x3                          MAC/out  113.00  latency 123/8 out frames
+  down_8                             MAC/out  169.00  latency 95/8 out frames
+  up_2_ratio_4_3_up_3 (48 fam.)      MAC/out   12.46  latency 117/1 out frames
+  up_3_ratio_8_3 (44.1 fam.)         MAC/out   14.50  latency 295/3 out frames
+  up_2 x3                            MAC/out   14.12  latency 123/1 out frames
+  up_8                               MAC/out   21.12  latency 95/1 out frames
+  down_2_down_2                      MAC/out   53.00  latency 55/4 out frames
+  ratio<1,4> (one stage)             MAC/out   67.00  latency 43/4 out frames
+  up_2_up_2                          MAC/out   13.25  latency 55/1 out frames
+  ratio<4,1> (one stage)             MAC/out   16.75  latency 43/1 out frames
+super_economy
+  down_3_ratio_3_4_down_2 (48 fam.)  MAC/out  101.00  latency 101/8 out frames
+  ratio_3_8_down_3 (44.1 fam.)       MAC/out  112.00  latency 223/24 out frames
+  down_2 x3                          MAC/out  109.00  latency 107/8 out frames
+  down_8                             MAC/out  113.00  latency 63/8 out frames
+  up_2_ratio_4_3_up_3 (48 fam.)      MAC/out   11.96  latency 101/1 out frames
+  up_3_ratio_8_3 (44.1 fam.)         MAC/out   13.00  latency 223/3 out frames
+  up_2 x3                            MAC/out   13.62  latency 107/1 out frames
+  up_8                               MAC/out   14.12  latency 63/1 out frames
+  down_2_down_2                      MAC/out   49.00  latency 47/4 out frames
+  ratio<1,4> (one stage)             MAC/out   49.00  latency 31/4 out frames
+  up_2_up_2                          MAC/out   12.25  latency 47/1 out frames
+  ratio<4,1> (one stage)             MAC/out   12.25  latency 31/1 out frames
+balanced
+  down_3_ratio_3_4_down_2 (48 fam.)  MAC/out  109.00  latency 133/8 out frames
+  ratio_3_8_down_3 (44.1 fam.)       MAC/out  132.00  latency 343/24 out frames
+  down_2 x3                          MAC/out  117.00  latency 139/8 out frames
+  down_8                             MAC/out  197.00  latency 111/8 out frames
+  up_2_ratio_4_3_up_3 (48 fam.)      MAC/out   12.96  latency 133/1 out frames
+  up_3_ratio_8_3 (44.1 fam.)         MAC/out   15.50  latency 343/3 out frames
+  up_2 x3                            MAC/out   14.62  latency 139/1 out frames
+  up_8                               MAC/out   24.62  latency 111/1 out frames
+  down_2_down_2                      MAC/out   57.00  latency 63/4 out frames
+  ratio<1,4> (one stage)             MAC/out   85.00  latency 55/4 out frames
+  up_2_up_2                          MAC/out   14.25  latency 63/1 out frames
+  ratio<4,1> (one stage)             MAC/out   21.25  latency 55/1 out frames
+transparent
+  down_3_ratio_3_4_down_2 (48 fam.)  MAC/out  219.67  latency 159/4 out frames
+  ratio_3_8_down_3 (44.1 fam.)       MAC/out  292.00  latency 229/8 out frames
+  down_2 x3                          MAC/out  181.00  latency 299/8 out frames
+  down_8                             MAC/out  351.00  latency 199/8 out frames
+  up_2_ratio_4_3_up_3 (48 fam.)      MAC/out   25.46  latency 318/1 out frames
+  up_3_ratio_8_3 (44.1 fam.)         MAC/out   33.75  latency 229/1 out frames
+  up_2 x3                            MAC/out   22.62  latency 299/1 out frames
+  up_8                               MAC/out   43.88  latency 199/1 out frames
+  down_2_down_2                      MAC/out  105.00  latency 141/4 out frames
+  ratio<1,4> (one stage)             MAC/out  151.00  latency 99/4 out frames
+  up_2_up_2                          MAC/out   26.25  latency 141/1 out frames
+  ratio<4,1> (one stage)             MAC/out   37.75  latency 99/1 out frames

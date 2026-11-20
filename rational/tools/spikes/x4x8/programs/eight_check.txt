@@ -1,0 +1,6 @@
+down_8 (one stage)          169.0 MAC/out   latency   11.88 out frames =  1.98 ms at 6 kHz out
+down_3 . 3/4 . down_2       105.0 MAC/out   latency   14.62 out frames =  2.44 ms at 6 kHz out
+down_2 . down_2 . down_2    113.0 MAC/out   latency   15.38 out frames =  2.56 ms at 6 kHz out
+up_8 (one stage)             21.1 MAC/out   latency   95.00 out frames =  1.98 ms at 48 kHz out
+up_2 . 4/3 . up_3            12.5 MAC/out   latency  117.00 out frames =  2.44 ms at 48 kHz out
+up_2 . up_2 . up_2           14.1 MAC/out   latency  123.00 out frames =  2.56 ms at 48 kHz out
