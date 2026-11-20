@@ -1,6 +1,7 @@
 # Spike X-0: ×4, ×8 and ×16 for `rational` (measurements only)
 
-The first item of the ×4 / ×8 / ×16 plan (draft v6, section 8, item 1). A spike ships nothing
+The first item of the ×4 / ×8 / ×16 plan (`docs/X4_X8_PLAN.md`, draft v6, section 8, item 1;
+its audit is `docs/PLANS_AUDIT_2026-11.md`). A spike ships nothing
 in the library: this directory holds the programs that measured, their outputs, and the
 go/no-go verdicts below. Nothing here is part of any build CI runs: the host programs build
 with `build.sh`, and the instruction-count workloads join a root configure only through
