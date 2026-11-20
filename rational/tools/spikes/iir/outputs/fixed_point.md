@@ -47,3 +47,14 @@ Decimators driven by full-scale square waves (periods 2 to 400 high-rate samples
 | `balanced` | near-linear | 2.106 | 3.394 | 101 |
 | `transparent` | nonlinear | 2.060 | 3.244 | 232 |
 | `transparent` | near-linear | 2.298 | 3.698 | 171 |
+
+## 4. The Q15 floor (Q2.29 states, magnitude truncation, the output rounded half up to Q15)
+
+A sine at 997/48000 of the high rate, -1 dBFS, quantized to Q15, through the bit-true decimator and through the same structure in double on the same input; error power against a full-scale sine's, 2^16 outputs after 4096. Divisor 1. Beside each, the double reference rounded to Q15: the floor any Q15 output of that signal has.
+
+| profile | nonlinear dB | its reference rounded to Q15 | near-linear dB | its reference rounded to Q15 |
+|---|---:|---:|---:|---:|
+| `super_economy` | -98.1 | -98.1 | -98.2 | -98.2 |
+| `economy` | -98.1 | -98.1 | -97.7 | -97.7 |
+| `balanced` | -98.0 | -98.0 | -97.9 | -97.9 |
+| `transparent` | -98.1 | -98.1 | -101.1 | -101.1 |

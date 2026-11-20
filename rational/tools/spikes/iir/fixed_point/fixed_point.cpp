@@ -509,4 +509,104 @@ int main() {
                 std::printf("STATE OVERFLOW of the two guard bits\n");
         }
     }
+
+    // ---- 4. the Q15 floor: the bit-true decimator against the same structure in double
+    std::printf("\n## 4. The Q15 floor (Q2.29 states, %s, the output rounded half up to Q15)\n\n", rnd_name(chosen));
+    std::printf(
+        "A sine at 997/48000 of the high rate, -1 dBFS, quantized to Q15, through the bit-true decimator and "
+        "through the same structure in double on the same input; error power against a full-scale sine's, "
+        "2^16 outputs after 4096. Divisor 1. Beside each, the double reference rounded to Q15: the floor any Q15 "
+        "output of that signal has.\n\n");
+    std::printf(
+        "| profile | nonlinear dB | its reference rounded to Q15 | near-linear dB | its reference rounded to Q15 "
+        "|\n|---|---:|---:|---:|---:|\n");
+    for (const char* prof : {"super_economy", "economy", "balanced", "transparent"}) {
+        double res[2] = {0, 0}, alone[2] = {0, 0};
+        for (int variant = 0; variant < 2; ++variant) {
+            const nonlinear_design*   nl = nullptr;
+            const near_linear_design* nr = nullptr;
+            for (const auto& x : k_nonlinear)
+                if (std::string(x.profile) == prof && x.divisor == 1)
+                    nl = &x;
+            for (const auto& x : k_near_linear)
+                if (std::string(x.profile) == prof && x.divisor == 1)
+                    nr = &x;
+            const std::size_t n_out = 4096 + 65536;
+            std::vector<int>  x(2 * n_out);
+            for (std::size_t n = 0; n < x.size(); ++n)
+                x[n] = static_cast<int>(std::lround(32767.0 * 0.891250938 * std::sin(2 * M_PI * 997.0 / 48000.0 * n)));
+            // double reference of the same structure
+            std::vector<double> ref, got;
+            if (variant == 0) {
+                q15_first_order_path p0(nl->a0, chosen), p1(nl->a1, chosen);
+                std::vector<double>  s0(nl->a0.size() + 1, 0.0), s1(nl->a1.size() + 1, 0.0);
+                auto                 path = [](std::span<const double> a, std::vector<double>& s, double v) {
+                    for (std::size_t i = 0; i < a.size(); ++i) {
+                        const double y = s[i] + a[i] * (v - s[i + 1]);
+                        s[i]           = v;
+                        v              = y;
+                    }
+                    s[a.size()] = v;
+                    return v;
+                };
+                i64    odd   = 0;
+                double odd_d = 0;
+                for (std::size_t n = 0; n + 1 < x.size(); n += 2) {
+                    const i64 sum = p0(i64(x[n]) << 14) + p1(odd);
+                    i64       r   = (sum + (i64(1) << 14)) >> 15;
+                    r             = std::clamp<i64>(r, -32768, 32767);
+                    got.push_back(static_cast<double>(r) / 32768.0);
+                    ref.push_back(0.5 * (path(nl->a0, s0, x[n] / 32768.0) + path(nl->a1, s1, odd_d)));
+                    odd   = i64(x[n + 1]) << 14;
+                    odd_d = x[n + 1] / 32768.0;
+                }
+            }
+            else {
+                q15_sos_path        p1(nr->sos, nr->N, chosen);
+                std::vector<double> dl(static_cast<std::size_t>(nr->K), 0.0);
+                std::vector<i64>    dq(static_cast<std::size_t>(nr->K), 0);
+                // the double allpass path: the direct form of its denominator
+                const std::size_t   N = static_cast<std::size_t>(nr->N);
+                std::vector<double> xin(N + 1, 0.0), yout(N + 1, 0.0);
+                std::size_t         at    = 0;
+                i64                 odd   = 0;
+                double              odd_d = 0;
+                for (std::size_t n = 0; n + 1 < x.size(); n += 2) {
+                    const i64    d0q = dq[at];
+                    const double d0  = dl[at];
+                    dq[at]           = i64(x[n]) << 14;
+                    dl[at]           = x[n] / 32768.0;
+                    at               = (at + 1) % dq.size();
+                    const i64 sum    = d0q + p1(odd);
+                    i64       r      = (sum + (i64(1) << 14)) >> 15;
+                    r                = std::clamp<i64>(r, -32768, 32767);
+                    got.push_back(static_cast<double>(r) / 32768.0);
+                    // A(w) = w^-N D(1/w) / D(w): y = sum_k den[N-k] x[-k] - sum_{k>=1} den[k] y[-k]
+                    for (std::size_t k = N; k > 0; --k) {
+                        xin[k]  = xin[k - 1];
+                        yout[k] = yout[k - 1];
+                    }
+                    xin[0]   = odd_d;
+                    double y = 0;
+                    for (std::size_t k = 0; k <= N; ++k)
+                        y += nr->den[N - k] * xin[k];
+                    for (std::size_t k = 1; k <= N; ++k)
+                        y -= nr->den[k] * yout[k];
+                    yout[0] = y;
+                    ref.push_back(0.5 * (d0 + y));
+                    odd   = i64(x[n + 1]) << 14;
+                    odd_d = x[n + 1] / 32768.0;
+                }
+            }
+            double e2 = 0, r2 = 0;
+            for (std::size_t i = 4096; i < got.size(); ++i) {
+                e2 += (got[i] - ref[i]) * (got[i] - ref[i]);
+                const double rq = std::floor(ref[i] * 32768.0 + 0.5) / 32768.0 - ref[i];
+                r2 += rq * rq;
+            }
+            res[variant]   = 10 * std::log10(e2 / static_cast<double>(got.size() - 4096) / 0.5);
+            alone[variant] = 10 * std::log10(r2 / static_cast<double>(got.size() - 4096) / 0.5);
+        }
+        std::printf("| `%s` | %.1f | %.1f | %.1f | %.1f |\n", prof, res[0], alone[0], res[1], alone[1]);
+    }
 }

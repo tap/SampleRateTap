@@ -4,7 +4,9 @@
 """IIR-0, go/no-go 7 (IIR_PLAN I12): one four-path stage against the pair of
 half-bands it would replace, inside x4, x8 and x16 cascades.
 
-    python3 fourpath.py           # after gen_designs.py; minutes
+    python3 fourpath.py                        # every profile (hours), then the tables
+    python3 fourpath.py --part NAME PROFILE..  # some profiles into outputs/fourpath_NAME.json
+    python3 fourpath.py --merge                # the parts into fourpath.json and fourpath.md
 
 A four-path stage whose output is at divisor D (input rate 4 D r_min)
 replaces the nonlinear half-bands at divisors 2D and D. Its spec is what the
@@ -17,15 +19,14 @@ those bands by the M-path power complementarity, so only the stopband is
 optimized (iir_design.fourpath_design: SLSQP minimax from random starts over
 every layout with the paths at most two sections apart up to 6 sections,
 and the balanced layouts, at most one apart, above). The search stops at
-the first section count that meets the spec, or at the tie.
+the first section count that meets the spec, or at the tie (capped at 16).
+Every call seeds its own generator, so the parts reproduce a whole run.
 
 MACs per chain output frame per channel, decimating: the pair spends
 n_hi * 2D + n_lo * D, the four-path stage S * D for S sections. The bar
 (I12): more than 10 % cheaper, so S * D < 0.9 (pair); a tie is S * D = pair.
 Placements: D = 1 (x4, and the bottom of x8 and x16), D = 2 (the top of x8,
 the middle of x16), D = 4 (the top of x16).
-
-Writes ../outputs/fourpath.json and ../outputs/fourpath.md.
 """
 import json
 import math
@@ -41,10 +42,10 @@ import iir_design as d  # noqa: E402
 OUT = HERE.parent / "outputs"
 
 
-def main():
+def measure(profiles):
     D_all = json.loads((OUT / "designs.json").read_text())
-    rows, js = [], {}
-    for name in d.PROFILE_ORDER:
+    js = {}
+    for name in profiles:
         A, p = d.PROFILES[name]
         P = D_all["profiles"][name]
         for D in (1, 2, 4):
@@ -60,8 +61,6 @@ def main():
             per_s = {}
             found = None
             for S in range(1, min(s_tie, 16) + 1):
-                # every layout with the paths at most two sections apart up to 6
-                # sections, then the balanced ones (at most one apart)
                 best = d.fourpath_design(A, p, D, S, starts=16 if S <= 5 else 8, spread=2 if S <= 6 else 1)
                 if best is None:
                     continue
@@ -70,39 +69,64 @@ def main():
                 if best[0] <= target:
                     found = S
                     break
-            # group delays (in chain output frames), passband DC and edge
+            # group delays in chain output frames, over the chain's passband
             fp = p / (4.0 * D)  # over the four-path stage's input rate
             f = np.linspace(1e-6, fp, 2001)
             pair_gd = (hb_hi.group_delay(f) + 2 * hb_lo.group_delay(2 * f)) / (4.0 * D)
-            entry = {"pair": [n_hi, n_lo], "pair_macs": pair, "pair_stopband_db": pair_sb, "tie_sections": s_tie,
+            entry = {"pair": [n_hi, n_lo], "pair_orders": [hi["order"], lo["order"]], "pair_macs": pair,
+                     "pair_stopband_db": pair_sb, "tie_sections": s_tie,
                      "bar_sections": math.ceil(0.9 * pair / D) - 1,  # the most S with S D < 0.9 pair
                      "found_sections": found, "per_sections": {str(k): v for k, v in per_s.items()},
-                     "pair_gd_dc": float(pair_gd[0]), "pair_gd_edge": float(pair_gd[-1])}
+                     "pair_gd_dc": float(pair_gd[0]), "pair_gd_max": float(pair_gd.max())}
             if found:
-                paths = per_s[found][2]
-                g = d.fourpath_group_delay(paths, f) / (4.0 * D)
+                g = d.fourpath_group_delay(per_s[found][2], f) / (4.0 * D)
                 entry["fourpath_gd_dc"] = float(g[0])
-                entry["fourpath_gd_edge"] = float(g.max())
+                entry["fourpath_gd_max"] = float(g.max())
             js[f"{name}/D{D}"] = entry
-            fs_txt = f"{found} ({found * D} MACs)" if found else f"none up to {max(per_s) if per_s else 0}"
-            gd_fp = f"{entry['fourpath_gd_dc']:.2f} .. {entry['fourpath_gd_edge']:.2f}" if found else "-"
-            verdict = ("passes" if found and found * D < 0.9 * pair else
-                       "tie" if found and found * D == pair else "fails")
-            rows.append([f"`{name}`", D, f"N{hi['order']} . N{lo['order']}", pair, f"{pair_sb:.1f}",
-                         s_tie, fs_txt, f"{pair_gd[0]:.2f} .. {pair_gd.max():.2f}", gd_fp, verdict])
-            print(rows[-1], flush=True)
+            print(f"{name}/D{D}: found {found}", flush=True)
+    return js
+
+
+def write(js):
     OUT.mkdir(exist_ok=True)
+    rank = {n: i for i, n in enumerate(d.PROFILE_ORDER)}
+    js = dict(sorted(js.items(), key=lambda kv: (rank[kv[0].split("/")[0]], kv[0])))
     (OUT / "fourpath.json").write_text(json.dumps(js, indent=1) + "\n")
     hdr = ["profile", "D", "pair it replaces", "pair MACs", "pair on the bands dB", "sections at a tie",
            "fewest sections meeting -(A+1)", "pair group delay", "four-path group delay", "bar (> 10 %)"]
     lines = ["# IIR-0: the four-path stage against the half-band pair (generated by python/fourpath.py)", "",
-             "Group delays in chain output frames over the chain's passband (DC .. edge).", "",
+             "Group delays in chain output frames over the chain's passband (DC .. largest).", "",
              "| " + " | ".join(hdr) + " |", "|" + "|".join(["---"] + ["---:"] * (len(hdr) - 1)) + "|"]
-    lines += ["| " + " | ".join(str(x) for x in r) + " |" for r in rows]
+    for k, e in js.items():
+        name, dd = k.split("/")
+        D = int(dd[1:])
+        found = e["found_sections"]
+        fs_txt = f"{found} ({found * D} MACs)" if found else f"none up to {max(int(s) for s in e['per_sections'])}"
+        gd_fp = f"{e['fourpath_gd_dc']:.2f} .. {e['fourpath_gd_max']:.2f}" if found else "-"
+        verdict = ("passes" if found and found * D < 0.9 * e["pair_macs"] else
+                   "tie" if found and found * D == e["pair_macs"] else
+                   "fails (dearer)" if found else "fails")
+        lines.append("| " + " | ".join(str(x) for x in [
+            f"`{name}`", D, f"N{e['pair_orders'][0]} . N{e['pair_orders'][1]}", e["pair_macs"],
+            f"{e['pair_stopband_db']:.1f}", e["tie_sections"], fs_txt,
+            f"{e['pair_gd_dc']:.2f} .. {e['pair_gd_max']:.2f}", gd_fp, verdict]) + " |")
     lines += ["", "Best stopband per section count (dB on the folding bands, layout):", ""]
     for k, e in js.items():
         lines.append(f"- {k}: " + "; ".join(f"S{s}: {v[0]:.1f} {v[1]}" for s, v in e["per_sections"].items()))
     (OUT / "fourpath.md").write_text("\n".join(lines) + "\n")
+
+
+def main():
+    args = sys.argv[1:]
+    if args[:1] == ["--part"]:
+        (OUT / f"fourpath_{args[1]}.json").write_text(json.dumps(measure(args[2:]), indent=1) + "\n")
+    elif args[:1] == ["--merge"]:
+        js = {}
+        for part in sorted(OUT.glob("fourpath_*.json")):
+            js.update(json.loads(part.read_text()))
+        write(js)
+    else:
+        write(measure(d.PROFILE_ORDER))
 
 
 if __name__ == "__main__":

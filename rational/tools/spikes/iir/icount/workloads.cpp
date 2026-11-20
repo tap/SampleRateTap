@@ -28,6 +28,9 @@
 #if __has_include("../cpp/fourpath_designs.h")
 #include "../cpp/fourpath_designs.h"
 #endif
+#if IIR_SC >= 44 && IIR_SC <= 47
+#include "tap/sr/rational/stage.h"
+#endif
 
 using namespace iir_spike;
 
@@ -677,6 +680,48 @@ int main() {
     hb_dec_offset<float, 2, 2> st;
     st.init(nl(eco, 1));
     run_dec<float, decltype(st), 2>(st);
+#elif IIR_SC >= 44 && IIR_SC <= 47
+    // today's FIR half-band, rational's own basic_stage at economy, mono, in
+    // the same harness: 44 / 45 down by 2 in float / Q15, 46 / 47 up by 2
+    namespace rat         = tap::sr::rational;
+    using S               = std::conditional_t<IIR_SC % 2 == 0, float, std::int16_t>;
+    constexpr bool k_down = IIR_SC < 46;
+    using R               = std::conditional_t<k_down, rat::down_2, rat::up_2>;
+    struct fir {
+        rat::basic_stage<S, 1, R> st{rat::profile::economy()};
+        [[gnu::noinline]] void    process(const S* in, S* out, int n) noexcept {
+            st.process(in, static_cast<std::size_t>(k_down ? 2 * n : n), out);
+        }
+    } st;
+    if constexpr (k_down)
+        run_dec<S, fir, 2>(st);
+    else
+        run_int<S>(st);
+#elif IIR_SC == 50 && defined(IIR_HAVE_FOURPATH)
+    // host check (not counted): tones through economy's four-path stage at D = 2 and through the
+    // half-band pair it replaces, the steady-state output amplitude in dB, to compare with
+    // python/iir_design.py's responses (README section 9)
+    for (double f : {0.01, 0.04, 0.2, 0.25, 0.28, 0.48, 0.5 - 1e-3}) {
+        fp_dec<double, 2, 2, 1, 1> fp;
+        fp.init(k_fp_economy_2);
+        hb_dec<double, 1, 1> h4, h2;
+        h4.init(nl(eco, 4));
+        h2.init(nl(eco, 2));
+        constexpr int n = 4096;
+        static double in[4 * n], o1[n], m[2 * n], o2[n];
+        for (int i = 0; i < 4 * n; ++i)
+            in[i] = std::cos(2 * M_PI * f * i);
+        fp.process(in, o1, n);
+        h4.process(in, m, 2 * n);
+        h2.process(m, o2, n);
+        double a1 = 0, a2 = 0;
+        for (int i = n / 2; i < n; ++i) {
+            a1 = std::max(a1, std::fabs(o1[i]));
+            a2 = std::max(a2, std::fabs(o2[i]));
+        }
+        std::printf("f = %.4f of the input rate: four-path %.2f dB, half-band pair %.2f dB\n", f, 20 * std::log10(a1),
+                    20 * std::log10(a2));
+    }
 #elif IIR_SC == 40
     nothing st;
     run_guarded<float, nothing, false>(st, false);

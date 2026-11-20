@@ -290,7 +290,7 @@ def nearlinear_polish(den, K, theta_p, n=1500):
     """Polish the LP design on the true objective: minimise t subject to
     -t <= eps(theta_i) <= t (SLSQP on the epigraph, analytic Jacobian),
     keeping the polished design only if it is stable and better on the
-    dense grid. It moves the LP's designs by 0.01 to 0.55 dB."""
+    dense grid. It moves the LP's designs by up to 0.7 dB."""
     N = len(den) - 1
     th = np.linspace(0, theta_p, n)
     k = np.arange(N + 1)

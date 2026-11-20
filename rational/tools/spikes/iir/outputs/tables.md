@@ -161,3 +161,14 @@ The count from the format's largest finite value down to its smallest normal val
 | `balanced` | near-linear | 0.8059 | 816 | 6572 |
 | `transparent` | nonlinear | 0.9188 | 2080 | 16752 |
 | `transparent` | near-linear | 0.8820 | 1402 | 11293 |
+
+## 8. The stopband after coefficient quantization (I8's formats)
+
+One-multiplier coefficients rounded to Q31, second-order section coefficients to Q2.30 (the near-linear allpass path rebuilt from its rounded sections), divisor 1; the attained stopband on the 16384-point grid.
+
+| profile | nonlinear, double | nonlinear, Q31 | near-linear, double | near-linear, Q2.30 / Q31 |
+|---|---:|---:|---:|---:|
+| `super_economy` | -89.97 | -89.97 | -75.47 | -75.47 |
+| `economy` | -77.56 | -77.56 | -77.48 | -77.48 |
+| `balanced` | -71.31 | -71.31 | -74.65 | -74.65 |
+| `transparent` | -127.89 | -127.88 | -121.20 | -121.18 |

@@ -1,0 +1,41 @@
+The flush guard (ftz/flush_guard.h) around one multiply, float (f) and double (h), as Clang 18.1
+builds it for AArch64 (--target=aarch64-none-elf -ffreestanding -O2); compiled, not run.
+Disassembly of section .text:
+
+0000000000000000 <f(float*)>:
+       0:      	mrs	x8, FPCR
+       4:      	tbnz	w8, #0x18, 0x30 <f(float*)+0x30>
+       8:      	fmov	s0, #0.50000000
+       c:      	orr	x8, x8, #0x1000000
+      10:      	msr	FPCR, x8
+      14:      	ldr	s1, [x0]
+      18:      	fmul	s0, s1, s0
+      1c:      	str	s0, [x0]
+      20:      	mrs	x8, FPCR
+      24:      	and	x8, x8, #0xfffffffffeffffff
+      28:      	msr	FPCR, x8
+      2c:      	ret
+      30:      	fmov	s0, #0.50000000
+      34:      	ldr	s1, [x0]
+      38:      	fmul	s0, s1, s0
+      3c:      	str	s0, [x0]
+      40:      	ret
+
+0000000000000044 <h(double*)>:
+      44:      	mrs	x8, FPCR
+      48:      	tbnz	w8, #0x18, 0x74 <h(double*)+0x30>
+      4c:      	fmov	d0, #0.50000000
+      50:      	orr	x8, x8, #0x1000000
+      54:      	msr	FPCR, x8
+      58:      	ldr	d1, [x0]
+      5c:      	fmul	d0, d1, d0
+      60:      	str	d0, [x0]
+      64:      	mrs	x8, FPCR
+      68:      	and	x8, x8, #0xfffffffffeffffff
+      6c:      	msr	FPCR, x8
+      70:      	ret
+      74:      	fmov	d0, #0.50000000
+      78:      	ldr	d1, [x0]
+      7c:      	fmul	d0, d1, d0
+      80:      	str	d0, [x0]
+      84:      	ret
