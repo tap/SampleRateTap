@@ -1,0 +1,34 @@
+| profile | variant | dir | input | float states: total dB | max bin dB | double states, float I/O: total dB | float output rounding alone: total dB | max bin dB |
+|---|---|---|---|---:|---:|---:|---:|---:|
+| `super_economy` | nonlinear | down | sine | -148.8 | -175.0 | -153.8 | -153.8 | -182.5 |
+| `super_economy` | near-linear | down | sine | -149.4 | -174.6 | -153.8 | -153.8 | -181.9 |
+| `super_economy` | nonlinear | down | noise | -147.4 | -174.0 | -156.8 | -156.8 | -189.6 |
+| `super_economy` | near-linear | down | noise | -148.3 | -176.7 | -156.8 | -156.8 | -189.6 |
+| `super_economy` | nonlinear | up | sine | -148.9 | -176.0 | -153.7 | -153.7 | -186.6 |
+| `super_economy` | near-linear | up | sine | -150.3 | -177.7 | -156.7 | -156.7 | -190.1 |
+| `super_economy` | nonlinear | up | noise | -145.1 | -171.5 | -153.6 | -153.6 | -186.1 |
+| `super_economy` | near-linear | up | noise | -146.1 | -174.0 | -156.7 | -156.7 | -189.4 |
+| `economy` | nonlinear | down | sine | -148.6 | -172.4 | -153.7 | -153.7 | -182.3 |
+| `economy` | near-linear | down | sine | -147.4 | -156.1 | -153.7 | -153.7 | -181.5 |
+| `economy` | nonlinear | down | noise | -146.6 | -172.7 | -156.8 | -156.8 | -189.3 |
+| `economy` | near-linear | down | noise | -145.7 | -174.5 | -156.8 | -156.8 | -189.6 |
+| `economy` | nonlinear | up | sine | -148.6 | -175.6 | -153.8 | -153.8 | -186.0 |
+| `economy` | near-linear | up | sine | -148.1 | -161.5 | -156.7 | -156.7 | -189.9 |
+| `economy` | nonlinear | up | noise | -144.2 | -170.3 | -153.6 | -153.6 | -185.8 |
+| `economy` | near-linear | up | noise | -143.2 | -170.7 | -156.6 | -156.6 | -190.0 |
+| `balanced` | nonlinear | down | sine | -148.5 | -171.8 | -153.8 | -153.8 | -182.1 |
+| `balanced` | near-linear | down | sine | -147.7 | -158.0 | -153.8 | -153.8 | -181.4 |
+| `balanced` | nonlinear | down | noise | -144.4 | -171.5 | -156.8 | -156.8 | -189.3 |
+| `balanced` | near-linear | down | noise | -146.0 | -176.2 | -156.8 | -156.8 | -189.6 |
+| `balanced` | nonlinear | up | sine | -148.3 | -171.3 | -153.7 | -153.7 | -186.7 |
+| `balanced` | near-linear | up | sine | -148.5 | -162.9 | -156.8 | -156.8 | -189.6 |
+| `balanced` | nonlinear | up | noise | -141.7 | -168.4 | -153.7 | -153.7 | -186.4 |
+| `balanced` | near-linear | up | noise | -143.4 | -173.2 | -156.7 | -156.7 | -189.1 |
+| `transparent` | nonlinear | down | sine | -145.8 | -166.7 | -153.7 | -153.7 | -179.9 |
+| `transparent` | near-linear | down | sine | -141.3 | -151.2 | -153.7 | -153.7 | -173.1 |
+| `transparent` | nonlinear | down | noise | -141.6 | -164.3 | -156.8 | -156.8 | -189.1 |
+| `transparent` | near-linear | down | noise | -140.0 | -167.1 | -156.8 | -156.8 | -188.8 |
+| `transparent` | nonlinear | up | sine | -144.5 | -167.7 | -153.7 | -153.7 | -187.2 |
+| `transparent` | near-linear | up | sine | -141.5 | -154.9 | -156.7 | -156.7 | -189.1 |
+| `transparent` | nonlinear | up | noise | -138.7 | -162.5 | -153.7 | -153.7 | -186.7 |
+| `transparent` | near-linear | up | noise | -137.1 | -165.7 | -156.6 | -156.6 | -189.4 |

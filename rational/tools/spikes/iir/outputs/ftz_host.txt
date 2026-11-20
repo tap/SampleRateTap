@@ -1,0 +1,13 @@
+Model name:                              Intel(R) Xeon(R) Processor @ 2.10GHz
+4
+--- ftz_bench
+guard alone: 4.9 ns per call (loop without it: 3.1 ns)
+block  32 out frames, stereo: plain   588.6 ns | guarded   599.0 ns (+1.8%) | per-sample flush   844.8 ns (+43.5%) || subnormal states: plain   5839.7 ns, guarded   593.5 ns
+block  64 out frames, stereo: plain  1160.8 ns | guarded  1175.5 ns (+1.3%) | per-sample flush  1663.3 ns (+43.3%) || subnormal states: plain  10881.3 ns, guarded  1412.1 ns
+block 256 out frames, stereo: plain  4601.3 ns | guarded  4431.2 ns (+-3.7%) | per-sample flush  6420.0 ns (+39.5%) || subnormal states: plain  42328.7 ns, guarded  4697.4 ns
+--- guard_branch
+caller's FTZ|DAZ off: no guard 3.35 ns | unconditional +3.47 ns | conditional +5.52 ns per call
+caller's FTZ|DAZ on : no guard 3.44 ns | unconditional +5.65 ns | conditional +0.01 ns per call
+--- mxcsr (the audit's dsp-15 check, the plan's conditional guard restoring the whole register)
+host FTZ|DAZ off: MXCSR before 0x1f80 after 0x1f80 -> whole register equal, control bits equal
+host FTZ|DAZ on : MXCSR before 0x9fc0 after 0x9fe0 -> whole register DIFFERS, control bits equal
