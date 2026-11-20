@@ -27,14 +27,16 @@
 //     quantized Q1.14 table attains (a decimator's table is its band's
 //     interpolator table, each branch at unity with the 1 / M in the
 //     finalize, so it attains what the interpolator does — by 8 at economy
-//     -71.7 dB; quantized as h / M in one row, as before the lever, it lost
-//     about 20 log10 M dB: -62.9 dB; a mixed ratio going down holds its rows
-//     at a power-of-two gain for the same reason, so every stage attains the
-//     70 dB tier; the 120 dB promise is float's and Q31's);
+//     -72.9 dB; quantized as h / M in one row, as before the lever, it lost
+//     about 20 log10 M dB: -62.9 dB at M5's design; a mixed ratio going down
+//     holds its rows at a power-of-two gain for the same reason, so every
+//     stage attains the 70 dB tier; the 120 dB promise is float's and Q31's);
 //   - full-scale drive saturates, never wraps, in both formats.
 //
 // Numbers measured 2026-10-02 (clang 18, x86-64; the formats are exact
-// integer arithmetic, so every host and target computes the same bits).
+// integer arithmetic, so every host and target computes the same bits), and
+// re-measured 2026-11-20 (gcc 13, x86-64) with the designer's beta for
+// A + 4 dB (X17, PLAN.md section 6), which moved every table.
 
 #include <algorithm>
 #include <array>
@@ -145,62 +147,62 @@ namespace {
     // fixed-point datapath.
     // clang-format off
 #define TAP_SR_RATIONAL_FIXED_POINT_ROWS(ROW) \
-        ROW(up2, super_economy, 19, 19, 0x3cba7ba5bf0200f1ULL, 0x65cde4429b552ad1ULL, -71.1, -94.0) \
-        ROW(up2, economy, 23, 23, 0x62302898b65a370dULL, 0xe57108ee5dcd11a5ULL, -72.3, -95.8) \
-        ROW(up2, balanced, 27, 27, 0x597a9bff98e1d2fdULL, 0x35690983e0275251ULL, -71.1, -92.8) \
-        ROW(up2, transparent, 63, 55, 0xcd3f2561c2e2d955ULL, 0x805ecb7ea3994265ULL, -77.3, -93.4) \
-        ROW(down2, super_economy, 19, 19, 0x3cba7ba5bf0200f1ULL, 0x23868914d48461fdULL, -71.1, -96.7) \
-        ROW(down2, economy, 23, 23, 0x62302898b65a370dULL, 0x8e72f5156b104145ULL, -72.3, -97.5) \
-        ROW(down2, balanced, 27, 27, 0x597a9bff98e1d2fdULL, 0xecc3467d30d76709ULL, -71.1, -94.9) \
-        ROW(down2, transparent, 63, 55, 0xcd3f2561c2e2d955ULL, 0x6ed3d49c1c32ca15ULL, -77.3, -95.7) \
-        ROW(up3, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0xdb52b0963a9827a9ULL, -71.7, -94.3) \
-        ROW(up3, economy, 45, 45, 0xf843d9f1da25e251ULL, 0xffcac366d1724905ULL, -70.2, -93.5) \
-        ROW(up3, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xe9b4f733f5f69a49ULL, -71.5, -94.0) \
-        ROW(up3, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x658e039e0cf17da1ULL, -76.1, -91.2) \
-        ROW(down3, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0x0e531ee9e040c832ULL, -71.7, -97.2) \
-        ROW(down3, economy, 45, 45, 0xf843d9f1da25e251ULL, 0x81e16a033f326f76ULL, -70.2, -96.8) \
-        ROW(down3, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xc11d78c7a4530ef8ULL, -71.5, -97.7) \
-        ROW(down3, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x6506baa7c5d51262ULL, -76.1, -95.7) \
-        ROW(up6, super_economy, 81, 81, 0x7376502a75faf5f5ULL, 0x9d6e292d48601b85ULL, -73.2, -93.1) \
-        ROW(up6, economy, 121, 121, 0x36e3c046fa633d21ULL, 0x39d801984353d381ULL, -71.5, -92.4) \
-        ROW(up6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0x7c7d5cef3507c531ULL, -72.2, -92.3) \
-        ROW(up6, transparent, 251, 219, 0xe46f033362196a39ULL, 0xb9fec6bbf1288489ULL, -78.5, -90.7) \
-        ROW(down6, super_economy, 81, 81, 0x7376502a75faf5f5ULL, 0x782ec334d8cf342bULL, -73.2, -99.8) \
-        ROW(down6, economy, 121, 121, 0x36e3c046fa633d21ULL, 0x92a24b5cea1909cfULL, -71.5, -98.6) \
-        ROW(down6, balanced, 141, 141, 0x3237cb76f59e248dULL, 0xe920f14d1d3d5a05ULL, -72.2, -99.6) \
-        ROW(down6, transparent, 251, 219, 0xe46f033362196a39ULL, 0x6a3f54f3e1587481ULL, -78.5, -98.3) \
-        ROW(up8, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -92.9) \
-        ROW(up8, economy, 169, 169, 0xdc280c16130175d1ULL, 0x192bcfb9abf918edULL, -71.7, -92.3) \
-        ROW(up8, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xbcda6fae5723088dULL, -72.6, -91.4) \
-        ROW(up8, transparent, 351, 303, 0x4b96078b2928931dULL, 0x11b5febcf65e1475ULL, -78.2, -90.2) \
-        ROW(down8, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0xc6ed1a337eadf041ULL, -72.0, -99.5) \
-        ROW(down8, economy, 169, 169, 0xdc280c16130175d1ULL, 0x43d2f7ee82afa8c5ULL, -71.7, -97.9) \
-        ROW(down8, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xdc5baf7a000445a9ULL, -72.6, -96.9) \
-        ROW(down8, transparent, 351, 303, 0x4b96078b2928931dULL, 0x5a6e47c4d822ebb1ULL, -78.2, -99.5) \
-        ROW(ratio3over2, super_economy, 33, 33, 0xfd3b44a261da711dULL, 0xdb52b0963a9827a9ULL, -71.7, -94.4) \
-        ROW(ratio3over2, economy, 45, 45, 0xf843d9f1da25e251ULL, 0xffcac366d1724905ULL, -70.2, -93.4) \
-        ROW(ratio3over2, balanced, 53, 53, 0x862f2f9c1f13e64dULL, 0xe9b4f733f5f69a49ULL, -71.5, -94.0) \
-        ROW(ratio3over2, transparent, 101, 89, 0xd39ee5ef4c648899ULL, 0x658e039e0cf17da1ULL, -76.1, -91.1) \
-        ROW(ratio2over3, super_economy, 47, 47, 0x82be2b09b1e3e71cULL, 0x73dd9f039a900588ULL, -71.0, -96.9) \
-        ROW(ratio2over3, economy, 65, 65, 0x6a10e7523141627cULL, 0xd990f930d9d2e66fULL, -70.5, -95.9) \
-        ROW(ratio2over3, balanced, 77, 77, 0xfc4820b544115c9cULL, 0xe2019e0deca448ddULL, -72.1, -95.8) \
-        ROW(ratio2over3, transparent, 149, 131, 0x4f5173a3477e3d44ULL, 0x174688556c046e2bULL, -78.2, -94.6) \
-        ROW(ratio4over3, super_economy, 49, 49, 0xaba05cd262d404a9ULL, 0xf789914bb74deab5ULL, -70.6, -94.0) \
-        ROW(ratio4over3, economy, 67, 67, 0x54b85d414b471985ULL, 0xf803f1ea55624179ULL, -71.7, -93.6) \
-        ROW(ratio4over3, balanced, 85, 85, 0x441dab53737b273dULL, 0x088ccad6c8e4a9b9ULL, -70.4, -92.9) \
-        ROW(ratio4over3, transparent, 151, 131, 0x2766dd02d84bd799ULL, 0x5491f247aa9ad425ULL, -77.2, -90.6) \
-        ROW(ratio3over4, super_economy, 63, 63, 0x37e88d3e5f085cf7ULL, 0xcacc9866f85a1482ULL, -71.6, -96.5) \
-        ROW(ratio3over4, economy, 87, 87, 0x75302a3d8b4e5354ULL, 0x692703f8c35bbdd1ULL, -70.0, -96.8) \
-        ROW(ratio3over4, balanced, 111, 111, 0xb633f47c0bfc20e1ULL, 0xddc050765dd8bd23ULL, -72.4, -95.5) \
-        ROW(ratio3over4, transparent, 199, 175, 0xe6f0871efac7d3f1ULL, 0x78b0ec09e7310bffULL, -78.3, -94.3) \
-        ROW(ratio8over3, super_economy, 113, 113, 0xeb745d04141f1bb1ULL, 0x878a639d0252fde5ULL, -72.0, -93.0) \
-        ROW(ratio8over3, economy, 169, 169, 0xdc280c16130175d1ULL, 0x192bcfb9abf918edULL, -71.7, -92.2) \
-        ROW(ratio8over3, balanced, 197, 197, 0x8cd458eb725f53ddULL, 0xbcda6fae5723088dULL, -72.6, -91.4) \
-        ROW(ratio8over3, transparent, 351, 303, 0x4b96078b2928931dULL, 0x11b5febcf65e1475ULL, -78.2, -90.4) \
-        ROW(ratio3over8, super_economy, 127, 127, 0xba84c60134e2ac09ULL, 0xca47a7f8e9a6c523ULL, -71.5, -98.9) \
-        ROW(ratio3over8, economy, 191, 191, 0x6bd0306058cbe5adULL, 0x3cc9b1b3c17f0e3bULL, -71.8, -97.8) \
-        ROW(ratio3over8, balanced, 223, 223, 0x0861406e06673615ULL, 0x3c098ec5243f25ecULL, -71.7, -97.0) \
-        ROW(ratio3over8, transparent, 399, 349, 0xc39ffccbb8c18bd5ULL, 0x7e280258af2f97a4ULL, -83.1, -96.6)
+        ROW(up2, super_economy, 17, 17, 0x14cf6470efe6927dULL, 0xbdd9174a705c3a59ULL, -71.4, -94.6) \
+        ROW(up2, economy, 21, 21, 0x3dc156bf7e96af1dULL, 0x9350e8239cdf5039ULL, -70.6, -95.3) \
+        ROW(up2, balanced, 25, 25, 0x45055d8fd99e161dULL, 0x087cfb78d59476bdULL, -70.7, -94.2) \
+        ROW(up2, transparent, 51, 43, 0x35d1dec0a1c88445ULL, 0x30f73228445b4861ULL, -77.1, -92.0) \
+        ROW(down2, super_economy, 17, 17, 0x14cf6470efe6927dULL, 0xdb18923fc41e8605ULL, -71.4, -96.0) \
+        ROW(down2, economy, 21, 21, 0x3dc156bf7e96af1dULL, 0x1aa8374d9b3a1639ULL, -70.6, -97.2) \
+        ROW(down2, balanced, 25, 25, 0x45055d8fd99e161dULL, 0x369a63548f81b825ULL, -70.7, -95.5) \
+        ROW(down2, transparent, 51, 43, 0x35d1dec0a1c88445ULL, 0x4405737eb3784409ULL, -77.1, -94.4) \
+        ROW(up3, super_economy, 33, 33, 0x8af024814b664ea1ULL, 0xaa26e7f192c7149dULL, -72.7, -94.5) \
+        ROW(up3, economy, 41, 41, 0x51b3728312bde5adULL, 0xd4efcaec483db611ULL, -71.8, -95.4) \
+        ROW(up3, balanced, 49, 49, 0x5b6cd18a34d851e5ULL, 0x46294c37c3a6eef1ULL, -71.8, -92.7) \
+        ROW(up3, transparent, 101, 87, 0x31f6906f83337a35ULL, 0xc785bb76f8242ebdULL, -74.2, -90.5) \
+        ROW(down3, super_economy, 33, 33, 0x8af024814b664ea1ULL, 0x6552145f3c369760ULL, -72.7, -97.4) \
+        ROW(down3, economy, 41, 41, 0x51b3728312bde5adULL, 0x4d713712298a7d18ULL, -71.8, -97.7) \
+        ROW(down3, balanced, 49, 49, 0x5b6cd18a34d851e5ULL, 0x5ea52a8b4fb88fc6ULL, -71.8, -96.2) \
+        ROW(down3, transparent, 101, 87, 0x31f6906f83337a35ULL, 0x938fd7c8b56b8338ULL, -74.2, -95.6) \
+        ROW(up6, super_economy, 71, 71, 0x76181d0d2bf49ea1ULL, 0x244bd5922fdd5e3dULL, -71.9, -93.6) \
+        ROW(up6, economy, 101, 101, 0x7b8414715922f849ULL, 0xc3bd21df38e7a6e9ULL, -71.8, -93.5) \
+        ROW(up6, balanced, 121, 121, 0xacc8d2a918ea7d61ULL, 0x83f620d66492377dULL, -71.0, -92.7) \
+        ROW(up6, transparent, 251, 215, 0x7cc51fd5656f9811ULL, 0x2e9f14df933d16c5ULL, -77.8, -90.8) \
+        ROW(down6, super_economy, 71, 71, 0x76181d0d2bf49ea1ULL, 0xdd3095cd1f248163ULL, -71.9, -98.6) \
+        ROW(down6, economy, 101, 101, 0x7b8414715922f849ULL, 0xc002ee0060a63fc3ULL, -71.8, -98.6) \
+        ROW(down6, balanced, 121, 121, 0xacc8d2a918ea7d61ULL, 0xd909bfce2e7ab5adULL, -71.0, -97.7) \
+        ROW(down6, transparent, 251, 215, 0x7cc51fd5656f9811ULL, 0x71479c0b7557534dULL, -77.8, -97.5) \
+        ROW(up8, super_economy, 99, 99, 0x6015b0be6cf257d5ULL, 0xb2aad1879cae7601ULL, -72.4, -93.8) \
+        ROW(up8, economy, 141, 141, 0xf865893036d83da1ULL, 0x219a3cb8da2ee9e5ULL, -72.9, -92.6) \
+        ROW(up8, balanced, 169, 169, 0x218616408337704dULL, 0xd0efdc7c70a13e19ULL, -73.6, -91.9) \
+        ROW(up8, transparent, 351, 299, 0x5b3db0ec1995eb7dULL, 0x5c62fe64d140c1c5ULL, -77.9, -90.0) \
+        ROW(down8, super_economy, 99, 99, 0x6015b0be6cf257d5ULL, 0x482bcbddd641c469ULL, -72.4, -99.4) \
+        ROW(down8, economy, 141, 141, 0xf865893036d83da1ULL, 0xcb658ae559e722a1ULL, -72.9, -99.4) \
+        ROW(down8, balanced, 169, 169, 0x218616408337704dULL, 0x6ce642d021ad403dULL, -73.6, -98.8) \
+        ROW(down8, transparent, 351, 299, 0x5b3db0ec1995eb7dULL, 0xa7f6d6068f46c4d1ULL, -77.9, -100.5) \
+        ROW(ratio3over2, super_economy, 33, 33, 0x8af024814b664ea1ULL, 0xaa26e7f192c7149dULL, -72.7, -94.4) \
+        ROW(ratio3over2, economy, 41, 41, 0x51b3728312bde5adULL, 0xd4efcaec483db611ULL, -71.8, -95.5) \
+        ROW(ratio3over2, balanced, 49, 49, 0x5b6cd18a34d851e5ULL, 0x46294c37c3a6eef1ULL, -71.8, -92.9) \
+        ROW(ratio3over2, transparent, 101, 87, 0x31f6906f83337a35ULL, 0xc785bb76f8242ebdULL, -74.2, -90.5) \
+        ROW(ratio2over3, super_economy, 47, 47, 0xc95dd6bbc840c69aULL, 0x2ea18619b9b54a6bULL, -73.5, -96.8) \
+        ROW(ratio2over3, economy, 59, 59, 0x169e01c4c79fd690ULL, 0x551c9ba359adea14ULL, -73.6, -96.3) \
+        ROW(ratio2over3, balanced, 71, 71, 0x0cc8d2eaaf5ea8d8ULL, 0xad5723eeda25161cULL, -71.9, -95.1) \
+        ROW(ratio2over3, transparent, 149, 131, 0x15298da333e2194aULL, 0xdb897dfa8d011a9bULL, -79.1, -94.4) \
+        ROW(ratio4over3, super_economy, 49, 49, 0x3e680ecc6a91c511ULL, 0xd54f53e0cc56c941ULL, -72.8, -95.2) \
+        ROW(ratio4over3, economy, 61, 61, 0xee3330ca24c8153dULL, 0x9316baef3b052ae9ULL, -73.9, -93.3) \
+        ROW(ratio4over3, balanced, 73, 73, 0x692ee42856a2b2d5ULL, 0x352b34c04a6ea715ULL, -70.4, -92.6) \
+        ROW(ratio4over3, transparent, 151, 131, 0x71a5a915c80aa3b1ULL, 0x0af398a526d71281ULL, -78.1, -91.0) \
+        ROW(ratio3over4, super_economy, 63, 63, 0x1f7a0b635cbb4d81ULL, 0xbfe07900221be1f6ULL, -73.8, -97.2) \
+        ROW(ratio3over4, economy, 79, 79, 0xbb2ed727a9d86dddULL, 0x0e344b588a2ef8d0ULL, -73.3, -96.5) \
+        ROW(ratio3over4, balanced, 95, 95, 0xda66cda1682f0e01ULL, 0x82c84ac819b52543ULL, -73.7, -95.4) \
+        ROW(ratio3over4, transparent, 199, 171, 0x3f7a4c963702157dULL, 0x9e00676910dca877ULL, -80.7, -94.6) \
+        ROW(ratio8over3, super_economy, 99, 99, 0x6015b0be6cf257d5ULL, 0xb2aad1879cae7601ULL, -72.4, -93.7) \
+        ROW(ratio8over3, economy, 141, 141, 0xf865893036d83da1ULL, 0x219a3cb8da2ee9e5ULL, -72.9, -92.3) \
+        ROW(ratio8over3, balanced, 169, 169, 0x218616408337704dULL, 0xd0efdc7c70a13e19ULL, -73.6, -91.8) \
+        ROW(ratio8over3, transparent, 351, 299, 0x5b3db0ec1995eb7dULL, 0x5c62fe64d140c1c5ULL, -77.9, -90.1) \
+        ROW(ratio3over8, super_economy, 111, 111, 0xfa2686f95ac2bf81ULL, 0x210b1b414c8856c4ULL, -71.9, -98.8) \
+        ROW(ratio3over8, economy, 159, 159, 0x82f7df5192bee815ULL, 0x576a97a9ba208208ULL, -73.4, -97.4) \
+        ROW(ratio3over8, balanced, 191, 191, 0xb555b75f633910c5ULL, 0x1a82d3af686eea2fULL, -71.8, -97.9) \
+        ROW(ratio3over8, transparent, 399, 349, 0x27417c3f4d4af3b5ULL, 0x98d65e3dded273c0ULL, -81.5, -95.5)
     // clang-format on
 
     struct pin_row {
@@ -395,11 +397,11 @@ namespace {
 
     // ------------------------------------------------------------------
     // Cross-precision on the reference noise (480 frames, peak 0.9), every
-    // stage against double. Measured worst |Q31 - double| 3.4e-9 (by 8 at
-    // transparent), worst |float - double| 5.1e-8 (bridge's float floor is
-    // 5e-8): Q31 sits a decade under float. Q15's RMS deviation is the
-    // format's floor, -90.2 to -99.8 dBFS by stage after the per-branch
-    // lever (pinned per row within 1 dB); its worst sample 1.36e-4.
+    // stage against double. Measured worst |Q31 - double| 2.5e-9 (3/4 at
+    // transparent), worst |float - double| 5.7e-8 (by 8 at transparent;
+    // bridge's float floor is 5e-8): Q31 sits a decade under float. Q15's RMS
+    // deviation is the format's floor, -90.0 to -100.5 dBFS by stage (pinned
+    // per row within 1 dB); its worst sample 1.38e-4 (2026-11-20, X17).
     struct floors {
         double worst_float = 0.0, worst_q31 = 0.0, worst_q15 = 0.0, worst_rms_q15 = -400.0;
     };
@@ -502,11 +504,13 @@ namespace {
     // (profile, divisor, band) of the relaxation tables, Q15, the band's
     // interpolator (a decimator's table is the same table, a mixed ratio's
     // rows the same coefficients at a power-of-two gain): the worst per
-    // profile is printed and pinned within 0.5 dB. The 70 dB tier is not
-    // attained by every relaxed Q15 design: the 147/160 rows (the stage at
-    // bridge's rate) are the widest transitions in the table, and at
-    // economy the half-band there attains -67.6 dB (the 2026-10 audit, F05;
-    // stated in PLAN.md section 6). A host suite (excluded on the QEMU legs).
+    // profile is printed and pinned within 0.5 dB, and at the 70 dB
+    // profiles it attains the tier. With the designer's beta for A (until
+    // X17) it did not: the 147/160 rows (the stage at bridge's rate) are the
+    // widest transitions in the table, and at economy the half-band there
+    // attained -67.6 dB (the 2026-10 audit, F05); with beta for A + 4 dB it
+    // attains -72.1 dB and every relaxed Q15 design meets 70 dB (PLAN.md
+    // section 6, the X17 record). A host suite (excluded on the QEMU legs).
     template <typename R>
     double relaxed_q15_stopband_db(const profile& base, const relaxed_pins& row) {
         return quantized_stopband_db<std::int16_t, R>(base.relaxed(row.divisor));
@@ -518,11 +522,12 @@ namespace {
     };
 
     TEST(FixedPoint, RelaxedQ15TablesStopbandsAreStated) {
-        // Measured 2026-10-09 (gcc 13, x86-64; exact integer tables, the same on
-        // every host): the worst relaxed Q15 design per profile, each at the
-        // 147/160 divisor.
+        // Measured 2026-11-20 (gcc 13, x86-64; exact integer tables, the same on
+        // every host), the designer's beta for A + 4 dB (X17): the worst
+        // relaxed Q15 design per profile (super_economy and economy at the
+        // 4/1 and 2/1 divisors, balanced and transparent at 147/160).
         const relaxed_worst stated[] = {
-            {"super_economy", -70.5}, {"economy", -67.6}, {"balanced", -70.0}, {"transparent", -72.3}};
+            {"super_economy", -70.5}, {"economy", -70.4}, {"balanced", -70.1}, {"transparent", -72.7}};
         const profile profiles[] = {profile::super_economy(), profile::economy(), profile::balanced(),
                                     profile::transparent()};
         for (std::size_t i = 0; i < 4; ++i) {
@@ -553,6 +558,7 @@ namespace {
             }
             std::printf("[ measured ] relaxed Q15 %s: worst %.1f dB (%s)\n", stated[i].profile, worst, where);
             EXPECT_NEAR(worst, stated[i].worst_db, 0.5) << stated[i].profile;
+            EXPECT_LE(worst, -70.0) << stated[i].profile << ": every relaxed Q15 design attains the 70 dB tier";
         }
     }
 
@@ -562,8 +568,8 @@ namespace {
     // overshoot) through every stage at economy and transparent; each output
     // is the double model's on the same input samples, clamped to full
     // scale, within the format's floor. A wrap would land ~2 away. Measured
-    // worst 4.83e-4 (Q15: Q1.14 coefficient error summed at full scale,
-    // after the per-branch lever) and 1.6e-8 (Q31).
+    // worst 4.96e-4 (Q15: Q1.14 coefficient error summed at full scale,
+    // after the per-branch lever; 4.83e-4 before X17) and 1.5e-8 (Q31).
     template <typename S, rational_ratio R>
     double worst_against_clamped_double(const profile& p) {
         std::vector<double> x(2048);

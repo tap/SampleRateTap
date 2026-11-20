@@ -22,23 +22,24 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > call shapes: `process`, `pull`, exact `outputs_for` / `frames_needed`,
 > `flush`, `reset`, the latency as an exact rational. Each stage is one
 > L-th-band filter at the pinned length of the M2 design spike
-> ([`notebooks/design_spike.ipynb`](notebooks/design_spike.ipynb)); its
+> ([`notebooks/design_spike.ipynb`](notebooks/design_spike.ipynb)), re-pinned
+> since with the designer's Kaiser β for A + 4 dB (X17); its
 > structural zeros are never multiplied by an interpolator or a decimator,
-> so the half-band decimator costs 23 MACs per output of its 43 taps and an
+> so the half-band decimator costs 21 MACs per output of its 39 taps and an
 > interpolator's centre phase is a copy. The chains ship too (`chain.h`):
 > `basic_chain<S, Ch, R...>` runs stages in sequence with each stage designed at
 > its own rate, and the 20 named multi-stage chains of the 14 × 14 coverage
 > matrix (PLAN.md section 3), pinned row by row by `tests/test_matrix.cpp`.
 > The fixed-point profiles are measured per stage (`tests/test_fixed_point.cpp`,
 > PLAN.md section 6): exact-unity rows and full-scale DC in Q15 and Q31,
-> bit-pinned tables, saturation without wrap, Q31 within 3.4e−9 of double on the
-> reference noise (480 frames at peak 0.9; 1.6e−8 under full-scale drive);
+> bit-pinned tables, saturation without wrap, Q31 within 2.5e−9 of double on the
+> reference noise (480 frames at peak 0.9; 1.5e−8 under full-scale drive);
 > Q15 is format-limited, and its numbers are stated per stage — at Q15 use
 > `economy`, where every stage of the vocabulary attains 70 dB of stopband at its own rate (a Q15 decimator
 > quantizes each branch at unity and divides by M in its one rounding, so ↓6
-> and ↓8 attain −71.5 / −71.7 dB, as ↑6 and ↑8 do; a mixed ratio going down
+> and ↓8 attain −71.8 / −72.9 dB, as ↑6 and ↑8 do; a mixed ratio going down
 > holds its rows at a power-of-two gain, shifted out the same way; the relaxed designs a chain runs are
-> measured too, and the `economy` half-band at the 147/160 divisor attains −67.6 dB, PLAN.md section 6). The C ABI, the executed coverage-matrix notebook and
+> measured too, and since the designer's β was re-tuned (X17) every one of them attains 70 dB as well, PLAN.md section 6). The C ABI, the executed coverage-matrix notebook and
 > the instruction-count ratchet landed at M6 (below). The
 > plan is authoritative: charter, the decisions R1–R16, the generated
 > matrix, layout, test strategy, non-goals and risks.
@@ -58,10 +59,10 @@ std::size_t made = down.process(in, n_in, out.data());   // noexcept, alloc-free
 std::vector<float> tail(down.flush_output_frames() * 2);
 down.flush(tail.data());                                 // end of stream
 
-converter<1, ratio2over3> to_32k;          // 48 -> 32 kHz: one mixed stage, 32.5 MACs per output
-auto lat = to_32k.latency_output_frames(); // exact: {32, 3} output frames = 32 / 3
+converter<1, ratio2over3> to_32k;          // 48 -> 32 kHz: one mixed stage, 29.5 MACs per output
+auto lat = to_32k.latency_output_frames(); // exact: {29, 3} output frames = 29 / 3
 
-down3_down8_down2<float, 1> to_8k;         // 384 -> 8 kHz: the matrix's 1/48 chain, 373 MACs per output
+down3_down8_down2<float, 1> to_8k;         // 384 -> 8 kHz: the matrix's 1/48 chain, 371 MACs per output
 // each stage designed at its own rate: divisors 16, 2, 1 of the chain's lowest rate (PLAN.md 3.1)
 static_assert(to_8k.k_divisors[0] == tap::dsp::exact_ratio{16, 1});
 chain<2, up2, ratio4over3> to_32k_from_12k; // 12 -> 32 kHz: 8/3 as the matrix factors it, stereo
@@ -255,41 +256,43 @@ and the M33's `down3_float_eco` +1.29 % (+1.37 %). One row is gated at a midpoin
 `ratio23_q15_eco` counts 15,341,916 instructions with exceptions and 14,577,966 without (GCC
 allocates the block's registers differently in the two builds, their GIMPLE identical:
 `PLAN.md` section 6, the A13 record), so its baseline is the midpoint, 14,959,941, and both
-builds sit within ±2.55 % of it. Re-record that row at the midpoint of the two builds' counts,
-never with `--update` from one of them.
+builds sat within ±2.55 % of it. Re-record that row at the midpoint of the two builds' counts,
+never with `--update` from one of them. Since X17's re-tune of the designer's β (every row
+re-recorded, `PLAN.md` section 6, "The designer's β, X17") it counts 15,140,167 and 14,312,206,
+the baseline is their midpoint, 14,726,186, and both builds sit within ±2.81 % of it.
 
 <!-- ICOUNT:BEGIN -->
 Executed instructions per fixed workload (`rational/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `rational/bench/baselines.json`. A `callmax_` row is the worst single call instead of a total: the most instructions one call executes over that stream (`bench/icount/callmax_main.cpp`):
 
 | Workload | Cortex-M33 | Cortex-M55 | Hexagon |
 |---|---:|---:|---:|
-| `callmax_down2_float` | 117,941 | 8,005 | 23,575 |
-| `callmax_down2_q15` | 6,941 | 5,688 | 4,027 |
-| `callmax_up2_float` | 230,591 | 13,300 | 44,745 |
-| `callmax_up2_q15` | 11,904 | 9,244 | 6,204 |
-| `construct_q15_eco` | 26,795,094 | 1,563,927 | 8,330,092 |
-| `down2_down2_q15_eco` | 54,230,002 | 24,338,577 | 21,039,350 |
-| `down2_float_eco` | 372,931,250 | 24,518,460 | 71,762,029 |
-| `down2_float_tr` | 969,430,557 | 47,938,192 | 173,693,796 |
-| `down2_q15_eco` | 46,259,438 | 16,928,036 | 17,391,093 |
-| `down3_float_eco` | 473,727,618 | 28,994,407 | 89,559,636 |
-| `down3_q15_eco` | 49,603,197 | 17,690,346 | 18,922,927 |
-| `ratio23_float_eco` | 590,589,638 | 32,850,410 | 125,532,691 |
-| `ratio23_q15_eco` | 49,398,652 | 14,959,941 | 18,650,895 |
-| `up2_float_eco` | 709,452,097 | 41,024,131 | 134,413,185 |
-| `up2_float_tr` | 1,900,067,616 | 87,483,405 | 337,137,965 |
-| `up2_q15_eco` | 62,262,576 | 28,735,799 | 25,938,856 |
-| `up3_float_eco` | 1,362,234,116 | 70,992,375 | 250,129,415 |
-| `up3_q15_eco` | 85,299,411 | 42,673,747 | 38,461,134 |
+| `callmax_down2_float` | 107,977 | 7,605 | 21,543 |
+| `callmax_down2_q15` | 6,685 | 5,624 | 3,763 |
+| `callmax_up2_float` | 210,879 | 12,524 | 40,873 |
+| `callmax_up2_q15` | 11,488 | 9,212 | 5,880 |
+| `construct_q15_eco` | 26,681,136 | 1,560,152 | 8,303,115 |
+| `down2_down2_q15_eco` | 52,537,300 | 24,216,725 | 19,567,759 |
+| `down2_float_eco` | 343,562,765 | 23,353,785 | 66,524,317 |
+| `down2_float_tr` | 790,228,053 | 40,912,993 | 142,826,681 |
+| `down2_q15_eco` | 45,602,994 | 16,879,879 | 16,905,026 |
+| `down3_float_eco` | 434,872,408 | 27,445,097 | 82,591,396 |
+| `down3_q15_eco` | 48,745,572 | 17,640,706 | 18,300,152 |
+| `ratio23_float_eco` | 538,739,305 | 30,545,005 | 115,766,432 |
+| `ratio23_q15_eco` | 48,128,267 | 14,726,186 | 19,232,880 |
+| `up2_float_eco` | 650,842,262 | 38,707,334 | 123,990,515 |
+| `up2_float_tr` | 1,542,330,040 | 73,546,460 | 275,750,044 |
+| `up2_q15_eco` | 61,032,738 | 28,687,571 | 25,064,644 |
+| `up3_float_eco` | 1,243,186,839 | 66,371,040 | 229,335,777 |
+| `up3_q15_eco` | 82,905,394 | 42,624,043 | 36,815,849 |
 
 On the host, the float converter in 128-frame blocks at 2 and 12 channels (`rational/bench/icount/host_main.cpp`): instructions executed by the streaming loop alone, counted under callgrind on x86-64 with GCC 13 (`scripts/icount.py --target host`), gated the same way:
 
 | Workload | x86-64 |
 |---|---:|
-| `down2_float_12ch` | 157,185,769 |
-| `down2_float_2ch` | 28,640,629 |
-| `up2_float_12ch` | 277,123,855 |
-| `up2_float_2ch` | 52,007,143 |
+| `down2_float_12ch` | 146,817,769 |
+| `down2_float_2ch` | 26,912,629 |
+| `up2_float_12ch` | 256,387,855 |
+| `up2_float_2ch` | 48,551,143 |
 <!-- ICOUNT:END -->
 
 ## Footprint
@@ -314,26 +317,26 @@ which C++ leaves unspecified, so the test reports it and does not pin it. Stages
 
 | stage | N | f32 held | f32 peak | Q15 held | Q15 peak | Q31 held | Q31 peak |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `up2` | 43 | 992 | 1,336 | 496 | 840 | 992 | 1,336 |
-| `down2` | 43 | 1,680 | 2,024 | 840 | 1,184 | 1,680 | 2,024 |
-| `up3` | 65 | 1,080 | 1,600 | 540 | 1,060 | 1,080 | 1,600 |
-| `down3` | 65 | 2,456 | 2,976 | 1,228 | 1,748 | 2,456 | 2,976 |
-| `up6` | 143 | 1,408 | 2,552 | 704 | 1,864 | 1,408 | 2,552 |
-| `down6` | 143 | 4,928 | 6,072 | 2,464 | 3,608 | 4,928 | 6,072 |
-| `up8` | 191 | 1,600 | 3,128 | 800 | 2,344 | 1,600 | 3,128 |
-| `down8` | 191 | 6,528 | 8,056 | 3,264 | 4,792 | 6,528 | 8,056 |
-| `ratio3over2` | 65 | 1,080 | 1,600 | 540 | 1,060 | 1,080 | 1,600 |
-| `ratio2over3` | 65 | 1,168 | 1,688 | 584 | 1,246 | 1,168 | 1,688 |
-| `ratio4over3` | 87 | 1,168 | 1,864 | 584 | 1,280 | 1,168 | 1,864 |
-| `ratio3over4` | 87 | 1,220 | 1,916 | 610 | 1,392 | 1,220 | 1,916 |
-| `ratio8over3` | 191 | 1,600 | 3,128 | 800 | 2,344 | 1,600 | 3,128 |
-| `ratio3over8` | 191 | 1,920 | 3,448 | 960 | 3,064 | 1,920 | 3,576 |
+| `up2` | 39 | 960 | 1,272 | 480 | 792 | 960 | 1,272 |
+| `down2` | 39 | 1,632 | 1,944 | 816 | 1,128 | 1,632 | 1,944 |
+| `up3` | 59 | 1,040 | 1,512 | 520 | 992 | 1,040 | 1,512 |
+| `down3` | 59 | 2,384 | 2,856 | 1,192 | 1,664 | 2,384 | 2,856 |
+| `up6` | 119 | 1,280 | 2,232 | 640 | 1,592 | 1,280 | 2,232 |
+| `down6` | 119 | 4,640 | 5,592 | 2,320 | 3,272 | 4,640 | 5,592 |
+| `up8` | 159 | 1,440 | 2,712 | 720 | 1,992 | 1,440 | 2,712 |
+| `down8` | 159 | 6,144 | 7,416 | 3,072 | 4,344 | 6,144 | 7,416 |
+| `ratio3over2` | 59 | 1,040 | 1,512 | 520 | 992 | 1,040 | 1,512 |
+| `ratio2over3` | 59 | 1,120 | 1,592 | 560 | 1,132 | 1,120 | 1,592 |
+| `ratio4over3` | 79 | 1,120 | 1,752 | 560 | 1,192 | 1,120 | 1,752 |
+| `ratio3over4` | 79 | 1,180 | 1,812 | 590 | 1,280 | 1,180 | 1,812 |
+| `ratio8over3` | 159 | 1,440 | 2,712 | 720 | 1,992 | 1,440 | 2,712 |
+| `ratio3over8` | 159 | 1,700 | 2,972 | 850 | 2,544 | 1,700 | 2,972 |
 
-Across the profiles a stage grows with its pins: `up2` f32 stereo holds 928 / 992 /
-1,056 / 1,632 bytes at `super_economy` / `economy` / `balanced` / `transparent`, and
-`down2` 1,584 / 1,680 / 1,776 / 2,640. The named chains hold 3.4 KB (`up2_up3`) to
-12.7 KB (`up2_up8_up3`) at `economy`, f32 stereo, and up to 14.1 KB at
-`transparent`.
+Across the profiles a stage grows with its pins: `up2` f32 stereo holds 896 / 960 /
+1,024 / 1,440 bytes at `super_economy` / `economy` / `balanced` / `transparent`, and
+`down2` 1,536 / 1,632 / 1,728 / 2,352. The named chains hold 3.3 KB (`up2_up2`,
+`up2_up3`) to 12.6 KB (`up2_up8_up3`) at `economy`, f32 stereo, and up to 13.5 KB at
+`transparent` (the pins of the designer's β for A + 4 dB, X17).
 
 The figures are bytes, and the formula has no pointer-sized term (the history is one
 allocation since the roadmap's A12; before it, each channel's each line was a vector of
@@ -372,15 +375,15 @@ same PR, with the reason.
 <!-- ceilings:begin (scripts/ceilings.py docs; do not edit by hand) -->
 | target | format | engine `.text` (bytes) | ceiling | engine `.rodata` (bytes) | ceiling | image (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|--:|--:|
-| m33 | f32 | 9,240 | 9,536 | 1,050 | 1,088 | 43,801 | 45,120 |
-| m33 | q15 | 10,728 | 11,072 | 1,050 | 1,088 | 45,497 | 46,912 |
-| m33 | q31 | 10,444 | 10,816 | 1,050 | 1,088 | 45,201 | 46,592 |
-| m55 | f32 | 8,052 | 8,320 | 1,050 | 1,088 | 43,825 | 45,184 |
-| m55 | q15 | 9,448 | 9,792 | 1,050 | 1,088 | 45,529 | 46,912 |
-| m55 | q31 | 9,228 | 9,536 | 1,050 | 1,088 | 45,313 | 46,720 |
-| hexagon | f32 | 19,636 | 20,288 | 428 | 448 | 296,984 | 305,920 |
-| hexagon | q15 | 21,944 | 22,656 | 428 | 448 | 299,928 | 308,928 |
-| hexagon | q31 | 20,824 | 21,504 | 428 | 448 | 298,840 | 307,840 |
+| m33 | f32 | 9,288 | 9,600 | 1,050 | 1,088 | 43,849 | 45,184 |
+| m33 | q15 | 10,776 | 11,136 | 1,050 | 1,088 | 45,545 | 46,912 |
+| m33 | q31 | 10,492 | 10,816 | 1,050 | 1,088 | 45,249 | 46,656 |
+| m55 | f32 | 8,084 | 8,384 | 1,050 | 1,088 | 43,857 | 45,184 |
+| m55 | q15 | 9,480 | 9,792 | 1,050 | 1,088 | 45,561 | 46,976 |
+| m55 | q31 | 9,260 | 9,600 | 1,050 | 1,088 | 45,345 | 46,720 |
+| hexagon | f32 | 19,700 | 20,352 | 428 | 448 | 297,048 | 305,984 |
+| hexagon | q15 | 22,008 | 22,720 | 428 | 448 | 299,992 | 308,992 |
+| hexagon | q31 | 20,888 | 21,568 | 428 | 448 | 298,904 | 307,904 |
 
 | M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|

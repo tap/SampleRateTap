@@ -519,7 +519,7 @@ def fig_coverage_matrix():
             flags[i, j] = mx.flagged(chosen[3], dst)
 
     # Sequential, one hue, light -> dark: the surface to the categorical blue
-    # to a deep ink-blue, on a log scale (the cells span 7.8 to about 550).
+    # to a deep ink-blue, on a log scale (the cells span 7.7 to about 515).
     from matplotlib.colors import LinearSegmentedColormap, LogNorm
     cmap = LinearSegmentedColormap.from_list("seq_blue", [SURFACE, "#c9ddf5", BLUE, "#10325e"])
     lo, hi = np.nanmin(macs), np.nanmax(macs)

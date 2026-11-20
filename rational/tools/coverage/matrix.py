@@ -14,12 +14,13 @@ family, where r / r_min is such a number, and conservative across (a
 passband at or above f_pass, so the stage still meets 2.1(a)); the one
 stage that runs BELOW r_min, a 48-family r_min's stage at bridge's rate
 (44.1 * 2^k / 48 * 2^k = 147/160), takes that fraction exactly. The stage's
-length is the smallest m whose B-th-band Kaiser design meets the stopband
-with >= 1 dB margin on the 16384-point grid (design.h's criterion, M2's
-search, here in numpy from the same published math), so the d = 1 column
-reproduces design.h's pins and the other columns are the relaxed pins
-design.h carries per named profile (`relaxations`), which test_design.cpp
-verifies against the shipping designer.
+length is the smallest m whose B-th-band Kaiser design, its window's beta
+taken for A + 4 dB (BETA_OFFSET_DB, X17), meets the stopband A with >= 1 dB
+margin on the 16384-point grid (design.h's criterion, M2's search, here in
+numpy from the same published math), so the d = 1 column reproduces
+design.h's pins and the other columns are the relaxed pins design.h carries
+per named profile (`relaxations`), which test_design.cpp verifies against
+the shipping designer.
 
 MACs per output are what stage.h executes: each row of the table (an L-phase
 row, or a decimating branch) trimmed to its nonzero span, summed over a
@@ -33,14 +34,23 @@ single 4th-band stage, decision 6; one bridge stage at the lowest k whose
 passband admits f_pass, decision 1), then the fewest stages whose rational
 stages' MACs are within 10 % of the minimum's around the same bridge stage
 (decision 2), then latency; a row whose bridge output rate is >= 2x the
-chain's output rate carries the flag (decision 3).
+chain's output rate carries the flag (decision 3). best_chain() is that rule.
+
+The selection is FROZEN for one pull request (X17, docs/X4_X8_PLAN.md): the
+re-tuned beta (X-a2) keeps every row's chain as the rule chose it on the
+pins of beta for A (v0.7 to v0.16), FROZEN_SELECTION below, and re-costs it
+on the new pins, so the named chains, the C ABI's constants and the design
+divisors stay as they were. X-a3 regenerates the selection under the new
+designer with band 4 admitted, and removes the table; until then `frozen`
+lists the rows the rule would move.
 
 Usage (from the engine root):
     tools/coverage/matrix.py md      # section 3's tables (3.3-3.6), markdown
     tools/coverage/matrix.py pins    # design.h's relaxation tables
     tools/coverage/matrix.py rows    # writes tests/coverage/matrix_rows.h
     tools/coverage/matrix.py diff    # chains that differ from PLAN.md's tables
-    tools/coverage/matrix.py rule    # rows where the fewest-stages rule overrode the minimum
+    tools/coverage/matrix.py rule    # rows where the fewest-stages rule overrode the minimum (on the current pins)
+    tools/coverage/matrix.py frozen  # rows whose chain the rule would move on the current pins (X17)
 """
 import collections
 import functools
@@ -76,6 +86,10 @@ FLAG_RATIO = 2
 NMAX = 8
 GRID = 16384
 MARGIN_DB = 1.0
+# X17 (docs/X4_X8_PLAN.md): every design's Kaiser beta is taken for A + 4 dB,
+# while a length is accepted at A + MARGIN_DB as before (design.h's
+# k_design_beta_offset_db).
+BETA_OFFSET_DB = 4.0
 MAX_M = 128
 
 
@@ -119,8 +133,9 @@ def worst_stopband_db(h, band, p, grid=GRID):
 
 @functools.lru_cache(maxsize=None)
 def search_m(band, p, atten):
-    """The smallest m meeting the stopband with the margin on the grid (design.h's search)."""
-    beta = kaiser_beta(atten)
+    """The smallest m meeting the stopband with the margin on the grid (design.h's search),
+    each candidate designed with beta for A + BETA_OFFSET_DB."""
+    beta = kaiser_beta(atten + BETA_OFFSET_DB)
     for m in range(1, MAX_M + 1):
         if worst_stopband_db(design_nyquist(band, m, beta), band, float(p)) <= -(atten + MARGIN_DB):
             return m
@@ -335,9 +350,250 @@ def fmt(x):
     return f"{x / 1000:g}"
 
 
+# The selection, frozen (X17): the chain best_chain() chose for every ordered
+# pair at economy on the pins of beta for A (v0.7 to v0.16), one line per pair
+# in RATES order, "src dst: stages". X-a2 re-tunes the designer's beta and
+# keeps these chains, re-costed on the new pins, so the named chains and the
+# C ABI's constants are unchanged; X-a3 regenerates the selection under the
+# new designer with band 4 admitted and removes this table (docs/X4_X8_PLAN.md
+# X17, X3). `frozen` lists the rows best_chain() would move meanwhile.
+FROZEN_SELECTION = """
+    8000 12000: 3/2
+    8000 16000: ↑2
+    8000 24000: ↑3
+    8000 32000: ↑2 · ↑2
+    8000 48000: ↑2 · ↑3
+    8000 96000: ↑2 · ↑6
+    8000 192000: ↑2 · ↑6 · ↑2
+    8000 384000: ↑2 · ↑8 · ↑3
+    8000 11025: ↑2 · ↑3 · bridge↓k0 · ↓2 · ↓2
+    8000 22050: ↑2 · ↑3 · bridge↓k0 · ↓2
+    8000 44100: ↑2 · ↑3 · bridge↓k0
+    8000 88200: ↑2 · ↑3 · bridge↓k0 · ↑2
+    8000 176400: ↑2 · ↑3 · bridge↓k0 · ↑2 · ↑2
+    12000 8000: 2/3
+    12000 16000: 4/3
+    12000 24000: ↑2
+    12000 32000: ↑2 · 4/3
+    12000 48000: ↑2 · ↑2
+    12000 96000: ↑2 · 4/3 · ↑3
+    12000 192000: ↑2 · ↑8
+    12000 384000: ↑2 · ↑8 · ↑2
+    12000 11025: ↑2 · ↑2 · bridge↓k0 · ↓2 · ↓2
+    12000 22050: ↑2 · ↑2 · bridge↓k0 · ↓2
+    12000 44100: ↑2 · ↑2 · bridge↓k0
+    12000 88200: ↑2 · ↑2 · bridge↓k0 · ↑2
+    12000 176400: ↑2 · ↑2 · bridge↓k0 · ↑2 · ↑2
+    16000 8000: ↓2
+    16000 12000: 3/4
+    16000 24000: 3/2
+    16000 32000: ↑2
+    16000 48000: ↑3
+    16000 96000: ↑2 · ↑3
+    16000 192000: ↑2 · ↑6
+    16000 384000: ↑2 · ↑6 · ↑2
+    16000 11025: ↑3 · bridge↓k0 · ↓2 · ↓2
+    16000 22050: ↑3 · bridge↓k0 · ↓2
+    16000 44100: ↑3 · bridge↓k0
+    16000 88200: ↑3 · bridge↓k0 · ↑2
+    16000 176400: ↑3 · bridge↓k0 · ↑2 · ↑2
+    24000 8000: ↓3
+    24000 12000: ↓2
+    24000 16000: 2/3
+    24000 32000: 4/3
+    24000 48000: ↑2
+    24000 96000: ↑2 · ↑2
+    24000 192000: ↑2 · 4/3 · ↑3
+    24000 384000: ↑2 · ↑8
+    24000 11025: ↑2 · bridge↓k0 · ↓2 · ↓2
+    24000 22050: ↑2 · bridge↓k0 · ↓2
+    24000 44100: ↑2 · bridge↓k0
+    24000 88200: ↑2 · bridge↓k0 · ↑2
+    24000 176400: ↑2 · bridge↓k0 · ↑2 · ↑2
+    32000 8000: ↓2 · ↓2
+    32000 12000: 3/4 · ↓2
+    32000 16000: ↓2
+    32000 24000: 3/4
+    32000 48000: 3/2
+    32000 96000: ↑3
+    32000 192000: ↑2 · ↑3
+    32000 384000: ↑2 · ↑6
+    32000 11025: 3/2 · bridge↓k0 · ↓2 · ↓2
+    32000 22050: 3/2 · bridge↓k0 · ↓2
+    32000 44100: 3/2 · bridge↓k0
+    32000 88200: 3/2 · bridge↓k0 · ↑2
+    32000 176400: 3/2 · bridge↓k0 · ↑2 · ↑2
+    48000 8000: ↓3 · ↓2
+    48000 12000: ↓2 · ↓2
+    48000 16000: ↓3
+    48000 24000: ↓2
+    48000 32000: 2/3
+    48000 96000: ↑2
+    48000 192000: ↑2 · ↑2
+    48000 384000: ↑2 · 4/3 · ↑3
+    48000 11025: bridge↓k0 · ↓2 · ↓2
+    48000 22050: bridge↓k0 · ↓2
+    48000 44100: bridge↓k0
+    48000 88200: bridge↓k0 · ↑2
+    48000 176400: bridge↓k0 · ↑2 · ↑2
+    96000 8000: ↓6 · ↓2
+    96000 12000: ↓3 · 3/4 · ↓2
+    96000 16000: ↓3 · ↓2
+    96000 24000: ↓2 · ↓2
+    96000 32000: ↓3
+    96000 48000: ↓2
+    96000 192000: ↑2
+    96000 384000: ↑2 · ↑2
+    96000 11025: ↓2 · bridge↓k0 · ↓2 · ↓2
+    96000 22050: ↓2 · bridge↓k0 · ↓2
+    96000 44100: ↓2 · bridge↓k0
+    96000 88200: bridge↓k1
+    96000 176400: bridge↓k1 · ↑2
+    192000 8000: ↓2 · ↓6 · ↓2
+    192000 12000: ↓8 · ↓2
+    192000 16000: ↓6 · ↓2
+    192000 24000: ↓3 · 3/4 · ↓2
+    192000 32000: ↓3 · ↓2
+    192000 48000: ↓2 · ↓2
+    192000 96000: ↓2
+    192000 384000: ↑2
+    192000 11025: ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2
+    192000 22050: ↓3 · 3/4 · bridge↓k0 · ↓2
+    192000 44100: ↓2 · ↓2 · bridge↓k0
+    192000 88200: ↓2 · bridge↓k1
+    192000 176400: bridge↓k2
+    384000 8000: ↓3 · ↓8 · ↓2
+    384000 12000: ↓2 · ↓8 · ↓2
+    384000 16000: ↓2 · ↓6 · ↓2
+    384000 24000: ↓8 · ↓2
+    384000 32000: ↓6 · ↓2
+    384000 48000: ↓3 · 3/4 · ↓2
+    384000 96000: ↓2 · ↓2
+    384000 192000: ↓2
+    384000 11025: ↓2 · ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2
+    384000 22050: ↓8 · bridge↓k0 · ↓2
+    384000 44100: ↓3 · 3/4 · ↓2 · bridge↓k0
+    384000 88200: ↓2 · ↓2 · bridge↓k1
+    384000 176400: ↓2 · bridge↓k2
+    11025 8000: ↑2 · ↑2 · bridge↑k0 · ↓3 · ↓2
+    11025 12000: ↑2 · ↑2 · bridge↑k0 · ↓2 · ↓2
+    11025 16000: ↑2 · ↑2 · bridge↑k0 · ↓3
+    11025 24000: ↑2 · ↑2 · bridge↑k0 · ↓2
+    11025 32000: ↑2 · ↑2 · bridge↑k0 · 2/3
+    11025 48000: ↑2 · ↑2 · bridge↑k0
+    11025 96000: ↑2 · ↑2 · bridge↑k0 · ↑2
+    11025 192000: ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2
+    11025 384000: ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 · ↑2
+    11025 22050: ↑2
+    11025 44100: ↑2 · ↑2
+    11025 88200: ↑3 · 8/3
+    11025 176400: ↑2 · ↑8
+    22050 8000: ↑2 · bridge↑k0 · ↓3 · ↓2
+    22050 12000: ↑2 · bridge↑k0 · ↓2 · ↓2
+    22050 16000: ↑2 · bridge↑k0 · ↓3
+    22050 24000: ↑2 · bridge↑k0 · ↓2
+    22050 32000: ↑2 · bridge↑k0 · 2/3
+    22050 48000: ↑2 · bridge↑k0
+    22050 96000: ↑2 · bridge↑k0 · ↑2
+    22050 192000: ↑2 · bridge↑k0 · 4/3 · ↑3
+    22050 384000: ↑2 · bridge↑k0 · ↑8
+    22050 11025: ↓2
+    22050 44100: ↑2
+    22050 88200: ↑2 · ↑2
+    22050 176400: ↑3 · 8/3
+    44100 8000: bridge↑k0 · ↓3 · ↓2
+    44100 12000: bridge↑k0 · ↓2 · ↓2
+    44100 16000: bridge↑k0 · ↓3
+    44100 24000: bridge↑k0 · ↓2
+    44100 32000: bridge↑k0 · 2/3
+    44100 48000: bridge↑k0
+    44100 96000: bridge↑k0 · ↑2
+    44100 192000: bridge↑k0 · ↑2 · ↑2
+    44100 384000: bridge↑k0 · ↑2 · 4/3 · ↑3
+    44100 11025: ↓2 · ↓2
+    44100 22050: ↓2
+    44100 88200: ↑2
+    44100 176400: ↑2 · ↑2
+    88200 8000: ↓2 · bridge↑k0 · ↓3 · ↓2
+    88200 12000: ↓2 · bridge↑k0 · ↓2 · ↓2
+    88200 16000: ↓2 · bridge↑k0 · ↓3
+    88200 24000: ↓2 · bridge↑k0 · ↓2
+    88200 32000: ↓2 · bridge↑k0 · 2/3
+    88200 48000: ↓2 · bridge↑k0
+    88200 96000: bridge↑k1
+    88200 192000: bridge↑k1 · ↑2
+    88200 384000: bridge↑k1 · ↑2 · ↑2
+    88200 11025: 3/8 · ↓3
+    88200 22050: ↓2 · ↓2
+    88200 44100: ↓2
+    88200 176400: ↑2
+    176400 8000: ↓2 · ↓2 · bridge↑k0 · ↓3 · ↓2
+    176400 12000: ↓2 · ↓2 · bridge↑k0 · ↓2 · ↓2
+    176400 16000: ↓2 · ↓2 · bridge↑k0 · ↓3
+    176400 24000: ↓2 · ↓2 · bridge↑k0 · ↓2
+    176400 32000: ↓2 · ↓2 · bridge↑k0 · 2/3
+    176400 48000: ↓2 · ↓2 · bridge↑k0
+    176400 96000: ↓2 · bridge↑k1
+    176400 192000: bridge↑k2
+    176400 384000: bridge↑k2 · ↑2
+    176400 11025: ↓8 · ↓2
+    176400 22050: 3/8 · ↓3
+    176400 44100: ↓2 · ↓2
+    176400 88200: ↓2
+"""
+
+
+def _stage_ratio(label):
+    """A stage label's rate factor: ↑L, ↓M, L/M, or bridge↓kK / bridge↑kK."""
+    if label.startswith("bridge"):
+        d = "down" if "↓" in label else "up"
+        return F(BRIDGE_L[d], BRIDGE_M[d])
+    if label[0] == "↑":
+        return F(int(label[1:]))
+    if label[0] == "↓":
+        return F(1, int(label[1:]))
+    num, den = label.split("/")
+    return F(int(num), int(den))
+
+
+@functools.lru_cache(maxsize=None)
+def frozen_selection():
+    """{(src, dst): chain} from FROZEN_SELECTION, each chain a tuple of
+    (from, to, label, kind, 0, 0, 0) edges, as best_chain's are before costing."""
+    out = {}
+    for line in FROZEN_SELECTION.strip().splitlines():
+        pair, stages = line.split(":")
+        src, dst = (int(v) for v in pair.split())
+        u, edges = src, []
+        for label in stages.strip().split(" · "):
+            v = u * _stage_ratio(label)
+            assert v.denominator == 1, (src, dst, label)
+            kind = "bridge" if label.startswith("bridge") else "stage"
+            edges.append((u, int(v), label, kind, 0, 0, 0))
+            u = int(v)
+        assert u == dst, (src, dst)
+        out[(src, dst)] = tuple(edges)
+    assert len(out) == len(RATES) * (len(RATES) - 1)
+    return out
+
+
 @functools.lru_cache(maxsize=None)
 def economy_chains():
-    """The chain per ordered pair at economy (the table's chains): {(src, dst): (chosen, minimal)}."""
+    """The chain per ordered pair at economy (the table's chains): {(src, dst): (chosen, minimal)},
+    chosen = (MACs per output, latency in output frames, stages, chain) costed on the current pins.
+    The selection is FROZEN_SELECTION (X17), so minimal is chosen; live_chains() is the rule's."""
+    out = {}
+    for (s, d), chain in frozen_selection().items():
+        macs, lat, stages = cost_chain(chain, s, d, "economy")
+        chosen = (macs, lat, len(stages), stages)
+        out[(s, d)] = (chosen, chosen)
+    return out
+
+
+@functools.lru_cache(maxsize=None)
+def live_chains():
+    """best_chain() at economy for every ordered pair on the current pins: the
+    selection the rules make now, which the frozen table suspends (X17)."""
     return {(s, d): best_chain(s, d, "economy") for s in RATES for d in RATES if s != d}
 
 
@@ -398,9 +654,10 @@ def md():
 
 
 def rule():
-    """Rows (economy) where the fewest-stages rule overrode the MAC minimum."""
+    """Rows (economy) where the fewest-stages rule overrode the MAC minimum, on the
+    current pins (the live rule, live_chains(); the matrix's chains are frozen, X17)."""
     n = 0
-    for (s, d), (c, m) in economy_chains().items():
+    for (s, d), (c, m) in live_chains().items():
         if c is not m:
             n += 1
             rm, rc = rational_macs(m, d), rational_macs(c, d)
@@ -512,6 +769,28 @@ def diff():
     print("changed rows:", n, "of", len(table), "parsed")
 
 
+def frozen():
+    """The rows whose chain the rules would move on the current pins: the
+    selection X17 suspends for one pull request (live_chains() against
+    FROZEN_SELECTION), with the named chains that would leave and join."""
+    within = lambda s, d: (s in A_RATES) == (d in A_RATES)  # noqa: E731
+    n = n_within = 0
+    kept, live = set(), set()
+    for (s, d), (c, _) in economy_chains().items():
+        lc, _ = live_chains()[(s, d)]
+        if within(s, d):
+            kept.add(shape(c[3]))
+            live.add(shape(lc[3]))
+        if shape(c[3]) != shape(lc[3]):
+            n += 1
+            n_within += within(s, d)
+            print(f"{'W' if within(s, d) else 'X'} {fmt(s)} → {fmt(d)}: {shape(c[3])} ({float(c[0]):.2f})  →  "
+                  f"{shape(lc[3])} ({float(lc[0]):.2f})")
+    print(f"rows the rule would move: {n} ({n_within} within the families, {n - n_within} across)")
+    print("within-family chains that would leave:", ", ".join(sorted(kept - live)) or "none")
+    print("within-family chains that would join:", ", ".join(sorted(live - kept)) or "none")
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "md"
-    {"md": md, "pins": pins, "rows": rows_header, "diff": diff, "rule": rule}[cmd]()
+    {"md": md, "pins": pins, "rows": rows_header, "diff": diff, "rule": rule, "frozen": frozen}[cmd]()

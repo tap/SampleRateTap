@@ -8,7 +8,8 @@ maintainer's answers to it:
   in its own PR (X-a2) after measuring the Q15/Q31 floors and passband ripple it gives,
   saves 4 to 10 % of MACs across the matrix with no DspTap change. X3 and X4 are re-sized
   on it. Wherever a `_transparent` alias would name the same chain as its plain twin, it is
-  dropped; X-0 found that true of all four under every re-tuned β.
+  dropped; X-0 found that true of all four under every re-tuned β. *X-a2 (measured): the
+  offset is A + 4 dB, and at A + 4 the ×8 pair is dropped but the ×16 pair survives (X4).*
 - **IIR round trips are held to the FIR's floor** (the IIR plan's question 5): −60 dB at the
   70 dB profiles, −100 dB at `transparent` (6.3).
 
@@ -291,7 +292,8 @@ constant, the Q15/Q31 chain-floor pins and the footprint pins. **Four chains are
 include 384 → 44.1 and 44.1 → 384, which carry a ×8 run beside `bridge`, and rows that put a
 single ↓4 or ↑4 beside it (192 → 11.025 becomes ↓4 · `bridge` · ↓4). **X-0** confirmed every
 count exactly with the generator's own `diff` (`generator/diff.txt`), for today's designer;
-X-a2 restates them under the re-tuned one (X17).
+X-a2 restates them under the re-tuned one (X17): 46 rows at `economy` (30 within, 16
+across), 14 named chains retired and 12 added.
 
 ### 3.4 Latency against MACs, for the round trip (**measured**, `economy`)
 
@@ -427,18 +429,36 @@ aliases exist (X-b), so `down_by8` is never another chain than the one it names.
 - **What changes:**
   - `matrix.py` admits band 4 (`NO_SINGLE_STAGE = {4}` goes, `matrix.py:32`, `:72`) and is
     re-run, and the tables are regenerated.
+  - **X-a3 regenerates the selection under the new designer with band 4 admitted** (X-a2
+    froze it, X17), so its retirements and additions include the β-driven ones.
   - **The rows that move:** 12 within the families and 14 across them at `economy` with
-    today's designer (section 3.3; **X-0** confirms them exactly). The re-tuned designer
-    (X17) re-sizes them, and X-a2 states the counts X-a3 will move.
+    today's designer (section 3.3; **X-0** confirms them exactly). Under X-a2's designer
+    (β for A + 4 dB, measured by X-a2 against the frozen tables): **46 rows, 30 within the
+    families and 16 across**, every one of them running a 4th-band stage; the 26 the β
+    alone would move (20 within, 6 across) are among them.
   - `down4` and `up4` enter the vocabulary as named single stages.
-  - **The named chains gain four** (`down4_down2`, `up2_up4`, `down4_down6_down2`,
-    `up2_up6_up4`) and **lose six** under D7 (the four ×8 chains, `down_3_down_8_down_2` and
-    `up_2_up_8_up_3`), whose old names go into `retired_words.txt`.
+  - **The named chains gain twelve and lose fourteen** under X-a2's designer (X17), not four
+    and six:
+    - gained: `up2_up4`, `down4_down2` (×8), `up2_up4_up2`, `down2_down4_down2` (×16),
+      `up3_up4`, `down4_down3` (12/1, 1/12), `up2_up3_up4`, `down4_down3_down2` (24/1, 1/24),
+      `up2_up4_up4`, `down4_down4_down2` (32/1, 1/32), `up3_up4_up4`, `down4_down4_down3`
+      (48/1, 1/48);
+    - lost, under D7: `up2_ratio4over3_up3` (10), `up3_ratio8over3` (11), `up2_up6` (12),
+      `up2_up8` (13), `up2_up6_up2` (14), `up2_up8_up2` (15), `up2_up8_up3` (16),
+      `down3_ratio3over4_down2` (21), `ratio3over8_down3` (22), `down6_down2` (23),
+      `down8_down2` (24), `down2_down6_down2` (25), `down2_down8_down2` (26),
+      `down3_down8_down2` (27), the C ABI value in brackets;
+    - four of the lost come back at `transparent` under X4 (`up2_up6`, `up2_up8`,
+      `down6_down2`, `down8_down2`), so if X-a4 follows X-a3 inside 0.8.0 X-a3 should keep
+      those four rather than retire a name and a value X-a4 needs again: ten retired
+      (values 10, 11, 14, 15, 16, 21, 22, 25, 26, 27).
   - **What the retirements carry with them, rewritten in X-a3:** the README's quick start
     and its comment, the book's C ABI example constant, the Q15/Q31 chain floors with their
     numbers in `rational/PLAN.md` section 6, and the footprint pins.
   - **C ABI (X7):** new chains take new values; retired values are never reused and are
     rejected; `TAP_SR_RATIONAL_CHAIN_COUNT` is retired for `TAP_SR_RATIONAL_CHAIN_END`.
+    Under X-a2's designer: 12 new constants (28 to 39), `CHAIN_END` 40, and 26 live
+    chains after X-a3 (18 multi-stage).
     `create_stage` accepts 4/1 and 1/4, the header says sixteen ratios, and
     `test_capi.cpp:238`'s pinned refusal becomes a test that accepts the stage, so
     `matrix.ipynb` and the binding can build the moved cross-family rows.
@@ -455,7 +475,9 @@ aliases exist (X-b), so `down_by8` is never another chain than the one it names.
 - **×16 at the 70 dB tiers does not move with today's designer.** `down_by16` and
   `up_by16` are ↓8 · ↓2 and ↑2 · ↑8 either way, since R3 keeps the two-stage chains within
   10 % of the three-stage minimum (section 3.1). With β for A + 4 the ×16 chain becomes
-  ↓2 · ↓4 · ↓2 (143 MACs), which needs X3; X17's choice of offset decides it.
+  ↓2 · ↓4 · ↓2 (143 MACs), which needs X3; X17's choice of offset decides it. **Decided by
+  X-a2's A + 4:** with X3, ×16 at `economy` is ↓2 · ↓4 · ↓2 (143) and ↑2 · ↑4 · ↑2 (8.94),
+  12 % below ↓8 · ↓2's 163 and ↑2 · ↑8's 10.19.
 - *Alternative:* keep decision 6. The aliases then resolve to today's matrix chains, at 24 %
   (down) and 17 % (up) more MACs than the cheapest at `economy` with today's designer, and
   the 44.1 family's rows stay as they are.
@@ -468,6 +490,12 @@ aliases exist (X-b), so `down_by8` is never another chain than the one it names.
   in X-a2 between A + 3 and A + 4 dB. The choice comes after measuring what each gives,
   which X-0 did not: the Q15/Q31 attained stopbands and floors per stage
   (`test_fixed_point.cpp`, `rational/PLAN.md` section 6) and the passband ripple.
+  **X-a2 chose A + 4:** at A + 3 the third-band `economy` design leaves ↑3, ↓3 and 3/2 at
+  −69.87 dB in Q15 (and 2/3 and 3/4 at `balanced` at −69.91 and −69.98), so "every Q15
+  stage of the vocabulary attains the 70 dB tier at its own rate" fails; at A + 4 it holds
+  (worst −70.42 dB) and every relaxed Q15 design attains the tier too (the `economy`
+  half-band at 147/160 −72.1 dB, from −67.6). Ripple improves at each stage's own rate and in
+  141 of the 200 designs, not in all (`rational/PLAN.md` section 6, "The designer's β, X17").
 - **Why in 0.8.0:** 0.8.0 already re-pins band 4 and moves 26 rows, so consumers see one
   numeric change, not two. It saves 3.8 to 10.3 % of the mean `economy` cost over the 182
   rows, and makes ×4, ×8 and ×16 cheaper (3.1's table).
@@ -479,16 +507,34 @@ aliases exist (X-b), so `down_by8` is never another chain than the one it names.
   0.2.0. *Declined:* a β searched per entry, which needs a joint m / β search in DspTap.
 - **What it moves:** 102 (A + 3) or 127 (A + 4) of the 200 relaxation pins and the tables
   built from them, every Q15/Q31 table, the scipy vectors (regenerated by
-  `tools/reference/`), the matrix rows, and every `rational` ratchet count and ceiling. X-a2
-  re-records the counts and ceilings with the reason, each at the midpoint of its two builds
-  where they split, never with `--update` from one build.
-- **What it does to X3 and X4:** their counts (3.3, X4) are today's designer's. Under the
-  re-tune X-0 measured:
-  - the per-tier split falls to 15 (A + 3) or 25 (A + 4) rows;
-  - the chains used only at `transparent` fall to 1 or 7;
-  - the ×8 and ×16 `transparent` chains equal the `economy` ones.
-
-  X-a2 states the regenerated counts for X-a3 and X-a4, from `x0_matrix.py`'s `beta` mode.
+  `tools/reference/`), the matrix rows' numbers, and every `rational` ratchet count and
+  ceiling. X-a2 re-records the counts and ceilings with the reason, each at the midpoint of
+  its two builds where they split, never with `--update` from one build.
+- **X-a2 freezes the chain selection (the maintainer, at X-a2).** On the new pins R3 would
+  move 26 rows at `economy` with decision 6 kept (20 within the families), retiring eight
+  named chains and naming six (at A + 3: 20 rows, six and four). X-a2 keeps every row's
+  chain instead, re-costed on the new pins (`matrix.py`'s committed `FROZEN_SELECTION`), so
+  the named chains, the C ABI's constants and the design divisors stay as they are and R3
+  is suspended for that one PR; X-a3 regenerates the selection under the new designer with
+  band 4 admitted, so the chain set changes once, with X7's stable values, before the
+  0.8.0 tag.
+- **What it does to X3 and X4** (measured by X-a2 with the shipping generator at A + 4,
+  band 4 admitted in scratch only, against X-a2's frozen tables, which are today's chains):
+  - **X-a3 (X3):** 46 rows move at `economy`, 30 within the families and 16 across; the
+    named chains lose 14 and gain 12 (X3 above), 26 live within-family chains after it
+    (18 multi-stage); the C ABI takes 12 new constants (28 to 39), `CHAIN_END` 40.
+  - **X-a4 (X4):** the `transparent` chain differs from the `economy` chain in 25 rows (17
+    within, 8 across), and 7 chains are used only at `transparent`: `up2_ratio3over2`,
+    `up2_up6`, `up2_up6_up4`, `up2_up8`, `down6_down2`, `down8_down2`, `down4_down6_down2`.
+    Four of them are today's chains X-a3 would otherwise retire, so with them kept X-a4
+    adds 3 constants (40 to 42), `CHAIN_END` 43, 33 live chains (25 multi-stage).
+  - **The ×8 `transparent` chains equal the `economy` ones** (↓4 · ↓2 / ↑2 · ↑4 at both
+    tiers: 71 / 8.88 MACs at `economy`, 149 / 18.62 at `transparent`), so
+    `down_by8_transparent` and `up_by8_transparent` are not added. **The ×16 ones do not:**
+    `economy` is ↓2 · ↓4 · ↓2 / ↑2 · ↑4 · ↑2 and `transparent` ↓8 · ↓2 / ↑2 · ↑8 (277 /
+    17.31 MACs against 301 / 18.81 for the `economy` chain run at `transparent`), so
+    `down_by16_transparent` and `up_by16_transparent` survive X4's rule. X-0's "under every
+    re-tuned β" held at A + 3, where ×16 stays ↓8 · ↓2 at both tiers, not at A + 4.
 
 ### X4. A chain per tier (decided, v5; its scope decided, v6; re-sized, v7)
 
@@ -504,7 +550,10 @@ inside 0.8.0, sized first by X-0 and, after the re-tune, by X-a2.
   name the same chains as `down_by8` and `down_by16`. If X-a2's offset confirms that, they are
   not added (nor their C constants, X7), and X4 is a matrix-only change: the per-tier rows
   and the chains used only at `transparent`. The rest of this section is the case where an
-  alias survives.
+  alias survives. **X-a2 (A + 4) confirms it for ×8 only:** ×16 at `economy` becomes
+  ↓2 · ↓4 · ↓2 / ↑2 · ↑4 · ↑2 while `transparent` keeps ↓8 · ↓2 / ↑2 · ↑8, so
+  `down_by16_transparent` and `up_by16_transparent` survive (X17, "What it does to X3 and
+  X4").
 
 - **The 70 dB tier's chain is selected at `economy`,** as `matrix.py` selects today, so
   `super_economy`'s exact ×4 tie (3.1) does not move the row.
@@ -528,7 +577,8 @@ inside 0.8.0, sized first by X-0 and, after the re-tune, by X-a2.
   adds **14 chains** used only at `transparent` (among them 3/8 and 8/3 as one-stage chains,
   ↓3 · ↓2 · ↓2, ↓4 · ↓3 · 3/8 and 8/3 · ↑3 · ↑4). With X3: 18 new C constants, 6 retired
   (values 10, 11, 16, 21, 22, 27), 40 live chains with values up to 45. Under the re-tune
-  the split is 15 to 25 rows and 1 to 7 chains (X17); X-a2 states the final counts.
+  the split is 15 to 25 rows and 1 to 7 chains (X17); X-a2 measured the final counts at
+  A + 4: 25 rows (17 within, 8 across) and 7 chains (X17).
 - **It changes the generated row format, not just the rows.** A row holds one chain today,
   the `economy` choice, costed under all four profiles, and `rational/PLAN.md:373-374` says
   the `transparent` columns "cost the same chains at `transparent`, not a second search".
@@ -941,11 +991,15 @@ version comes with the scaffold (X10), which replaces its hand-written delay and
    the `HISTORY` and `ALLOWED` entries. Outputs, Q15/Q31 pins, row numbers, counts and
    ceilings identical, checked by a script under a name map.
 3. **X-a2, the designer's β (X17):** the offset chosen between A + 3 and A + 4 dB on the
-   measured Q15/Q31 floors and passband ripple; every pin and table re-pinned, the scipy
-   vectors and the matrix regenerated, every `rational` count and ceiling re-recorded with the
-   reason; the designer's record (X8); and the counts X-a3 and X-a4 will move, regenerated.
-4. **X-a3, decision 6 reopened (X3):** `down4` / `up4`, the regenerated matrix and named
-   chains, the six retirements under D7, the C ABI's stable values (X7: `CHAIN_END`, retired
+   measured Q15/Q31 floors and passband ripple (A + 4); every pin and table re-pinned, the
+   scipy vectors and the matrix regenerated with its chain selection frozen (R3 suspended for
+   this PR, the named chains and C ABI unchanged), every `rational` count and ceiling
+   re-recorded with the reason; the designer's record (X8); and the counts X-a3 and X-a4 will
+   move, regenerated (X17).
+4. **X-a3, decision 6 reopened (X3):** `down4` / `up4`, the matrix's selection regenerated
+   under the new designer with band 4 admitted (so its retirements and additions include
+   the β-driven ones X-a2 froze: 46 rows, 12 chains added and up to 14 retired, X17), the
+   named chains, the retirements under D7, the C ABI's stable values (X7: `CHAIN_END`, retired
    values rejected, `create_stage` with band 4), band 4's design, fixed-point and scipy pins,
    the rewrites the retirements carry (the quick start, the book's constant, the chain floors,
    the footprints), the new ratchet workloads and ceilings, and decision 6's record (X8).

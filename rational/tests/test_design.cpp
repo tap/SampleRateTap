@@ -56,11 +56,14 @@ namespace {
     }
 
     // The M2 table (PLAN.md section 6; design.h's profile docstring):
-    // measured 2026-10-02 by notebooks/design_spike.ipynb (the numpy leg)
-    // and re-measured here through the shipping designer: for every band
-    // of the vocabulary and every profile, the pinned m is the smallest
-    // meeting the stopband with the 1 dB margin on the 16384-point grid
-    // (m - 1 misses it), and the pin equals what the search finds.
+    // measured 2026-10-02 by notebooks/design_spike.ipynb (the numpy leg),
+    // re-pinned 2026-11-20 under X17's rule by tools/coverage/matrix.py (the
+    // numpy leg since) and re-measured here through the shipping designer:
+    // for every band of the vocabulary and every profile, the pinned m is
+    // the smallest whose design, its Kaiser beta taken for A + 4 dB
+    // (design_beta), meets the stopband with the 1 dB margin on the
+    // 16384-point grid (m - 1 misses it), and the pin equals what the
+    // search finds.
     struct pinned_row {
         std::size_t band;
         profile     p;
@@ -70,31 +73,31 @@ namespace {
     };
 
     const pinned_row k_m2_table[] = {
-        {.band = 2, .p = profile::super_economy(), .m = 9, .n = 35, .worst_db = -72.78},
-        {.band = 2, .p = profile::economy(), .m = 11, .n = 43, .worst_db = -71.92},
-        {.band = 2, .p = profile::balanced(), .m = 13, .n = 51, .worst_db = -71.52},
-        {.band = 2, .p = profile::transparent(), .m = 31, .n = 123, .worst_db = -121.67},
-        {.band = 3, .p = profile::super_economy(), .m = 8, .n = 47, .worst_db = -71.21},
-        {.band = 3, .p = profile::economy(), .m = 11, .n = 65, .worst_db = -71.33},
-        {.band = 3, .p = profile::balanced(), .m = 13, .n = 77, .worst_db = -71.17},
-        {.band = 3, .p = profile::transparent(), .m = 25, .n = 149, .worst_db = -121.13},
-        {.band = 4, .p = profile::super_economy(), .m = 8, .n = 63, .worst_db = -71.39},
-        {.band = 4, .p = profile::economy(), .m = 11, .n = 87, .worst_db = -71.10},
-        {.band = 4, .p = profile::balanced(), .m = 14, .n = 111, .worst_db = -72.26},
-        {.band = 4, .p = profile::transparent(), .m = 25, .n = 199, .worst_db = -121.38},
-        {.band = 6, .p = profile::super_economy(), .m = 8, .n = 95, .worst_db = -71.46},
-        {.band = 6, .p = profile::economy(), .m = 12, .n = 143, .worst_db = -72.11},
-        {.band = 6, .p = profile::balanced(), .m = 14, .n = 167, .worst_db = -72.18},
-        {.band = 6, .p = profile::transparent(), .m = 25, .n = 299, .worst_db = -121.35},
-        {.band = 8, .p = profile::super_economy(), .m = 8, .n = 127, .worst_db = -71.48},
-        {.band = 8, .p = profile::economy(), .m = 12, .n = 191, .worst_db = -72.10},
-        {.band = 8, .p = profile::balanced(), .m = 14, .n = 223, .worst_db = -72.15},
-        {.band = 8, .p = profile::transparent(), .m = 25, .n = 399, .worst_db = -121.20},
+        {.band = 2, .p = profile::super_economy(), .m = 8, .n = 31, .worst_db = -72.44},
+        {.band = 2, .p = profile::economy(), .m = 10, .n = 39, .worst_db = -73.05},
+        {.band = 2, .p = profile::balanced(), .m = 12, .n = 47, .worst_db = -72.49},
+        {.band = 2, .p = profile::transparent(), .m = 25, .n = 99, .worst_db = -122.16},
+        {.band = 3, .p = profile::super_economy(), .m = 8, .n = 47, .worst_db = -73.63},
+        {.band = 3, .p = profile::economy(), .m = 10, .n = 59, .worst_db = -72.47},
+        {.band = 3, .p = profile::balanced(), .m = 12, .n = 71, .worst_db = -72.36},
+        {.band = 3, .p = profile::transparent(), .m = 25, .n = 149, .worst_db = -122.83},
+        {.band = 4, .p = profile::super_economy(), .m = 8, .n = 63, .worst_db = -74.35},
+        {.band = 4, .p = profile::economy(), .m = 10, .n = 79, .worst_db = -72.51},
+        {.band = 4, .p = profile::balanced(), .m = 12, .n = 95, .worst_db = -72.46},
+        {.band = 4, .p = profile::transparent(), .m = 25, .n = 199, .worst_db = -122.93},
+        {.band = 6, .p = profile::super_economy(), .m = 7, .n = 83, .worst_db = -71.86},
+        {.band = 6, .p = profile::economy(), .m = 10, .n = 119, .worst_db = -72.60},
+        {.band = 6, .p = profile::balanced(), .m = 12, .n = 143, .worst_db = -72.59},
+        {.band = 6, .p = profile::transparent(), .m = 25, .n = 299, .worst_db = -123.01},
+        {.band = 8, .p = profile::super_economy(), .m = 7, .n = 111, .worst_db = -72.13},
+        {.band = 8, .p = profile::economy(), .m = 10, .n = 159, .worst_db = -72.66},
+        {.band = 8, .p = profile::balanced(), .m = 12, .n = 191, .worst_db = -72.67},
+        {.band = 8, .p = profile::transparent(), .m = 25, .n = 399, .worst_db = -123.06},
     };
 
     // The ripple candidates of PLAN.md 2.3, now bounds: per 70 dB stage
-    // 0.01 dB, per transparent stage 0.0001 dB (measured <= 0.0025 and
-    // <= 0.00001).
+    // 0.01 dB, per transparent stage 0.0001 dB (measured <= 0.0024 and
+    // <= 0.00001 since X17; <= 0.0025 and <= 0.00001 with beta for A).
     double ripple_bound_db(const profile& p) {
         return p.stopband_atten_db >= 100.0 ? 0.0001 : 0.01;
     }
@@ -114,12 +117,12 @@ namespace {
             EXPECT_EQ(taps_per_branch_for(row.band, row.p), row.m) << "band " << row.band;
             EXPECT_EQ(tap::dsp::nyquist_length(row.band, row.m), row.n) << "band " << row.band;
         }
-        EXPECT_EQ(design_stage<up2>(profile::economy()).size(), 43u);
+        EXPECT_EQ(design_stage<up2>(profile::economy()).size(), 39u);
         EXPECT_EQ(design_stage<up3>(profile::transparent()).size(), 149u);
         EXPECT_EQ(design_stage<down8>(profile::transparent()).size(), 399u);
         // The nonzero counts the plan states beside the lengths: 2m(L - 1) + 1.
-        EXPECT_EQ(tap::dsp::nyquist_nonzero_taps(2, 11), 23u);
-        EXPECT_EQ(tap::dsp::nyquist_nonzero_taps(3, 11), 45u);
+        EXPECT_EQ(tap::dsp::nyquist_nonzero_taps(2, 10), 21u);
+        EXPECT_EQ(tap::dsp::nyquist_nonzero_taps(3, 10), 41u);
         EXPECT_EQ(tap::dsp::nyquist_nonzero_taps(8, 25), 351u);
     }
 
@@ -135,7 +138,7 @@ namespace {
         EXPECT_LE(worst, -(row.p.stopband_atten_db + k_design_margin_db)) << "band " << row.band;
         EXPECT_NEAR(worst, row.worst_db, 0.05) << "band " << row.band;
         std::vector<double> g(tap::dsp::nyquist_length(row.band, row.m - 1));
-        tap::dsp::design_nyquist(g, row.band, tap::dsp::kaiser_beta(row.p.stopband_atten_db));
+        tap::dsp::design_nyquist(g, row.band, design_beta(row.p));
         EXPECT_GT(tap::dsp::nyquist_worst_stopband_db(g, row.band, row.p.passband_frac, k_design_grid_points),
                   -(row.p.stopband_atten_db + k_design_margin_db))
             << "band " << row.band << ": m - 1 meets the spec, the pin is not minimal";
@@ -158,9 +161,14 @@ namespace {
         }
     }
 
-    // The two rows a 1024-point search gets wrong (the finding behind
+    // The two rows a 1024-point search got wrong (the finding behind
     // tap/DspTap#50): band 4 balanced and band 8 transparent, where the
-    // coarse grid steps over a sidelobe and accepts one branch tap fewer.
+    // coarse grid steps over a sidelobe of a design with beta for A and
+    // accepts one branch tap fewer. DspTap's search still does (these calls
+    // design with beta for A). Under the rule the pins use since X17 (beta
+    // for A + 4 dB) the 1024-point grid finds the same m as the design grid
+    // at every entry of the tables (measured 2026-11-20), so the grid stays
+    // part of the criterion, not a correction a current pin needs.
     TEST(Design, TheCoarseGridWouldUnderPinTwoRows) {
         EXPECT_EQ(tap::dsp::search_nyquist_m(4, 19.0 / 48.0, 70.0), 13u);
         EXPECT_EQ(tap::dsp::search_nyquist_m(4, 19.0 / 48.0, 70.0, 1.0, 256, k_design_grid_points), 14u);
@@ -172,12 +180,12 @@ namespace {
     // (the M2 table's last row): the MACs per output of a mixed stage.
     TEST(Design, MixedStagesTapsPerPhaseAreTheM2Table) {
         const profile eco = profile::economy(), tr = profile::transparent();
-        EXPECT_EQ(stage_taps_per_phase<ratio3over2>(eco), 22u); // N = 65 over 3 phases
-        EXPECT_EQ(stage_taps_per_phase<ratio2over3>(eco), 33u); // N = 65 over 2
-        EXPECT_EQ(stage_taps_per_phase<ratio4over3>(eco), 22u); // N = 87 over 4
-        EXPECT_EQ(stage_taps_per_phase<ratio3over4>(eco), 29u); // N = 87 over 3
-        EXPECT_EQ(stage_taps_per_phase<ratio8over3>(eco), 24u); // N = 191 over 8
-        EXPECT_EQ(stage_taps_per_phase<ratio3over8>(eco), 64u); // N = 191 over 3
+        EXPECT_EQ(stage_taps_per_phase<ratio3over2>(eco), 20u); // N = 59 over 3 phases
+        EXPECT_EQ(stage_taps_per_phase<ratio2over3>(eco), 30u); // N = 59 over 2
+        EXPECT_EQ(stage_taps_per_phase<ratio4over3>(eco), 20u); // N = 79 over 4
+        EXPECT_EQ(stage_taps_per_phase<ratio3over4>(eco), 27u); // N = 79 over 3
+        EXPECT_EQ(stage_taps_per_phase<ratio8over3>(eco), 20u); // N = 159 over 8
+        EXPECT_EQ(stage_taps_per_phase<ratio3over8>(eco), 53u); // N = 159 over 3
         EXPECT_EQ(stage_taps_per_phase<ratio3over2>(tr), 50u);
         EXPECT_EQ(stage_taps_per_phase<ratio2over3>(tr), 75u);
         EXPECT_EQ(stage_taps_per_phase<ratio4over3>(tr), 50u);
@@ -185,7 +193,7 @@ namespace {
         EXPECT_EQ(stage_taps_per_phase<ratio8over3>(tr), 50u);
         EXPECT_EQ(stage_taps_per_phase<ratio3over8>(tr), 133u);
         EXPECT_EQ(stage_taps_per_phase<ratio3over2>(profile::super_economy()), 16u);
-        EXPECT_EQ(stage_taps_per_phase<ratio3over8>(profile::balanced()), 75u);
+        EXPECT_EQ(stage_taps_per_phase<ratio3over8>(profile::balanced()), 64u);
     }
 
     // A custom profile without pins is searched on the same grid, so it
@@ -193,7 +201,7 @@ namespace {
     TEST(Design, UnpinnedProfileIsSearchedOnTheDesignGrid) {
         profile custom         = profile::balanced();
         custom.taps_per_branch = {0, 0, 0, 0, 0};
-        EXPECT_EQ(taps_per_branch_for(4, custom), 14u);
+        EXPECT_EQ(taps_per_branch_for(4, custom), 12u);
         EXPECT_TRUE(design_stage<ratio4over3>(custom) == design_stage<ratio4over3>(profile::balanced()));
         profile unknown_band = profile::economy();
         EXPECT_EQ(unknown_band.pinned_taps_per_branch(5), 0u); // not a band of the vocabulary
@@ -285,10 +293,13 @@ namespace {
     // The relaxation tables (M4, design.h; tools/coverage/matrix.py `pins`):
     // every entry of every named profile is what the shipping search finds
     // for the band at the relaxed passband, on the design grid with the
-    // margin — the same criterion as the M2 pins. The 1/1 row is the M2
+    // margin and beta for A + 4 dB — the same criterion as the M2 pins
+    // (DspTap's search given A + x and the margin less x designs with beta
+    // for A + x and accepts at the margin, design.h's
+    // taps_per_branch_for). The 1/1 row is the M2
     // table; 147/160 tightens (the stage at bridge's rate under a 48-family
     // r_min); the others relax. The 70 dB tables run on every leg, the
-    // transparent one (designs up to N = 735) on the hosts.
+    // transparent one (designs up to N = 703) on the hosts.
     void expect_relaxations_are_the_search(const profile& p) {
         for (const auto& row : p.relaxations) {
             const profile r = p.relaxed(row.divisor);
@@ -298,9 +309,9 @@ namespace {
             }
             const std::size_t bands[] = {2, 3, 4, 6, 8};
             for (std::size_t b = 0; b < 5; ++b) {
-                const std::size_t found =
-                    tap::dsp::search_nyquist_m(bands[b], r.passband_frac, r.stopband_atten_db, k_design_margin_db,
-                                               k_design_max_taps_per_branch, k_design_grid_points);
+                const std::size_t found = tap::dsp::search_nyquist_m(
+                    bands[b], r.passband_frac, r.stopband_atten_db + k_design_beta_offset_db,
+                    k_design_margin_db - k_design_beta_offset_db, k_design_max_taps_per_branch, k_design_grid_points);
                 EXPECT_EQ(found, row.taps_per_branch[b])
                     << "divisor " << row.divisor.num << "/" << row.divisor.den << " band " << bands[b];
             }

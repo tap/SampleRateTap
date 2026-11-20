@@ -135,19 +135,39 @@ The `taps_per_branch` array is the design spike's result, **pinned**: the
 minimal m per band on the 16,384-point grid, verified against the shipping
 designer by `Design.PinsAreMinimalAndMeasuredAt70dB` (which also checks
 that m − 1 *misses* the spec — a pin that is not minimal is a pin that
-drifted). The measured table, with the harris estimates the plan started
-from struck through beside it:
+drifted).
+
+One number in that search is not the spec's. The window needs a β, and
+Kaiser's published fit gives the β for an attenuation A — but the search
+accepts a design only at A + 1 dB. A short windowed sinc with β tuned for
+exactly 70 dB has sidelobes at −68 to −70.6 dB, inside the margin, so the
+search ran on past it to a longer design, and for a relaxed half-band it
+ran to m = 7 however wide the transition: a floor the plan first read as
+the Kaiser fit's own. It was the designer's. Since X17 (the ×4 / ×8 / ×16
+plan, `docs/X4_X8_PLAN.md`) every design takes β for A + 4 dB
+(`design_beta`), still accepted at A + 1: 127 of the 200 pins of the
+relaxation tables got shorter, the coverage matrix's mean `economy` cost
+fell 6.3 %, and the fixed-point chapter's promise held with more margin
+than before. A + 3 dB, the other offset measured, would have shortened 102
+pins and put three Q15 stages at −69.9 dB, under the tier; the plan's
+section 6 has the comparison. No DspTap change was needed: the search is
+handed A + 4 dB and a margin of −3 dB, which designs with β for A + 4 and
+accepts at −71, the same pin at every key the matrix designs.
+
+The measured table, with the harris estimates the plan started from struck
+through beside it:
 
 | Band | super_economy | economy | balanced | transparent |
 |---|---|---|---|---|
-| 2 (↑2 / ↓2) | 35 taps, 19 nonzero (−72.8 dB); ~~27~~ | 43 / 23 (−71.9 dB); ~~35~~ | 51 / 27 (−71.5 dB); ~~43~~ | 123 / 63 (−121.7 dB); ~~95~~ |
-| 3 (↑3 / ↓3) | 47 / 33 (−71.2 dB); ~~41~~ | 65 / 45 (−71.3 dB); ~~53~~ | 77 / 53 (−71.2 dB); ~~65~~ | 149 / 101 (−121.1 dB); ~~143~~ |
-| 4 (serves 4/3, 3/4) | 63 / 49 (−71.4 dB) | 87 / 67 (−71.1 dB) | 111 / 85 (−72.3 dB) | 199 / 151 (−121.4 dB) |
-| 6 | 95 / 81 (−71.5 dB) | 143 / 121 (−72.1 dB) | 167 / 141 (−72.2 dB) | 299 / 251 (−121.3 dB) |
-| 8 | 127 / 113 (−71.5 dB) | 191 / 169 (−72.1 dB) | 223 / 197 (−72.1 dB) | 399 / 351 (−121.2 dB) |
+| 2 (↑2 / ↓2) | 31 taps, 17 nonzero (−72.4 dB); ~~27~~ | 39 / 21 (−73.1 dB); ~~35~~ | 47 / 25 (−72.5 dB); ~~43~~ | 99 / 51 (−122.2 dB); ~~95~~ |
+| 3 (↑3 / ↓3) | 47 / 33 (−73.6 dB); ~~41~~ | 59 / 41 (−72.5 dB); ~~53~~ | 71 / 49 (−72.4 dB); ~~65~~ | 149 / 101 (−122.8 dB); ~~143~~ |
+| 4 (serves 4/3, 3/4) | 63 / 49 (−74.4 dB) | 79 / 61 (−72.5 dB) | 95 / 73 (−72.5 dB) | 199 / 151 (−122.9 dB) |
+| 6 | 83 / 71 (−71.9 dB) | 119 / 101 (−72.6 dB) | 143 / 121 (−72.6 dB) | 299 / 251 (−123.0 dB) |
+| 8 | 111 / 99 (−72.1 dB) | 159 / 141 (−72.7 dB) | 191 / 169 (−72.7 dB) | 399 / 351 (−123.1 dB) |
 
-The Kaiser fit needs 2–8 more taps per branch than the harris estimate at
-the half band and 1–7 at the third. The estimates are kept in the plan as
+With β for A + 4 dB the Kaiser fit needs exactly one tap per branch more
+than the harris estimate at the half and third bands, every profile (with
+β for A it needed one to seven more). The estimates are kept in the plan as
 the *derivation* of the factoring rules; the pins are what ships, and a
 later chapter's ledger records every place the two disagreed about which
 chain to build.
@@ -163,8 +183,8 @@ Two properties of the table that the tests pin and the engine leans on:
 - **A mixed ratio's band is its larger factor.** 2/3 and 3/2 share the
   third-band design; 3/8 and 8/3 the 8th-band. The mixed stage's cost per
   output is its taps per *phase* — ⌈N/L⌉, the last phase zero-padded —
-  which is how a 2/3 stage at `economy` comes to cost 32.5 MACs per
-  output over a 65-tap design.
+  which is how a 2/3 stage at `economy` comes to cost 29.5 MACs per
+  output over a 59-tap design.
 
 ## From profile to filter
 
@@ -175,7 +195,7 @@ Two properties of the table that the tests pin and the engine leans on:
 `design_stage<R>` is twelve lines because everything it needs is already a
 constant: the band from the traits, m from the profile's pin (or the
 search, for a custom profile that carries none), the length from the
-formula, β from the attenuation. The passband fraction it hands the
+formula, β from the attenuation plus 4 dB. The passband fraction it hands the
 designer is *of the stage's lower rate* — which is the designer's own
 argument — and the reason that is correct for every ratio of the charter is
 the identity the previous chapter's traits assert: the composite rate is
@@ -203,7 +223,8 @@ between the two designs, and anything beyond it is a finding.
 | Zeros written as exact `0.0` | leave libm's ~10⁻¹⁶ | the fixed-point tables are bit-pinned; the trimmed rows must skip exactly the taps the contract says are zero |
 | Mirror the window | compute both halves | bit-identical halves; see the fixed-point chapter for what that buys across libms |
 | Per-branch DC normalization | normalize the whole filter | each branch passes DC with no gain error; branch 0 of ↑L is exactly `{1.0}` |
-| Pins per (band, profile) on a 16,384-point grid | search at construction with the 1024-point default | the default steps over a sidelobe of the long designs (383 → 399 at band 8 `transparent`); construction stays cheap; the grid is part of the pin |
+| Pins per (band, profile) on a 16,384-point grid | search at construction with the 1024-point default | the default stepped over a sidelobe of the long designs (383 → 399 at band 8 `transparent`, with β for A) and still misreads their peaks by up to 0.6 dB; construction stays cheap; the grid is part of the pin |
+| β for A + 4 dB, accepted at A + 1 (X17) | Kaiser's β for A | β for A puts a short design's sidelobes inside the margin, so the search ran long; A + 4 shortened 127 of 200 pins and every Q15 stage still attains 70 dB, where A + 3 left three at −69.9 dB |
 | Profile edges as fractions of the lowest rate | hertz | one profile serves a stage at any rate; a composed chain means one (f_pass, A) under one name |
 | Four named tiers, `economy` default | a continuous (f_pass, A) | the matrix pins only the named four; a custom profile exists but is searched and unpinned |
 | Keep `decimate.h` separate | adopt the Nyquist designer there | different contract for a different consumer; the two designs cross-check each other |
@@ -221,11 +242,18 @@ ctest --test-dir build-dsp -R Nyquist --output-on-failure
 # down bit for bit, the coarse grid would under-pin two rows:
 ctest --test-dir build -R 'rational\.Design\.' --output-on-failure
 
-# The independent numpy leg that found the pins, re-executed:
+# The independent numpy leg that found M2's pins (with beta for A, the
+# record of the pins before X17), re-executed:
 jupyter nbconvert --to notebook --execute --inplace rational/notebooks/design_spike.ipynb
+# And the numpy leg of today's pins (beta for A + 4 dB): the generator's search.
+python3 rational/tools/coverage/matrix.py pins
 
 # Break it on purpose: change k_design_grid_points to 1024 in design.h.
-# Design.PinsAreMinimalAndMeasuredAtTransparent fails: the 8th-band pin
-# is no longer minimal on the coarse grid, because the grid can no longer
-# see the sidelobe that made it necessary.
+# Design.PinsAreMinimalAndMeasuredAt70dB and ...AtTransparent fail: the
+# coarse grid misses the long designs' sidelobe peaks, reading them up to
+# 0.6 dB below the pinned measurement. (With beta for A it did worse: the
+# 8th-band transparent pin was no longer minimal on it.)
+# Or set k_design_beta_offset_db to 0: Design.RelaxationTablesAreTheSearch*
+# and Design.PinsAreMinimalAndMeasured* fail, because the pins are the
+# shorter designs a beta for A + 4 dB buys.
 ```

@@ -78,8 +78,8 @@ y[k] = Σ_j dot(branch j, sub-line (M − j) mod M)
 
 with branch j the taps h[j + sM], s ascending toward older samples. The
 branch holding the centre is the centre tap and its zeros, trimmed to one
-tap, so a half-band decimator computes 23 of its 43 taps at `economy` and
-↓8 169 of 191. The ASRC never had this option because its input had no
+tap, so a half-band decimator computes 21 of its 39 taps at `economy` and
+↓8 141 of 159. The ASRC never had this option because its input had no
 fixed phase structure; here the structure is the ratio.
 
 One detail is load-bearing for the fixed-point chapter. The M branches are
@@ -162,8 +162,8 @@ dot, so "every row sums to the format's unity" is a property of the
 There is one shape the two machines serve imperfectly. 2/3, 3/4 and 3/8
 run the L-phase machine over a band-M design: the design's zeros stride by
 M, the rows stride by L, and L and M are coprime, so every row crosses
-every M-th zero and the trimmed span cannot exclude them — 20 of 65 MACs
-per superblock for 2/3 at `economy`, 20 of 87 for 3/4, 22 of 191 for 3/8.
+every M-th zero and the trimmed span cannot exclude them — 18 of 59 MACs
+per superblock for 2/3 at `economy`, 18 of 79 for 3/4, 18 of 159 for 3/8.
 Interpolators, decimators and the mixed ratios going *up* (band L, every
 zero in the centre phase) multiply none.
 

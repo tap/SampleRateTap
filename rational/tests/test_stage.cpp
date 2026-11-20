@@ -708,26 +708,26 @@ namespace {
     // mixed stage pays its T per output less the padding.
     TEST(Stage, MacsPerOutputAreTheNonzeroCounts) {
         converter<1, up2> u2;
-        EXPECT_EQ(u2.macs_per_superblock(), 23u); // 2 m + 1, m = 11
-        EXPECT_DOUBLE_EQ(u2.macs_per_output(), 11.5);
+        EXPECT_EQ(u2.macs_per_superblock(), 21u); // 2 m + 1, m = 10
+        EXPECT_DOUBLE_EQ(u2.macs_per_output(), 10.5);
         converter<1, down2> d2;
-        EXPECT_EQ(d2.macs_per_superblock(), 23u);
-        EXPECT_DOUBLE_EQ(d2.macs_per_output(), 23.0); // of 43 taps: the half-band's half
+        EXPECT_EQ(d2.macs_per_superblock(), 21u);
+        EXPECT_DOUBLE_EQ(d2.macs_per_output(), 21.0); // of 39 taps: the half-band's half
         converter<1, down3> d3;
-        EXPECT_EQ(d3.macs_per_superblock(), 45u); // 2 m (M - 1) + 1
+        EXPECT_EQ(d3.macs_per_superblock(), 41u); // 2 m (M - 1) + 1
         converter<1, up8> u8;
-        EXPECT_EQ(u8.macs_per_superblock(), 169u); // 2 * 12 * 7 + 1
+        EXPECT_EQ(u8.macs_per_superblock(), 141u); // 2 * 10 * 7 + 1
         converter<1, down8> d8;
-        EXPECT_EQ(d8.macs_per_superblock(), 169u);
+        EXPECT_EQ(d8.macs_per_superblock(), 141u);
         converter<1, ratio2over3> m23;
-        EXPECT_EQ(m23.macs_per_superblock(), 65u); // N over 2 phases: 33 + 32
-        EXPECT_DOUBLE_EQ(m23.macs_per_output(), 32.5);
+        EXPECT_EQ(m23.macs_per_superblock(), 59u); // N over 2 phases: 30 + 29
+        EXPECT_DOUBLE_EQ(m23.macs_per_output(), 29.5);
         converter<1, ratio3over8> m38;
-        EXPECT_EQ(m38.macs_per_superblock(), 191u);
+        EXPECT_EQ(m38.macs_per_superblock(), 159u);
         EXPECT_EQ(m38.row_length(), stage_taps_per_phase<ratio3over8>(profile::economy()));
         converter<1, up2> tr(profile::transparent());
-        EXPECT_EQ(tr.taps(), 123u);
-        EXPECT_EQ(tr.macs_per_superblock(), 63u);
+        EXPECT_EQ(tr.taps(), 99u);
+        EXPECT_EQ(tr.macs_per_superblock(), 51u);
     }
 
     // ------------------------------------------------------------------
@@ -766,7 +766,7 @@ namespace {
     // integer ratios it shares (by 2, 3, 6 at 16 kHz out) is a different
     // design on the same substrate (a 7 kHz Kaiser lowpass of 81 / 121 /
     // 239 taps against this engine's half-, third- and sixth-band of
-    // 43 / 65 / 143). On a tone inside both passbands each must follow the
+    // 39 / 59 / 119). On a tone inside both passbands each must follow the
     // analytic sine within its own documented ripple after its own delay:
     // this engine within 3e-4 (0.0025 dB), decimate.h within 0.1 dB (its
     // header's bound); a larger disagreement is a finding.
