@@ -31,8 +31,8 @@ plugin-enabled `qemu-hexagon` 8.2.2, the counting plugin built from
    re-tuned β, 2.5 today; `generator/beta.txt`). **X3 stands, its reason restated:** under today's designer it is
    19 % below the matrix's ×8 chain (85 against 105); under any re-tuned β the gain over the
    best chain without band 4 is 0 to 10 %, and ↓4 · ↓2 wins on R3's fewer-stages rule and on
-   latency, not on a 19–24 % MAC gap. At `super_economy` alone, β for A + 1 to A + 3 makes three
-   half-bands 11.0–11.3 % cheaper; that column does not select the row (X4).
+   latency, not on a 19–24 % MAC gap. At `super_economy` alone, β for A + 1 to A + 3 puts ↓4 · ↓2
+   11.0–11.3 % above three half-bands, past R3's 10 %; that column does not select the row (X4).
 3. **Does ↓4 · ↓2 count no fewer instructions than ↓3 · 3/4 · ↓2 on two of the three targets?
    No: it counts fewer on all three, in both formats, both ways.** Per output frame, the
    matrix's 48-family chain costs 1.22–1.31 times X3's chain down and 1.17–1.30 times up, on
@@ -65,9 +65,10 @@ to 12, 9, 1, 7 and 5 (A + 1, A + 2, A + 3, A + 4, searched; `generator/beta.txt`
 - **X6 / X3, "the rows it fixes as a side effect":** true in MACs (124 → 85 down, 14.50 →
   10.62 up), not in Q15 instructions down. 3/8 · ↓3 counts 0.96 (M33), 0.81 (M55) and 0.99
   (Hexagon) of ↓4 · ↓2 in Q15; in float, and up in either format, X3's chain counts fewer
-  everywhere. The cause is the Q15 decimator's per-branch cost: ↓4 · ↓2 runs short branches
-  (m = 5 at divisor 2, 10 taps), about 9 instructions per MAC on the M55 against about 5 for
-  the 3/8 stage's long rows (`icount/summary.txt`, "per MAC").
+  everywhere. Per MAC, ↓4 · ↓2 costs about 9 instructions on the M55 in Q15 and 3/8 · ↓3 about 5
+  (`icount/summary.txt`, "per MAC"). The likely cause, not measured stage by stage: the ↓4
+  stage's branches are short (m = 5 at divisor 2, 10 taps each), while the 3/8 stage runs
+  rows of about 27 taps, so the Q15 decimator's per-branch overhead dominates.
 - **3.1's β table** is confirmed (A: 85 / 113 / 53; A + 2: 85 / 85 / 49; A + 3: 83 / 83 / 47;
   A + 4: 71 / 79 / 43), with two rows added: A + 1 gives 85 / 85 / 49, and β searched per entry
   71 / 79 / 43.
@@ -80,6 +81,15 @@ to 12, 9, 1, 7 and 5 (A + 1, A + 2, A + 3, A + 4, searched; `generator/beta.txt`
   load average of 5 to 13 on 4 cores), so all of these are indicative; the ratio, about 10 to
   11× less after ×8, is the robust figure (the plan says 9.8×).
 - **X4 sizing:** see the note above; 47 rows and 14 chains hold for today's designer only.
+
+## Not measured
+
+- Passband ripple and the Q15 / Q31 attained stopbands under a re-tuned β (the pin criterion is
+  the stopband alone).
+- Instruction counts at ×4 and ×16, at any profile but `economy`, of the worst single call
+  (`callmax_*`), and the size and stack ceilings of the new chains; and the double format on
+  target. X3's question is ×8 at `economy`, and X-a2 adds its own workloads and ceilings.
+- The FFT on a target (the M55's CMSIS-Helium float backend): host wall clock only.
 
 ## Layout and how to run
 
