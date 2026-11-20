@@ -34,15 +34,16 @@ with their engine.
   down), 3–34× under r8brain's matched setting; in float, r8brain's FFT
   convolution undercuts `bridge`'s polyphase at both tiers, at 4–15× the
   latency.
-- **rational.** One Nyquist stage per ratio at 0.22 ms (by 2) and 0.33 ms
+- **rational.** One Nyquist stage per ratio at 0.20 ms (by 2) and 0.30 ms
   (3/2, 2/3) of latency, the shortest in its table; the competitors' matched
   settings sit one notch below their 44.1 ↔ 48 ones, and SpeexDSP's quality
   2 is the one competitor setting that lands on `economy`'s 70 dB. At 3/2,
   the one ratio where a 997 Hz probe's image lands in band, `economy`
-  measures −88 dB and `transparent` −140 dB; elsewhere every float row is at
-  the 24-bit ceiling. Its Q15 stage is the cheapest row at every ratio on
-  every target (189–379 instructions per stereo frame on the M55, 291–575
-  on the M33), and in float the short Nyquist stage holds its own against
+  measures −93 dB and `transparent` −141 dB (since X17's re-tuned designer;
+  −88 and −140 before); elsewhere every float row is at the 24-bit ceiling.
+  Its Q15 stage is the cheapest row at every ratio on every target
+  (189–379 instructions per stereo frame on the M55, 291–575 on the M33,
+  measured before X17 shortened its designs), and in float the short Nyquist stage holds its own against
   r8brain's FFT (0.8–2.5× at economy), which `bridge`'s longer polyphase
   does not.
 

@@ -237,10 +237,12 @@ ctest --test-dir build -R 'rational\.(Chain|chain_test|chain_golden_test)\.' --o
 ctest --test-dir build -R 'rational\.Matrix\.' --output-on-failure
 
 # Regenerate the matrix from the pinned lengths and compare to the plan;
-# `rule` lists the rows where the fewest-stages rule bit, `pins` prints
-# design.h's relaxation tables:
+# `rule` lists the rows where the fewest-stages rule bites, `pins` prints
+# design.h's relaxation tables, and `frozen` the rows the rule would move
+# while the selection is frozen (X17, until X-a3):
 python3 rational/tools/coverage/matrix.py diff
 python3 rational/tools/coverage/matrix.py rule
+python3 rational/tools/coverage/matrix.py frozen
 
 # Break it on purpose: in design_divisor, return {1, 1} for every q. Every
 # stage is now designed at the full profile — the chains still meet their
