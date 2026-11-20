@@ -57,7 +57,8 @@ margin and grid (`design.h`: `k_design_margin_db`, `k_design_grid_points`).
   (2.2). Its delay path is always K = N, and its passband group delay (2K high-rate samples: 14 at
   `economy`, 38 at `transparent`) is below the FIR half-band's 21 and 61.
 - At divisor 8 the two variants are the same filter up to one sample of delay: the N3 elliptic
-  half-band has one path empty, so its other path already approximates the delay.
+  half-band's second path holds no section, so it is a bare delay and the design already has the
+  near-linear form.
 - Quantizing the coefficients to I8's formats (Q31 one-multiplier, Q2.30 second-order) moves no
   stopband by more than 0.02 dB (`outputs/tables.md` section 8).
 
