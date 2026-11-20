@@ -1,0 +1,4 @@
+down2.down2  macs 49/1 latency 11.7500
+down4        macs 49/1 latency 7.7500
+up2.up2      macs 49/4 latency 47.0000
+up4          macs 49/4 latency 31.0000

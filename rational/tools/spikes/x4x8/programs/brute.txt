@@ -1,0 +1,1848 @@
+economy|8|up_8|21.1250|95.0000
+economy|1/8|down_8|169.0000|11.8750
+economy|4|ratio<4, 1>|16.7500|43.0000
+economy|1/4|ratio<1, 4>|67.0000|10.7500
+economy|4|up_2 . up_2|13.2500|55.0000
+economy|1/4|up_2 . down_8|229.0000|13.5000
+economy|8|up_2 . ratio<4, 1>|10.6250|103.0000
+economy|1/4|down_2 . down_2|53.0000|13.7500
+economy|4|down_2 . up_8|24.0000|179.0000
+economy|1/8|down_2 . ratio<1, 4>|127.0000|12.3750
+economy|4|up_3 . ratio_4_3|19.0000|49.0000
+economy|8|up_3 . ratio_8_3|14.5000|98.3333
+economy|1/4|down_3 . ratio_3_4|89.0000|18.7500
+economy|1/8|down_3 . ratio_3_8|119.6667|13.6250
+economy|4|up_6 . ratio_2_3|44.7500|52.0000
+economy|8|up_6 . ratio_4_3|21.3750|99.6667
+economy|1/4|down_6 . ratio_3_2|95.6667|33.7500
+economy|1/8|down_6 . ratio_3_4|190.3333|19.6250
+economy|4|up_8 . down_2|57.2500|54.0000
+economy|1/4|down_8 . up_2|96.0000|44.7500
+economy|1/4|ratio_3_2 . down_6|163.0000|13.0000
+economy|4|ratio_3_2 . ratio_8_3|26.7500|74.3333
+economy|4|ratio_2_3 . up_6|25.5833|135.0000
+economy|1/4|ratio_2_3 . ratio_3_8|102.3333|13.6250
+economy|4|ratio_4_3 . up_3|20.5833|75.0000
+economy|8|ratio_4_3 . up_6|22.9583|157.0000
+economy|1/4|ratio_3_4 . down_3|84.0000|12.2500
+economy|1/8|ratio_3_4 . down_6|183.0000|12.4583
+economy|8|ratio_8_3 . up_3|14.0417|109.0000
+economy|4|ratio_8_3 . ratio_3_2|21.0833|54.5000
+economy|1/8|ratio_3_8 . down_3|124.0000|12.2917
+economy|1/4|ratio_3_8 . ratio_2_3|128.0000|18.5833
+economy|8|ratio<4, 1> . up_2|15.8750|99.0000
+economy|1/8|ratio<1, 4> . down_2|85.0000|12.8750
+economy|8|up_2 . up_2 . up_2|14.1250|123.0000
+economy|8|up_2 . down_2 . up_8|26.8750|263.0000
+economy|1/8|up_2 . down_2 . down_8|313.0000|12.7500
+economy|4|up_2 . down_2 . ratio<4, 1>|28.2500|127.0000
+economy|1/4|up_2 . down_2 . ratio<1, 4>|187.0000|14.0000
+economy|4|up_2 . up_3 . ratio_2_3|30.7500|56.0000
+economy|8|up_2 . up_3 . ratio_4_3|14.3750|107.6667
+economy|4|up_2 . down_3 . up_6|33.4167|177.0000
+economy|1/4|up_2 . down_3 . ratio_3_8|179.6667|15.2500
+economy|4|up_2 . up_6 . down_3|52.2500|56.3333
+economy|8|up_2 . up_6 . ratio_2_3|27.1250|107.0000
+economy|1/4|up_2 . down_6 . ratio_3_4|250.3333|21.2500
+economy|1/8|up_2 . down_6 . ratio_3_8|271.6667|14.1250
+economy|8|up_2 . up_8 . down_2|29.6250|107.0000
+economy|4|up_2 . up_8 . ratio<1, 4>|72.2500|56.5000
+economy|1/8|up_2 . down_8 . down_2|237.0000|13.3750
+economy|4|up_2 . ratio_3_2 . ratio_4_3|18.7500|57.6667
+economy|8|up_2 . ratio_3_2 . ratio_8_3|14.3750|115.6667
+economy|4|up_2 . ratio_2_3 . up_3|31.5833|106.0000
+economy|8|up_2 . ratio_2_3 . up_6|28.4583|219.0000
+economy|8|up_2 . ratio_4_3 . up_3|12.4583|117.0000
+economy|4|up_2 . ratio_4_3 . ratio_3_2|17.9167|58.5000
+economy|1/4|up_2 . ratio_3_4 . down_6|243.0000|14.0833
+economy|4|up_2 . ratio_3_4 . ratio_8_3|37.7500|102.3333
+economy|8|up_2 . ratio_8_3 . ratio_3_2|15.7917|110.5000
+economy|4|up_2 . ratio_8_3 . ratio_3_4|30.5833|56.5000
+economy|1/4|up_2 . ratio_3_8 . down_3|184.0000|13.9167
+economy|1/8|up_2 . ratio_3_8 . down_6|319.0000|12.9167
+economy|4|up_2 . ratio<4, 1> . down_2|36.2500|58.0000
+economy|1/4|up_2 . ratio<1, 4> . down_2|145.0000|14.5000
+economy|4|up_2 . ratio<1, 4> . up_8|33.2500|207.0000
+economy|1/8|up_2 . ratio<1, 4> . ratio<1, 4>|263.0000|12.3750
+economy|8|down_2 . up_2 . up_8|11.7500|375.0000
+economy|1/8|down_2 . up_2 . down_8|289.0000|15.1250
+economy|4|down_2 . up_2 . ratio<4, 1>|13.5000|187.0000
+economy|1/4|down_2 . up_2 . ratio<1, 4>|127.0000|17.2500
+economy|1/8|down_2 . down_2 . down_2|113.0000|15.3750
+economy|1/4|down_2 . up_3 . down_6|193.0000|17.4167
+economy|4|down_2 . up_3 . ratio_8_3|17.3750|182.3333
+economy|1/4|down_2 . down_3 . ratio_3_2|75.0000|35.2500
+economy|1/8|down_2 . down_3 . ratio_3_4|149.0000|20.3750
+economy|4|down_2 . up_6 . ratio_4_3|24.2500|183.6667
+economy|8|down_2 . up_6 . ratio_8_3|16.1250|367.6667
+economy|1/4|down_2 . down_6 . up_3|73.3333|69.2500
+economy|1/8|down_2 . down_6 . ratio_3_2|131.6667|34.6250
+economy|8|down_2 . up_8 . up_2|16.5000|365.0000
+economy|1/8|down_2 . down_8 . up_2|132.0000|45.6250
+economy|1/4|down_2 . down_8 . ratio<4, 1>|77.0000|92.2500
+economy|1/4|down_2 . ratio_3_2 . down_3|96.0000|16.2500
+economy|1/8|down_2 . ratio_3_2 . down_6|223.0000|14.6250
+economy|1/4|down_2 . ratio_2_3 . ratio_3_4|102.3333|22.0000
+economy|1/8|down_2 . ratio_2_3 . ratio_3_8|162.3333|15.2500
+economy|4|down_2 . ratio_4_3 . up_6|25.8333|241.0000
+economy|1/4|down_2 . ratio_4_3 . ratio_3_8|114.3333|17.5000
+economy|1/8|down_2 . ratio_3_4 . down_3|144.0000|13.8750
+economy|1/4|down_2 . ratio_3_4 . ratio_2_3|106.0000|21.0833
+economy|4|down_2 . ratio_8_3 . up_3|16.9167|193.0000
+economy|8|down_2 . ratio_8_3 . up_6|13.4583|387.0000
+economy|1/8|down_2 . ratio_3_8 . ratio_2_3|188.0000|20.2083
+economy|1/4|down_2 . ratio_3_8 . ratio_4_3|94.5000|33.4167
+economy|4|down_2 . ratio<4, 1> . up_2|18.7500|183.0000
+economy|1/4|down_2 . ratio<4, 1> . down_8|261.0000|17.5000
+economy|8|down_2 . ratio<4, 1> . ratio<4, 1>|13.3750|359.0000
+economy|1/4|down_2 . ratio<1, 4> . up_2|75.0000|45.7500
+economy|4|up_3 . up_2 . ratio_2_3|37.0000|56.0000
+economy|8|up_3 . up_2 . ratio_4_3|17.5000|107.6667
+economy|1/4|up_3 . down_2 . down_6|259.0000|13.5833
+economy|4|up_3 . down_2 . ratio_8_3|41.0000|102.3333
+economy|8|up_3 . down_3 . up_8|32.3750|265.6667
+economy|1/8|up_3 . down_3 . down_8|441.0000|12.7917
+economy|4|up_3 . down_3 . ratio<4, 1>|39.2500|128.3333
+economy|1/4|up_3 . down_3 . ratio<1, 4>|235.0000|13.0833
+economy|1/4|up_3 . down_6 . down_2|209.0000|14.0833
+economy|4|up_3 . down_6 . up_8|41.5000|208.3333
+economy|1/8|up_3 . down_6 . ratio<1, 4>|407.0000|12.4167
+economy|8|up_3 . up_8 . down_3|49.2500|102.0000
+economy|4|up_3 . up_8 . down_6|115.5000|54.0000
+economy|1/8|up_3 . down_8 . down_3|394.0000|12.7500
+economy|1/4|up_3 . down_8 . ratio_2_3|370.0000|19.7500
+economy|4|up_3 . ratio_2_3 . up_2|26.0000|65.0000
+economy|1/4|up_3 . ratio_2_3 . down_8|345.0000|13.5000
+economy|8|up_3 . ratio_2_3 . ratio<4, 1>|17.0000|123.0000
+economy|8|up_3 . ratio_4_3 . up_2|17.0000|111.0000
+economy|4|up_3 . ratio_8_3 . down_2|44.0000|55.6667
+economy|4|up_3 . ratio<4, 1> . down_3|55.5000|53.6667
+economy|8|up_3 . ratio<4, 1> . ratio_2_3|28.7500|101.6667
+economy|1/4|up_3 . ratio<1, 4> . down_3|222.0000|13.4167
+economy|1/8|up_3 . ratio<1, 4> . down_6|407.0000|12.9167
+economy|4|down_3 . up_2 . up_6|14.1667|283.0000
+economy|1/4|down_3 . up_2 . ratio_3_8|154.3333|27.7500
+economy|1/4|down_3 . down_2 . ratio_3_2|58.3333|35.2500
+economy|1/8|down_3 . down_2 . ratio_3_4|115.6667|20.3750
+economy|8|down_3 . up_3 . up_8|12.6250|551.0000
+economy|1/8|down_3 . up_3 . down_8|281.0000|15.3750
+economy|4|down_3 . up_3 . ratio<4, 1>|15.2500|275.0000
+economy|1/4|down_3 . up_3 . ratio<1, 4>|187.0000|26.7500
+economy|4|down_3 . up_6 . up_2|18.3333|277.0000
+economy|1/4|down_3 . up_6 . down_8|390.3333|28.7500
+economy|8|down_3 . up_6 . ratio<4, 1>|13.1667|555.0000
+economy|8|down_3 . up_8 . up_3|14.5833|552.0000
+economy|4|down_3 . up_8 . ratio_3_2|23.5000|276.0000
+economy|1/8|down_3 . down_8 . up_3|116.6667|69.0000
+economy|1/4|down_3 . down_8 . up_6|71.0000|145.0000
+economy|1/4|down_3 . ratio_3_2 . down_2|113.0000|26.5000
+economy|4|down_3 . ratio_3_2 . up_8|26.7500|351.0000
+economy|1/8|down_3 . ratio_3_2 . ratio<1, 4>|151.0000|14.2500
+economy|1/8|down_3 . ratio_3_4 . down_2|105.0000|14.6250
+economy|1/4|down_3 . ratio_3_8 . up_2|71.3333|48.2500
+economy|4|down_3 . ratio<4, 1> . up_3|16.3333|271.0000
+economy|8|down_3 . ratio<4, 1> . up_6|13.1667|543.0000
+economy|1/4|down_3 . ratio<1, 4> . up_3|65.3333|67.7500
+economy|1/8|down_3 . ratio<1, 4> . ratio_3_2|115.6667|33.8750
+economy|4|up_6 . up_2 . down_3|64.7500|54.3333
+economy|8|up_6 . up_2 . ratio_2_3|33.3750|103.0000
+economy|4|up_6 . down_2 . ratio_4_3|49.2500|62.3333
+economy|8|up_6 . down_2 . ratio_8_3|29.6250|125.0000
+economy|4|up_6 . down_3 . up_2|48.2500|69.6667
+economy|1/4|up_6 . down_3 . down_8|509.0000|13.5417
+economy|8|up_6 . down_3 . ratio<4, 1>|28.1250|132.3333
+economy|8|up_6 . down_6 . up_8|51.3750|284.3333
+economy|1/8|up_6 . down_6 . down_8|825.0000|12.8333
+economy|4|up_6 . down_6 . ratio<4, 1>|77.2500|137.6667
+economy|1/4|up_6 . down_6 . ratio<1, 4>|475.0000|13.1667
+economy|8|up_6 . up_8 . down_6|98.8750|103.6667
+economy|1/4|up_6 . down_8 . down_3|462.0000|13.5000
+economy|1/8|up_6 . down_8 . down_6|791.0000|12.9583
+economy|8|up_6 . ratio_2_3 . up_2|29.8750|117.0000
+economy|4|up_6 . ratio_4_3 . down_2|57.7500|56.3333
+economy|8|up_6 . ratio_8_3 . down_2|38.3750|103.3333
+economy|4|up_6 . ratio_8_3 . ratio<1, 4>|89.7500|54.6667
+economy|8|up_6 . ratio<4, 1> . down_3|50.8750|103.3333
+economy|4|up_6 . ratio<4, 1> . down_6|118.7500|54.6667
+economy|1/4|up_6 . ratio<1, 4> . down_6|475.0000|13.6667
+economy|4|up_6 . ratio<1, 4> . ratio_8_3|76.5000|107.6667
+economy|1/4|down_6 . up_2 . ratio_3_4|125.0000|44.2500
+economy|1/8|down_6 . up_2 . ratio_3_8|255.6667|28.6250
+economy|1/4|down_6 . down_2 . up_3|56.6667|70.7500
+economy|1/8|down_6 . down_2 . ratio_3_2|98.3333|35.3750
+economy|1/4|down_6 . up_3 . down_2|133.6667|44.2500
+economy|4|down_6 . up_3 . up_8|15.7917|579.0000
+economy|1/8|down_6 . up_3 . ratio<1, 4>|288.3333|27.6250
+economy|8|down_6 . up_6 . up_8|12.1667|1167.0000
+economy|1/8|down_6 . up_6 . down_8|491.6667|29.6250
+economy|4|down_6 . up_6 . ratio<4, 1>|16.3333|583.0000
+economy|1/4|down_6 . up_6 . ratio<1, 4>|228.3333|46.2500
+economy|4|down_6 . up_8 . up_3|17.7500|580.0000
+economy|8|down_6 . up_8 . up_6|12.8750|1161.0000
+economy|1/8|down_6 . down_8 . up_6|103.0000|145.1250
+economy|1/8|down_6 . ratio_3_2 . down_2|214.3333|27.3750
+economy|1/4|down_6 . ratio_3_4 . up_2|106.6667|60.2500
+economy|1/8|down_6 . ratio_3_8 . up_2|111.3333|48.3750
+economy|1/4|down_6 . ratio_3_8 . ratio<4, 1>|66.6667|97.7500
+economy|4|down_6 . ratio<4, 1> . up_6|16.3333|571.0000
+economy|1/4|down_6 . ratio<4, 1> . ratio_3_8|189.0000|45.7500
+economy|1/8|down_6 . ratio<1, 4> . up_3|105.3333|67.8750
+economy|1/4|down_6 . ratio<1, 4> . up_6|65.3333|142.7500
+economy|8|up_8 . up_2 . down_2|39.1250|102.0000
+economy|4|up_8 . up_2 . ratio<1, 4>|91.2500|54.0000
+economy|8|up_8 . down_2 . up_2|36.1250|121.0000
+economy|8|up_8 . up_3 . down_3|55.1250|102.3333
+economy|4|up_8 . up_3 . down_6|127.2500|54.1667
+economy|8|up_8 . down_3 . up_3|35.1250|123.0000
+economy|4|up_8 . down_3 . ratio_3_2|63.2500|61.5000
+economy|8|up_8 . up_6 . down_6|103.1250|102.6667
+economy|4|up_8 . down_6 . up_3|97.5833|115.0000
+economy|8|up_8 . down_6 . up_6|61.4583|237.0000
+economy|8|up_8 . up_8 . down_8|135.1250|102.7500
+economy|8|up_8 . down_8 . up_8|63.3750|285.0000
+economy|1/8|up_8 . down_8 . down_8|1081.0000|12.8438
+economy|4|up_8 . down_8 . ratio<4, 1>|101.2500|138.0000
+economy|1/4|up_8 . down_8 . ratio<1, 4>|635.0000|13.1875
+economy|4|up_8 . ratio_3_2 . down_3|80.2500|54.0000
+economy|8|up_8 . ratio_3_2 . ratio_2_3|41.1250|102.3333
+economy|8|up_8 . ratio_2_3 . ratio_3_2|37.7917|109.0000
+economy|4|up_8 . ratio_2_3 . ratio_3_4|74.5833|55.7500
+economy|8|up_8 . ratio_4_3 . ratio_3_4|39.7917|102.5000
+economy|4|up_8 . ratio_4_3 . ratio_3_8|85.2500|54.2500
+economy|4|up_8 . ratio_3_4 . ratio_2_3|72.2500|54.6667
+economy|8|up_8 . ratio_3_4 . ratio_4_3|35.1250|105.0000
+economy|8|up_8 . ratio_8_3 . ratio_3_8|61.1250|102.7500
+economy|4|up_8 . ratio_3_8 . ratio_4_3|69.7500|60.3333
+economy|8|up_8 . ratio_3_8 . ratio_8_3|39.8750|121.0000
+economy|4|up_8 . ratio<4, 1> . down_8|163.2500|54.2500
+economy|8|up_8 . ratio<4, 1> . ratio<1, 4>|71.1250|102.5000
+economy|4|up_8 . ratio<1, 4> . up_2|65.2500|70.0000
+economy|1/4|up_8 . ratio<1, 4> . down_8|653.0000|13.5625
+economy|8|up_8 . ratio<1, 4> . ratio<4, 1>|36.6250|133.0000
+economy|1/8|down_8 . up_2 . down_2|215.0000|32.8750
+economy|1/8|down_8 . down_2 . up_2|94.0000|46.8750
+economy|1/4|down_8 . down_2 . ratio<4, 1>|58.0000|94.7500
+economy|1/8|down_8 . up_3 . down_3|259.0000|33.2083
+economy|1/4|down_8 . up_3 . ratio_2_3|121.5000|49.7500
+economy|1/8|down_8 . down_3 . up_3|101.0000|68.8750
+economy|1/4|down_8 . down_3 . up_6|63.1667|144.7500
+economy|1/4|down_8 . up_6 . down_3|166.0000|52.0833
+economy|1/8|down_8 . up_6 . down_6|411.0000|35.5417
+economy|1/8|down_8 . down_6 . up_6|97.3333|145.8750
+economy|8|down_8 . up_8 . up_8|12.4062|1551.0000
+economy|1/8|down_8 . up_8 . down_8|507.0000|35.6250
+economy|4|down_8 . up_8 . ratio<4, 1>|16.8125|775.0000
+economy|1/4|down_8 . up_8 . ratio<1, 4>|200.0000|52.2500
+economy|1/8|down_8 . down_8 . up_8|99.2500|193.8750
+economy|1/8|down_8 . ratio_3_2 . ratio_2_3|224.0000|33.2083
+economy|1/4|down_8 . ratio_3_2 . ratio_4_3|112.5000|59.4167
+economy|1/4|down_8 . ratio_2_3 . up_3|110.3333|87.7500
+economy|1/8|down_8 . ratio_2_3 . ratio_3_2|205.6667|43.8750
+economy|1/4|down_8 . ratio_4_3 . ratio_3_2|110.6667|61.2500
+economy|1/8|down_8 . ratio_4_3 . ratio_3_4|220.3333|33.3750
+economy|1/8|down_8 . ratio_3_4 . ratio_4_3|207.5000|40.5417
+economy|1/4|down_8 . ratio_3_4 . ratio_8_3|116.5000|84.0833
+economy|1/4|down_8 . ratio_8_3 . ratio_3_4|125.6667|52.2500
+economy|1/8|down_8 . ratio_8_3 . ratio_3_8|289.0000|35.6250
+economy|1/8|down_8 . ratio_3_8 . ratio_8_3|116.0000|68.2083
+economy|1/4|down_8 . ratio<4, 1> . down_2|133.0000|51.7500
+economy|4|down_8 . ratio<4, 1> . up_8|16.2500|763.0000
+economy|1/8|down_8 . ratio<4, 1> . ratio<1, 4>|303.0000|33.3750
+economy|1/4|down_8 . ratio<1, 4> . up_8|65.0000|190.7500
+economy|1/8|down_8 . ratio<1, 4> . ratio<4, 1>|104.5000|90.8750
+economy|4|ratio_3_2 . up_2 . ratio_4_3|22.0000|77.0000
+economy|8|ratio_3_2 . up_2 . ratio_8_3|16.0000|154.3333
+economy|1/4|ratio_3_2 . down_2 . down_3|132.0000|14.0000
+economy|1/8|ratio_3_2 . down_2 . down_6|243.0000|12.8750
+economy|1/4|ratio_3_2 . down_3 . down_2|107.0000|14.0000
+economy|4|ratio_3_2 . down_3 . up_8|29.3750|199.0000
+economy|1/8|ratio_3_2 . down_3 . ratio<1, 4>|219.0000|12.3750
+economy|1/8|ratio_3_2 . down_6 . down_2|193.0000|13.3750
+economy|4|ratio_3_2 . up_8 . down_3|90.0000|79.0000
+economy|8|ratio_3_2 . up_8 . ratio_2_3|46.0000|152.3333
+economy|1/8|ratio_3_2 . down_8 . ratio_2_3|354.0000|19.0417
+economy|1/4|ratio_3_2 . down_8 . ratio_4_3|185.5000|31.3333
+economy|8|ratio_3_2 . ratio_2_3 . up_8|28.0000|265.6667
+economy|1/8|ratio_3_2 . ratio_2_3 . down_8|329.0000|12.7917
+economy|4|ratio_3_2 . ratio_2_3 . ratio<4, 1>|30.5000|128.3333
+economy|1/4|ratio_3_2 . ratio_2_3 . ratio<1, 4>|167.0000|13.0833
+economy|4|ratio_3_2 . ratio_4_3 . up_2|21.5000|84.3333
+economy|1/4|ratio_3_2 . ratio_4_3 . down_8|261.0000|13.6667
+economy|8|ratio_3_2 . ratio_4_3 . ratio<4, 1>|14.7500|161.6667
+economy|8|ratio_3_2 . ratio_8_3 . up_2|20.8750|161.6667
+economy|4|ratio_3_2 . ratio<4, 1> . ratio_2_3|45.2500|76.0000
+economy|8|ratio_3_2 . ratio<4, 1> . ratio_4_3|21.6250|147.6667
+economy|1/8|ratio_3_2 . ratio<1, 4> . down_3|206.0000|12.7083
+economy|1/4|ratio_3_2 . ratio<1, 4> . ratio_2_3|175.0000|19.0000
+economy|4|ratio_2_3 . up_2 . up_3|16.2500|141.0000
+economy|8|ratio_2_3 . up_2 . up_6|13.1250|283.0000
+economy|1/4|ratio_2_3 . down_2 . ratio_3_4|98.3333|20.3750
+economy|1/8|ratio_2_3 . down_2 . ratio_3_8|181.0000|15.1875
+economy|4|ratio_2_3 . up_3 . up_2|20.4167|141.0000
+economy|1/4|ratio_2_3 . up_3 . down_8|263.6667|15.3750
+economy|8|ratio_2_3 . up_3 . ratio<4, 1>|14.2083|275.0000
+economy|8|ratio_2_3 . up_6 . up_2|17.2917|277.0000
+economy|8|ratio_2_3 . up_8 . ratio_3_2|22.4583|276.0000
+economy|4|ratio_2_3 . up_8 . ratio_3_4|43.9167|139.0000
+economy|1/4|ratio_2_3 . down_8 . up_3|102.0000|69.0000
+economy|1/8|ratio_2_3 . down_8 . ratio_3_2|189.0000|34.5000
+economy|8|ratio_2_3 . ratio_3_2 . up_8|25.7083|351.0000
+economy|1/8|ratio_2_3 . ratio_3_2 . down_8|302.3333|13.6250
+economy|4|ratio_2_3 . ratio_3_2 . ratio<4, 1>|25.9167|171.0000
+economy|1/4|ratio_2_3 . ratio_3_2 . ratio<1, 4>|133.6667|14.2500
+economy|1/4|ratio_2_3 . ratio_3_4 . down_2|87.6667|14.6250
+economy|4|ratio_2_3 . ratio_3_4 . up_8|30.1667|245.0000
+economy|1/8|ratio_2_3 . ratio_3_4 . ratio<1, 4>|196.3333|12.8125
+economy|1/8|ratio_2_3 . ratio_3_8 . down_2|153.0000|13.8125
+economy|8|ratio_2_3 . ratio<4, 1> . up_3|15.2917|271.0000
+economy|4|ratio_2_3 . ratio<4, 1> . ratio_3_2|23.5833|135.5000
+economy|1/4|ratio_2_3 . ratio<1, 4> . ratio_3_2|98.3333|33.8750
+economy|1/8|ratio_2_3 . ratio<1, 4> . ratio_3_4|195.6667|19.6875
+economy|8|ratio_4_3 . up_2 . up_3|13.6250|163.0000
+economy|4|ratio_4_3 . up_2 . ratio_3_2|20.2500|81.5000
+economy|4|ratio_4_3 . down_2 . up_6|29.5833|177.0000
+economy|1/4|ratio_4_3 . down_2 . ratio_3_8|145.0000|15.5000
+economy|8|ratio_4_3 . up_3 . up_2|17.7917|163.0000
+economy|4|ratio_4_3 . up_6 . down_2|60.9167|85.0000
+economy|8|ratio_4_3 . up_8 . ratio_3_4|41.2917|161.0000
+economy|4|ratio_4_3 . up_8 . ratio_3_8|88.2500|83.5000
+economy|1/4|ratio_4_3 . down_8 . ratio_3_2|161.0000|34.7500
+economy|1/8|ratio_4_3 . down_8 . ratio_3_4|321.0000|20.1250
+economy|4|ratio_4_3 . ratio_3_2 . up_2|20.5833|88.0000
+economy|1/4|ratio_4_3 . ratio_3_2 . down_8|266.3333|13.9375
+economy|8|ratio_4_3 . ratio_3_2 . ratio<4, 1>|14.2917|169.0000
+economy|8|ratio_4_3 . ratio_3_4 . up_8|27.5417|267.0000
+economy|1/8|ratio_4_3 . ratio_3_4 . down_8|318.3333|12.8125
+economy|4|ratio_4_3 . ratio_3_4 . ratio<4, 1>|29.5833|129.0000
+economy|1/4|ratio_4_3 . ratio_3_4 . ratio<1, 4>|160.3333|13.1250
+economy|1/4|ratio_4_3 . ratio_3_8 . down_2|117.0000|14.1250
+economy|4|ratio_4_3 . ratio_3_8 . up_8|31.6667|209.0000
+economy|1/8|ratio_4_3 . ratio_3_8 . ratio<1, 4>|239.0000|12.4375
+economy|8|ratio_4_3 . ratio<4, 1> . ratio_3_2|20.9583|157.5000
+economy|4|ratio_4_3 . ratio<4, 1> . ratio_3_4|40.9167|80.0000
+economy|1/4|ratio_4_3 . ratio<1, 4> . ratio_3_4|159.6667|20.0000
+economy|1/8|ratio_4_3 . ratio<1, 4> . ratio_3_8|213.0000|14.1250
+economy|1/4|ratio_3_4 . up_2 . down_6|205.0000|15.5833
+economy|4|ratio_3_4 . up_2 . ratio_8_3|18.6250|126.3333
+economy|1/8|ratio_3_4 . down_2 . down_3|152.0000|13.4583
+economy|1/4|ratio_3_4 . down_2 . ratio_2_3|106.0000|19.2500
+economy|1/8|ratio_3_4 . down_3 . down_2|127.0000|13.4583
+economy|1/4|ratio_3_4 . down_6 . up_2|103.0000|45.9167
+economy|4|ratio_3_4 . up_8 . ratio_2_3|51.6250|125.3333
+economy|8|ratio_3_4 . up_8 . ratio_4_3|24.8125|246.3333
+economy|1/8|ratio_3_4 . down_8 . ratio_4_3|205.5000|30.7917
+economy|1/4|ratio_3_4 . down_8 . ratio_8_3|115.5000|64.5833
+economy|1/4|ratio_3_4 . ratio_2_3 . down_2|91.0000|14.4167
+economy|4|ratio_3_4 . ratio_2_3 . up_8|30.6250|237.6667
+economy|1/8|ratio_3_4 . ratio_2_3 . ratio<1, 4>|187.0000|12.5417
+economy|8|ratio_3_4 . ratio_4_3 . up_8|25.9375|324.3333
+economy|1/8|ratio_3_4 . ratio_4_3 . down_8|281.0000|13.1250
+economy|4|ratio_3_4 . ratio_4_3 . ratio<4, 1>|26.3750|157.6667
+economy|1/4|ratio_3_4 . ratio_4_3 . ratio<1, 4>|137.0000|13.9167
+economy|4|ratio_3_4 . ratio_8_3 . up_2|23.5000|133.6667
+economy|1/4|ratio_3_4 . ratio_8_3 . down_8|279.0000|15.0833
+economy|8|ratio_3_4 . ratio_8_3 . ratio<4, 1>|15.7500|260.3333
+economy|4|ratio_3_4 . ratio<4, 1> . ratio_4_3|25.7500|121.0000
+economy|8|ratio_3_4 . ratio<4, 1> . ratio_8_3|17.8750|242.3333
+economy|1/8|ratio_3_4 . ratio<1, 4> . ratio_2_3|195.0000|18.4583
+economy|1/4|ratio_3_4 . ratio<1, 4> . ratio_4_3|106.0000|30.2500
+economy|8|ratio_8_3 . up_2 . ratio_3_2|19.0417|121.5000
+economy|4|ratio_8_3 . up_2 . ratio_3_4|37.0833|62.0000
+economy|4|ratio_8_3 . down_2 . up_3|36.7500|111.0000
+economy|8|ratio_8_3 . down_2 . up_6|31.0417|229.0000
+economy|4|ratio_8_3 . up_3 . down_2|43.0833|61.0000
+economy|8|ratio_8_3 . up_6 . down_2|33.0417|113.0000
+economy|4|ratio_8_3 . up_6 . ratio<1, 4>|79.0833|59.5000
+economy|8|ratio_8_3 . up_8 . ratio_3_8|51.7083|113.5000
+economy|1/4|ratio_8_3 . down_8 . ratio_3_4|349.0000|20.8750
+economy|1/8|ratio_8_3 . down_8 . ratio_3_8|405.0000|14.1875
+economy|8|ratio_8_3 . ratio_3_2 . up_2|18.0417|122.0000
+economy|4|ratio_8_3 . ratio_3_4 . up_2|28.0833|70.0000
+economy|1/4|ratio_8_3 . ratio_3_4 . down_8|346.3333|13.5625
+economy|8|ratio_8_3 . ratio_3_4 . ratio<4, 1>|18.0417|133.0000
+economy|8|ratio_8_3 . ratio_3_8 . up_8|36.1250|285.0000
+economy|1/8|ratio_8_3 . ratio_3_8 . down_8|489.0000|12.8438
+economy|4|ratio_8_3 . ratio_3_8 . ratio<4, 1>|46.7500|138.0000
+economy|1/4|ratio_8_3 . ratio_3_8 . ratio<1, 4>|267.0000|13.1875
+economy|8|ratio_8_3 . ratio<4, 1> . ratio_3_4|27.7083|113.0000
+economy|4|ratio_8_3 . ratio<4, 1> . ratio_3_8|61.0833|59.5000
+economy|4|ratio_8_3 . ratio<1, 4> . up_6|45.4167|183.0000
+economy|1/4|ratio_8_3 . ratio<1, 4> . ratio_3_8|241.0000|14.8750
+economy|1/4|ratio_3_8 . up_2 . down_3|175.0000|25.5833
+economy|1/8|ratio_3_8 . up_2 . down_6|245.0000|15.6250
+economy|1/8|ratio_3_8 . down_2 . ratio_2_3|146.0000|19.2917
+economy|1/4|ratio_3_8 . down_2 . ratio_4_3|73.5000|31.5833
+economy|1/4|ratio_3_8 . down_3 . up_2|73.5000|45.5833
+economy|1/8|ratio_3_8 . down_6 . up_2|135.0000|45.9583
+economy|1/4|ratio_3_8 . down_6 . ratio<4, 1>|78.5000|92.9167
+economy|4|ratio_3_8 . up_8 . ratio_4_3|28.0625|258.3333
+economy|8|ratio_3_8 . up_8 . ratio_8_3|18.0312|517.0000
+economy|1/8|ratio_3_8 . down_8 . ratio_8_3|147.5000|64.6250
+economy|1/8|ratio_3_8 . ratio_2_3 . down_2|131.0000|14.4583
+economy|1/4|ratio_3_8 . ratio_4_3 . down_2|152.0000|25.5833
+economy|4|ratio_3_8 . ratio_4_3 . up_8|29.1875|336.3333
+economy|1/8|ratio_3_8 . ratio_4_3 . ratio<1, 4>|177.0000|13.9583
+economy|8|ratio_3_8 . ratio_8_3 . up_8|14.5000|545.6667
+economy|1/8|ratio_3_8 . ratio_8_3 . down_8|319.0000|15.1250
+economy|4|ratio_3_8 . ratio_8_3 . ratio<4, 1>|19.0000|272.3333
+economy|1/4|ratio_3_8 . ratio_8_3 . ratio<1, 4>|247.0000|26.5833
+economy|1/4|ratio_3_8 . ratio<4, 1> . down_6|317.0000|26.9167
+economy|4|ratio_3_8 . ratio<4, 1> . ratio_8_3|21.1250|254.3333
+economy|1/8|ratio_3_8 . ratio<1, 4> . ratio_4_3|146.0000|30.2917
+economy|1/4|ratio_3_8 . ratio<1, 4> . ratio_8_3|85.7500|63.5833
+economy|4|ratio<4, 1> . up_2 . down_2|46.7500|56.0000
+economy|4|ratio<4, 1> . down_2 . up_2|31.7500|69.0000
+economy|1/4|ratio<4, 1> . down_2 . down_8|365.0000|13.5000
+economy|8|ratio<4, 1> . down_2 . ratio<4, 1>|19.8750|131.0000
+economy|4|ratio<4, 1> . up_3 . down_3|58.7500|52.3333
+economy|8|ratio<4, 1> . up_3 . ratio_2_3|30.3750|99.0000
+economy|4|ratio<4, 1> . down_3 . up_3|46.7500|107.0000
+economy|8|ratio<4, 1> . down_3 . up_6|36.0417|221.0000
+economy|8|ratio<4, 1> . up_6 . down_3|50.8750|99.3333
+economy|4|ratio<4, 1> . up_6 . down_6|118.7500|52.6667
+economy|4|ratio<4, 1> . down_6 . up_6|57.0833|185.0000
+economy|1/4|ratio<4, 1> . down_6 . ratio_3_8|323.6667|14.8750
+economy|4|ratio<4, 1> . up_8 . down_8|158.7500|52.7500
+economy|8|ratio<4, 1> . up_8 . ratio<1, 4>|68.8750|99.5000
+economy|1/4|ratio<4, 1> . down_8 . down_2|289.0000|14.1250
+economy|4|ratio<4, 1> . down_8 . up_8|50.0000|209.0000
+economy|1/8|ratio<4, 1> . down_8 . ratio<1, 4>|551.0000|12.4375
+economy|4|ratio<4, 1> . ratio_3_2 . ratio_2_3|41.7500|52.3333
+economy|8|ratio<4, 1> . ratio_3_2 . ratio_4_3|19.8750|100.3333
+economy|8|ratio<4, 1> . ratio_2_3 . up_3|20.2083|114.0000
+economy|4|ratio<4, 1> . ratio_2_3 . ratio_3_2|33.4167|57.0000
+economy|8|ratio<4, 1> . ratio_4_3 . ratio_3_2|20.5417|102.5000
+economy|4|ratio<4, 1> . ratio_4_3 . ratio_3_4|40.0833|52.5000
+economy|4|ratio<4, 1> . ratio_3_4 . ratio_4_3|34.2500|55.6667
+economy|8|ratio<4, 1> . ratio_3_4 . ratio_8_3|22.1250|111.6667
+economy|8|ratio<4, 1> . ratio_8_3 . ratio_3_4|30.5417|99.5000
+economy|4|ratio<4, 1> . ratio_8_3 . ratio_3_8|66.7500|52.7500
+economy|1/4|ratio<4, 1> . ratio_3_8 . down_6|371.0000|13.6667
+economy|4|ratio<4, 1> . ratio_3_8 . ratio_8_3|61.7500|106.3333
+economy|8|ratio<4, 1> . ratio<4, 1> . down_2|32.8750|99.0000
+economy|4|ratio<4, 1> . ratio<4, 1> . ratio<1, 4>|78.7500|52.5000
+economy|8|ratio<4, 1> . ratio<1, 4> . up_8|37.8750|267.0000
+economy|1/8|ratio<4, 1> . ratio<1, 4> . down_8|569.0000|12.8125
+economy|4|ratio<4, 1> . ratio<1, 4> . ratio<4, 1>|50.2500|129.0000
+economy|1/4|ratio<4, 1> . ratio<1, 4> . ratio<1, 4>|315.0000|13.1250
+economy|1/4|ratio<1, 4> . up_2 . down_2|113.0000|31.7500
+economy|4|ratio<1, 4> . up_2 . up_8|14.5000|379.0000
+economy|1/8|ratio<1, 4> . up_2 . ratio<1, 4>|159.0000|16.3750
+economy|1/4|ratio<1, 4> . down_2 . up_2|54.0000|46.7500
+economy|1/4|ratio<1, 4> . up_3 . down_3|157.0000|32.0833
+economy|1/8|ratio<1, 4> . up_3 . down_6|225.0000|16.5417
+economy|1/4|ratio<1, 4> . down_3 . up_3|61.0000|68.7500
+economy|1/8|ratio<1, 4> . down_3 . ratio_3_2|107.0000|34.3750
+economy|1/4|ratio<1, 4> . up_6 . down_6|309.0000|34.4167
+economy|4|ratio<1, 4> . up_6 . ratio_8_3|18.8750|371.6667
+economy|1/8|ratio<1, 4> . down_6 . up_3|105.3333|69.3750
+economy|1/4|ratio<1, 4> . down_6 . up_6|65.3333|145.7500
+economy|4|ratio<1, 4> . up_8 . up_2|19.2500|369.0000
+economy|1/4|ratio<1, 4> . up_8 . down_8|405.0000|34.5000
+economy|8|ratio<1, 4> . up_8 . ratio<4, 1>|13.6250|739.0000
+economy|1/4|ratio<1, 4> . down_8 . up_8|67.2500|193.7500
+economy|1/8|ratio<1, 4> . down_8 . ratio<4, 1>|109.0000|92.3750
+economy|1/8|ratio<1, 4> . ratio_3_2 . down_3|128.0000|15.3750
+economy|1/4|ratio<1, 4> . ratio_3_2 . ratio_2_3|122.0000|32.0833
+economy|1/4|ratio<1, 4> . ratio_2_3 . ratio_3_2|103.6667|42.7500
+economy|1/8|ratio<1, 4> . ratio_2_3 . ratio_3_4|134.3333|21.1250
+economy|1/4|ratio<1, 4> . ratio_4_3 . ratio_3_4|118.3333|32.2500
+economy|1/8|ratio<1, 4> . ratio_4_3 . ratio_3_8|146.3333|16.6250
+economy|1/8|ratio<1, 4> . ratio_3_4 . ratio_2_3|138.0000|20.2083
+economy|1/4|ratio<1, 4> . ratio_3_4 . ratio_4_3|105.5000|39.4167
+economy|4|ratio<1, 4> . ratio_8_3 . up_6|16.2083|391.0000
+economy|1/4|ratio<1, 4> . ratio_8_3 . ratio_3_8|187.0000|34.5000
+economy|1/8|ratio<1, 4> . ratio_3_8 . ratio_4_3|126.5000|32.5417
+economy|1/4|ratio<1, 4> . ratio_3_8 . ratio_8_3|76.0000|68.0833
+economy|8|ratio<1, 4> . ratio<4, 1> . up_8|13.0625|727.0000
+economy|1/8|ratio<1, 4> . ratio<4, 1> . down_8|293.0000|16.6250
+economy|4|ratio<1, 4> . ratio<4, 1> . ratio<4, 1>|16.1250|363.0000
+economy|1/4|ratio<1, 4> . ratio<4, 1> . ratio<1, 4>|201.0000|32.2500
+economy|1/8|ratio<1, 4> . ratio<1, 4> . up_2|107.0000|44.8750
+economy|1/4|ratio<1, 4> . ratio<1, 4> . ratio<4, 1>|64.5000|90.7500
+super_economy|8|up_8|14.1250|63.0000
+super_economy|1/8|down_8|113.0000|7.8750
+super_economy|4|ratio<4, 1>|12.2500|31.0000
+super_economy|1/4|ratio<1, 4>|49.0000|7.7500
+super_economy|4|up_2 . up_2|12.2500|47.0000
+super_economy|1/4|up_2 . down_8|173.0000|9.5000
+super_economy|8|up_2 . ratio<4, 1>|10.1250|87.0000
+super_economy|1/4|down_2 . down_2|49.0000|11.7500
+super_economy|4|down_2 . up_8|16.5000|131.0000
+super_economy|1/8|down_2 . ratio<1, 4>|109.0000|9.3750
+super_economy|4|up_3 . ratio_4_3|16.0000|37.0000
+super_economy|8|up_3 . ratio_8_3|13.0000|74.3333
+super_economy|1/4|down_3 . ratio_3_4|65.0000|13.5000
+super_economy|1/8|down_3 . ratio_3_8|98.3333|9.6250
+super_economy|4|up_6 . ratio_2_3|34.7500|36.0000
+super_economy|8|up_6 . ratio_4_3|16.3750|67.6667
+super_economy|1/4|down_6 . ratio_3_2|65.0000|23.2500
+super_economy|1/8|down_6 . ratio_3_4|129.0000|13.6250
+super_economy|4|up_8 . down_2|43.2500|38.0000
+super_economy|1/4|down_8 . up_2|66.0000|32.7500
+super_economy|1/4|ratio_3_2 . down_6|123.0000|9.0000
+super_economy|4|ratio_3_2 . ratio_8_3|18.2500|51.6667
+super_economy|4|ratio_2_3 . up_6|17.4167|93.0000
+super_economy|1/4|ratio_2_3 . ratio_3_8|81.0000|9.6250
+super_economy|4|ratio_4_3 . up_3|15.0833|54.0000
+super_economy|8|ratio_4_3 . up_6|15.5417|109.0000
+super_economy|1/4|ratio_3_4 . down_3|72.0000|9.2500
+super_economy|1/8|ratio_3_4 . down_6|143.0000|8.4583
+super_economy|8|ratio_8_3 . up_3|11.7083|77.0000
+super_economy|4|ratio_8_3 . ratio_3_2|16.4167|38.5000
+super_economy|1/8|ratio_3_8 . down_3|112.0000|9.2917
+super_economy|1/4|ratio_3_8 . ratio_2_3|87.0000|12.9167
+super_economy|8|ratio<4, 1> . up_2|13.6250|75.0000
+super_economy|1/8|ratio<1, 4> . down_2|81.0000|10.8750
+super_economy|8|up_2 . up_2 . up_2|13.6250|107.0000
+super_economy|8|up_2 . down_2 . up_8|18.8750|199.0000
+super_economy|1/8|up_2 . down_2 . down_8|257.0000|8.7500
+super_economy|4|up_2 . down_2 . ratio<4, 1>|21.7500|99.0000
+super_economy|1/4|up_2 . down_2 . ratio<1, 4>|169.0000|11.0000
+super_economy|4|up_2 . up_3 . ratio_2_3|29.7500|48.0000
+super_economy|8|up_2 . up_3 . ratio_4_3|13.8750|91.6667
+super_economy|4|up_2 . down_3 . up_6|23.7500|127.0000
+super_economy|1/4|up_2 . down_3 . ratio_3_8|158.3333|11.2500
+super_economy|4|up_2 . up_6 . down_3|51.2500|48.3333
+super_economy|8|up_2 . up_6 . ratio_2_3|26.6250|91.0000
+super_economy|1/4|up_2 . down_6 . ratio_3_4|189.0000|15.2500
+super_economy|1/8|up_2 . down_6 . ratio_3_8|250.3333|10.1250
+super_economy|8|up_2 . up_8 . down_2|29.1250|91.0000
+super_economy|4|up_2 . up_8 . ratio<1, 4>|71.2500|48.5000
+super_economy|1/8|up_2 . down_8 . down_2|233.0000|11.3750
+super_economy|4|up_2 . ratio_3_2 . ratio_4_3|17.7500|49.6667
+super_economy|8|up_2 . ratio_3_2 . ratio_8_3|13.8750|99.6667
+super_economy|4|up_2 . ratio_2_3 . up_3|23.5833|80.0000
+super_economy|8|up_2 . ratio_2_3 . up_6|19.7917|161.0000
+super_economy|8|up_2 . ratio_4_3 . up_3|11.9583|101.0000
+super_economy|4|up_2 . ratio_4_3 . ratio_3_2|16.9167|50.5000
+super_economy|1/4|up_2 . ratio_3_4 . down_6|203.0000|10.0833
+super_economy|4|up_2 . ratio_3_4 . ratio_8_3|26.7500|75.6667
+super_economy|8|up_2 . ratio_8_3 . ratio_3_2|15.2917|94.5000
+super_economy|4|up_2 . ratio_8_3 . ratio_3_4|29.5833|48.5000
+super_economy|1/4|up_2 . ratio_3_8 . down_3|172.0000|10.9167
+super_economy|1/8|up_2 . ratio_3_8 . down_6|279.0000|8.9167
+super_economy|4|up_2 . ratio<4, 1> . down_2|35.2500|50.0000
+super_economy|1/4|up_2 . ratio<1, 4> . down_2|141.0000|12.5000
+super_economy|4|up_2 . ratio<1, 4> . up_8|24.0000|151.0000
+super_economy|1/8|up_2 . ratio<1, 4> . ratio<1, 4>|245.0000|9.3750
+super_economy|8|down_2 . up_2 . up_8|11.2500|311.0000
+super_economy|1/8|down_2 . up_2 . down_8|233.0000|11.1250
+super_economy|4|down_2 . up_2 . ratio<4, 1>|12.5000|155.0000
+super_economy|1/4|down_2 . up_2 . ratio<1, 4>|109.0000|14.2500
+super_economy|1/8|down_2 . down_2 . down_2|109.0000|13.3750
+super_economy|1/4|down_2 . up_3 . down_6|153.0000|13.4167
+super_economy|4|down_2 . up_3 . ratio_8_3|15.3750|142.3333
+super_economy|1/4|down_2 . down_3 . ratio_3_2|63.0000|26.2500
+super_economy|1/8|down_2 . down_3 . ratio_3_4|125.0000|15.1250
+super_economy|4|down_2 . up_6 . ratio_4_3|18.7500|135.6667
+super_economy|8|down_2 . up_6 . ratio_8_3|13.3750|271.6667
+super_economy|1/4|down_2 . down_6 . up_3|56.0000|48.2500
+super_economy|1/8|down_2 . down_6 . ratio_3_2|101.0000|24.1250
+super_economy|8|down_2 . up_8 . up_2|12.7500|269.0000
+super_economy|1/8|down_2 . down_8 . up_2|102.0000|33.6250
+super_economy|1/4|down_2 . down_8 . ratio<4, 1>|58.5000|64.2500
+super_economy|1/4|down_2 . ratio_3_2 . down_3|84.0000|13.2500
+super_economy|1/8|down_2 . ratio_3_2 . down_6|183.0000|10.6250
+super_economy|1/4|down_2 . ratio_2_3 . ratio_3_4|82.3333|16.7500
+super_economy|1/8|down_2 . ratio_2_3 . ratio_3_8|141.0000|11.2500
+super_economy|4|down_2 . ratio_4_3 . up_6|17.9167|177.0000
+super_economy|1/4|down_2 . ratio_4_3 . ratio_3_8|93.0000|13.5000
+super_economy|1/8|down_2 . ratio_3_4 . down_3|132.0000|10.8750
+super_economy|1/4|down_2 . ratio_3_4 . ratio_2_3|85.0000|16.0833
+super_economy|4|down_2 . ratio_8_3 . up_3|14.0833|145.0000
+super_economy|8|down_2 . ratio_8_3 . up_6|12.0417|291.0000
+super_economy|1/8|down_2 . ratio_3_8 . ratio_2_3|147.0000|14.5417
+super_economy|1/4|down_2 . ratio_3_8 . ratio_4_3|74.0000|24.0833
+super_economy|4|down_2 . ratio<4, 1> . up_2|16.0000|143.0000
+super_economy|1/4|down_2 . ratio<4, 1> . down_8|205.0000|13.5000
+super_economy|8|down_2 . ratio<4, 1> . ratio<4, 1>|12.0000|279.0000
+super_economy|1/4|down_2 . ratio<1, 4> . up_2|64.0000|35.7500
+super_economy|4|up_3 . up_2 . ratio_2_3|34.0000|44.0000
+super_economy|8|up_3 . up_2 . ratio_4_3|16.0000|83.6667
+super_economy|1/4|up_3 . down_2 . down_6|219.0000|9.5833
+super_economy|4|up_3 . down_2 . ratio_8_3|29.5000|74.3333
+super_economy|8|up_3 . down_3 . up_8|22.3750|185.6667
+super_economy|1/8|up_3 . down_3 . down_8|385.0000|8.7917
+super_economy|4|up_3 . down_3 . ratio<4, 1>|28.7500|92.3333
+super_economy|1/4|up_3 . down_3 . ratio<1, 4>|217.0000|10.0833
+super_economy|1/4|up_3 . down_6 . down_2|205.0000|12.0833
+super_economy|4|up_3 . down_6 . up_8|29.5000|144.3333
+super_economy|1/8|up_3 . down_6 . ratio<1, 4>|389.0000|9.4167
+super_economy|8|up_3 . up_8 . down_3|47.7500|78.0000
+super_economy|4|up_3 . up_8 . down_6|112.5000|42.0000
+super_economy|1/8|up_3 . down_8 . down_3|382.0000|9.7500
+super_economy|1/4|up_3 . down_8 . ratio_2_3|277.0000|14.0833
+super_economy|4|up_3 . ratio_2_3 . up_2|23.0000|53.0000
+super_economy|1/4|up_3 . ratio_2_3 . down_8|289.0000|9.5000
+super_economy|8|up_3 . ratio_2_3 . ratio<4, 1>|15.5000|99.0000
+super_economy|8|up_3 . ratio_4_3 . up_2|15.5000|87.0000
+super_economy|4|up_3 . ratio_8_3 . down_2|41.0000|43.6667
+super_economy|4|up_3 . ratio<4, 1> . down_3|52.5000|41.6667
+super_economy|8|up_3 . ratio<4, 1> . ratio_2_3|27.2500|77.6667
+super_economy|1/4|up_3 . ratio<1, 4> . down_3|210.0000|10.4167
+super_economy|1/8|up_3 . ratio<1, 4> . down_6|367.0000|8.9167
+super_economy|4|down_3 . up_2 . up_6|12.8333|223.0000
+super_economy|1/4|down_3 . up_2 . ratio_3_8|111.6667|20.0000
+super_economy|1/4|down_3 . down_2 . ratio_3_2|51.6667|27.7500
+super_economy|1/8|down_3 . down_2 . ratio_3_4|102.3333|15.8750
+super_economy|8|down_3 . up_3 . up_8|11.6250|407.0000
+super_economy|1/8|down_3 . up_3 . down_8|225.0000|11.3750
+super_economy|4|down_3 . up_3 . ratio<4, 1>|13.2500|203.0000
+super_economy|1/4|down_3 . up_3 . ratio<1, 4>|137.0000|19.2500
+super_economy|4|down_3 . up_6 . up_2|14.0000|193.0000
+super_economy|1/4|down_3 . up_6 . down_8|265.0000|19.5000
+super_economy|8|down_3 . up_6 . ratio<4, 1>|11.0000|387.0000
+super_economy|8|down_3 . up_8 . up_3|11.7500|384.0000
+super_economy|4|down_3 . up_8 . ratio_3_2|17.8333|192.0000
+super_economy|1/8|down_3 . down_8 . up_3|94.0000|48.0000
+super_economy|1/4|down_3 . down_8 . up_6|55.0000|97.0000
+super_economy|1/4|down_3 . ratio_3_2 . down_2|85.0000|20.0000
+super_economy|4|down_3 . ratio_3_2 . up_8|18.2500|247.0000
+super_economy|1/8|down_3 . ratio_3_2 . ratio<1, 4>|133.0000|11.2500
+super_economy|1/8|down_3 . ratio_3_4 . down_2|101.0000|12.6250
+super_economy|1/4|down_3 . ratio_3_8 . up_2|58.6667|36.2500
+super_economy|4|down_3 . ratio<4, 1> . up_3|13.8333|199.0000
+super_economy|8|down_3 . ratio<4, 1> . up_6|11.9167|399.0000
+super_economy|1/4|down_3 . ratio<1, 4> . up_3|55.3333|49.7500
+super_economy|1/8|down_3 . ratio<1, 4> . ratio_3_2|99.6667|24.8750
+super_economy|4|up_6 . up_2 . down_3|54.7500|38.3333
+super_economy|8|up_6 . up_2 . ratio_2_3|28.3750|71.0000
+super_economy|4|up_6 . down_2 . ratio_4_3|39.2500|46.3333
+super_economy|8|up_6 . down_2 . ratio_8_3|24.6250|93.0000
+super_economy|4|up_6 . down_3 . up_2|38.2500|53.6667
+super_economy|1/4|up_6 . down_3 . down_8|453.0000|9.5417
+super_economy|8|up_6 . down_3 . ratio<4, 1>|23.1250|100.3333
+super_economy|8|up_6 . down_6 . up_8|34.3750|188.3333
+super_economy|1/8|up_6 . down_6 . down_8|769.0000|8.8333
+super_economy|4|up_6 . down_6 . ratio<4, 1>|52.7500|93.6667
+super_economy|1/4|up_6 . down_6 . ratio<1, 4>|457.0000|10.1667
+super_economy|8|up_6 . up_8 . down_6|93.8750|71.6667
+super_economy|1/4|up_6 . down_8 . down_3|450.0000|10.5000
+super_economy|1/8|up_6 . down_8 . down_6|751.0000|8.9583
+super_economy|8|up_6 . ratio_2_3 . up_2|24.8750|85.0000
+super_economy|4|up_6 . ratio_4_3 . down_2|47.7500|40.3333
+super_economy|8|up_6 . ratio_8_3 . down_2|33.3750|71.3333
+super_economy|4|up_6 . ratio_8_3 . ratio<1, 4>|79.7500|38.6667
+super_economy|8|up_6 . ratio<4, 1> . down_3|45.8750|71.3333
+super_economy|4|up_6 . ratio<4, 1> . down_6|108.7500|38.6667
+super_economy|1/4|up_6 . ratio<1, 4> . down_6|435.0000|9.6667
+super_economy|4|up_6 . ratio<1, 4> . ratio_8_3|52.7500|73.0000
+super_economy|1/4|down_6 . up_2 . ratio_3_4|87.6667|32.2500
+super_economy|1/8|down_6 . up_2 . ratio_3_8|175.6667|20.1250
+super_economy|1/4|down_6 . down_2 . up_3|51.3333|55.7500
+super_economy|1/8|down_6 . down_2 . ratio_3_2|91.6667|27.8750
+super_economy|1/4|down_6 . up_3 . down_2|95.0000|31.7500
+super_economy|4|down_6 . up_3 . up_8|13.6250|411.0000
+super_economy|1/8|down_6 . up_3 . ratio<1, 4>|201.0000|19.3750
+super_economy|8|down_6 . up_6 . up_8|10.5000|783.0000
+super_economy|1/8|down_6 . up_6 . down_8|329.0000|19.6250
+super_economy|4|down_6 . up_6 . ratio<4, 1>|13.0000|391.0000
+super_economy|1/4|down_6 . up_6 . ratio<1, 4>|157.0000|31.2500
+super_economy|4|down_6 . up_8 . up_3|13.7500|388.0000
+super_economy|8|down_6 . up_8 . up_6|10.8750|777.0000
+super_economy|1/8|down_6 . down_8 . up_6|87.0000|97.1250
+super_economy|1/8|down_6 . ratio_3_2 . down_2|149.0000|20.1250
+super_economy|1/4|down_6 . ratio_3_4 . up_2|74.0000|44.2500
+super_economy|1/8|down_6 . ratio_3_8 . up_2|98.6667|36.3750
+super_economy|1/4|down_6 . ratio_3_8 . ratio<4, 1>|56.8333|69.7500
+super_economy|4|down_6 . ratio<4, 1> . up_6|13.9167|403.0000
+super_economy|1/4|down_6 . ratio<4, 1> . ratio_3_8|129.0000|31.2500
+super_economy|1/8|down_6 . ratio<1, 4> . up_3|95.3333|49.8750
+super_economy|1/4|down_6 . ratio<1, 4> . up_6|55.6667|100.7500
+super_economy|8|up_8 . up_2 . down_2|32.1250|70.0000
+super_economy|4|up_8 . up_2 . ratio<1, 4>|77.2500|38.0000
+super_economy|8|up_8 . down_2 . up_2|29.1250|89.0000
+super_economy|8|up_8 . up_3 . down_3|48.1250|70.3333
+super_economy|4|up_8 . up_3 . down_6|113.2500|38.1667
+super_economy|8|up_8 . down_3 . up_3|28.1250|91.0000
+super_economy|4|up_8 . down_3 . ratio_3_2|49.2500|45.5000
+super_economy|8|up_8 . up_6 . down_6|96.1250|70.6667
+super_economy|4|up_8 . down_6 . up_3|66.2500|78.0000
+super_economy|8|up_8 . down_6 . up_6|41.1250|157.0000
+super_economy|8|up_8 . up_8 . down_8|128.1250|70.7500
+super_economy|8|up_8 . down_8 . up_8|42.3750|189.0000
+super_economy|1/8|up_8 . down_8 . down_8|1025.0000|8.8438
+super_economy|4|up_8 . down_8 . ratio<4, 1>|68.7500|94.0000
+super_economy|1/4|up_8 . down_8 . ratio<1, 4>|617.0000|10.1875
+super_economy|4|up_8 . ratio_3_2 . down_3|66.2500|38.0000
+super_economy|8|up_8 . ratio_3_2 . ratio_2_3|34.1250|70.3333
+super_economy|8|up_8 . ratio_2_3 . ratio_3_2|30.7917|77.0000
+super_economy|4|up_8 . ratio_2_3 . ratio_3_4|60.5833|39.7500
+super_economy|8|up_8 . ratio_4_3 . ratio_3_4|32.7917|70.5000
+super_economy|4|up_8 . ratio_4_3 . ratio_3_8|71.2500|38.2500
+super_economy|4|up_8 . ratio_3_4 . ratio_2_3|58.2500|38.6667
+super_economy|8|up_8 . ratio_3_4 . ratio_4_3|28.1250|73.0000
+super_economy|8|up_8 . ratio_8_3 . ratio_3_8|54.1250|70.7500
+super_economy|4|up_8 . ratio_3_8 . ratio_4_3|55.7500|44.3333
+super_economy|8|up_8 . ratio_3_8 . ratio_8_3|32.8750|89.0000
+super_economy|4|up_8 . ratio<4, 1> . down_8|149.2500|38.2500
+super_economy|8|up_8 . ratio<4, 1> . ratio<1, 4>|64.1250|70.5000
+super_economy|4|up_8 . ratio<1, 4> . up_2|51.2500|54.0000
+super_economy|1/4|up_8 . ratio<1, 4> . down_8|597.0000|9.5625
+super_economy|8|up_8 . ratio<1, 4> . ratio<4, 1>|29.6250|101.0000
+super_economy|1/8|down_8 . up_2 . down_2|151.0000|24.8750
+super_economy|1/8|down_8 . down_2 . up_2|90.0000|38.8750
+super_economy|1/4|down_8 . down_2 . ratio<4, 1>|52.5000|74.7500
+super_economy|1/8|down_8 . up_3 . down_3|179.0000|23.2083
+super_economy|1/4|down_8 . up_3 . ratio_2_3|87.5000|35.7500
+super_economy|1/8|down_8 . down_3 . up_3|93.0000|50.8750
+super_economy|1/4|down_8 . down_3 . up_6|54.5000|102.7500
+super_economy|1/4|down_8 . up_6 . down_3|118.0000|36.0833
+super_economy|1/8|down_8 . up_6 . down_6|275.0000|23.5417
+super_economy|1/8|down_8 . down_6 . up_6|84.0000|97.8750
+super_economy|8|down_8 . up_8 . up_8|10.6562|1039.0000
+super_economy|1/8|down_8 . up_8 . down_8|339.0000|23.6250
+super_economy|4|down_8 . up_8 . ratio<4, 1>|13.3125|519.0000
+super_economy|1/4|down_8 . up_8 . ratio<1, 4>|144.0000|36.2500
+super_economy|1/8|down_8 . down_8 . up_8|85.2500|129.8750
+super_economy|1/8|down_8 . ratio_3_2 . ratio_2_3|153.0000|23.2083
+super_economy|1/4|down_8 . ratio_3_2 . ratio_4_3|77.0000|41.4167
+super_economy|1/4|down_8 . ratio_2_3 . up_3|75.3333|61.7500
+super_economy|1/8|down_8 . ratio_2_3 . ratio_3_2|139.6667|30.8750
+super_economy|1/4|down_8 . ratio_4_3 . ratio_3_2|75.6667|42.7500
+super_economy|1/8|down_8 . ratio_4_3 . ratio_3_4|150.3333|23.3750
+super_economy|1/8|down_8 . ratio_3_4 . ratio_4_3|141.0000|28.5417
+super_economy|1/4|down_8 . ratio_3_4 . ratio_8_3|78.5000|57.4167
+super_economy|1/4|down_8 . ratio_8_3 . ratio_3_4|88.3333|36.2500
+super_economy|1/8|down_8 . ratio_8_3 . ratio_3_8|193.0000|23.6250
+super_economy|1/8|down_8 . ratio_3_8 . ratio_8_3|101.0000|46.8750
+super_economy|1/4|down_8 . ratio<4, 1> . down_2|96.0000|37.7500
+super_economy|4|down_8 . ratio<4, 1> . up_8|13.9375|539.0000
+super_economy|1/8|down_8 . ratio<4, 1> . ratio<1, 4>|211.0000|23.3750
+super_economy|1/4|down_8 . ratio<1, 4> . up_8|55.7500|134.7500
+super_economy|1/8|down_8 . ratio<1, 4> . ratio<4, 1>|95.5000|66.8750
+super_economy|4|ratio_3_2 . up_2 . ratio_4_3|19.0000|59.6667
+super_economy|8|ratio_3_2 . up_2 . ratio_8_3|14.5000|119.6667
+super_economy|1/4|ratio_3_2 . down_2 . down_3|120.0000|11.0000
+super_economy|1/8|ratio_3_2 . down_2 . down_6|203.0000|8.8750
+super_economy|1/4|ratio_3_2 . down_3 . down_2|103.0000|12.0000
+super_economy|4|ratio_3_2 . down_3 . up_8|20.8750|143.0000
+super_economy|1/8|ratio_3_2 . down_3 . ratio<1, 4>|201.0000|9.3750
+super_economy|1/8|ratio_3_2 . down_6 . down_2|189.0000|11.3750
+super_economy|4|ratio_3_2 . up_8 . down_3|67.5000|56.3333
+super_economy|8|ratio_3_2 . up_8 . ratio_2_3|34.7500|107.0000
+super_economy|1/8|ratio_3_2 . down_8 . ratio_2_3|261.0000|13.3750
+super_economy|1/4|ratio_3_2 . down_8 . ratio_4_3|139.0000|22.0000
+super_economy|8|ratio_3_2 . ratio_2_3 . up_8|19.1250|185.6667
+super_economy|1/8|ratio_3_2 . ratio_2_3 . down_8|273.0000|8.7917
+super_economy|4|ratio_3_2 . ratio_2_3 . ratio<4, 1>|22.2500|92.3333
+super_economy|1/4|ratio_3_2 . ratio_2_3 . ratio<1, 4>|149.0000|10.0833
+super_economy|4|ratio_3_2 . ratio_4_3 . up_2|17.7500|64.3333
+super_economy|1/4|ratio_3_2 . ratio_4_3 . down_8|205.0000|9.6667
+super_economy|8|ratio_3_2 . ratio_4_3 . ratio<4, 1>|12.8750|121.6667
+super_economy|8|ratio_3_2 . ratio_8_3 . up_2|16.6250|116.3333
+super_economy|4|ratio_3_2 . ratio<4, 1> . ratio_2_3|37.0000|56.0000
+super_economy|8|ratio_3_2 . ratio<4, 1> . ratio_4_3|17.5000|107.6667
+super_economy|1/8|ratio_3_2 . ratio<1, 4> . down_3|194.0000|9.7083
+super_economy|1/4|ratio_3_2 . ratio<1, 4> . ratio_2_3|139.0000|14.0000
+super_economy|4|ratio_2_3 . up_2 . up_3|14.0833|111.0000
+super_economy|8|ratio_2_3 . up_2 . up_6|12.0417|223.0000
+super_economy|1/4|ratio_2_3 . down_2 . ratio_3_4|85.0000|15.8750
+super_economy|1/8|ratio_2_3 . down_2 . ratio_3_8|159.6667|11.1875
+super_economy|4|ratio_2_3 . up_3 . up_2|16.9167|105.0000
+super_economy|1/4|ratio_2_3 . up_3 . down_8|207.6667|11.3750
+super_economy|8|ratio_2_3 . up_3 . ratio<4, 1>|12.4583|203.0000
+super_economy|8|ratio_2_3 . up_6 . up_2|13.2083|193.0000
+super_economy|8|ratio_2_3 . up_8 . ratio_3_2|17.0417|192.0000
+super_economy|4|ratio_2_3 . up_8 . ratio_3_4|33.0833|97.0000
+super_economy|1/4|ratio_2_3 . down_8 . up_3|79.3333|48.0000
+super_economy|1/8|ratio_2_3 . down_8 . ratio_3_2|147.6667|24.0000
+super_economy|8|ratio_2_3 . ratio_3_2 . up_8|17.4583|247.0000
+super_economy|1/8|ratio_2_3 . ratio_3_2 . down_8|246.3333|9.6250
+super_economy|4|ratio_2_3 . ratio_3_2 . ratio<4, 1>|18.9167|123.0000
+super_economy|1/4|ratio_2_3 . ratio_3_2 . ratio<1, 4>|115.6667|11.2500
+super_economy|1/4|ratio_2_3 . ratio_3_4 . down_2|83.6667|12.6250
+super_economy|4|ratio_2_3 . ratio_3_4 . up_8|20.6667|171.0000
+super_economy|1/8|ratio_2_3 . ratio_3_4 . ratio<1, 4>|178.3333|9.8125
+super_economy|1/8|ratio_2_3 . ratio_3_8 . down_2|149.0000|11.8125
+super_economy|8|ratio_2_3 . ratio<4, 1> . up_3|13.0417|199.0000
+super_economy|4|ratio_2_3 . ratio<4, 1> . ratio_3_2|19.0833|99.5000
+super_economy|1/4|ratio_2_3 . ratio<1, 4> . ratio_3_2|82.3333|24.8750
+super_economy|1/8|ratio_2_3 . ratio<1, 4> . ratio_3_4|163.6667|14.4375
+super_economy|8|ratio_4_3 . up_2 . up_3|12.2083|127.0000
+super_economy|4|ratio_4_3 . up_2 . ratio_3_2|17.4167|63.5000
+super_economy|4|ratio_4_3 . down_2 . up_6|20.7500|129.0000
+super_economy|1/4|ratio_4_3 . down_2 . ratio_3_8|123.6667|11.5000
+super_economy|8|ratio_4_3 . up_3 . up_2|15.0417|121.0000
+super_economy|4|ratio_4_3 . up_6 . down_2|46.0833|61.0000
+super_economy|8|ratio_4_3 . up_8 . ratio_3_4|31.2083|113.0000
+super_economy|4|ratio_4_3 . up_8 . ratio_3_8|68.0833|59.5000
+super_economy|1/4|ratio_4_3 . down_8 . ratio_3_2|119.6667|24.2500
+super_economy|1/8|ratio_4_3 . down_8 . ratio_3_4|238.3333|14.1250
+super_economy|4|ratio_4_3 . ratio_3_2 . up_2|17.0833|67.0000
+super_economy|1/4|ratio_4_3 . ratio_3_2 . down_8|210.3333|9.9375
+super_economy|8|ratio_4_3 . ratio_3_2 . ratio<4, 1>|12.5417|127.0000
+super_economy|8|ratio_4_3 . ratio_3_4 . up_8|18.7917|187.0000
+super_economy|1/8|ratio_4_3 . ratio_3_4 . down_8|262.3333|8.8125
+super_economy|4|ratio_4_3 . ratio_3_4 . ratio<4, 1>|21.5833|93.0000
+super_economy|1/4|ratio_4_3 . ratio_3_4 . ratio<1, 4>|142.3333|10.1250
+super_economy|1/4|ratio_4_3 . ratio_3_8 . down_2|113.0000|12.1250
+super_economy|4|ratio_4_3 . ratio_3_8 . up_8|22.0000|145.0000
+super_economy|1/8|ratio_4_3 . ratio_3_8 . ratio<1, 4>|221.0000|9.4375
+super_economy|8|ratio_4_3 . ratio<4, 1> . ratio_3_2|17.2083|115.5000
+super_economy|4|ratio_4_3 . ratio<4, 1> . ratio_3_4|33.4167|59.0000
+super_economy|1/4|ratio_4_3 . ratio<1, 4> . ratio_3_4|127.6667|14.7500
+super_economy|1/8|ratio_4_3 . ratio<1, 4> . ratio_3_8|191.6667|10.1250
+super_economy|1/4|ratio_3_4 . up_2 . down_6|165.0000|11.5833
+super_economy|4|ratio_3_4 . up_2 . ratio_8_3|16.3750|99.6667
+super_economy|1/8|ratio_3_4 . down_2 . down_3|140.0000|10.4583
+super_economy|1/4|ratio_3_4 . down_2 . ratio_2_3|91.0000|14.9167
+super_economy|1/8|ratio_3_4 . down_3 . down_2|123.0000|11.4583
+super_economy|1/4|ratio_3_4 . down_6 . up_2|81.0000|33.9167
+super_economy|4|ratio_3_4 . up_8 . ratio_2_3|39.6250|88.0000
+super_economy|8|ratio_3_4 . up_8 . ratio_4_3|18.8125|171.6667
+super_economy|1/8|ratio_3_4 . down_8 . ratio_4_3|159.0000|21.4583
+super_economy|1/4|ratio_3_4 . down_8 . ratio_8_3|87.5000|43.2500
+super_economy|1/4|ratio_3_4 . ratio_2_3 . down_2|87.0000|12.4167
+super_economy|4|ratio_3_4 . ratio_2_3 . up_8|21.0000|165.6667
+super_economy|1/8|ratio_3_4 . ratio_2_3 . ratio<1, 4>|169.0000|9.5417
+super_economy|8|ratio_3_4 . ratio_4_3 . up_8|17.6250|228.3333
+super_economy|1/8|ratio_3_4 . ratio_4_3 . down_8|225.0000|9.1250
+super_economy|4|ratio_3_4 . ratio_4_3 . ratio<4, 1>|19.2500|113.6667
+super_economy|1/4|ratio_3_4 . ratio_4_3 . ratio<1, 4>|119.0000|10.9167
+super_economy|4|ratio_3_4 . ratio_8_3 . up_2|18.5000|96.3333
+super_economy|1/4|ratio_3_4 . ratio_8_3 . down_8|223.0000|11.0833
+super_economy|8|ratio_3_4 . ratio_8_3 . ratio<4, 1>|13.2500|185.6667
+super_economy|4|ratio_3_4 . ratio<4, 1> . ratio_4_3|20.8750|89.0000
+super_economy|8|ratio_3_4 . ratio<4, 1> . ratio_8_3|15.4375|178.3333
+super_economy|1/8|ratio_3_4 . ratio<1, 4> . ratio_2_3|159.0000|13.4583
+super_economy|1/4|ratio_3_4 . ratio<1, 4> . ratio_4_3|88.0000|22.2500
+super_economy|8|ratio_8_3 . up_2 . ratio_3_2|16.7083|89.5000
+super_economy|4|ratio_8_3 . up_2 . ratio_3_4|32.4167|46.0000
+super_economy|4|ratio_8_3 . down_2 . up_3|26.7500|80.0000
+super_economy|8|ratio_8_3 . down_2 . up_6|21.3750|161.0000
+super_economy|4|ratio_8_3 . up_3 . down_2|38.4167|45.0000
+super_economy|8|ratio_8_3 . up_6 . down_2|30.7083|81.0000
+super_economy|4|ratio_8_3 . up_6 . ratio<1, 4>|74.4167|43.5000
+super_economy|8|ratio_8_3 . up_8 . ratio_3_8|49.3750|81.5000
+super_economy|1/4|ratio_8_3 . down_8 . ratio_3_4|266.3333|14.8750
+super_economy|1/8|ratio_8_3 . down_8 . ratio_3_8|383.6667|10.1875
+super_economy|8|ratio_8_3 . ratio_3_2 . up_2|15.7083|90.0000
+super_economy|4|ratio_8_3 . ratio_3_4 . up_2|23.4167|54.0000
+super_economy|1/4|ratio_8_3 . ratio_3_4 . down_8|290.3333|9.5625
+super_economy|8|ratio_8_3 . ratio_3_4 . ratio<4, 1>|15.7083|101.0000
+super_economy|8|ratio_8_3 . ratio_3_8 . up_8|24.1250|189.0000
+super_economy|1/8|ratio_8_3 . ratio_3_8 . down_8|433.0000|8.8438
+super_economy|4|ratio_8_3 . ratio_3_8 . ratio<4, 1>|32.2500|94.0000
+super_economy|1/4|ratio_8_3 . ratio_3_8 . ratio<1, 4>|249.0000|10.1875
+super_economy|8|ratio_8_3 . ratio<4, 1> . ratio_3_4|25.3750|81.0000
+super_economy|4|ratio_8_3 . ratio<4, 1> . ratio_3_8|56.4167|43.5000
+super_economy|4|ratio_8_3 . ratio<1, 4> . up_6|31.0833|125.0000
+super_economy|1/4|ratio_8_3 . ratio<1, 4> . ratio_3_8|219.6667|10.8750
+super_economy|1/4|ratio_3_8 . up_2 . down_3|125.0000|18.5833
+super_economy|1/8|ratio_3_8 . up_2 . down_6|205.0000|11.6250
+super_economy|1/8|ratio_3_8 . down_2 . ratio_2_3|131.0000|14.9583
+super_economy|1/4|ratio_3_8 . down_2 . ratio_4_3|66.0000|24.9167
+super_economy|1/4|ratio_3_8 . down_3 . up_2|65.5000|35.5833
+super_economy|1/8|ratio_3_8 . down_6 . up_2|113.0000|33.9583
+super_economy|1/4|ratio_3_8 . down_6 . ratio<4, 1>|64.0000|64.9167
+super_economy|4|ratio_3_8 . up_8 . ratio_4_3|20.8125|173.0000
+super_economy|8|ratio_3_8 . up_8 . ratio_8_3|14.4062|346.3333
+super_economy|1/8|ratio_3_8 . down_8 . ratio_8_3|119.5000|43.2917
+super_economy|1/8|ratio_3_8 . ratio_2_3 . down_2|127.0000|12.4583
+super_economy|1/4|ratio_3_8 . ratio_4_3 . down_2|107.0000|18.9167
+super_economy|4|ratio_3_8 . ratio_4_3 . up_8|19.6250|229.6667
+super_economy|1/8|ratio_3_8 . ratio_4_3 . ratio<1, 4>|159.0000|10.9583
+super_economy|8|ratio_3_8 . ratio_8_3 . up_8|12.6250|375.0000
+super_economy|1/8|ratio_3_8 . ratio_8_3 . down_8|263.0000|11.1250
+super_economy|4|ratio_3_8 . ratio_8_3 . ratio<4, 1>|15.2500|187.0000
+super_economy|1/4|ratio_3_8 . ratio_8_3 . ratio<1, 4>|169.0000|18.2500
+super_economy|1/4|ratio_3_8 . ratio<4, 1> . down_6|218.0000|18.2500
+super_economy|4|ratio_3_8 . ratio<4, 1> . ratio_8_3|17.4375|179.6667
+super_economy|1/8|ratio_3_8 . ratio<1, 4> . ratio_4_3|128.0000|22.2917
+super_economy|1/4|ratio_3_8 . ratio<1, 4> . ratio_8_3|72.0000|44.9167
+super_economy|4|ratio<4, 1> . up_2 . down_2|42.2500|44.0000
+super_economy|4|ratio<4, 1> . down_2 . up_2|27.2500|57.0000
+super_economy|1/4|ratio<4, 1> . down_2 . down_8|309.0000|9.5000
+super_economy|8|ratio<4, 1> . down_2 . ratio<4, 1>|17.6250|107.0000
+super_economy|4|ratio<4, 1> . up_3 . down_3|54.2500|40.3333
+super_economy|8|ratio<4, 1> . up_3 . ratio_2_3|28.1250|75.0000
+super_economy|4|ratio<4, 1> . down_3 . up_3|34.2500|77.0000
+super_economy|8|ratio<4, 1> . down_3 . up_6|25.1250|155.0000
+super_economy|8|ratio<4, 1> . up_6 . down_3|48.6250|75.3333
+super_economy|4|ratio<4, 1> . up_6 . down_6|114.2500|40.6667
+super_economy|4|ratio<4, 1> . down_6 . up_6|39.2500|125.0000
+super_economy|1/4|ratio<4, 1> . down_6 . ratio_3_8|302.3333|10.8750
+super_economy|4|ratio<4, 1> . up_8 . down_8|154.2500|40.7500
+super_economy|8|ratio<4, 1> . up_8 . ratio<1, 4>|66.6250|75.5000
+super_economy|1/4|ratio<4, 1> . down_8 . down_2|285.0000|12.1250
+super_economy|4|ratio<4, 1> . down_8 . up_8|36.0000|145.0000
+super_economy|1/8|ratio<4, 1> . down_8 . ratio<1, 4>|533.0000|9.4375
+super_economy|4|ratio<4, 1> . ratio_3_2 . ratio_2_3|37.2500|40.3333
+super_economy|8|ratio<4, 1> . ratio_3_2 . ratio_4_3|17.6250|76.3333
+super_economy|8|ratio<4, 1> . ratio_2_3 . up_3|17.9583|90.0000
+super_economy|4|ratio<4, 1> . ratio_2_3 . ratio_3_2|28.9167|45.0000
+super_economy|8|ratio<4, 1> . ratio_4_3 . ratio_3_2|18.2917|78.5000
+super_economy|4|ratio<4, 1> . ratio_4_3 . ratio_3_4|35.5833|40.5000
+super_economy|4|ratio<4, 1> . ratio_3_4 . ratio_4_3|29.7500|43.6667
+super_economy|8|ratio<4, 1> . ratio_3_4 . ratio_8_3|19.8750|87.6667
+super_economy|8|ratio<4, 1> . ratio_8_3 . ratio_3_4|28.2917|75.5000
+super_economy|4|ratio<4, 1> . ratio_8_3 . ratio_3_8|62.2500|40.7500
+super_economy|1/4|ratio<4, 1> . ratio_3_8 . down_6|331.0000|9.6667
+super_economy|4|ratio<4, 1> . ratio_3_8 . ratio_8_3|42.2500|73.0000
+super_economy|8|ratio<4, 1> . ratio<4, 1> . down_2|30.6250|75.0000
+super_economy|4|ratio<4, 1> . ratio<4, 1> . ratio<1, 4>|74.2500|40.5000
+super_economy|8|ratio<4, 1> . ratio<1, 4> . up_8|26.3750|187.0000
+super_economy|1/8|ratio<4, 1> . ratio<1, 4> . down_8|513.0000|8.8125
+super_economy|4|ratio<4, 1> . ratio<1, 4> . ratio<4, 1>|36.7500|93.0000
+super_economy|1/4|ratio<4, 1> . ratio<1, 4> . ratio<1, 4>|297.0000|10.1250
+super_economy|1/4|ratio<1, 4> . up_2 . down_2|87.0000|24.7500
+super_economy|4|ratio<1, 4> . up_2 . up_8|13.1250|299.0000
+super_economy|1/8|ratio<1, 4> . up_2 . ratio<1, 4>|141.0000|13.3750
+super_economy|1/4|ratio<1, 4> . down_2 . up_2|50.0000|38.7500
+super_economy|1/4|ratio<1, 4> . up_3 . down_3|115.0000|23.0833
+super_economy|1/8|ratio<1, 4> . up_3 . down_6|185.0000|12.5417
+super_economy|1/4|ratio<1, 4> . down_3 . up_3|53.0000|50.7500
+super_economy|1/8|ratio<1, 4> . down_3 . ratio_3_2|95.0000|25.3750
+super_economy|1/4|ratio<1, 4> . up_6 . down_6|211.0000|23.4167
+super_economy|4|ratio<1, 4> . up_6 . ratio_8_3|15.2500|259.6667
+super_economy|1/8|ratio<1, 4> . down_6 . up_3|88.0000|48.3750
+super_economy|1/4|ratio<1, 4> . down_6 . up_6|52.0000|97.7500
+super_economy|4|ratio<1, 4> . up_8 . up_2|14.6250|257.0000
+super_economy|1/4|ratio<1, 4> . up_8 . down_8|275.0000|23.5000
+super_economy|8|ratio<1, 4> . up_8 . ratio<4, 1>|11.3125|515.0000
+super_economy|1/4|ratio<1, 4> . down_8 . up_8|53.2500|129.7500
+super_economy|1/8|ratio<1, 4> . down_8 . ratio<4, 1>|90.5000|64.3750
+super_economy|1/8|ratio<1, 4> . ratio_3_2 . down_3|116.0000|12.3750
+super_economy|1/4|ratio<1, 4> . ratio_3_2 . ratio_2_3|89.0000|23.0833
+super_economy|1/4|ratio<1, 4> . ratio_2_3 . ratio_3_2|75.6667|30.7500
+super_economy|1/8|ratio<1, 4> . ratio_2_3 . ratio_3_4|114.3333|15.8750
+super_economy|1/4|ratio<1, 4> . ratio_4_3 . ratio_3_4|86.3333|23.2500
+super_economy|1/8|ratio<1, 4> . ratio_4_3 . ratio_3_8|125.0000|12.6250
+super_economy|1/8|ratio<1, 4> . ratio_3_4 . ratio_2_3|117.0000|15.2083
+super_economy|1/4|ratio<1, 4> . ratio_3_4 . ratio_4_3|77.0000|28.4167
+super_economy|4|ratio<1, 4> . ratio_8_3 . up_6|13.9167|279.0000
+super_economy|1/4|ratio<1, 4> . ratio_8_3 . ratio_3_8|129.0000|23.5000
+super_economy|1/8|ratio<1, 4> . ratio_3_8 . ratio_4_3|106.0000|23.2083
+super_economy|1/4|ratio<1, 4> . ratio_3_8 . ratio_8_3|61.0000|46.7500
+super_economy|8|ratio<1, 4> . ratio<4, 1> . up_8|11.9375|535.0000
+super_economy|1/8|ratio<1, 4> . ratio<4, 1> . down_8|237.0000|12.6250
+super_economy|4|ratio<1, 4> . ratio<4, 1> . ratio<4, 1>|13.8750|267.0000
+super_economy|1/4|ratio<1, 4> . ratio<4, 1> . ratio<1, 4>|147.0000|23.2500
+super_economy|1/8|ratio<1, 4> . ratio<1, 4> . up_2|96.0000|34.8750
+super_economy|1/4|ratio<1, 4> . ratio<1, 4> . ratio<4, 1>|55.5000|66.7500
+balanced|8|up_8|24.6250|111.0000
+balanced|1/8|down_8|197.0000|13.8750
+balanced|4|ratio<4, 1>|21.2500|55.0000
+balanced|1/4|ratio<1, 4>|85.0000|13.7500
+balanced|4|up_2 . up_2|14.2500|63.0000
+balanced|1/4|up_2 . down_8|257.0000|15.5000
+balanced|8|up_2 . ratio<4, 1>|11.1250|119.0000
+balanced|1/4|down_2 . down_2|57.0000|15.7500
+balanced|4|down_2 . up_8|28.0000|211.0000
+balanced|1/8|down_2 . ratio<1, 4>|145.0000|15.3750
+balanced|4|up_3 . ratio_4_3|21.0000|57.0000
+balanced|8|up_3 . ratio_8_3|15.5000|114.3333
+balanced|1/4|down_3 . ratio_3_4|107.6667|23.2500
+balanced|1/8|down_3 . ratio_3_8|130.3333|15.6250
+balanced|4|up_6 . ratio_2_3|49.7500|60.0000
+balanced|8|up_6 . ratio_4_3|23.8750|115.6667
+balanced|1/4|down_6 . ratio_3_2|111.6667|39.7500
+balanced|1/8|down_6 . ratio_3_4|225.0000|24.1250
+balanced|4|up_8 . down_2|64.2500|62.0000
+balanced|1/4|down_8 . up_2|112.0000|52.7500
+balanced|1/4|ratio_3_2 . down_6|183.0000|15.0000
+balanced|4|ratio_3_2 . ratio_8_3|31.2500|87.6667
+balanced|4|ratio_2_3 . up_6|29.9167|159.0000
+balanced|1/4|ratio_2_3 . ratio_3_8|113.0000|15.6250
+balanced|4|ratio_4_3 . up_3|24.7500|93.0000
+balanced|8|ratio_4_3 . up_6|27.0417|193.0000
+balanced|1/4|ratio_3_4 . down_3|92.0000|14.2500
+balanced|1/8|ratio_3_4 . down_6|203.0000|14.4583
+balanced|8|ratio_8_3 . up_3|15.2083|125.0000
+balanced|4|ratio_8_3 . ratio_3_2|23.4167|62.5000
+balanced|1/8|ratio_3_8 . down_3|132.0000|14.2917
+balanced|1/4|ratio_3_8 . ratio_2_3|150.0000|21.9167
+balanced|8|ratio<4, 1> . up_2|18.1250|123.0000
+balanced|1/8|ratio<1, 4> . down_2|89.0000|14.8750
+balanced|8|up_2 . up_2 . up_2|14.6250|139.0000
+balanced|8|up_2 . down_2 . up_8|31.3750|311.0000
+balanced|1/8|up_2 . down_2 . down_8|341.0000|14.7500
+balanced|4|up_2 . down_2 . ratio<4, 1>|34.7500|155.0000
+balanced|1/4|up_2 . down_2 . ratio<1, 4>|205.0000|17.0000
+balanced|4|up_2 . up_3 . ratio_2_3|31.7500|64.0000
+balanced|8|up_2 . up_3 . ratio_4_3|14.8750|123.6667
+balanced|4|up_2 . down_3 . up_6|39.0833|209.0000
+balanced|1/4|up_2 . down_3 . ratio_3_8|190.3333|17.2500
+balanced|4|up_2 . up_6 . down_3|53.2500|64.3333
+balanced|8|up_2 . up_6 . ratio_2_3|27.6250|123.0000
+balanced|1/4|up_2 . down_6 . ratio_3_4|285.0000|25.7500
+balanced|1/8|up_2 . down_6 . ratio_3_8|282.3333|16.1250
+balanced|8|up_2 . up_8 . down_2|30.1250|123.0000
+balanced|4|up_2 . up_8 . ratio<1, 4>|73.2500|64.5000
+balanced|1/8|up_2 . down_8 . down_2|241.0000|15.3750
+balanced|4|up_2 . ratio_3_2 . ratio_4_3|19.7500|65.6667
+balanced|8|up_2 . ratio_3_2 . ratio_8_3|14.8750|131.6667
+balanced|4|up_2 . ratio_2_3 . up_3|37.2500|126.0000
+balanced|8|up_2 . ratio_2_3 . up_6|33.2917|259.0000
+balanced|8|up_2 . ratio_4_3 . up_3|12.9583|133.0000
+balanced|4|up_2 . ratio_4_3 . ratio_3_2|18.9167|66.5000
+balanced|1/4|up_2 . ratio_3_4 . down_6|263.0000|16.0833
+balanced|4|up_2 . ratio_3_4 . ratio_8_3|45.2500|123.6667
+balanced|8|up_2 . ratio_8_3 . ratio_3_2|16.2917|126.5000
+balanced|4|up_2 . ratio_8_3 . ratio_3_4|31.5833|64.5000
+balanced|1/4|up_2 . ratio_3_8 . down_3|192.0000|15.9167
+balanced|1/8|up_2 . ratio_3_8 . down_6|339.0000|14.9167
+balanced|4|up_2 . ratio<4, 1> . down_2|37.2500|66.0000
+balanced|1/4|up_2 . ratio<1, 4> . down_2|149.0000|16.5000
+balanced|4|up_2 . ratio<1, 4> . up_8|39.0000|247.0000
+balanced|1/8|up_2 . ratio<1, 4> . ratio<1, 4>|281.0000|15.3750
+balanced|8|down_2 . up_2 . up_8|12.2500|439.0000
+balanced|1/8|down_2 . up_2 . down_8|317.0000|17.1250
+balanced|4|down_2 . up_2 . ratio<4, 1>|14.5000|219.0000
+balanced|1/4|down_2 . up_2 . ratio<1, 4>|145.0000|20.2500
+balanced|1/8|down_2 . down_2 . down_2|117.0000|17.3750
+balanced|1/4|down_2 . up_3 . down_6|213.0000|19.4167
+balanced|4|down_2 . up_3 . ratio_8_3|18.8750|214.3333
+balanced|1/4|down_2 . down_3 . ratio_3_2|83.0000|41.2500
+balanced|1/8|down_2 . down_3 . ratio_3_4|167.6667|24.8750
+balanced|4|down_2 . up_6 . ratio_4_3|27.2500|215.6667
+balanced|8|down_2 . up_6 . ratio_8_3|17.6250|431.6667
+balanced|1/4|down_2 . down_6 . up_3|90.6667|82.2500
+balanced|1/8|down_2 . down_6 . ratio_3_2|163.6667|41.1250
+balanced|8|down_2 . up_8 . up_2|18.5000|429.0000
+balanced|1/8|down_2 . down_8 . up_2|148.0000|53.6250
+balanced|1/4|down_2 . down_8 . ratio<4, 1>|88.5000|112.2500
+balanced|1/4|down_2 . ratio_3_2 . down_3|104.0000|18.2500
+balanced|1/8|down_2 . ratio_3_2 . down_6|243.0000|16.6250
+balanced|1/4|down_2 . ratio_2_3 . ratio_3_4|118.3333|26.5000
+balanced|1/8|down_2 . ratio_2_3 . ratio_3_8|173.0000|17.2500
+balanced|4|down_2 . ratio_4_3 . up_6|30.4167|293.0000
+balanced|1/4|down_2 . ratio_4_3 . ratio_3_8|125.0000|19.5000
+balanced|1/8|down_2 . ratio_3_4 . down_3|152.0000|15.8750
+balanced|1/4|down_2 . ratio_3_4 . ratio_2_3|124.0000|25.0833
+balanced|4|down_2 . ratio_8_3 . up_3|18.5833|225.0000
+balanced|8|down_2 . ratio_8_3 . up_6|14.2917|451.0000
+balanced|1/8|down_2 . ratio_3_8 . ratio_2_3|210.0000|23.5417
+balanced|1/4|down_2 . ratio_3_8 . ratio_4_3|107.0000|40.0833
+balanced|4|down_2 . ratio<4, 1> . up_2|21.5000|223.0000
+balanced|1/4|down_2 . ratio<4, 1> . down_8|289.0000|19.5000
+balanced|8|down_2 . ratio<4, 1> . ratio<4, 1>|14.7500|439.0000
+balanced|1/4|down_2 . ratio<1, 4> . up_2|86.0000|55.7500
+balanced|4|up_3 . up_2 . ratio_2_3|39.0000|64.0000
+balanced|8|up_3 . up_2 . ratio_4_3|18.5000|123.6667
+balanced|1/4|up_3 . down_2 . down_6|303.0000|15.9167
+balanced|4|up_3 . down_2 . ratio_8_3|48.0000|121.0000
+balanced|8|up_3 . down_3 . up_8|37.8750|313.6667
+balanced|1/8|up_3 . down_3 . down_8|469.0000|14.7917
+balanced|4|up_3 . down_3 . ratio<4, 1>|47.7500|156.3333
+balanced|1/4|up_3 . down_3 . ratio<1, 4>|253.0000|16.0833
+balanced|1/4|up_3 . down_6 . down_2|213.0000|16.0833
+balanced|4|up_3 . down_6 . up_8|47.5000|240.3333
+balanced|1/8|up_3 . down_6 . ratio<1, 4>|425.0000|15.4167
+balanced|8|up_3 . up_8 . down_3|50.2500|118.0000
+balanced|4|up_3 . up_8 . down_6|117.5000|62.0000
+balanced|1/8|up_3 . down_8 . down_3|402.0000|14.7500
+balanced|1/4|up_3 . down_8 . ratio_2_3|418.0000|23.0833
+balanced|4|up_3 . ratio_2_3 . up_2|28.0000|73.0000
+balanced|1/4|up_3 . ratio_2_3 . down_8|373.0000|15.5000
+balanced|8|up_3 . ratio_2_3 . ratio<4, 1>|18.0000|139.0000
+balanced|8|up_3 . ratio_4_3 . up_2|18.0000|127.0000
+balanced|4|up_3 . ratio_8_3 . down_2|46.0000|63.6667
+balanced|4|up_3 . ratio<4, 1> . down_3|57.5000|61.6667
+balanced|8|up_3 . ratio<4, 1> . ratio_2_3|29.7500|117.6667
+balanced|1/4|up_3 . ratio<1, 4> . down_3|230.0000|15.4167
+balanced|1/8|up_3 . ratio<1, 4> . down_6|427.0000|14.9167
+balanced|4|down_3 . up_2 . up_6|15.1667|331.0000
+balanced|1/4|down_3 . up_2 . ratio_3_8|181.0000|32.7500
+balanced|1/4|down_3 . down_2 . ratio_3_2|63.6667|41.2500
+balanced|1/8|down_3 . down_2 . ratio_3_4|129.0000|24.8750
+balanced|8|down_3 . up_3 . up_8|13.2917|647.0000
+balanced|1/8|down_3 . up_3 . down_8|309.0000|17.3750
+balanced|4|down_3 . up_3 . ratio<4, 1>|16.5833|323.0000
+balanced|1/4|down_3 . up_3 . ratio<1, 4>|226.3333|32.7500
+balanced|4|down_3 . up_6 . up_2|22.6667|329.0000
+balanced|1/4|down_3 . up_6 . down_8|455.6667|33.7500
+balanced|8|down_3 . up_6 . ratio<4, 1>|14.3333|651.0000
+balanced|8|down_3 . up_8 . up_3|16.0833|648.0000
+balanced|4|down_3 . up_8 . ratio_3_2|26.5000|324.0000
+balanced|1/8|down_3 . down_8 . up_3|128.6667|81.0000
+balanced|1/4|down_3 . down_8 . up_6|79.0000|169.0000
+balanced|1/4|down_3 . ratio_3_2 . down_2|133.0000|31.5000
+balanced|4|down_3 . ratio_3_2 . up_8|31.2500|415.0000
+balanced|1/8|down_3 . ratio_3_2 . ratio<1, 4>|169.0000|17.2500
+balanced|1/8|down_3 . ratio_3_4 . down_2|109.0000|16.6250
+balanced|1/4|down_3 . ratio_3_8 . up_2|78.6667|56.2500
+balanced|4|down_3 . ratio<4, 1> . up_3|18.5000|331.0000
+balanced|8|down_3 . ratio<4, 1> . up_6|14.2500|663.0000
+balanced|1/4|down_3 . ratio<1, 4> . up_3|74.0000|82.7500
+balanced|1/8|down_3 . ratio<1, 4> . ratio_3_2|130.3333|41.3750
+balanced|4|up_6 . up_2 . down_3|75.7500|63.6667
+balanced|8|up_6 . up_2 . ratio_2_3|38.8750|121.6667
+balanced|4|up_6 . down_2 . ratio_4_3|54.2500|70.3333
+balanced|8|up_6 . down_2 . ratio_8_3|32.1250|141.0000
+balanced|4|up_6 . down_3 . up_2|53.2500|77.6667
+balanced|1/4|up_6 . down_3 . down_8|537.0000|15.5417
+balanced|8|up_6 . down_3 . ratio<4, 1>|30.6250|148.3333
+balanced|8|up_6 . down_6 . up_8|59.8750|332.3333
+balanced|1/8|up_6 . down_6 . down_8|853.0000|14.8333
+balanced|4|up_6 . down_6 . ratio<4, 1>|91.7500|165.6667
+balanced|1/4|up_6 . down_6 . ratio<1, 4>|493.0000|16.1667
+balanced|8|up_6 . up_8 . down_6|101.3750|119.6667
+balanced|1/4|up_6 . down_8 . down_3|470.0000|15.5000
+balanced|1/8|up_6 . down_8 . down_6|811.0000|14.9583
+balanced|8|up_6 . ratio_2_3 . up_2|32.3750|133.0000
+balanced|4|up_6 . ratio_4_3 . down_2|62.7500|64.3333
+balanced|8|up_6 . ratio_8_3 . down_2|40.8750|119.3333
+balanced|4|up_6 . ratio_8_3 . ratio<1, 4>|94.7500|62.6667
+balanced|8|up_6 . ratio<4, 1> . down_3|53.3750|119.3333
+balanced|4|up_6 . ratio<4, 1> . down_6|123.7500|62.6667
+balanced|1/4|up_6 . ratio<1, 4> . down_6|495.0000|15.6667
+balanced|4|up_6 . ratio<1, 4> . ratio_8_3|91.7500|129.0000
+balanced|1/4|down_6 . up_2 . ratio_3_4|149.0000|53.2500
+balanced|1/8|down_6 . up_2 . ratio_3_8|298.3333|33.6250
+balanced|1/4|down_6 . down_2 . up_3|60.6667|82.7500
+balanced|1/8|down_6 . down_2 . ratio_3_2|103.6667|41.3750
+balanced|1/4|down_6 . up_3 . down_2|156.3333|52.2500
+balanced|4|down_6 . up_3 . up_8|16.9583|675.0000
+balanced|1/8|down_6 . up_3 . ratio<1, 4>|343.6667|33.6250
+balanced|8|down_6 . up_6 . up_8|13.0000|1359.0000
+balanced|1/8|down_6 . up_6 . down_8|573.0000|34.6250
+balanced|4|down_6 . up_6 . ratio<4, 1>|18.0000|679.0000
+balanced|1/4|down_6 . up_6 . ratio<1, 4>|273.0000|55.2500
+balanced|4|down_6 . up_8 . up_3|19.7500|676.0000
+balanced|8|down_6 . up_8 . up_6|13.8750|1353.0000
+balanced|1/8|down_6 . down_8 . up_6|111.0000|169.1250
+balanced|1/8|down_6 . ratio_3_2 . down_2|250.3333|32.3750
+balanced|1/4|down_6 . ratio_3_4 . up_2|126.0000|73.2500
+balanced|1/8|down_6 . ratio_3_8 . up_2|118.6667|56.3750
+balanced|1/4|down_6 . ratio_3_8 . ratio<4, 1>|73.8333|117.7500
+balanced|4|down_6 . ratio<4, 1> . up_6|17.9167|691.0000
+balanced|1/4|down_6 . ratio<4, 1> . ratio_3_8|225.0000|55.2500
+balanced|1/8|down_6 . ratio<1, 4> . up_3|114.0000|82.8750
+balanced|1/4|down_6 . ratio<1, 4> . up_6|71.6667|172.7500
+balanced|8|up_8 . up_2 . down_2|42.6250|118.0000
+balanced|4|up_8 . up_2 . ratio<1, 4>|98.2500|62.0000
+balanced|8|up_8 . down_2 . up_2|39.6250|137.0000
+balanced|8|up_8 . up_3 . down_3|58.6250|118.3333
+balanced|4|up_8 . up_3 . down_6|134.2500|62.1667
+balanced|8|up_8 . down_3 . up_3|38.6250|139.0000
+balanced|4|up_8 . down_3 . ratio_3_2|70.2500|69.5000
+balanced|8|up_8 . up_6 . down_6|106.6250|118.6667
+balanced|4|up_8 . down_6 . up_3|113.9167|135.0000
+balanced|8|up_8 . down_6 . up_6|71.6250|277.0000
+balanced|8|up_8 . up_8 . down_8|138.6250|118.7500
+balanced|8|up_8 . down_8 . up_8|73.8750|333.0000
+balanced|1/8|up_8 . down_8 . down_8|1109.0000|14.8438
+balanced|4|up_8 . down_8 . ratio<4, 1>|119.7500|166.0000
+balanced|1/4|up_8 . down_8 . ratio<1, 4>|653.0000|16.1875
+balanced|4|up_8 . ratio_3_2 . down_3|87.2500|62.0000
+balanced|8|up_8 . ratio_3_2 . ratio_2_3|44.6250|118.3333
+balanced|8|up_8 . ratio_2_3 . ratio_3_2|41.2917|125.0000
+balanced|4|up_8 . ratio_2_3 . ratio_3_4|81.5833|63.7500
+balanced|8|up_8 . ratio_4_3 . ratio_3_4|43.2917|118.5000
+balanced|4|up_8 . ratio_4_3 . ratio_3_8|92.2500|62.2500
+balanced|4|up_8 . ratio_3_4 . ratio_2_3|79.2500|62.6667
+balanced|8|up_8 . ratio_3_4 . ratio_4_3|38.6250|121.0000
+balanced|8|up_8 . ratio_8_3 . ratio_3_8|64.6250|118.7500
+balanced|4|up_8 . ratio_3_8 . ratio_4_3|76.7500|68.3333
+balanced|8|up_8 . ratio_3_8 . ratio_8_3|43.3750|137.0000
+balanced|4|up_8 . ratio<4, 1> . down_8|170.2500|62.2500
+balanced|8|up_8 . ratio<4, 1> . ratio<1, 4>|74.6250|118.5000
+balanced|4|up_8 . ratio<1, 4> . up_2|72.2500|78.0000
+balanced|1/4|up_8 . ratio<1, 4> . down_8|681.0000|15.5625
+balanced|8|up_8 . ratio<1, 4> . ratio<4, 1>|40.1250|149.0000
+balanced|1/8|down_8 . up_2 . down_2|251.0000|38.8750
+balanced|1/8|down_8 . down_2 . up_2|98.0000|54.8750
+balanced|1/4|down_8 . down_2 . ratio<4, 1>|63.5000|114.7500
+balanced|1/8|down_8 . up_3 . down_3|303.0000|39.2083
+balanced|1/4|down_8 . up_3 . ratio_2_3|139.5000|57.7500
+balanced|1/8|down_8 . down_3 . up_3|106.3333|80.8750
+balanced|1/4|down_8 . down_3 . up_6|67.8333|168.7500
+balanced|1/4|down_8 . up_6 . down_3|190.0000|60.0833
+balanced|1/8|down_8 . up_6 . down_6|479.0000|41.5417
+balanced|1/8|down_8 . down_6 . up_6|104.0000|169.8750
+balanced|8|down_8 . up_8 . up_8|13.2812|1807.0000
+balanced|1/8|down_8 . up_8 . down_8|591.0000|41.6250
+balanced|4|down_8 . up_8 . ratio<4, 1>|18.5625|903.0000
+balanced|1/4|down_8 . up_8 . ratio<1, 4>|228.0000|60.2500
+balanced|1/8|down_8 . down_8 . up_8|106.2500|225.8750
+balanced|1/8|down_8 . ratio_3_2 . ratio_2_3|262.0000|39.2083
+balanced|1/4|down_8 . ratio_3_2 . ratio_4_3|133.0000|71.4167
+balanced|1/4|down_8 . ratio_2_3 . up_3|129.0000|103.7500
+balanced|1/8|down_8 . ratio_2_3 . ratio_3_2|240.3333|51.8750
+balanced|1/4|down_8 . ratio_4_3 . ratio_3_2|130.3333|74.2500
+balanced|1/8|down_8 . ratio_4_3 . ratio_3_4|262.3333|41.3750
+balanced|1/8|down_8 . ratio_3_4 . ratio_4_3|246.0000|50.5417
+balanced|1/4|down_8 . ratio_3_4 . ratio_8_3|137.0000|101.4167
+balanced|1/4|down_8 . ratio_8_3 . ratio_3_4|144.3333|60.2500
+balanced|1/8|down_8 . ratio_8_3 . ratio_3_8|337.0000|41.6250
+balanced|1/8|down_8 . ratio_3_8 . ratio_8_3|123.5000|78.8750
+balanced|1/4|down_8 . ratio<4, 1> . down_2|156.0000|61.7500
+balanced|4|down_8 . ratio<4, 1> . up_8|17.6875|923.0000
+balanced|1/8|down_8 . ratio<4, 1> . ratio<1, 4>|367.0000|41.3750
+balanced|1/4|down_8 . ratio<1, 4> . up_8|70.7500|230.7500
+balanced|1/8|down_8 . ratio<1, 4> . ratio<4, 1>|113.5000|114.8750
+balanced|4|ratio_3_2 . up_2 . ratio_4_3|24.5000|90.3333
+balanced|8|ratio_3_2 . up_2 . ratio_8_3|17.2500|181.0000
+balanced|1/4|ratio_3_2 . down_2 . down_3|140.0000|16.0000
+balanced|1/8|ratio_3_2 . down_2 . down_6|287.0000|15.2083
+balanced|1/4|ratio_3_2 . down_3 . down_2|111.0000|16.0000
+balanced|4|ratio_3_2 . down_3 . up_8|33.8750|231.0000
+balanced|1/8|ratio_3_2 . down_3 . ratio<1, 4>|237.0000|15.3750
+balanced|1/8|ratio_3_2 . down_6 . down_2|197.0000|15.3750
+balanced|4|ratio_3_2 . up_8 . down_3|101.5000|92.3333
+balanced|8|ratio_3_2 . up_8 . ratio_2_3|51.7500|179.0000
+balanced|1/8|ratio_3_2 . down_8 . ratio_2_3|402.0000|22.3750
+balanced|1/4|ratio_3_2 . down_8 . ratio_4_3|211.0000|38.0000
+balanced|8|ratio_3_2 . ratio_2_3 . up_8|32.7500|313.6667
+balanced|1/8|ratio_3_2 . ratio_2_3 . down_8|357.0000|14.7917
+balanced|4|ratio_3_2 . ratio_2_3 . ratio<4, 1>|37.5000|156.3333
+balanced|1/4|ratio_3_2 . ratio_2_3 . ratio<1, 4>|185.0000|16.0833
+balanced|4|ratio_3_2 . ratio_4_3 . up_2|24.7500|100.3333
+balanced|1/4|ratio_3_2 . ratio_4_3 . down_8|289.0000|15.6667
+balanced|8|ratio_3_2 . ratio_4_3 . ratio<4, 1>|16.3750|193.6667
+balanced|8|ratio_3_2 . ratio_8_3 . up_2|23.1250|188.3333
+balanced|4|ratio_3_2 . ratio<4, 1> . ratio_2_3|53.0000|92.0000
+balanced|8|ratio_3_2 . ratio<4, 1> . ratio_4_3|25.5000|179.6667
+balanced|1/8|ratio_3_2 . ratio<1, 4> . down_3|214.0000|14.7083
+balanced|1/4|ratio_3_2 . ratio<1, 4> . ratio_2_3|208.0000|23.0000
+balanced|4|ratio_2_3 . up_2 . up_3|17.9167|165.0000
+balanced|8|ratio_2_3 . up_2 . up_6|13.9583|331.0000
+balanced|1/4|ratio_2_3 . down_2 . ratio_3_4|111.6667|24.8750
+balanced|1/8|ratio_2_3 . down_2 . ratio_3_8|191.6667|17.1875
+balanced|4|ratio_2_3 . up_3 . up_2|22.7500|165.0000
+balanced|1/4|ratio_2_3 . up_3 . down_8|291.6667|17.3750
+balanced|8|ratio_2_3 . up_3 . ratio<4, 1>|15.3750|323.0000
+balanced|8|ratio_2_3 . up_6 . up_2|21.4583|329.0000
+balanced|8|ratio_2_3 . up_8 . ratio_3_2|25.2917|324.0000
+balanced|4|ratio_2_3 . up_8 . ratio_3_4|49.5833|163.0000
+balanced|1/4|ratio_2_3 . down_8 . up_3|114.0000|81.0000
+balanced|1/8|ratio_2_3 . down_8 . ratio_3_2|210.3333|40.5000
+balanced|8|ratio_2_3 . ratio_3_2 . up_8|30.0417|415.0000
+balanced|1/8|ratio_2_3 . ratio_3_2 . down_8|330.3333|15.6250
+balanced|4|ratio_2_3 . ratio_3_2 . ratio<4, 1>|32.0833|207.0000
+balanced|1/4|ratio_2_3 . ratio_3_2 . ratio<1, 4>|151.6667|17.2500
+balanced|1/4|ratio_2_3 . ratio_3_4 . down_2|91.6667|16.6250
+balanced|4|ratio_2_3 . ratio_3_4 . up_8|35.6667|297.0000
+balanced|1/8|ratio_2_3 . ratio_3_4 . ratio<1, 4>|214.3333|15.8125
+balanced|1/8|ratio_2_3 . ratio_3_8 . down_2|157.0000|15.8125
+balanced|8|ratio_2_3 . ratio<4, 1> . up_3|17.2917|331.0000
+balanced|4|ratio_2_3 . ratio<4, 1> . ratio_3_2|27.5833|165.5000
+balanced|1/4|ratio_2_3 . ratio<1, 4> . ratio_3_2|113.0000|41.3750
+balanced|1/8|ratio_2_3 . ratio<1, 4> . ratio_3_4|227.6667|24.9375
+balanced|8|ratio_4_3 . up_2 . up_3|15.0417|199.0000
+balanced|4|ratio_4_3 . up_2 . ratio_3_2|23.0833|99.5000
+balanced|4|ratio_4_3 . down_2 . up_6|35.0833|213.0000
+balanced|1/4|ratio_4_3 . down_2 . ratio_3_8|155.6667|17.5000
+balanced|8|ratio_4_3 . up_3 . up_2|19.8750|199.0000
+balanced|4|ratio_4_3 . up_6 . down_2|69.0833|103.0000
+balanced|8|ratio_4_3 . up_8 . ratio_3_4|46.7083|197.0000
+balanced|4|ratio_4_3 . up_8 . ratio_3_8|99.0833|101.5000
+balanced|1/4|ratio_4_3 . down_8 . ratio_3_2|182.3333|40.7500
+balanced|1/8|ratio_4_3 . down_8 . ratio_3_4|366.3333|24.6250
+balanced|4|ratio_4_3 . ratio_3_2 . up_2|23.4167|106.0000
+balanced|1/4|ratio_4_3 . ratio_3_2 . down_8|294.3333|15.9375
+balanced|8|ratio_4_3 . ratio_3_2 . ratio<4, 1>|15.7083|205.0000
+balanced|8|ratio_4_3 . ratio_3_4 . up_8|32.7917|331.0000
+balanced|1/8|ratio_4_3 . ratio_3_4 . down_8|346.3333|14.8125
+balanced|4|ratio_4_3 . ratio_3_4 . ratio<4, 1>|37.5833|165.0000
+balanced|1/4|ratio_4_3 . ratio_3_4 . ratio<1, 4>|178.3333|16.1250
+balanced|1/4|ratio_4_3 . ratio_3_8 . down_2|121.0000|16.1250
+balanced|4|ratio_4_3 . ratio_3_8 . up_8|36.5000|241.0000
+balanced|1/8|ratio_4_3 . ratio_3_8 . ratio<1, 4>|257.0000|15.4375
+balanced|8|ratio_4_3 . ratio<4, 1> . ratio_3_2|24.7083|199.5000
+balanced|4|ratio_4_3 . ratio<4, 1> . ratio_3_4|48.4167|101.0000
+balanced|1/4|ratio_4_3 . ratio<1, 4> . ratio_3_4|191.6667|25.2500
+balanced|1/8|ratio_4_3 . ratio<1, 4> . ratio_3_8|223.6667|16.1250
+balanced|1/4|ratio_3_4 . up_2 . down_6|225.0000|17.5833
+balanced|4|ratio_3_4 . up_2 . ratio_8_3|20.8750|153.0000
+balanced|1/8|ratio_3_4 . down_2 . down_3|160.0000|15.4583
+balanced|1/4|ratio_3_4 . down_2 . ratio_2_3|118.0000|22.5833
+balanced|1/8|ratio_3_4 . down_3 . down_2|131.0000|15.4583
+balanced|1/4|ratio_3_4 . down_6 . up_2|115.0000|53.9167
+balanced|4|ratio_3_4 . up_8 . ratio_2_3|58.3750|152.0000
+balanced|8|ratio_3_4 . up_8 . ratio_4_3|28.1875|299.6667
+balanced|1/8|ratio_3_4 . down_8 . ratio_4_3|231.0000|37.4583
+balanced|1/4|ratio_3_4 . down_8 . ratio_8_3|129.5000|75.2500
+balanced|1/4|ratio_3_4 . ratio_2_3 . down_2|95.0000|16.4167
+balanced|4|ratio_3_4 . ratio_2_3 . up_8|36.3750|285.6667
+balanced|1/8|ratio_3_4 . ratio_2_3 . ratio<1, 4>|205.0000|15.5417
+balanced|8|ratio_3_4 . ratio_4_3 . up_8|30.7500|404.3333
+balanced|1/8|ratio_3_4 . ratio_4_3 . down_8|309.0000|15.1250
+balanced|4|ratio_3_4 . ratio_4_3 . ratio<4, 1>|33.5000|201.6667
+balanced|1/4|ratio_3_4 . ratio_4_3 . ratio<1, 4>|155.0000|16.9167
+balanced|4|ratio_3_4 . ratio_8_3 . up_2|26.7500|160.3333
+balanced|1/4|ratio_3_4 . ratio_8_3 . down_8|307.0000|17.0833
+balanced|8|ratio_3_4 . ratio_8_3 . ratio<4, 1>|17.3750|313.6667
+balanced|4|ratio_3_4 . ratio<4, 1> . ratio_4_3|30.6250|153.0000
+balanced|8|ratio_3_4 . ratio<4, 1> . ratio_8_3|20.3125|306.3333
+balanced|1/8|ratio_3_4 . ratio<1, 4> . ratio_2_3|228.0000|22.4583
+balanced|1/4|ratio_3_4 . ratio<1, 4> . ratio_4_3|124.0000|38.2500
+balanced|8|ratio_8_3 . up_2 . ratio_3_2|20.2083|137.5000
+balanced|4|ratio_8_3 . up_2 . ratio_3_4|39.4167|70.0000
+balanced|4|ratio_8_3 . down_2 . up_3|43.0833|131.0000
+balanced|8|ratio_8_3 . down_2 . up_6|36.2083|269.0000
+balanced|4|ratio_8_3 . up_3 . down_2|45.4167|69.0000
+balanced|8|ratio_8_3 . up_6 . down_2|34.2083|129.0000
+balanced|4|ratio_8_3 . up_6 . ratio<1, 4>|81.4167|67.5000
+balanced|8|ratio_8_3 . up_8 . ratio_3_8|52.8750|129.5000
+balanced|1/4|ratio_8_3 . down_8 . ratio_3_4|394.3333|25.3750
+balanced|1/8|ratio_8_3 . down_8 . ratio_3_8|415.6667|16.1875
+balanced|8|ratio_8_3 . ratio_3_2 . up_2|19.2083|138.0000
+balanced|4|ratio_8_3 . ratio_3_4 . up_2|30.4167|78.0000
+balanced|1/4|ratio_8_3 . ratio_3_4 . down_8|374.3333|15.5625
+balanced|8|ratio_8_3 . ratio_3_4 . ratio<4, 1>|19.2083|149.0000
+balanced|8|ratio_8_3 . ratio_3_8 . up_8|42.1250|333.0000
+balanced|1/8|ratio_8_3 . ratio_3_8 . down_8|517.0000|14.8438
+balanced|4|ratio_8_3 . ratio_3_8 . ratio<4, 1>|56.2500|166.0000
+balanced|1/4|ratio_8_3 . ratio_3_8 . ratio<1, 4>|285.0000|16.1875
+balanced|8|ratio_8_3 . ratio<4, 1> . ratio_3_4|28.8750|129.0000
+balanced|4|ratio_8_3 . ratio<4, 1> . ratio_3_8|63.4167|67.5000
+balanced|4|ratio_8_3 . ratio<1, 4> . up_6|54.0833|221.0000
+balanced|1/4|ratio_8_3 . ratio<1, 4> . ratio_3_8|251.6667|16.8750
+balanced|1/4|ratio_3_8 . up_2 . down_3|205.0000|30.2500
+balanced|1/8|ratio_3_8 . up_2 . down_6|265.0000|17.6250
+balanced|1/8|ratio_3_8 . down_2 . ratio_2_3|158.0000|22.6250
+balanced|1/4|ratio_3_8 . down_2 . ratio_4_3|81.0000|38.2500
+balanced|1/4|ratio_3_8 . down_3 . up_2|79.5000|53.5833
+balanced|1/8|ratio_3_8 . down_6 . up_2|147.0000|53.9583
+balanced|1/4|ratio_3_8 . down_6 . ratio<4, 1>|88.0000|112.9167
+balanced|4|ratio_3_8 . up_8 . ratio_4_3|31.6875|301.0000
+balanced|8|ratio_3_8 . up_8 . ratio_8_3|19.8438|602.3333
+balanced|1/8|ratio_3_8 . down_8 . ratio_8_3|161.5000|75.2917
+balanced|1/8|ratio_3_8 . ratio_2_3 . down_2|135.0000|16.4583
+balanced|1/4|ratio_3_8 . ratio_4_3 . down_2|181.0000|30.9167
+balanced|4|ratio_3_8 . ratio_4_3 . up_8|34.2500|405.6667
+balanced|1/8|ratio_3_8 . ratio_4_3 . ratio<1, 4>|195.0000|16.9583
+balanced|8|ratio_3_8 . ratio_8_3 . up_8|15.4375|631.0000
+balanced|1/8|ratio_3_8 . ratio_8_3 . down_8|347.0000|17.1250
+balanced|4|ratio_3_8 . ratio_8_3 . ratio<4, 1>|20.8750|315.0000
+balanced|1/4|ratio_3_8 . ratio_8_3 . ratio<1, 4>|295.0000|32.2500
+balanced|1/4|ratio_3_8 . ratio<4, 1> . down_6|380.0000|32.2500
+balanced|4|ratio_3_8 . ratio<4, 1> . ratio_8_3|23.8125|307.6667
+balanced|1/8|ratio_3_8 . ratio<1, 4> . ratio_4_3|164.0000|38.2917
+balanced|1/4|ratio_3_8 . ratio<1, 4> . ratio_8_3|96.0000|76.9167
+balanced|4|ratio<4, 1> . up_2 . down_2|51.2500|68.0000
+balanced|4|ratio<4, 1> . down_2 . up_2|36.2500|81.0000
+balanced|1/4|ratio<4, 1> . down_2 . down_8|393.0000|15.5000
+balanced|8|ratio<4, 1> . down_2 . ratio<4, 1>|22.1250|155.0000
+balanced|4|ratio<4, 1> . up_3 . down_3|63.2500|64.3333
+balanced|8|ratio<4, 1> . up_3 . ratio_2_3|32.6250|123.0000
+balanced|4|ratio<4, 1> . down_3 . up_3|56.5833|131.0000
+balanced|8|ratio<4, 1> . down_3 . up_6|42.9583|269.0000
+balanced|8|ratio<4, 1> . up_6 . down_3|53.1250|123.3333
+balanced|4|ratio<4, 1> . up_6 . down_6|123.2500|64.6667
+balanced|4|ratio<4, 1> . down_6 . up_6|68.2500|221.0000
+balanced|1/4|ratio<4, 1> . down_6 . ratio_3_8|334.3333|16.8750
+balanced|4|ratio<4, 1> . up_8 . down_8|163.2500|64.7500
+balanced|8|ratio<4, 1> . up_8 . ratio<1, 4>|71.1250|123.5000
+balanced|1/4|ratio<4, 1> . down_8 . down_2|293.0000|16.1250
+balanced|4|ratio<4, 1> . down_8 . up_8|57.0000|241.0000
+balanced|1/8|ratio<4, 1> . down_8 . ratio<1, 4>|569.0000|15.4375
+balanced|4|ratio<4, 1> . ratio_3_2 . ratio_2_3|46.2500|64.3333
+balanced|8|ratio<4, 1> . ratio_3_2 . ratio_4_3|22.1250|124.3333
+balanced|8|ratio<4, 1> . ratio_2_3 . up_3|22.4583|138.0000
+balanced|4|ratio<4, 1> . ratio_2_3 . ratio_3_2|37.9167|69.0000
+balanced|8|ratio<4, 1> . ratio_4_3 . ratio_3_2|22.7917|126.5000
+balanced|4|ratio<4, 1> . ratio_4_3 . ratio_3_4|44.5833|64.5000
+balanced|4|ratio<4, 1> . ratio_3_4 . ratio_4_3|38.7500|67.6667
+balanced|8|ratio<4, 1> . ratio_3_4 . ratio_8_3|24.3750|135.6667
+balanced|8|ratio<4, 1> . ratio_8_3 . ratio_3_4|32.7917|123.5000
+balanced|4|ratio<4, 1> . ratio_8_3 . ratio_3_8|71.2500|64.7500
+balanced|1/4|ratio<4, 1> . ratio_3_8 . down_6|391.0000|15.6667
+balanced|4|ratio<4, 1> . ratio_3_8 . ratio_8_3|73.7500|129.0000
+balanced|8|ratio<4, 1> . ratio<4, 1> . down_2|35.1250|123.0000
+balanced|4|ratio<4, 1> . ratio<4, 1> . ratio<1, 4>|83.2500|64.5000
+balanced|8|ratio<4, 1> . ratio<1, 4> . up_8|45.8750|331.0000
+balanced|1/8|ratio<4, 1> . ratio<1, 4> . down_8|597.0000|14.8125
+balanced|4|ratio<4, 1> . ratio<1, 4> . ratio<4, 1>|63.7500|165.0000
+balanced|1/4|ratio<4, 1> . ratio<1, 4> . ratio<1, 4>|333.0000|16.1250
+balanced|1/4|ratio<1, 4> . up_2 . down_2|139.0000|38.7500
+balanced|4|ratio<1, 4> . up_2 . up_8|15.8750|459.0000
+balanced|1/8|ratio<1, 4> . up_2 . ratio<1, 4>|177.0000|19.3750
+balanced|1/4|ratio<1, 4> . down_2 . up_2|58.0000|54.7500
+balanced|1/4|ratio<1, 4> . up_3 . down_3|191.0000|39.0833
+balanced|1/8|ratio<1, 4> . up_3 . down_6|245.0000|18.5417
+balanced|1/4|ratio<1, 4> . down_3 . up_3|66.3333|80.7500
+balanced|1/8|ratio<1, 4> . down_3 . ratio_3_2|115.0000|40.3750
+balanced|1/4|ratio<1, 4> . up_6 . down_6|367.0000|41.4167
+balanced|4|ratio<1, 4> . up_6 . ratio_8_3|21.2500|451.6667
+balanced|1/8|ratio<1, 4> . down_6 . up_3|114.6667|81.3750
+balanced|1/4|ratio<1, 4> . down_6 . up_6|72.0000|169.7500
+balanced|4|ratio<1, 4> . up_8 . up_2|22.1250|449.0000
+balanced|1/4|ratio<1, 4> . up_8 . down_8|479.0000|41.5000
+balanced|8|ratio<1, 4> . up_8 . ratio<4, 1>|15.0625|899.0000
+balanced|1/4|ratio<1, 4> . down_8 . up_8|74.2500|225.7500
+balanced|1/8|ratio<1, 4> . down_8 . ratio<4, 1>|120.5000|112.3750
+balanced|1/8|ratio<1, 4> . ratio_3_2 . down_3|136.0000|17.3750
+balanced|1/4|ratio<1, 4> . ratio_3_2 . ratio_2_3|150.0000|39.0833
+balanced|1/4|ratio<1, 4> . ratio_2_3 . ratio_3_2|128.3333|51.7500
+balanced|1/8|ratio<1, 4> . ratio_2_3 . ratio_3_4|150.3333|25.6250
+balanced|1/4|ratio<1, 4> . ratio_4_3 . ratio_3_4|150.3333|41.2500
+balanced|1/8|ratio<1, 4> . ratio_4_3 . ratio_3_8|157.0000|18.6250
+balanced|1/8|ratio<1, 4> . ratio_3_4 . ratio_2_3|156.0000|24.2083
+balanced|1/4|ratio<1, 4> . ratio_3_4 . ratio_4_3|134.0000|50.4167
+balanced|4|ratio<1, 4> . ratio_8_3 . up_6|17.9167|471.0000
+balanced|1/4|ratio<1, 4> . ratio_8_3 . ratio_3_8|225.0000|41.5000
+balanced|1/8|ratio<1, 4> . ratio_3_8 . ratio_4_3|139.0000|39.2083
+balanced|1/4|ratio<1, 4> . ratio_3_8 . ratio_8_3|83.5000|78.7500
+balanced|8|ratio<1, 4> . ratio<4, 1> . up_8|14.1875|919.0000
+balanced|1/8|ratio<1, 4> . ratio<4, 1> . down_8|321.0000|18.6250
+balanced|4|ratio<1, 4> . ratio<4, 1> . ratio<4, 1>|18.3750|459.0000
+balanced|1/4|ratio<1, 4> . ratio<4, 1> . ratio<1, 4>|255.0000|41.2500
+balanced|1/8|ratio<1, 4> . ratio<1, 4> . up_2|118.0000|54.8750
+balanced|1/4|ratio<1, 4> . ratio<1, 4> . ratio<4, 1>|73.5000|114.7500
+transparent|8|up_8|43.8750|199.0000
+transparent|1/8|down_8|351.0000|24.8750
+transparent|4|ratio<4, 1>|37.7500|99.0000
+transparent|1/4|ratio<1, 4>|151.0000|24.7500
+transparent|4|up_2 . up_2|26.2500|141.0000
+transparent|1/4|up_2 . down_8|427.0000|27.0000
+transparent|8|up_2 . ratio<4, 1>|27.6250|295.0000
+transparent|1/4|down_2 . down_2|105.0000|35.2500
+transparent|4|down_2 . up_8|51.7500|443.0000
+transparent|1/8|down_2 . ratio<1, 4>|227.0000|26.8750
+transparent|4|up_3 . ratio_4_3|42.0000|113.0000
+transparent|8|up_3 . ratio_8_3|33.7500|229.0000
+transparent|1/4|down_3 . ratio_3_4|201.0000|43.2500
+transparent|1/8|down_3 . ratio_3_8|221.0000|27.7500
+transparent|4|up_6 . ratio_2_3|86.2500|107.0000
+transparent|8|up_6 . ratio_4_3|42.1250|207.6667
+transparent|1/4|down_6 . ratio_3_2|201.0000|74.2500
+transparent|1/8|down_6 . ratio_3_4|401.0000|43.3750
+transparent|4|up_8 . down_2|106.7500|108.0000
+transparent|1/4|down_8 . up_2|207.0000|110.7500
+transparent|1/4|ratio_3_2 . down_6|317.0000|26.7500
+transparent|4|ratio_3_2 . ratio_8_3|56.5000|165.0000
+transparent|4|ratio_2_3 . up_6|54.2500|297.0000
+transparent|1/4|ratio_2_3 . ratio_3_8|195.6667|27.7500
+transparent|4|ratio_4_3 . up_3|46.2500|173.0000
+transparent|8|ratio_4_3 . up_6|48.1250|347.0000
+transparent|1/4|ratio_3_4 . down_3|188.0000|28.2500
+transparent|1/8|ratio_3_4 . down_6|361.0000|25.9583
+transparent|8|ratio_8_3 . up_3|25.6250|222.0000
+transparent|4|ratio_8_3 . ratio_3_2|40.2500|111.0000
+transparent|1/8|ratio_3_8 . down_3|292.0000|28.6250
+transparent|1/4|ratio_3_8 . ratio_2_3|274.0000|41.2500
+transparent|8|ratio<4, 1> . up_2|28.3750|215.0000
+transparent|1/8|ratio<1, 4> . down_2|221.0000|36.8750
+transparent|8|up_2 . up_2 . up_2|22.6250|299.0000
+transparent|8|up_2 . down_2 . up_8|59.6250|687.0000
+transparent|1/8|up_2 . down_2 . down_8|655.0000|27.0000
+transparent|4|up_2 . down_2 . ratio<4, 1>|69.2500|343.0000
+transparent|1/4|up_2 . down_2 . ratio<1, 4>|303.0000|29.0000
+transparent|4|up_2 . up_3 . ratio_2_3|55.7500|145.0000
+transparent|8|up_2 . up_3 . ratio_4_3|26.8750|283.6667
+transparent|4|up_2 . down_3 . up_6|74.4167|419.0000
+transparent|1/4|up_2 . down_3 . ratio_3_8|297.0000|29.8750
+transparent|4|up_2 . up_6 . down_3|114.2500|155.3333
+transparent|8|up_2 . up_6 . ratio_2_3|61.1250|302.0000
+transparent|1/4|up_2 . down_6 . ratio_3_4|477.0000|45.5000
+transparent|1/8|up_2 . down_6 . ratio_3_8|634.3333|30.7500
+transparent|8|up_2 . up_8 . down_2|72.6250|304.0000
+transparent|4|up_2 . up_8 . ratio<1, 4>|156.2500|155.5000
+transparent|1/8|up_2 . down_8 . down_2|581.0000|38.0000
+transparent|4|up_2 . ratio_3_2 . ratio_4_3|40.7500|151.6667
+transparent|8|up_2 . ratio_3_2 . ratio_8_3|33.1250|306.3333
+transparent|4|up_2 . ratio_2_3 . up_3|74.2500|270.0000
+transparent|8|up_2 . ratio_2_3 . up_6|62.1250|541.0000
+transparent|8|up_2 . ratio_4_3 . up_3|25.4583|318.0000
+transparent|4|up_2 . ratio_4_3 . ratio_3_2|39.9167|159.0000
+transparent|1/4|up_2 . ratio_3_4 . down_6|437.0000|28.0833
+transparent|4|up_2 . ratio_3_4 . ratio_8_3|84.5000|254.3333
+transparent|8|up_2 . ratio_8_3 . ratio_3_2|34.1250|307.0000
+transparent|4|up_2 . ratio_8_3 . ratio_3_4|67.2500|155.5000
+transparent|1/4|up_2 . ratio_3_8 . down_3|368.0000|30.7500
+transparent|1/8|up_2 . ratio_3_8 . down_6|721.0000|27.5417
+transparent|4|up_2 . ratio<4, 1> . down_2|74.2500|156.0000
+transparent|1/4|up_2 . ratio<1, 4> . down_2|297.0000|39.0000
+transparent|4|up_2 . ratio<1, 4> . up_8|68.0000|435.0000
+transparent|1/8|up_2 . ratio<1, 4> . ratio<1, 4>|499.0000|27.7500
+transparent|8|down_2 . up_2 . up_8|30.7500|1079.0000
+transparent|1/8|down_2 . up_2 . down_8|503.0000|29.1250
+transparent|4|down_2 . up_2 . ratio<4, 1>|35.5000|539.0000
+transparent|1/4|down_2 . up_2 . ratio<1, 4>|235.0000|34.2500
+transparent|1/8|down_2 . down_2 . down_2|181.0000|37.3750
+transparent|1/4|down_2 . up_3 . down_6|359.0000|33.4167
+transparent|4|down_2 . up_3 . ratio_8_3|41.6250|473.0000
+transparent|1/4|down_2 . down_3 . ratio_3_2|139.0000|78.2500
+transparent|1/8|down_2 . down_3 . ratio_3_4|277.0000|45.3750
+transparent|4|down_2 . up_6 . ratio_4_3|50.0000|451.6667
+transparent|8|down_2 . up_6 . ratio_8_3|37.2500|911.6667
+transparent|1/4|down_2 . down_6 . up_3|155.3333|152.7500
+transparent|1/8|down_2 . down_6 . ratio_3_2|277.0000|76.3750
+transparent|8|down_2 . up_8 . up_2|35.3750|903.0000
+transparent|1/8|down_2 . down_8 . up_2|283.0000|112.8750
+transparent|1/4|down_2 . down_8 . ratio<4, 1>|163.5000|202.7500
+transparent|1/4|down_2 . ratio_3_2 . down_3|176.0000|33.2500
+transparent|1/8|down_2 . ratio_3_2 . down_6|393.0000|28.8750
+transparent|1/4|down_2 . ratio_2_3 . ratio_3_4|207.6667|48.0000
+transparent|1/8|down_2 . ratio_2_3 . ratio_3_8|271.6667|29.8750
+transparent|4|down_2 . ratio_4_3 . up_6|56.0000|591.0000
+transparent|1/4|down_2 . ratio_4_3 . ratio_3_8|227.6667|36.0000
+transparent|1/8|down_2 . ratio_3_4 . down_3|264.0000|30.3750
+transparent|1/4|down_2 . ratio_3_4 . ratio_2_3|216.0000|45.9167
+transparent|4|down_2 . ratio_8_3 . up_3|33.5000|466.0000
+transparent|8|down_2 . ratio_8_3 . up_6|33.0833|963.0000
+transparent|1/8|down_2 . ratio_3_8 . ratio_2_3|350.0000|43.3750
+transparent|1/4|down_2 . ratio_3_8 . ratio_4_3|179.5000|70.9167
+transparent|4|down_2 . ratio<4, 1> . up_2|36.2500|459.0000
+transparent|1/4|down_2 . ratio<4, 1> . down_8|551.0000|36.0000
+transparent|8|down_2 . ratio<4, 1> . ratio<4, 1>|25.6250|915.0000
+transparent|1/4|down_2 . ratio<1, 4> . up_2|145.0000|114.7500
+transparent|4|up_3 . up_2 . ratio_2_3|63.0000|117.6667
+transparent|8|up_3 . up_2 . ratio_4_3|30.5000|229.0000
+transparent|1/4|up_3 . down_2 . down_6|497.0000|28.1667
+transparent|4|up_3 . down_2 . ratio_8_3|92.7500|246.3333
+transparent|8|up_3 . down_3 . up_8|69.1250|593.6667
+transparent|1/8|up_3 . down_3 . down_8|815.0000|26.5417
+transparent|4|up_3 . down_3 . ratio<4, 1>|88.2500|296.3333
+transparent|1/4|up_3 . down_3 . ratio<1, 4>|415.0000|28.5833
+transparent|1/4|up_3 . down_6 . down_2|457.0000|38.8333
+transparent|4|up_3 . down_6 . up_8|83.5000|428.3333
+transparent|1/8|up_3 . down_6 . ratio<1, 4>|667.0000|27.2917
+transparent|8|up_3 . up_8 . down_3|105.0000|235.6667
+transparent|4|up_3 . up_8 . down_6|223.0000|121.3333
+transparent|1/8|up_3 . down_8 . down_3|840.0000|29.4583
+transparent|1/4|up_3 . down_8 . ratio_2_3|733.0000|43.1667
+transparent|4|up_3 . ratio_2_3 . up_2|47.5000|133.0000
+transparent|1/4|up_3 . ratio_2_3 . down_8|647.0000|27.6250
+transparent|8|up_3 . ratio_2_3 . ratio<4, 1>|38.2500|279.0000
+transparent|8|up_3 . ratio_4_3 . up_2|30.5000|243.0000
+transparent|4|up_3 . ratio_8_3 . down_2|86.5000|123.0000
+transparent|4|up_3 . ratio<4, 1> . down_3|108.5000|120.6667
+transparent|8|up_3 . ratio<4, 1> . ratio_2_3|58.2500|232.6667
+transparent|1/4|up_3 . ratio<1, 4> . down_3|434.0000|30.1667
+transparent|1/8|up_3 . ratio<1, 4> . down_6|741.0000|26.7917
+transparent|4|down_3 . up_2 . up_6|35.5000|739.0000
+transparent|1/4|down_3 . up_2 . ratio_3_8|351.6667|66.2500
+transparent|1/4|down_3 . down_2 . ratio_3_2|119.6667|88.5000
+transparent|1/8|down_3 . down_2 . ratio_3_4|238.3333|50.5000
+transparent|8|down_3 . up_3 . up_8|29.5417|1279.0000
+transparent|1/8|down_3 . up_3 . down_8|527.0000|30.6250
+transparent|4|down_3 . up_3 . ratio<4, 1>|33.5833|635.0000
+transparent|1/4|down_3 . up_3 . ratio<1, 4>|420.3333|61.7500
+transparent|4|down_3 . up_6 . up_2|38.8333|611.0000
+transparent|1/4|down_3 . up_6 . down_8|820.3333|62.0000
+transparent|8|down_3 . up_6 . ratio<4, 1>|25.4167|1215.0000
+transparent|8|down_3 . up_8 . up_3|28.5000|1209.0000
+transparent|4|down_3 . up_8 . ratio_3_2|47.3333|604.5000
+transparent|1/8|down_3 . down_8 . up_3|228.0000|151.1250
+transparent|1/4|down_3 . down_8 . up_6|139.0000|303.2500
+transparent|1/4|down_3 . ratio_3_2 . down_2|265.0000|67.5000
+transparent|4|down_3 . ratio_3_2 . up_8|56.5000|791.0000
+transparent|1/8|down_3 . ratio_3_2 . ratio<1, 4>|283.0000|30.5000
+transparent|1/8|down_3 . ratio_3_4 . down_2|219.6667|39.7500
+transparent|1/4|down_3 . ratio_3_8 . up_2|142.0000|116.5000
+transparent|4|down_3 . ratio<4, 1> . up_3|32.0000|616.0000
+transparent|8|down_3 . ratio<4, 1> . up_6|22.3333|1227.0000
+transparent|1/4|down_3 . ratio<1, 4> . up_3|128.0000|154.0000
+transparent|1/8|down_3 . ratio<1, 4> . ratio_3_2|222.3333|77.0000
+transparent|4|up_6 . up_2 . down_3|124.2500|112.6667
+transparent|8|up_6 . up_2 . ratio_2_3|66.1250|216.6667
+transparent|4|up_6 . down_2 . ratio_4_3|93.7500|125.0000
+transparent|8|up_6 . down_2 . ratio_8_3|59.6250|253.0000
+transparent|4|up_6 . down_3 . up_2|89.7500|133.6667
+transparent|1/4|up_6 . down_3 . down_8|867.0000|27.4167
+transparent|8|up_6 . down_3 . ratio<4, 1>|59.3750|280.3333
+transparent|8|up_6 . down_6 . up_8|106.6250|596.3333
+transparent|1/8|up_6 . down_6 . down_8|1487.0000|26.5833
+transparent|4|up_6 . down_6 . ratio<4, 1>|163.2500|297.6667
+transparent|1/4|up_6 . down_6 . ratio<1, 4>|719.0000|28.1667
+transparent|8|up_6 . up_8 . down_6|208.1250|218.6667
+transparent|1/4|up_6 . down_8 . down_3|892.0000|30.3333
+transparent|1/8|up_6 . down_8 . down_6|1665.0000|27.3333
+transparent|8|up_6 . ratio_2_3 . up_2|52.6250|231.0000
+transparent|4|up_6 . ratio_4_3 . down_2|103.2500|112.3333
+transparent|8|up_6 . ratio_8_3 . down_2|85.6250|220.3333
+transparent|4|up_6 . ratio_8_3 . ratio<1, 4>|182.2500|113.6667
+transparent|8|up_6 . ratio<4, 1> . down_3|92.6250|214.3333
+transparent|4|up_6 . ratio<4, 1> . down_6|198.2500|110.6667
+transparent|1/4|up_6 . ratio<1, 4> . down_6|793.0000|27.6667
+transparent|4|up_6 . ratio<1, 4> . ratio_8_3|163.2500|231.6667
+transparent|1/4|down_6 . up_2 . ratio_3_4|275.6667|107.7500
+transparent|1/8|down_6 . up_2 . ratio_3_8|551.6667|66.3750
+transparent|1/4|down_6 . down_2 . up_3|142.0000|184.7500
+transparent|1/8|down_6 . down_2 . ratio_3_2|250.3333|92.3750
+transparent|1/4|down_6 . up_3 . down_2|297.6667|104.7500
+transparent|4|down_6 . up_3 . up_8|35.7917|1283.0000
+transparent|1/8|down_6 . up_3 . ratio<1, 4>|620.3333|61.8750
+transparent|8|down_6 . up_6 . up_8|28.0833|2463.0000
+transparent|1/8|down_6 . up_6 . down_8|1020.3333|62.1250
+transparent|4|down_6 . up_6 . ratio<4, 1>|31.6667|1219.0000
+transparent|1/4|down_6 . up_6 . ratio<1, 4>|485.6667|99.2500
+transparent|4|down_6 . up_8 . up_3|34.7500|1213.0000
+transparent|8|down_6 . up_8 . up_6|24.3750|2427.0000
+transparent|1/8|down_6 . down_8 . up_6|195.0000|303.3750
+transparent|1/8|down_6 . ratio_3_2 . down_2|465.0000|67.6250
+transparent|1/4|down_6 . ratio_3_4 . up_2|232.0000|147.7500
+transparent|1/8|down_6 . ratio_3_8 . up_2|272.6667|120.3750
+transparent|1/4|down_6 . ratio_3_8 . ratio<4, 1>|158.3333|217.7500
+transparent|4|down_6 . ratio<4, 1> . up_6|28.5833|1231.0000
+transparent|1/4|down_6 . ratio<4, 1> . ratio_3_8|401.0000|99.2500
+transparent|1/8|down_6 . ratio<1, 4> . up_3|178.6667|153.3750
+transparent|1/4|down_6 . ratio<1, 4> . up_6|114.3333|307.7500
+transparent|8|up_8 . up_2 . down_2|81.8750|216.0000
+transparent|4|up_8 . up_2 . ratio<1, 4>|174.7500|111.5000
+transparent|8|up_8 . down_2 . up_2|62.8750|233.0000
+transparent|8|up_8 . up_3 . down_3|101.8750|212.3333
+transparent|4|up_8 . up_3 . down_6|216.7500|109.6667
+transparent|8|up_8 . down_3 . up_3|65.8750|245.0000
+transparent|4|up_8 . down_3 . ratio_3_2|120.7500|122.5000
+transparent|8|up_8 . up_6 . down_6|185.8750|212.6667
+transparent|4|up_8 . down_6 . up_3|205.0833|248.0000
+transparent|8|up_8 . down_6 . up_6|127.5417|497.0000
+transparent|8|up_8 . up_8 . down_8|325.8750|218.7500
+transparent|8|up_8 . down_8 . up_8|131.6250|597.0000
+transparent|1/8|up_8 . down_8 . down_8|2607.0000|27.3438
+transparent|4|up_8 . down_8 . ratio<4, 1>|213.2500|298.0000
+transparent|1/4|up_8 . down_8 . ratio<1, 4>|1279.0000|29.6875
+transparent|4|up_8 . ratio_3_2 . down_3|149.7500|110.5000
+transparent|8|up_8 . ratio_3_2 . ratio_2_3|78.8750|212.3333
+transparent|8|up_8 . ratio_2_3 . ratio_3_2|70.5417|222.0000
+transparent|4|up_8 . ratio_2_3 . ratio_3_4|140.0833|113.0000
+transparent|8|up_8 . ratio_4_3 . ratio_3_4|76.5417|212.5000
+transparent|4|up_8 . ratio_4_3 . ratio_3_8|169.4167|112.7500
+transparent|4|up_8 . ratio_3_4 . ratio_2_3|138.7500|111.6667
+transparent|8|up_8 . ratio_3_4 . ratio_4_3|68.3750|217.0000
+transparent|8|up_8 . ratio_8_3 . ratio_3_8|143.8750|218.7500
+transparent|4|up_8 . ratio_3_8 . ratio_4_3|152.2500|129.6667
+transparent|8|up_8 . ratio_3_8 . ratio_8_3|88.8750|262.3333
+transparent|4|up_8 . ratio<4, 1> . down_8|314.7500|112.7500
+transparent|8|up_8 . ratio<4, 1> . ratio<1, 4>|129.8750|212.5000
+transparent|4|up_8 . ratio<1, 4> . up_2|137.7500|144.0000
+transparent|1/4|up_8 . ratio<1, 4> . down_8|1259.0000|28.1875
+transparent|8|up_8 . ratio<1, 4> . ratio<4, 1>|83.3750|301.0000
+transparent|1/8|down_8 . up_2 . down_2|477.0000|85.8750
+transparent|1/8|down_8 . down_2 . up_2|246.0000|134.8750
+transparent|1/4|down_8 . down_2 . ratio<4, 1>|145.0000|246.7500
+transparent|1/8|down_8 . up_3 . down_3|553.0000|74.2083
+transparent|1/4|down_8 . up_3 . ratio_2_3|249.5000|106.7500
+transparent|1/8|down_8 . down_3 . up_3|236.3333|159.8750
+transparent|1/4|down_8 . down_3 . up_6|143.1667|320.7500
+transparent|1/4|down_8 . up_6 . down_3|334.0000|107.0833
+transparent|1/8|down_8 . up_6 . down_6|853.0000|74.5417
+transparent|1/8|down_8 . down_6 . up_6|224.6667|307.8750
+transparent|8|down_8 . up_8 . up_8|28.5938|3263.0000
+transparent|1/8|down_8 . up_8 . down_8|1053.0000|74.6250
+transparent|4|down_8 . up_8 . ratio<4, 1>|32.6875|1619.0000
+transparent|1/4|down_8 . up_8 . ratio<1, 4>|430.0000|112.2500
+transparent|1/8|down_8 . down_8 . up_8|228.7500|407.8750
+transparent|1/8|down_8 . ratio_3_2 . ratio_2_3|476.0000|74.2083
+transparent|1/4|down_8 . ratio_3_2 . ratio_4_3|238.5000|132.0833
+transparent|1/4|down_8 . ratio_2_3 . up_3|234.0000|197.7500
+transparent|1/8|down_8 . ratio_2_3 . ratio_3_2|434.3333|98.8750
+transparent|1/4|down_8 . ratio_4_3 . ratio_3_2|234.3333|136.2500
+transparent|1/8|down_8 . ratio_4_3 . ratio_3_4|467.6667|74.3750
+transparent|1/8|down_8 . ratio_3_4 . ratio_4_3|438.5000|90.8750
+transparent|1/4|down_8 . ratio_3_4 . ratio_8_3|244.2500|182.0833
+transparent|1/4|down_8 . ratio_8_3 . ratio_3_4|268.3333|112.2500
+transparent|1/8|down_8 . ratio_8_3 . ratio_3_8|601.0000|74.6250
+transparent|1/8|down_8 . ratio_3_8 . ratio_8_3|276.7500|145.5417
+transparent|1/4|down_8 . ratio<4, 1> . down_2|272.0000|108.7500
+transparent|4|down_8 . ratio<4, 1> . up_8|33.3125|1667.0000
+transparent|1/8|down_8 . ratio<4, 1> . ratio<1, 4>|653.0000|74.3750
+transparent|1/4|down_8 . ratio<1, 4> . up_8|133.2500|416.7500
+transparent|1/8|down_8 . ratio<1, 4> . ratio<4, 1>|216.5000|207.8750
+transparent|4|ratio_3_2 . up_2 . ratio_4_3|53.0000|194.3333
+transparent|8|ratio_3_2 . up_2 . ratio_8_3|39.2500|391.6667
+transparent|1/4|ratio_3_2 . down_2 . down_3|224.0000|29.4167
+transparent|1/8|ratio_3_2 . down_2 . down_6|481.0000|27.0833
+transparent|1/4|ratio_3_2 . down_3 . down_2|195.0000|36.2500
+transparent|4|ratio_3_2 . down_3 . up_8|60.6250|427.0000
+transparent|1/8|ratio_3_2 . down_3 . ratio<1, 4>|399.0000|27.5000
+transparent|1/8|ratio_3_2 . down_6 . down_2|441.0000|37.7500
+transparent|4|ratio_3_2 . up_8 . down_3|177.2500|172.6667
+transparent|8|ratio_3_2 . up_8 . ratio_2_3|92.6250|336.6667
+transparent|1/8|ratio_3_2 . down_8 . ratio_2_3|717.0000|42.0833
+transparent|1/4|ratio_3_2 . down_8 . ratio_4_3|367.0000|68.0833
+transparent|8|ratio_3_2 . ratio_2_3 . up_8|59.5000|593.6667
+transparent|1/8|ratio_3_2 . ratio_2_3 . down_8|631.0000|26.5417
+transparent|4|ratio_3_2 . ratio_2_3 . ratio<4, 1>|69.0000|296.3333
+transparent|1/4|ratio_3_2 . ratio_2_3 . ratio<1, 4>|311.0000|28.5833
+transparent|4|ratio_3_2 . ratio_4_3 . up_2|42.0000|183.6667
+transparent|1/4|ratio_3_2 . ratio_4_3 . down_8|503.0000|27.9167
+transparent|8|ratio_3_2 . ratio_4_3 . ratio<4, 1>|35.5000|380.3333
+transparent|8|ratio_3_2 . ratio_8_3 . up_2|37.7500|347.0000
+transparent|4|ratio_3_2 . ratio<4, 1> . ratio_2_3|92.7500|172.3333
+transparent|8|ratio_3_2 . ratio<4, 1> . ratio_4_3|45.3750|338.3333
+transparent|1/8|ratio_3_2 . ratio<1, 4> . down_3|418.0000|29.0833
+transparent|1/4|ratio_3_2 . ratio<1, 4> . ratio_2_3|367.0000|43.0833
+transparent|4|ratio_2_3 . up_2 . up_3|33.9167|354.0000
+transparent|8|ratio_2_3 . up_2 . up_6|33.2917|739.0000
+transparent|1/4|ratio_2_3 . down_2 . ratio_3_4|213.0000|50.5000
+transparent|1/8|ratio_2_3 . down_2 . ratio_3_8|314.3333|29.8750
+transparent|4|ratio_2_3 . up_3 . up_2|38.7500|313.0000
+transparent|1/4|ratio_2_3 . up_3 . down_8|501.6667|30.6250
+transparent|8|ratio_2_3 . up_3 . ratio<4, 1>|31.3750|635.0000
+transparent|8|ratio_2_3 . up_6 . up_2|36.6250|611.0000
+transparent|8|ratio_2_3 . up_8 . ratio_3_2|45.1250|604.5000
+transparent|4|ratio_2_3 . up_8 . ratio_3_4|89.2500|304.0000
+transparent|1/4|ratio_2_3 . down_8 . up_3|205.3333|151.1250
+transparent|1/8|ratio_2_3 . down_8 . ratio_3_2|377.0000|75.5625
+transparent|8|ratio_2_3 . ratio_3_2 . up_8|54.2917|791.0000
+transparent|1/8|ratio_2_3 . ratio_3_2 . down_8|564.3333|27.7500
+transparent|4|ratio_2_3 . ratio_3_2 . ratio<4, 1>|58.5833|395.0000
+transparent|1/4|ratio_2_3 . ratio_3_2 . ratio<1, 4>|257.6667|30.5000
+transparent|1/4|ratio_2_3 . ratio_3_4 . down_2|194.3333|39.7500
+transparent|4|ratio_2_3 . ratio_3_4 . up_8|64.5833|545.0000
+transparent|1/8|ratio_2_3 . ratio_3_4 . ratio<1, 4>|360.3333|28.1250
+transparent|1/8|ratio_2_3 . ratio_3_8 . down_2|326.3333|38.3750
+transparent|8|ratio_2_3 . ratio<4, 1> . up_3|29.7917|616.0000
+transparent|4|ratio_2_3 . ratio<4, 1> . ratio_3_2|48.5833|308.0000
+transparent|1/4|ratio_2_3 . ratio<1, 4> . ratio_3_2|197.0000|77.0000
+transparent|1/8|ratio_2_3 . ratio<1, 4> . ratio_3_4|393.0000|44.7500
+transparent|8|ratio_4_3 . up_2 . up_3|27.7917|404.0000
+transparent|4|ratio_4_3 . up_2 . ratio_3_2|44.5833|202.0000
+transparent|4|ratio_4_3 . down_2 . up_6|64.9167|431.0000
+transparent|1/4|ratio_4_3 . down_2 . ratio_3_8|254.3333|30.3750
+transparent|8|ratio_4_3 . up_3 . up_2|32.6250|363.0000
+transparent|4|ratio_4_3 . up_6 . down_2|115.2500|182.0000
+transparent|8|ratio_4_3 . up_8 . ratio_3_4|83.1250|354.0000
+transparent|4|ratio_4_3 . up_8 . ratio_3_8|182.5833|183.5000
+transparent|1/4|ratio_4_3 . down_8 . ratio_3_2|325.0000|76.0000
+transparent|1/8|ratio_4_3 . down_8 . ratio_3_4|649.0000|44.2500
+transparent|4|ratio_4_3 . ratio_3_2 . up_2|39.9167|192.0000
+transparent|1/4|ratio_4_3 . ratio_3_2 . down_8|504.3333|28.2500
+transparent|8|ratio_4_3 . ratio_3_2 . ratio<4, 1>|34.4583|397.0000
+transparent|8|ratio_4_3 . ratio_3_4 . up_8|58.4583|595.0000
+transparent|1/8|ratio_4_3 . ratio_3_4 . down_8|612.3333|26.5625
+transparent|4|ratio_4_3 . ratio_3_4 . ratio<4, 1>|66.9167|297.0000
+transparent|1/4|ratio_4_3 . ratio_3_4 . ratio<1, 4>|300.3333|28.6250
+transparent|1/4|ratio_4_3 . ratio_3_8 . down_2|266.3333|38.8750
+transparent|4|ratio_4_3 . ratio_3_8 . up_8|67.0833|449.0000
+transparent|1/8|ratio_4_3 . ratio_3_8 . ratio<1, 4>|477.6667|28.0625
+transparent|8|ratio_4_3 . ratio<4, 1> . ratio_3_2|42.4583|358.0000
+transparent|4|ratio_4_3 . ratio<4, 1> . ratio_3_4|83.9167|181.0000
+transparent|1/4|ratio_4_3 . ratio<1, 4> . ratio_3_4|333.0000|45.2500
+transparent|1/8|ratio_4_3 . ratio<1, 4> . ratio_3_8|458.3333|30.5000
+transparent|1/4|ratio_3_4 . up_2 . down_6|395.0000|31.2500
+transparent|4|ratio_3_4 . up_2 . ratio_8_3|47.1250|329.0000
+transparent|1/8|ratio_3_4 . down_2 . down_3|268.0000|28.6250
+transparent|1/4|ratio_3_4 . down_2 . ratio_2_3|256.0000|48.5833
+transparent|1/8|ratio_3_4 . down_3 . down_2|239.0000|35.4583
+transparent|1/4|ratio_3_4 . down_6 . up_2|212.0000|112.9167
+transparent|4|ratio_3_4 . up_8 . ratio_2_3|101.7500|272.3333
+transparent|8|ratio_3_4 . up_8 . ratio_4_3|49.8750|538.3333
+transparent|1/8|ratio_3_4 . down_8 . ratio_4_3|411.0000|67.2917
+transparent|1/4|ratio_3_4 . down_8 . ratio_8_3|230.5000|134.9167
+transparent|1/4|ratio_3_4 . ratio_2_3 . down_2|197.0000|37.9167
+transparent|4|ratio_3_4 . ratio_2_3 . up_8|65.6250|528.3333
+transparent|1/8|ratio_3_4 . ratio_2_3 . ratio<1, 4>|355.0000|27.7917
+transparent|8|ratio_3_4 . ratio_4_3 . up_8|54.8125|727.0000
+transparent|1/8|ratio_3_4 . ratio_4_3 . down_8|547.0000|27.1250
+transparent|4|ratio_3_4 . ratio_4_3 . ratio<4, 1>|59.6250|363.0000
+transparent|1/4|ratio_3_4 . ratio_4_3 . ratio<1, 4>|305.0000|31.9167
+transparent|4|ratio_3_4 . ratio_8_3 . up_2|44.8750|283.6667
+transparent|1/4|ratio_3_4 . ratio_8_3 . down_8|607.0000|32.4167
+transparent|8|ratio_3_4 . ratio_8_3 . ratio<4, 1>|36.9375|580.3333
+transparent|4|ratio_3_4 . ratio<4, 1> . ratio_4_3|53.0000|274.3333
+transparent|8|ratio_3_4 . ratio<4, 1> . ratio_8_3|38.0000|554.3333
+transparent|1/8|ratio_3_4 . ratio<1, 4> . ratio_2_3|411.0000|42.2917
+transparent|1/4|ratio_3_4 . ratio<1, 4> . ratio_4_3|214.0000|68.5833
+transparent|8|ratio_8_3 . up_2 . ratio_3_2|32.6250|239.0000
+transparent|4|ratio_8_3 . up_2 . ratio_3_4|64.2500|121.5000
+transparent|4|ratio_8_3 . down_2 . up_3|83.9167|265.0000
+transparent|8|ratio_8_3 . down_2 . up_6|66.9583|531.0000
+transparent|4|ratio_8_3 . up_3 . down_2|70.2500|119.5000
+transparent|8|ratio_8_3 . up_6 . down_2|77.2917|246.0000
+transparent|4|ratio_8_3 . up_6 . ratio<1, 4>|165.5833|126.5000
+transparent|8|ratio_8_3 . up_8 . ratio_3_8|128.6250|247.5000
+transparent|1/4|ratio_8_3 . down_8 . ratio_3_4|722.3333|45.8750
+transparent|1/8|ratio_8_3 . down_8 . ratio_3_8|997.0000|30.9375
+transparent|8|ratio_8_3 . ratio_3_2 . up_2|29.6250|239.0000
+transparent|4|ratio_8_3 . ratio_3_4 . up_2|56.9167|144.0000
+transparent|1/4|ratio_8_3 . ratio_3_4 . down_8|685.6667|28.1875
+transparent|8|ratio_8_3 . ratio_3_4 . ratio<4, 1>|42.9583|301.0000
+transparent|8|ratio_8_3 . ratio_3_8 . up_8|75.1250|597.0000
+transparent|1/8|ratio_8_3 . ratio_3_8 . down_8|1151.0000|27.3438
+transparent|4|ratio_8_3 . ratio_3_8 . ratio<4, 1>|100.2500|298.0000
+transparent|1/4|ratio_8_3 . ratio_3_8 . ratio<1, 4>|551.0000|29.6875
+transparent|8|ratio_8_3 . ratio<4, 1> . ratio_3_4|59.2917|244.0000
+transparent|4|ratio_8_3 . ratio<4, 1> . ratio_3_8|134.9167|128.5000
+transparent|4|ratio_8_3 . ratio<1, 4> . up_6|96.2500|397.0000
+transparent|1/4|ratio_8_3 . ratio<1, 4> . ratio_3_8|531.6667|32.1250
+transparent|1/4|ratio_3_8 . up_2 . down_3|395.0000|61.5833
+transparent|1/8|ratio_3_8 . up_2 . down_6|499.0000|31.6250
+transparent|1/8|ratio_3_8 . down_2 . ratio_2_3|360.0000|48.9583
+transparent|1/4|ratio_3_8 . down_2 . ratio_4_3|188.5000|82.2500
+transparent|1/4|ratio_3_8 . down_3 . up_2|177.5000|118.2500
+transparent|1/8|ratio_3_8 . down_6 . up_2|316.0000|113.9583
+transparent|1/4|ratio_3_8 . down_6 . ratio<4, 1>|180.0000|204.9167
+transparent|4|ratio_3_8 . up_8 . ratio_4_3|56.1250|539.6667
+transparent|8|ratio_3_8 . up_8 . ratio_8_3|40.3125|1087.6667
+transparent|1/8|ratio_3_8 . down_8 . ratio_8_3|334.5000|135.9583
+transparent|1/8|ratio_3_8 . ratio_2_3 . down_2|301.0000|38.2917
+transparent|1/4|ratio_3_8 . ratio_4_3 . down_2|338.0000|63.5833
+transparent|4|ratio_3_8 . ratio_4_3 . up_8|61.0625|728.3333
+transparent|1/8|ratio_3_8 . ratio_4_3 . ratio<1, 4>|409.0000|32.2917
+transparent|8|ratio_3_8 . ratio_8_3 . up_8|34.5938|1164.3333
+transparent|1/8|ratio_3_8 . ratio_8_3 . down_8|711.0000|32.7917
+transparent|4|ratio_3_8 . ratio_8_3 . ratio<4, 1>|43.1875|581.6667
+transparent|1/4|ratio_3_8 . ratio_8_3 . ratio<1, 4>|526.0000|57.9167
+transparent|1/4|ratio_3_8 . ratio<4, 1> . down_6|677.0000|57.9167
+transparent|4|ratio_3_8 . ratio<4, 1> . ratio_8_3|44.2500|555.6667
+transparent|1/8|ratio_3_8 . ratio<1, 4> . ratio_4_3|310.0000|69.2917
+transparent|1/4|ratio_3_8 . ratio<1, 4> . ratio_8_3|180.0000|138.9167
+transparent|4|ratio<4, 1> . up_2 . down_2|75.7500|116.0000
+transparent|4|ratio<4, 1> . down_2 . up_2|58.7500|137.0000
+transparent|1/4|ratio<4, 1> . down_2 . down_8|699.0000|27.8750
+transparent|8|ratio<4, 1> . down_2 . ratio<4, 1>|43.8750|287.0000
+transparent|4|ratio<4, 1> . up_3 . down_3|103.7500|114.3333
+transparent|8|ratio<4, 1> . up_3 . ratio_2_3|55.8750|220.0000
+transparent|4|ratio<4, 1> . down_3 . up_3|105.0833|247.0000
+transparent|8|ratio<4, 1> . down_3 . up_6|77.5417|495.0000
+transparent|8|ratio<4, 1> . up_6 . down_3|83.3750|218.3333
+transparent|4|ratio<4, 1> . up_6 . down_6|179.7500|112.6667
+transparent|4|ratio<4, 1> . down_6 . up_6|121.4167|397.0000
+transparent|1/4|ratio<4, 1> . down_6 . ratio_3_8|678.3333|31.6250
+transparent|4|ratio<4, 1> . up_8 . down_8|319.7500|118.7500
+transparent|8|ratio<4, 1> . up_8 . ratio<1, 4>|132.3750|224.5000
+transparent|1/4|ratio<4, 1> . down_8 . down_2|625.0000|38.8750
+transparent|4|ratio<4, 1> . down_8 . up_8|107.5000|449.0000
+transparent|1/8|ratio<4, 1> . down_8 . ratio<1, 4>|1059.0000|28.0625
+transparent|4|ratio<4, 1> . ratio_3_2 . ratio_2_3|77.7500|114.3333
+transparent|8|ratio<4, 1> . ratio_3_2 . ratio_4_3|37.8750|222.3333
+transparent|8|ratio<4, 1> . ratio_2_3 . up_3|37.7083|244.0000
+transparent|4|ratio<4, 1> . ratio_2_3 . ratio_3_2|64.4167|122.0000
+transparent|8|ratio<4, 1> . ratio_4_3 . ratio_3_2|38.0417|225.0000
+transparent|4|ratio<4, 1> . ratio_4_3 . ratio_3_4|75.0833|114.5000
+transparent|4|ratio<4, 1> . ratio_3_4 . ratio_4_3|76.2500|127.6667
+transparent|8|ratio<4, 1> . ratio_3_4 . ratio_8_3|50.8750|258.3333
+transparent|8|ratio<4, 1> . ratio_8_3 . ratio_3_4|60.7083|224.5000
+transparent|4|ratio<4, 1> . ratio_8_3 . ratio_3_8|137.7500|118.7500
+transparent|1/4|ratio<4, 1> . ratio_3_8 . down_6|765.0000|28.4167
+transparent|4|ratio<4, 1> . ratio_3_8 . ratio_8_3|131.5000|231.6667
+transparent|8|ratio<4, 1> . ratio<4, 1> . down_2|62.3750|222.0000
+transparent|4|ratio<4, 1> . ratio<4, 1> . ratio<1, 4>|135.7500|114.5000
+transparent|8|ratio<4, 1> . ratio<1, 4> . up_8|81.6250|595.0000
+transparent|1/8|ratio<4, 1> . ratio<1, 4> . down_8|1039.0000|26.5625
+transparent|4|ratio<4, 1> . ratio<1, 4> . ratio<4, 1>|113.2500|297.0000
+transparent|1/4|ratio<4, 1> . ratio<1, 4> . ratio<1, 4>|543.0000|28.6250
+transparent|1/4|ratio<1, 4> . up_2 . down_2|277.0000|85.7500
+transparent|4|ratio<1, 4> . up_2 . up_8|36.2500|987.0000
+transparent|1/8|ratio<1, 4> . up_2 . ratio<1, 4>|351.0000|35.8750
+transparent|1/4|ratio<1, 4> . down_2 . up_2|142.0000|134.7500
+transparent|1/4|ratio<1, 4> . up_3 . down_3|353.0000|74.0833
+transparent|1/8|ratio<1, 4> . up_3 . down_6|475.0000|35.0417
+transparent|1/4|ratio<1, 4> . down_3 . up_3|134.3333|158.7500
+transparent|1/8|ratio<1, 4> . down_3 . ratio_3_2|235.0000|79.3750
+transparent|1/4|ratio<1, 4> . up_6 . down_6|653.0000|74.4167
+transparent|4|ratio<1, 4> . up_6 . ratio_8_3|42.7500|819.6667
+transparent|1/8|ratio<1, 4> . down_6 . up_3|203.3333|151.8750
+transparent|1/4|ratio<1, 4> . down_6 . up_6|126.6667|304.7500
+transparent|4|ratio<1, 4> . up_8 . up_2|40.8750|811.0000
+transparent|1/4|ratio<1, 4> . up_8 . down_8|853.0000|74.5000
+transparent|8|ratio<1, 4> . up_8 . ratio<4, 1>|26.4375|1615.0000
+transparent|1/4|ratio<1, 4> . down_8 . up_8|130.7500|404.7500
+transparent|1/8|ratio<1, 4> . down_8 . ratio<4, 1>|211.5000|201.8750
+transparent|1/8|ratio<1, 4> . ratio_3_2 . down_3|292.0000|34.8750
+transparent|1/4|ratio<1, 4> . ratio_3_2 . ratio_2_3|276.0000|74.0833
+transparent|1/4|ratio<1, 4> . ratio_2_3 . ratio_3_2|234.3333|98.7500
+transparent|1/8|ratio<1, 4> . ratio_2_3 . ratio_3_4|323.6667|49.6250
+transparent|1/4|ratio<1, 4> . ratio_4_3 . ratio_3_4|267.6667|74.2500
+transparent|1/8|ratio<1, 4> . ratio_4_3 . ratio_3_8|343.6667|37.6250
+transparent|1/8|ratio<1, 4> . ratio_3_4 . ratio_2_3|332.0000|47.5417
+transparent|1/4|ratio<1, 4> . ratio_3_4 . ratio_4_3|238.5000|90.7500
+transparent|4|ratio<1, 4> . ratio_8_3 . up_6|38.5833|871.0000
+transparent|1/4|ratio<1, 4> . ratio_8_3 . ratio_3_8|401.0000|74.5000
+transparent|1/8|ratio<1, 4> . ratio_3_8 . ratio_4_3|295.5000|72.5417
+transparent|1/4|ratio<1, 4> . ratio_3_8 . ratio_8_3|172.7500|145.4167
+transparent|8|ratio<1, 4> . ratio<4, 1> . up_8|27.0625|1663.0000
+transparent|1/8|ratio<1, 4> . ratio<4, 1> . down_8|667.0000|37.6250
+transparent|4|ratio<1, 4> . ratio<4, 1> . ratio<4, 1>|31.1250|823.0000
+transparent|1/4|ratio<1, 4> . ratio<4, 1> . ratio<1, 4>|453.0000|74.2500
+transparent|1/8|ratio<1, 4> . ratio<1, 4> . up_2|205.0000|114.3750
+transparent|1/4|ratio<1, 4> . ratio<1, 4> . ratio<4, 1>|124.5000|205.7500

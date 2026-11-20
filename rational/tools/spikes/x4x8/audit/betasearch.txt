@@ -1,0 +1,20 @@
+super_economy
+  div 1:  B2 m=8 (beta for 72.25 dB)  B4 m=8 (beta for 69.50 dB)  B8 m=7 (beta for 73.00 dB)
+  div 2:  B2 m=4 (beta for 71.00 dB)  B4 m=4 (beta for 74.00 dB)  B8 m=4 (beta for 75.00 dB)
+  div 4:  B2 m=4 (beta for 71.00 dB)  B4 m=3 (beta for 73.00 dB)  B8 m=3 (beta for 75.50 dB)
+  div 8:  B2 m=3 (beta for 65.00 dB)  B4 m=3 (beta for 72.50 dB)  B8 m=3 (beta for 73.25 dB)
+economy
+  div 1:  B2 m=10 (beta for 72.25 dB)  B4 m=10 (beta for 72.75 dB)  B8 m=9 (beta for 72.00 dB)
+  div 2:  B2 m=5 (beta for 73.25 dB)  B4 m=4 (beta for 74.00 dB)  B8 m=4 (beta for 75.00 dB)
+  div 4:  B2 m=4 (beta for 71.00 dB)  B4 m=4 (beta for 74.00 dB)  B8 m=3 (beta for 75.50 dB)
+  div 8:  B2 m=3 (beta for 65.00 dB)  B4 m=3 (beta for 72.75 dB)  B8 m=3 (beta for 74.75 dB)
+balanced
+  div 1:  B2 m=12 (beta for 72.75 dB)  B4 m=11 (beta for 72.25 dB)  B8 m=11 (beta for 71.75 dB)
+  div 2:  B2 m=5 (beta for 73.25 dB)  B4 m=5 (beta for 68.50 dB)  B8 m=4 (beta for 75.00 dB)
+  div 4:  B2 m=4 (beta for 71.00 dB)  B4 m=4 (beta for 74.00 dB)  B8 m=3 (beta for 75.50 dB)
+  div 8:  B2 m=3 (beta for 65.00 dB)  B4 m=3 (beta for 72.75 dB)  B8 m=3 (beta for 75.00 dB)
+transparent
+  div 1:  B2 m=25 (beta for 122.75 dB)  B4 m=25 (beta for 119.75 dB)  B8 m=24 (beta for 122.00 dB)
+  div 2:  B2 m=8 (beta for 128.25 dB)  B4 m=8 (beta for 121.25 dB)  B8 m=7 (beta for 122.00 dB)
+  div 4:  B2 m=6 (beta for 124.50 dB)  B4 m=6 (beta for 126.75 dB)  B8 m=6 (beta for 126.00 dB)
+  div 8:  B2 m=6 (beta for 124.50 dB)  B4 m=5 (beta for 123.00 dB)  B8 m=5 (beta for 125.50 dB)

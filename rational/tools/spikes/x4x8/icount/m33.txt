@@ -1,0 +1,44 @@
+# x8 chains at economy, two channels, 32-frame blocks: instructions per output frame
+# target m33; (count at 3000 blocks - count at 1000) / (frames at 3000 - frames at 1000)
+| chain | format | insns / output frame | frames (3000 blocks) | count (3000 blocks) |
+|---|---|---:|---:|---:|
+| ↓4 · ↓2 | float | 26818.47 | 12000 | 346069622 |
+| ↓3 · 3/4 · ↓2 (48 matrix today) | float | 32776.32 | 12000 | 417901056 |
+| ↓2 · ↓2 · ↓2 | float | 36029.20 | 12000 | 456733529 |
+| 3/8 · ↓3 (44.1 matrix today) | float | 37764.03 | 12000 | 478214501 |
+| ↑2 · ↑4 | float | 3292.18 | 768000 | 2552604564 |
+| ↑2 · 4/3 · ↑3 (48 matrix today) | float | 3860.08 | 768000 | 2989095774 |
+| ↑2 · ↑2 · ↑2 | float | 4383.60 | 768000 | 3390931101 |
+| ↑3 · 8/3 (44.1 matrix today) | float | 4497.01 | 768000 | 3478637062 |
+| ↓4 · ↓2 | q15 | 1823.26 | 12000 | 48852596 |
+| ↓3 · 3/4 · ↓2 (48 matrix today) | q15 | 2379.23 | 12000 | 55889964 |
+| ↓2 · ↓2 · ↓2 | q15 | 2600.59 | 12000 | 58316519 |
+| 3/8 · ↓3 (44.1 matrix today) | q15 | 1754.93 | 12000 | 48854448 |
+| ↑2 · ↑4 | q15 | 201.55 | 768000 | 181755813 |
+| ↑2 · 4/3 · ↑3 (48 matrix today) | q15 | 254.11 | 768000 | 222474833 |
+| ↑2 · ↑2 · ↑2 | q15 | 282.45 | 768000 | 244027787 |
+| ↑3 · 8/3 (44.1 matrix today) | q15 | 242.55 | 768000 | 214022512 |
+
+# scripts/icount.py --engine rational --target m33 on this build, against rational/bench/baselines.json: exit 0
+#   tap_sr_rational_icount_callmax_down2_float: worst call 740 of 3000: 117941 insns (mean 116171, whole run 372994249)
+#   callmax_down2_float: 117941 insns vs baseline 117941 (+0, +0.0000%) ok
+#   tap_sr_rational_icount_callmax_down2_q15: worst call 5 of 3000: 6941 insns (mean 6377, whole run 46322437)
+#   callmax_down2_q15: 6941 insns vs baseline 6941 (+0, +0.0000%) ok
+#   tap_sr_rational_icount_callmax_up2_float: worst call 360 of 3000: 230591 insns (mean 228346, whole run 709515096)
+#   callmax_up2_float: 230591 insns vs baseline 230591 (+0, +0.0000%) ok
+#   tap_sr_rational_icount_callmax_up2_q15: worst call 3 of 3000: 11904 insns (mean 11714, whole run 62325575)
+#   callmax_up2_q15: 11904 insns vs baseline 11904 (+0, +0.0000%) ok
+#   construct_q15_eco: 26795094 insns vs baseline 26795094 (+0, +0.0000%) ok
+#   down2_down2_q15_eco: 54230002 insns vs baseline 54230002 (+0, +0.0000%) ok
+#   down2_float_eco: 372931250 insns vs baseline 372931250 (+0, +0.0000%) ok
+#   down2_float_tr: 969430557 insns vs baseline 969430557 (+0, +0.0000%) ok
+#   down2_q15_eco: 46259438 insns vs baseline 46259438 (+0, +0.0000%) ok
+#   down3_float_eco: 473727618 insns vs baseline 473727618 (+0, +0.0000%) ok
+#   down3_q15_eco: 49603197 insns vs baseline 49603197 (+0, +0.0000%) ok
+#   ratio23_float_eco: 590589638 insns vs baseline 590589638 (+0, +0.0000%) ok
+#   ratio23_q15_eco: 49398652 insns vs baseline 49398652 (+0, +0.0000%) ok
+#   up2_float_eco: 709452097 insns vs baseline 709452097 (+0, +0.0000%) ok
+#   up2_float_tr: 1900067616 insns vs baseline 1900067616 (+0, +0.0000%) ok
+#   up2_q15_eco: 62262576 insns vs baseline 62262576 (+0, +0.0000%) ok
+#   up3_float_eco: 1362234116 insns vs baseline 1362234116 (+0, +0.0000%) ok
+#   up3_q15_eco: 85299411 insns vs baseline 85299411 (+0, +0.0000%) ok

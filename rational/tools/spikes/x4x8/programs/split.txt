@@ -1,0 +1,39 @@
+x4 economy (down2.down2 / up2.up2): round trip tau = 110/1 full-rate samples
+  f/r    R gain   alias in R (at r-f)   high path at f   down: alias in low band
+  0.100     0.00        nan dB             -71.0 dB            nan dB
+  0.300    -0.00        nan dB             -91.7 dB            nan dB
+  0.375     0.00        nan dB             -65.4 dB            nan dB
+  0.400    -0.01        nan dB             -59.8 dB            nan dB
+  0.450    -1.82        nan dB             -14.5 dB            nan dB
+  0.500    -9.03        nan dB              -2.0 dB            nan dB
+  0.550   -40.09      -21.0 dB              -0.1 dB          -20.0 dB
+  0.600  -124.61      -62.3 dB              -0.0 dB          -62.3 dB
+  0.625  -163.47      -81.7 dB              -0.0 dB          -81.7 dB
+  0.650  -148.74      -74.4 dB              -0.0 dB          -74.4 dB
+  0.700  -193.09      -96.5 dB               0.0 dB          -96.5 dB
+x8 economy (matrix chains): round trip tau = 234/1 full-rate samples
+  f/r    R gain   alias in R (at r-f)   high path at f   down: alias in low band
+  0.100     0.01        nan dB             -63.6 dB            nan dB
+  0.300     0.01        nan dB             -59.9 dB            nan dB
+  0.375     0.00        nan dB             -71.2 dB            nan dB
+  0.400    -0.01        nan dB             -56.5 dB            nan dB
+  0.450    -1.82        nan dB             -14.5 dB            nan dB
+  0.500    -6.70        nan dB              -4.4 dB            nan dB
+  0.550   -40.09      -21.0 dB              -0.1 dB          -20.0 dB
+  0.600  -124.69      -62.3 dB              -0.0 dB          -62.3 dB
+  0.625  -162.51      -81.8 dB              -0.0 dB          -81.8 dB
+  0.650  -148.87      -74.5 dB              -0.0 dB          -74.5 dB
+  0.700  -181.68      -96.8 dB              -0.0 dB          -96.8 dB
+x8 transparent (half-bands): round trip tau = 598/1 full-rate samples
+  f/r    R gain   alias in R (at r-f)   high path at f   down: alias in low band
+  0.100    -0.00        nan dB            -122.7 dB            nan dB
+  0.300    -0.00        nan dB            -128.3 dB            nan dB
+  0.375    -0.00        nan dB            -120.3 dB            nan dB
+  0.400    -0.00        nan dB            -123.0 dB            nan dB
+  0.450    -0.02        nan dB             -51.4 dB            nan dB
+  0.500    -6.71        nan dB              -4.4 dB            nan dB
+  0.550  -114.80      -57.4 dB              -0.0 dB          -57.4 dB
+  0.600  -240.00     -127.1 dB               0.0 dB         -127.1 dB
+  0.625  -240.00     -156.2 dB              -0.0 dB         -156.2 dB
+  0.650  -240.00     -129.1 dB              -0.0 dB         -129.1 dB
+  0.700  -240.00     -140.8 dB              -0.0 dB         -140.8 dB

@@ -1,0 +1,25 @@
+custom p = 0.40, A = 70 dB
+  down 2 . down 2            MAC/full-rate sample  14.25  latency   63.0 full-rate samples
+  up 2 . up 2                MAC/full-rate sample  14.25  latency   63.0 full-rate samples
+  down 2 . down 2 . down 2   MAC/full-rate sample  14.62  latency  139.0 full-rate samples
+  up 2 . up 2 . up 2         MAC/full-rate sample  14.62  latency  139.0 full-rate samples
+  down 3 . 3/4 . down 2      MAC/full-rate sample  13.62  latency  133.0 full-rate samples
+  up 2 . 4/3 . up 3          MAC/full-rate sample  12.96  latency  133.0 full-rate samples
+custom p = 0.45, A = 70 dB
+  down 2 . down 2            MAC/full-rate sample  20.75  latency  115.0 full-rate samples
+  up 2 . up 2                MAC/full-rate sample  20.75  latency  115.0 full-rate samples
+  down 2 . down 2 . down 2   MAC/full-rate sample  17.88  latency  243.0 full-rate samples
+  up 2 . up 2 . up 2         MAC/full-rate sample  17.88  latency  243.0 full-rate samples
+  down 3 . 3/4 . down 2      MAC/full-rate sample  19.54  latency  243.0 full-rate samples
+  up 2 . 4/3 . up 3          MAC/full-rate sample  18.88  latency  243.0 full-rate samples
+custom p = 0.45, A = 90 dB
+  down 2 . down 2            MAC/full-rate sample  28.75  latency  161.0 full-rate samples
+  up 2 . up 2                MAC/full-rate sample  28.75  latency  161.0 full-rate samples
+  down 2 . down 2 . down 2   MAC/full-rate sample  20.88  latency  333.0 full-rate samples
+  up 2 . up 2 . up 2         MAC/full-rate sample  20.88  latency  333.0 full-rate samples
+  down 3 . 3/4 . down 2      MAC/full-rate sample  25.38  latency  338.0 full-rate samples
+  up 2 . 4/3 . up 3          MAC/full-rate sample  24.21  latency  338.0 full-rate samples
+real_fft32 N =   512: forward + inverse      4.1 us
+real_fft32 N =  4096: forward + inverse     37.9 us
+real_fft32 N = 16384: forward + inverse    163.9 us
+real_fft32 N = 32768: forward + inverse    387.8 us

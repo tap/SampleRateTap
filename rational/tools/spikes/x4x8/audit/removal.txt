@@ -1,0 +1,9 @@
+x16 economy (48k -> 3k)            T=414.000 f=204.0 Hz: removal residual -74.5 dB
+x16 economy (48k -> 3k)            T=414.000 f=604.2 Hz: removal residual -65.3 dB
+x16 economy (48k -> 3k)            T=414.000 f=900.0 Hz: removal residual -73.1 dB
+x16 economy (48k -> 3k)            T=414.000 f=1100.0 Hz: removal residual -63.7 dB
+x16 economy (48k -> 3k)            T=414.000 f=1124.0 Hz: removal residual -71.8 dB
+x8 transparent 2.2.2 (48k -> 6k)   T=598.000 f=1800.0 Hz: removal residual -126.5 dB
+x8 transparent 2.2.2 (48k -> 6k)   T=598.000 f=2400.0 Hz: removal residual -118.9 dB
+x8 transparent 2.2.2 (48k -> 6k)   T=598.000 f=2450.4 Hz: removal residual -109.4 dB
+x8 transparent 2.2.2 (48k -> 6k)   T=598.000 f=2490.0 Hz: removal residual -117.7 dB

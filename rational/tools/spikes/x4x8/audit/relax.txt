@@ -1,0 +1,9 @@
+economy down_2 at divisor  1: m=11  macs/out 23.0
+economy down_2 at divisor  2: m=7  macs/out 15.0
+economy down_2 at divisor  3: m=7  macs/out 15.0
+economy down_2 at divisor  4: m=7  macs/out 15.0
+economy down_2 at divisor  6: m=4  macs/out 9.0
+economy down_2 at divisor  8: m=4  macs/out 9.0
+economy down_2 at divisor  9: m=4  macs/out 9.0
+economy down_2 at divisor 12: m=3  macs/out 7.0
+economy down_2 at divisor 16: m=3  macs/out 7.0

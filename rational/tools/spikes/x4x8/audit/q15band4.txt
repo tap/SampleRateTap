@@ -1,0 +1,8 @@
+super_economy divisor 1: Q15 down4 -70.6 dB (dc 16.000000)  Q15 up4 -70.6 dB  Q31 down4 -71.4 dB
+super_economy divisor 2: Q15 down4 -72.8 dB (dc 16.000000)  Q15 up4 -72.8 dB  Q31 down4 -71.9 dB
+economy       divisor 1: Q15 down4 -71.7 dB (dc 16.000000)  Q15 up4 -71.7 dB  Q31 down4 -71.1 dB
+economy       divisor 2: Q15 down4 -72.8 dB (dc 16.000000)  Q15 up4 -72.8 dB  Q31 down4 -71.9 dB
+balanced      divisor 1: Q15 down4 -70.4 dB (dc 16.000000)  Q15 up4 -70.4 dB  Q31 down4 -72.3 dB
+balanced      divisor 2: Q15 down4 -72.8 dB (dc 16.000000)  Q15 up4 -72.8 dB  Q31 down4 -71.9 dB
+transparent   divisor 1: Q15 down4 -77.2 dB (dc 16.000000)  Q15 up4 -77.2 dB  Q31 down4 -121.4 dB
+transparent   divisor 2: Q15 down4 -78.3 dB (dc 16.000000)  Q15 up4 -78.3 dB  Q31 down4 -122.1 dB

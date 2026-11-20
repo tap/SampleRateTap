@@ -1,0 +1,11 @@
+1/32 economy (matrix: down_2 . down_8 . down_2 = 277; plan's best 4th-band: 285)
+  down_2 . down_2 . down_4 . down_2  269.00 MAC/out  latency 13.469 out
+  down_2 . down_4 . down_2 . down_2  289.00 MAC/out  latency 15.094 out
+  down_4 . down_2 . down_4      327.00 MAC/out  latency 12.844 out
+  down_2 . down_2 . down_8      353.00 MAC/out  latency 12.469 out
+  down_4 . down_8               369.00 MAC/out  latency 12.344 out
+1/24 economy (matrix: down_2 . down_6 . down_2 = 209; plan's best 4th-band: 215)
+  down_2 . down_4 . down_3      222.00 MAC/out  latency 12.458 out
+  down_2 . down_3 . down_4      235.00 MAC/out  latency 12.125 out
+  down_2 . down_2 . down_3 . down_2  203.00 MAC/out  latency 13.625 out
+  down_2 . down_3 . down_2 . down_2  221.00 MAC/out  latency 15.125 out

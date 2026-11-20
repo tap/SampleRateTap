@@ -1,0 +1,44 @@
+# x8 chains at economy, two channels, 32-frame blocks: instructions per output frame
+# target hexagon; (count at 3000 blocks - count at 1000) / (frames at 3000 - frames at 1000)
+| chain | format | insns / output frame | frames (3000 blocks) | count (3000 blocks) |
+|---|---|---:|---:|---:|
+| ↓4 · ↓2 | float | 5044.15 | 12000 | 68528631 |
+| ↓3 · 3/4 · ↓2 (48 matrix today) | float | 6267.75 | 12000 | 83273450 |
+| ↓2 · ↓2 · ↓2 | float | 6773.15 | 12000 | 89315228 |
+| 3/8 · ↓3 (44.1 matrix today) | float | 7031.17 | 12000 | 92490490 |
+| ↑2 · ↑4 | float | 620.02 | 768000 | 484182240 |
+| ↑2 · 4/3 · ↑3 (48 matrix today) | float | 734.39 | 768000 | 572077404 |
+| ↑2 · ↑2 · ↑2 | float | 835.23 | 768000 | 649495316 |
+| ↑3 · 8/3 (44.1 matrix today) | float | 832.74 | 768000 | 647653488 |
+| ↓4 · ↓2 | q15 | 864.54 | 12000 | 18719863 |
+| ↓3 · 3/4 · ↓2 (48 matrix today) | q15 | 1085.61 | 12000 | 21447594 |
+| ↓2 · ↓2 · ↓2 | q15 | 1212.23 | 12000 | 22942871 |
+| 3/8 · ↓3 (44.1 matrix today) | q15 | 857.61 | 12000 | 18772353 |
+| ↑2 · ↑4 | q15 | 96.46 | 768000 | 82427995 |
+| ↑2 · 4/3 · ↑3 (48 matrix today) | q15 | 124.84 | 768000 | 104295939 |
+| ↑2 · ↑2 · ↑2 | q15 | 144.22 | 768000 | 119148291 |
+| ↑3 · 8/3 (44.1 matrix today) | q15 | 120.00 | 768000 | 100633046 |
+
+# scripts/icount.py --engine rational --target hexagon on this build, against rational/bench/baselines.json: exit 0
+#   tap_sr_rational_icount_callmax_down2_float: worst call 1 of 3000: 23575 insns (mean 21258, whole run 71794282)
+#   callmax_down2_float: 23575 insns vs baseline 23575 (+0, +0.0000%) ok
+#   tap_sr_rational_icount_callmax_down2_q15: worst call 5 of 3000: 4027 insns (mean 3020, whole run 17423345)
+#   callmax_down2_q15: 4027 insns vs baseline 4027 (+0, +0.0000%) ok
+#   tap_sr_rational_icount_callmax_up2_float: worst call 1 of 3000: 44745 insns (mean 42140, whole run 134443187)
+#   callmax_up2_float: 44745 insns vs baseline 44745 (+0, +0.0000%) ok
+#   tap_sr_rational_icount_callmax_up2_q15: worst call 3 of 3000: 6204 insns (mean 5867, whole run 25968858)
+#   callmax_up2_q15: 6204 insns vs baseline 6204 (+0, +0.0000%) ok
+#   construct_q15_eco: 8330092 insns vs baseline 8330092 (+0, +0.0000%) ok
+#   down2_down2_q15_eco: 21039350 insns vs baseline 21039350 (+0, +0.0000%) ok
+#   down2_float_eco: 71762029 insns vs baseline 71762029 (+0, +0.0000%) ok
+#   down2_float_tr: 173693796 insns vs baseline 173693796 (+0, +0.0000%) ok
+#   down2_q15_eco: 17391093 insns vs baseline 17391093 (+0, +0.0000%) ok
+#   down3_float_eco: 89559636 insns vs baseline 89559636 (+0, +0.0000%) ok
+#   down3_q15_eco: 18922927 insns vs baseline 18922927 (+0, +0.0000%) ok
+#   ratio23_float_eco: 125532691 insns vs baseline 125532691 (+0, +0.0000%) ok
+#   ratio23_q15_eco: 18650895 insns vs baseline 18650895 (+0, +0.0000%) ok
+#   up2_float_eco: 134413185 insns vs baseline 134413185 (+0, +0.0000%) ok
+#   up2_float_tr: 337137965 insns vs baseline 337137965 (+0, +0.0000%) ok
+#   up2_q15_eco: 25938856 insns vs baseline 25938856 (+0, +0.0000%) ok
+#   up3_float_eco: 250129415 insns vs baseline 250129415 (+0, +0.0000%) ok
+#   up3_q15_eco: 38461134 insns vs baseline 38461134 (+0, +0.0000%) ok

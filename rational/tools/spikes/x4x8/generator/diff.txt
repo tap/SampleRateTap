@@ -1,0 +1,291 @@
+rational/PLAN.md tables parsed: 182 rows
+
+## matrix.py diff (economy), band 4 not admitted (today)
+changed rows: 0 of 182 parsed
+
+## matrix.py diff (economy), band 4 admitted (X3)
+8 → 384: ↑2 · ↑8 · ↑3  →  ↑2 · ↑6 · ↑4
+8 → 176.4: ↑2 · ↑3 · bridge↓k0 · ↑2 · ↑2  →  ↑2 · ↑3 · bridge↓k0 · ↑4
+12 → 96: ↑2 · 4/3 · ↑3  →  ↑2 · ↑4
+12 → 176.4: ↑2 · ↑2 · bridge↓k0 · ↑2 · ↑2  →  ↑4 · bridge↓k0 · ↑4
+16 → 176.4: ↑3 · bridge↓k0 · ↑2 · ↑2  →  ↑3 · bridge↓k0 · ↑4
+24 → 192: ↑2 · 4/3 · ↑3  →  ↑2 · ↑4
+48 → 384: ↑2 · 4/3 · ↑3  →  ↑2 · ↑4
+96 → 12: ↓3 · 3/4 · ↓2  →  ↓4 · ↓2
+192 → 24: ↓3 · 3/4 · ↓2  →  ↓4 · ↓2
+192 → 11.025: ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2  →  ↓4 · bridge↓k0 · ↓4
+192 → 22.05: ↓3 · 3/4 · bridge↓k0 · ↓2  →  ↓4 · bridge↓k0 · ↓2
+384 → 8: ↓3 · ↓8 · ↓2  →  ↓4 · ↓6 · ↓2
+384 → 48: ↓3 · 3/4 · ↓2  →  ↓4 · ↓2
+384 → 11.025: ↓2 · ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2  →  ↓2 · ↓4 · bridge↓k0 · ↓4
+384 → 44.1: ↓3 · 3/4 · ↓2 · bridge↓k0  →  ↓4 · ↓2 · bridge↓k0
+11.025 → 192: ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2  →  ↑4 · bridge↑k0 · ↑4
+11.025 → 384: ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 · ↑2  →  ↑4 · bridge↑k0 · ↑4 · ↑2
+11.025 → 88.2: ↑3 · 8/3  →  ↑2 · ↑4
+22.05 → 192: ↑2 · bridge↑k0 · 4/3 · ↑3  →  ↑2 · bridge↑k0 · ↑4
+22.05 → 176.4: ↑3 · 8/3  →  ↑2 · ↑4
+44.1 → 384: bridge↑k0 · ↑2 · 4/3 · ↑3  →  bridge↑k0 · ↑2 · ↑4
+88.2 → 11.025: 3/8 · ↓3  →  ↓4 · ↓2
+176.4 → 8: ↓2 · ↓2 · bridge↑k0 · ↓3 · ↓2  →  ↓4 · bridge↑k0 · ↓3 · ↓2
+176.4 → 12: ↓2 · ↓2 · bridge↑k0 · ↓2 · ↓2  →  ↓4 · bridge↑k0 · ↓4
+176.4 → 16: ↓2 · ↓2 · bridge↑k0 · ↓3  →  ↓4 · bridge↑k0 · ↓3
+176.4 → 22.05: 3/8 · ↓3  →  ↓4 · ↓2
+changed rows: 26 of 182 parsed
+
+## X3 at economy: the economy chain moves (today → band 4 admitted): 26 rows (12 within the families, 14 across)
+  W 8 → 384: ↑2 · ↑8 · ↑3  →  ↑2 · ↑6 · ↑4
+  X 8 → 176.4: ↑2 · ↑3 · bridge↓k0 · ↑2 · ↑2  →  ↑2 · ↑3 · bridge↓k0 · ↑4
+  W 12 → 96: ↑2 · 4/3 · ↑3  →  ↑2 · ↑4
+  X 12 → 176.4: ↑2 · ↑2 · bridge↓k0 · ↑2 · ↑2  →  ↑4 · bridge↓k0 · ↑4
+  X 16 → 176.4: ↑3 · bridge↓k0 · ↑2 · ↑2  →  ↑3 · bridge↓k0 · ↑4
+  W 24 → 192: ↑2 · 4/3 · ↑3  →  ↑2 · ↑4
+  W 48 → 384: ↑2 · 4/3 · ↑3  →  ↑2 · ↑4
+  W 96 → 12: ↓3 · 3/4 · ↓2  →  ↓4 · ↓2
+  W 192 → 24: ↓3 · 3/4 · ↓2  →  ↓4 · ↓2
+  X 192 → 11.025: ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2  →  ↓4 · bridge↓k0 · ↓4
+  X 192 → 22.05: ↓3 · 3/4 · bridge↓k0 · ↓2  →  ↓4 · bridge↓k0 · ↓2
+  W 384 → 8: ↓3 · ↓8 · ↓2  →  ↓4 · ↓6 · ↓2
+  W 384 → 48: ↓3 · 3/4 · ↓2  →  ↓4 · ↓2
+  X 384 → 11.025: ↓2 · ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2  →  ↓2 · ↓4 · bridge↓k0 · ↓4
+  X 384 → 44.1: ↓3 · 3/4 · ↓2 · bridge↓k0  →  ↓4 · ↓2 · bridge↓k0
+  X 11.025 → 192: ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2  →  ↑4 · bridge↑k0 · ↑4
+  X 11.025 → 384: ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 · ↑2  →  ↑4 · bridge↑k0 · ↑4 · ↑2
+  W 11.025 → 88.2: ↑3 · 8/3  →  ↑2 · ↑4
+  X 22.05 → 192: ↑2 · bridge↑k0 · 4/3 · ↑3  →  ↑2 · bridge↑k0 · ↑4
+  W 22.05 → 176.4: ↑3 · 8/3  →  ↑2 · ↑4
+  X 44.1 → 384: bridge↑k0 · ↑2 · 4/3 · ↑3  →  bridge↑k0 · ↑2 · ↑4
+  W 88.2 → 11.025: 3/8 · ↓3  →  ↓4 · ↓2
+  X 176.4 → 8: ↓2 · ↓2 · bridge↑k0 · ↓3 · ↓2  →  ↓4 · bridge↑k0 · ↓3 · ↓2
+  X 176.4 → 12: ↓2 · ↓2 · bridge↑k0 · ↓2 · ↓2  →  ↓4 · bridge↑k0 · ↓4
+  X 176.4 → 16: ↓2 · ↓2 · bridge↑k0 · ↓3  →  ↓4 · bridge↑k0 · ↓3
+  W 176.4 → 22.05: 3/8 · ↓3  →  ↓4 · ↓2
+
+## X3 + X4: the transparent chain differs from the X3 economy chain (the per-tier split): 47 rows (32 within the families, 15 across)
+  W 8 → 96: ↑2 · ↑6  →  ↑2 · ↑2 · ↑3
+  W 8 → 192: ↑2 · ↑6 · ↑2  →  ↑2 · ↑3 · ↑4
+  W 8 → 384: ↑2 · ↑6 · ↑4  →  ↑4 · ↑6 · ↑2
+  W 12 → 32: ↑2 · 4/3  →  8/3
+  W 12 → 96: ↑2 · ↑4  →  ↑2 · ↑2 · ↑2
+  W 12 → 192: ↑2 · ↑8  →  ↑2 · ↑2 · ↑4
+  W 12 → 384: ↑2 · ↑8 · ↑2  →  8/3 · ↑3 · ↑4
+  X 12 → 176.4: ↑4 · bridge↓k0 · ↑4  →  ↑2 · ↑2 · bridge↓k0 · ↑2 · ↑2
+  W 16 → 192: ↑2 · ↑6  →  ↑2 · ↑2 · ↑3
+  W 16 → 384: ↑2 · ↑6 · ↑2  →  ↑2 · ↑3 · ↑4
+  X 16 → 11.025: ↑3 · bridge↓k0 · ↓2 · ↓2  →  3/2 · ↑2 · bridge↓k0 · ↓2 · ↓2
+  X 16 → 176.4: ↑3 · bridge↓k0 · ↑4  →  ↑3 · bridge↓k0 · ↑2 · ↑2
+  W 24 → 192: ↑2 · ↑4  →  ↑2 · ↑2 · ↑2
+  W 24 → 384: ↑2 · ↑8  →  ↑2 · ↑2 · ↑4
+  W 32 → 12: 3/4 · ↓2  →  3/8
+  W 32 → 384: ↑2 · ↑6  →  ↑2 · ↑2 · ↑3
+  W 48 → 384: ↑2 · ↑4  →  ↑2 · ↑2 · ↑2
+  W 96 → 8: ↓6 · ↓2  →  ↓3 · ↓2 · ↓2
+  W 96 → 12: ↓4 · ↓2  →  ↓2 · ↓2 · ↓2
+  W 192 → 8: ↓2 · ↓6 · ↓2  →  ↓4 · ↓3 · ↓2
+  W 192 → 12: ↓8 · ↓2  →  ↓4 · ↓2 · ↓2
+  W 192 → 16: ↓6 · ↓2  →  ↓3 · ↓2 · ↓2
+  W 192 → 24: ↓4 · ↓2  →  ↓2 · ↓2 · ↓2
+  X 192 → 11.025: ↓4 · bridge↓k0 · ↓4  →  ↓4 · bridge↓k0 · ↓2 · ↓2
+  X 192 → 22.05: ↓4 · bridge↓k0 · ↓2  →  ↓2 · ↓2 · bridge↓k0 · ↓2
+  W 384 → 8: ↓4 · ↓6 · ↓2  →  ↓2 · ↓6 · ↓4
+  W 384 → 12: ↓2 · ↓8 · ↓2  →  ↓4 · ↓3 · 3/8
+  W 384 → 16: ↓2 · ↓6 · ↓2  →  ↓4 · ↓3 · ↓2
+  W 384 → 24: ↓8 · ↓2  →  ↓4 · ↓2 · ↓2
+  W 384 → 32: ↓6 · ↓2  →  ↓3 · ↓2 · ↓2
+  W 384 → 48: ↓4 · ↓2  →  ↓2 · ↓2 · ↓2
+  X 384 → 11.025: ↓2 · ↓4 · bridge↓k0 · ↓4  →  ↓4 · ↓2 · bridge↓k0 · ↓4
+  X 384 → 22.05: ↓8 · bridge↓k0 · ↓2  →  ↓4 · ↓2 · bridge↓k0 · ↓2
+  X 384 → 44.1: ↓4 · ↓2 · bridge↓k0  →  ↓2 · ↓2 · ↓2 · bridge↓k0
+  X 11.025 → 192: ↑4 · bridge↑k0 · ↑4  →  ↑2 · ↑2 · bridge↑k0 · ↑4
+  X 11.025 → 384: ↑4 · bridge↑k0 · ↑4 · ↑2  →  ↑4 · bridge↑k0 · ↑2 · ↑4
+  W 11.025 → 88.2: ↑2 · ↑4  →  ↑2 · ↑2 · ↑2
+  W 11.025 → 176.4: ↑2 · ↑8  →  ↑2 · ↑2 · ↑4
+  X 22.05 → 192: ↑2 · bridge↑k0 · ↑4  →  ↑2 · bridge↑k0 · ↑2 · ↑2
+  X 22.05 → 384: ↑2 · bridge↑k0 · ↑8  →  ↑2 · bridge↑k0 · ↑2 · ↑4
+  W 22.05 → 176.4: ↑2 · ↑4  →  ↑2 · ↑2 · ↑2
+  X 44.1 → 384: bridge↑k0 · ↑2 · ↑4  →  bridge↑k0 · ↑2 · ↑2 · ↑2
+  W 88.2 → 11.025: ↓4 · ↓2  →  ↓2 · ↓2 · ↓2
+  X 176.4 → 12: ↓4 · bridge↑k0 · ↓4  →  ↓2 · ↓2 · bridge↑k0 · ↓2 · ↓2
+  X 176.4 → 16: ↓4 · bridge↑k0 · ↓3  →  ↓2 · ↓2 · bridge↑k0 · ↓3
+  W 176.4 → 11.025: ↓8 · ↓2  →  ↓4 · ↓2 · ↓2
+  W 176.4 → 22.05: ↓4 · ↓2  →  ↓2 · ↓2 · ↓2
+
+## X3 + X4 at transparent against today's tables (today's transparent column runs the economy chain): 45 rows (32 within the families, 13 across)
+  W 8 → 96: ↑2 · ↑6  →  ↑2 · ↑2 · ↑3
+  W 8 → 192: ↑2 · ↑6 · ↑2  →  ↑2 · ↑3 · ↑4
+  W 8 → 384: ↑2 · ↑8 · ↑3  →  ↑4 · ↑6 · ↑2
+  X 8 → 176.4: ↑2 · ↑3 · bridge↓k0 · ↑2 · ↑2  →  ↑2 · ↑3 · bridge↓k0 · ↑4
+  W 12 → 32: ↑2 · 4/3  →  8/3
+  W 12 → 96: ↑2 · 4/3 · ↑3  →  ↑2 · ↑2 · ↑2
+  W 12 → 192: ↑2 · ↑8  →  ↑2 · ↑2 · ↑4
+  W 12 → 384: ↑2 · ↑8 · ↑2  →  8/3 · ↑3 · ↑4
+  W 16 → 192: ↑2 · ↑6  →  ↑2 · ↑2 · ↑3
+  W 16 → 384: ↑2 · ↑6 · ↑2  →  ↑2 · ↑3 · ↑4
+  X 16 → 11.025: ↑3 · bridge↓k0 · ↓2 · ↓2  →  3/2 · ↑2 · bridge↓k0 · ↓2 · ↓2
+  W 24 → 192: ↑2 · 4/3 · ↑3  →  ↑2 · ↑2 · ↑2
+  W 24 → 384: ↑2 · ↑8  →  ↑2 · ↑2 · ↑4
+  W 32 → 12: 3/4 · ↓2  →  3/8
+  W 32 → 384: ↑2 · ↑6  →  ↑2 · ↑2 · ↑3
+  W 48 → 384: ↑2 · 4/3 · ↑3  →  ↑2 · ↑2 · ↑2
+  W 96 → 8: ↓6 · ↓2  →  ↓3 · ↓2 · ↓2
+  W 96 → 12: ↓3 · 3/4 · ↓2  →  ↓2 · ↓2 · ↓2
+  W 192 → 8: ↓2 · ↓6 · ↓2  →  ↓4 · ↓3 · ↓2
+  W 192 → 12: ↓8 · ↓2  →  ↓4 · ↓2 · ↓2
+  W 192 → 16: ↓6 · ↓2  →  ↓3 · ↓2 · ↓2
+  W 192 → 24: ↓3 · 3/4 · ↓2  →  ↓2 · ↓2 · ↓2
+  X 192 → 11.025: ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2  →  ↓4 · bridge↓k0 · ↓2 · ↓2
+  X 192 → 22.05: ↓3 · 3/4 · bridge↓k0 · ↓2  →  ↓2 · ↓2 · bridge↓k0 · ↓2
+  W 384 → 8: ↓3 · ↓8 · ↓2  →  ↓2 · ↓6 · ↓4
+  W 384 → 12: ↓2 · ↓8 · ↓2  →  ↓4 · ↓3 · 3/8
+  W 384 → 16: ↓2 · ↓6 · ↓2  →  ↓4 · ↓3 · ↓2
+  W 384 → 24: ↓8 · ↓2  →  ↓4 · ↓2 · ↓2
+  W 384 → 32: ↓6 · ↓2  →  ↓3 · ↓2 · ↓2
+  W 384 → 48: ↓3 · 3/4 · ↓2  →  ↓2 · ↓2 · ↓2
+  X 384 → 11.025: ↓2 · ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2  →  ↓4 · ↓2 · bridge↓k0 · ↓4
+  X 384 → 22.05: ↓8 · bridge↓k0 · ↓2  →  ↓4 · ↓2 · bridge↓k0 · ↓2
+  X 384 → 44.1: ↓3 · 3/4 · ↓2 · bridge↓k0  →  ↓2 · ↓2 · ↓2 · bridge↓k0
+  X 11.025 → 192: ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2  →  ↑2 · ↑2 · bridge↑k0 · ↑4
+  X 11.025 → 384: ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 · ↑2  →  ↑4 · bridge↑k0 · ↑2 · ↑4
+  W 11.025 → 88.2: ↑3 · 8/3  →  ↑2 · ↑2 · ↑2
+  W 11.025 → 176.4: ↑2 · ↑8  →  ↑2 · ↑2 · ↑4
+  X 22.05 → 192: ↑2 · bridge↑k0 · 4/3 · ↑3  →  ↑2 · bridge↑k0 · ↑2 · ↑2
+  X 22.05 → 384: ↑2 · bridge↑k0 · ↑8  →  ↑2 · bridge↑k0 · ↑2 · ↑4
+  W 22.05 → 176.4: ↑3 · 8/3  →  ↑2 · ↑2 · ↑2
+  X 44.1 → 384: bridge↑k0 · ↑2 · 4/3 · ↑3  →  bridge↑k0 · ↑2 · ↑2 · ↑2
+  W 88.2 → 11.025: 3/8 · ↓3  →  ↓2 · ↓2 · ↓2
+  X 176.4 → 8: ↓2 · ↓2 · bridge↑k0 · ↓3 · ↓2  →  ↓4 · bridge↑k0 · ↓3 · ↓2
+  W 176.4 → 11.025: ↓8 · ↓2  →  ↓4 · ↓2 · ↓2
+  W 176.4 → 22.05: 3/8 · ↓3  →  ↓2 · ↓2 · ↓2
+
+## rows that run a 4th-band stage, X3, economy: 26 (14 across the families, which the C ABI builds stage by stage through create_stage(4, 1) or (1, 4))
+
+## rows that run a 4th-band stage, X3 + X4, transparent: 22 (8 across the families, which the C ABI builds stage by stage through create_stage(4, 1) or (1, 4))
+
+## X4 alone (decision 6 kept): the transparent chain differs from today's economy chain: 41 rows (32 within the families, 9 across)
+  W 8 → 96: ↑2 · ↑6  →  ↑2 · ↑2 · ↑3
+  W 8 → 192: ↑2 · ↑6 · ↑2  →  ↑2 · ↑2 · ↑6
+  W 8 → 384: ↑2 · ↑8 · ↑3  →  ↑2 · ↑2 · ↑6 · ↑2
+  W 12 → 32: ↑2 · 4/3  →  8/3
+  W 12 → 96: ↑2 · 4/3 · ↑3  →  ↑2 · ↑2 · ↑2
+  W 12 → 192: ↑2 · ↑8  →  8/3 · ↑2 · ↑3
+  W 12 → 384: ↑2 · ↑8 · ↑2  →  8/3 · ↑2 · ↑6
+  W 16 → 192: ↑2 · ↑6  →  ↑2 · ↑2 · ↑3
+  W 16 → 384: ↑2 · ↑6 · ↑2  →  ↑2 · ↑2 · ↑6
+  X 16 → 11.025: ↑3 · bridge↓k0 · ↓2 · ↓2  →  3/2 · ↑2 · bridge↓k0 · ↓2 · ↓2
+  W 24 → 192: ↑2 · 4/3 · ↑3  →  ↑2 · ↑2 · ↑2
+  W 24 → 384: ↑2 · ↑8  →  8/3 · ↑2 · ↑3
+  W 32 → 12: 3/4 · ↓2  →  3/8
+  W 32 → 384: ↑2 · ↑6  →  ↑2 · ↑2 · ↑3
+  W 48 → 384: ↑2 · 4/3 · ↑3  →  ↑2 · ↑2 · ↑2
+  W 96 → 8: ↓6 · ↓2  →  ↓3 · ↓2 · ↓2
+  W 96 → 12: ↓3 · 3/4 · ↓2  →  ↓2 · ↓2 · ↓2
+  W 192 → 8: ↓2 · ↓6 · ↓2  →  ↓6 · ↓2 · ↓2
+  W 192 → 12: ↓8 · ↓2  →  ↓3 · ↓2 · 3/8
+  W 192 → 16: ↓6 · ↓2  →  ↓3 · ↓2 · ↓2
+  W 192 → 24: ↓3 · 3/4 · ↓2  →  ↓2 · ↓2 · ↓2
+  X 192 → 22.05: ↓3 · 3/4 · bridge↓k0 · ↓2  →  ↓2 · ↓2 · bridge↓k0 · ↓2
+  W 384 → 8: ↓3 · ↓8 · ↓2  →  ↓2 · ↓6 · ↓2 · ↓2
+  W 384 → 12: ↓2 · ↓8 · ↓2  →  ↓6 · ↓2 · 3/8
+  W 384 → 16: ↓2 · ↓6 · ↓2  →  ↓6 · ↓2 · ↓2
+  W 384 → 24: ↓8 · ↓2  →  ↓3 · ↓2 · 3/8
+  W 384 → 32: ↓6 · ↓2  →  ↓3 · ↓2 · ↓2
+  W 384 → 48: ↓3 · 3/4 · ↓2  →  ↓2 · ↓2 · ↓2
+  X 384 → 11.025: ↓2 · ↓2 · ↓2 · bridge↓k0 · ↓2 · ↓2  →  ↓6 · 3/4 · bridge↓k0 · ↓2 · ↓2
+  X 384 → 22.05: ↓8 · bridge↓k0 · ↓2  →  ↓2 · ↓2 · ↓2 · bridge↓k0 · ↓2
+  X 384 → 44.1: ↓3 · 3/4 · ↓2 · bridge↓k0  →  ↓2 · ↓2 · ↓2 · bridge↓k0
+  X 11.025 → 384: ↑2 · ↑2 · bridge↑k0 · ↑2 · ↑2 · ↑2  →  ↑2 · ↑2 · bridge↑k0 · 4/3 · ↑6
+  W 11.025 → 88.2: ↑3 · 8/3  →  ↑2 · ↑2 · ↑2
+  W 11.025 → 176.4: ↑2 · ↑8  →  ↑2 · ↑2 · ↑2 · ↑2
+  X 22.05 → 192: ↑2 · bridge↑k0 · 4/3 · ↑3  →  ↑2 · bridge↑k0 · ↑2 · ↑2
+  X 22.05 → 384: ↑2 · bridge↑k0 · ↑8  →  ↑2 · bridge↑k0 · 8/3 · ↑3
+  W 22.05 → 176.4: ↑3 · 8/3  →  ↑2 · ↑2 · ↑2
+  X 44.1 → 384: bridge↑k0 · ↑2 · 4/3 · ↑3  →  bridge↑k0 · ↑2 · ↑2 · ↑2
+  W 88.2 → 11.025: 3/8 · ↓3  →  ↓2 · ↓2 · ↓2
+  W 176.4 → 11.025: ↓8 · ↓2  →  ↓2 · ↓2 · ↓2 · ↓2
+  W 176.4 → 22.05: 3/8 · ↓3  →  ↓2 · ↓2 · ↓2
+
+## rows whose X3 + X4 economy chain differs from the X3 economy chain (sanity: the 70 dB tier is economy's)
+  0 by construction (the economy chain is selected at economy)
+
+## within-family chains (the C ABI's constants are exactly these)
+  today: 28 (20 named multi-stage chains)
+  X3, economy: 26 (18 multi-stage)
+  X3 + X4, economy ∪ transparent: 40 (30 multi-stage)
+  retired by X3 (no row uses them at either tier): 6
+    3/8 · ↓3  (ratio_3_8_down_3)
+    ↑2 · 4/3 · ↑3  (up_2_ratio_4_3_up_3)
+    ↑2 · ↑8 · ↑3  (up_2_up_8_up_3)
+    ↑3 · 8/3  (up_3_ratio_8_3)
+    ↓3 · 3/4 · ↓2  (down_3_ratio_3_4_down_2)
+    ↓3 · ↓8 · ↓2  (down_3_down_8_down_2)
+  retired at economy by X3 alone: 6
+    3/8 · ↓3  (ratio_3_8_down_3)
+    ↑2 · 4/3 · ↑3  (up_2_ratio_4_3_up_3)
+    ↑2 · ↑8 · ↑3  (up_2_up_8_up_3)
+    ↑3 · 8/3  (up_3_ratio_8_3)
+    ↓3 · 3/4 · ↓2  (down_3_ratio_3_4_down_2)
+    ↓3 · ↓8 · ↓2  (down_3_down_8_down_2)
+  added by X3 (economy): 4
+    ↑2 · ↑4  (up2_up4)
+    ↑2 · ↑6 · ↑4  (up2_up6_up4)
+    ↓4 · ↓2  (down4_down2)
+    ↓4 · ↓6 · ↓2  (down4_down6_down2)
+  transparent-only under X4 (no economy row uses them): 14
+    3/8  (ratio3over8)
+    8/3  (ratio8over3)
+    8/3 · ↑3 · ↑4  (ratio8over3_up3_up4)
+    ↑2 · ↑2 · ↑2  (up2_up2_up2)
+    ↑2 · ↑2 · ↑3  (up2_up2_up3)
+    ↑2 · ↑2 · ↑4  (up2_up2_up4)
+    ↑2 · ↑3 · ↑4  (up2_up3_up4)
+    ↑4 · ↑6 · ↑2  (up4_up6_up2)
+    ↓2 · ↓2 · ↓2  (down2_down2_down2)
+    ↓2 · ↓6 · ↓4  (down2_down6_down4)
+    ↓3 · ↓2 · ↓2  (down3_down2_down2)
+    ↓4 · ↓2 · ↓2  (down4_down2_down2)
+    ↓4 · ↓3 · 3/8  (down4_down3_ratio3over8)
+    ↓4 · ↓3 · ↓2  (down4_down3_down2)
+
+## C ABI (X7): today's constants 28 values 0 .. 27
+  retired values (6): 10 TAP_SR_RATIONAL_UP_2_RATIO_4_3_UP_3, 11 TAP_SR_RATIONAL_UP_3_RATIO_8_3, 16 TAP_SR_RATIONAL_UP_2_UP_8_UP_3, 21 TAP_SR_RATIONAL_DOWN_3_RATIO_3_4_DOWN_2, 22 TAP_SR_RATIONAL_RATIO_3_8_DOWN_3, 27 TAP_SR_RATIONAL_DOWN_3_DOWN_8_DOWN_2
+  new constants: 18 (X3: 4, X4: 14), values 28 .. 45 in this (illustrative) order:
+    28 TAP_SR_RATIONAL_RATIO3OVER8  (3/8, X4)
+    29 TAP_SR_RATIONAL_RATIO8OVER3  (8/3, X4)
+    30 TAP_SR_RATIONAL_UP2_UP4  (↑2 · ↑4, X3)
+    31 TAP_SR_RATIONAL_DOWN4_DOWN2  (↓4 · ↓2, X3)
+    32 TAP_SR_RATIONAL_RATIO8OVER3_UP3_UP4  (8/3 · ↑3 · ↑4, X4)
+    33 TAP_SR_RATIONAL_UP2_UP2_UP2  (↑2 · ↑2 · ↑2, X4)
+    34 TAP_SR_RATIONAL_UP2_UP2_UP3  (↑2 · ↑2 · ↑3, X4)
+    35 TAP_SR_RATIONAL_UP2_UP2_UP4  (↑2 · ↑2 · ↑4, X4)
+    36 TAP_SR_RATIONAL_UP2_UP3_UP4  (↑2 · ↑3 · ↑4, X4)
+    37 TAP_SR_RATIONAL_UP2_UP6_UP4  (↑2 · ↑6 · ↑4, X3)
+    38 TAP_SR_RATIONAL_UP4_UP6_UP2  (↑4 · ↑6 · ↑2, X4)
+    39 TAP_SR_RATIONAL_DOWN2_DOWN2_DOWN2  (↓2 · ↓2 · ↓2, X4)
+    40 TAP_SR_RATIONAL_DOWN2_DOWN6_DOWN4  (↓2 · ↓6 · ↓4, X4)
+    41 TAP_SR_RATIONAL_DOWN3_DOWN2_DOWN2  (↓3 · ↓2 · ↓2, X4)
+    42 TAP_SR_RATIONAL_DOWN4_DOWN2_DOWN2  (↓4 · ↓2 · ↓2, X4)
+    43 TAP_SR_RATIONAL_DOWN4_DOWN3_RATIO3OVER8  (↓4 · ↓3 · 3/8, X4)
+    44 TAP_SR_RATIONAL_DOWN4_DOWN3_DOWN2  (↓4 · ↓3 · ↓2, X4)
+    45 TAP_SR_RATIONAL_DOWN4_DOWN6_DOWN2  (↓4 · ↓6 · ↓2, X3)
+  live chains: 40; CHAIN_END (one past the largest value ever assigned): 46
+
+## the within-family ratios that move, per tier
+  X3, economy: 4 ratios
+    48/1 (8 → 384): ↑2 · ↑8 · ↑3 7.77 → ↑2 · ↑6 · ↑4 7.35 MAC/out at its tier
+    8/1 (12 → 96, 24 → 192, 48 → 384, 11.025 → 88.2, 22.05 → 176.4): ↑2 · 4/3 · ↑3 12.46 → ↑2 · ↑4 10.62 MAC/out at its tier
+    1/8 (96 → 12, 192 → 24, 384 → 48, 88.2 → 11.025, 176.4 → 22.05): ↓3 · 3/4 · ↓2 105.00 → ↓4 · ↓2 85.00 MAC/out at its tier
+    1/48 (384 → 8): ↓3 · ↓8 · ↓2 373.00 → ↓4 · ↓6 · ↓2 353.00 MAC/out at its tier
+  X3 + X4, transparent vs X3 economy: 14 ratios
+    12/1 (8 → 96, 16 → 192, 32 → 384): ↑2 · ↑6 10.42 → ↑2 · ↑2 · ↑3 19.75 MAC/out at its tier
+    24/1 (8 → 192, 16 → 384): ↑2 · ↑6 · ↑2 8.71 → ↑2 · ↑3 · ↑4 16.12 MAC/out at its tier
+    48/1 (8 → 384): ↑2 · ↑6 · ↑4 7.35 → ↑4 · ↑6 · ↑2 14.56 MAC/out at its tier
+    8/3 (12 → 32): ↑2 · 4/3 16.38 → 8/3 43.88 MAC/out at its tier
+    8/1 (12 → 96, 24 → 192, 48 → 384, 11.025 → 88.2, 22.05 → 176.4): ↑2 · ↑4 10.62 → ↑2 · ↑2 · ↑2 22.62 MAC/out at its tier
+    16/1 (12 → 192, 24 → 384, 11.025 → 176.4): ↑2 · ↑8 10.31 → ↑2 · ↑2 · ↑4 18.81 MAC/out at its tier
+    32/1 (12 → 384): ↑2 · ↑8 · ↑2 8.66 → 8/3 · ↑3 · ↑4 17.16 MAC/out at its tier
+    3/8 (32 → 12): 3/4 · ↓2 49.00 → 3/8 133.00 MAC/out at its tier
+    1/12 (96 → 8, 192 → 16, 384 → 32): ↓6 · ↓2 125.00 → ↓3 · ↓2 · ↓2 237.00 MAC/out at its tier
+    1/8 (96 → 12, 192 → 24, 384 → 48, 88.2 → 11.025, 176.4 → 22.05): ↓4 · ↓2 85.00 → ↓2 · ↓2 · ↓2 181.00 MAC/out at its tier
+    1/24 (192 → 8, 384 → 16): ↓2 · ↓6 · ↓2 209.00 → ↓4 · ↓3 · ↓2 387.00 MAC/out at its tier
+    1/16 (192 → 12, 384 → 24, 176.4 → 11.025): ↓8 · ↓2 165.00 → ↓4 · ↓2 · ↓2 301.00 MAC/out at its tier
+    1/48 (384 → 8): ↓4 · ↓6 · ↓2 353.00 → ↓2 · ↓6 · ↓4 699.00 MAC/out at its tier
+    1/32 (384 → 12): ↓2 · ↓8 · ↓2 277.00 → ↓4 · ↓3 · 3/8 565.00 MAC/out at its tier

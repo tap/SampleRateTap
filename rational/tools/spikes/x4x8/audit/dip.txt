@@ -1,0 +1,21 @@
+frame at  6000: dip 46.7 dB
+frame at  6030: dip 46.3 dB
+frame at  6060: dip 46.2 dB
+frame at  6090: dip 46.3 dB
+frame at  6120: dip 46.5 dB
+frame at  6150: dip 47.0 dB
+frame at  6180: dip 47.8 dB
+frame at  6210: dip 48.8 dB
+frame at  6240: dip 50.2 dB
+frame at  6270: dip 52.0 dB
+frame at  6300: dip 54.3 dB
+frame at  6330: dip 57.2 dB
+frame at  6360: dip 59.3 dB
+frame at  6390: dip 58.1 dB
+frame at  6420: dip 55.2 dB
+frame at  6450: dip 52.7 dB
+frame at  6480: dip 50.7 dB
+frame at  6510: dip 49.2 dB
+frame at  6540: dip 48.1 dB
+frame at  6570: dip 47.3 dB
+shallowest dip over one beat period: 46.2 dB

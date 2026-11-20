@@ -1,0 +1,3 @@
+round-trip latency: 234/1 frames = 4.875 ms at 48 kHz
+MACs per output frame per channel: down 105.0 (at 6 kHz), up 12.5 (at 48 kHz)
+every block: 384 frames in, 48 at 6 kHz, 384 out
