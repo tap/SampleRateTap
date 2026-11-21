@@ -86,7 +86,7 @@ instruction baselines), and `examples/pico2_dualcore/` (the
 one-clock-domain-per-core RP2350 deployment, self-validating).
 
 **Consuming the library**: `add_subdirectory` or `FetchContent` only —
-there are no install/package rules yet. The family version is 0.7.0
+there are no install/package rules yet. The family version is 0.8.0
 (`TAP_SR_VERSION_*` in `tap/sr/async/async.h`, token-identical in the three
 engines' umbrella headers, `tap_sr_async_version()` over the C ABI, D13);
 pre-1.0, the API may still change between versions.

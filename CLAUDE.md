@@ -26,8 +26,11 @@ made this tree (sections 5–6). Do not re-derive what it settles.
   their composition for 44.1 ↔ 48 across independent clocks (`bridge/examples/bluetooth_bridge.cpp`)
   or across families (a chain through `bridge`, written by the caller). There is no
   `(in_hz, out_hz)` lookup anywhere, `async` is never chained behind one, and no rate is served by
-  an engine whose charter does not name it (the 1000/1001 pull-down rates sit inside async's
-  ±1000 ppm and must still never be served by it).
+  an engine whose charter does not name it. Rates are named by ratio (D19): `rational`'s charter
+  names L/M of 2^a·3^b inside a family, so any rate a family rate reaches by such a ratio is in it
+  (48 → 3 kHz is the ratio 1/16), and the family's 14 rates are the coverage matrix's pinned set,
+  not a limit. The 1000/1001 pull-down rates are no such ratio: they sit inside async's ±1000 ppm
+  and must still never be served by it.
 - **The dependency rule (PLAN.md 4.2).** Each engine depends on `tap::dsp` only. A sibling appears
   only under an engine's `tests/` and `examples/`; `capi/` is per engine; nothing shipped links two
   engines (the umbrella `tap::sr` is the caller's choice). The root `tests/` enforces it per engine
@@ -42,13 +45,15 @@ made this tree (sections 5–6). Do not re-derive what it settles.
 - **Substrate discipline.** Shared code (design math, sample traits, kernels, quantization,
   measurement instruments) lands in DspTap first; this tree bumps the submodule pin. Never fork
   substrate code into an engine.
-- **One version (D13).** `TAP_SR_VERSION_*` is 0.7.0, defined token-identically in each umbrella
+- **One version (D13).** `TAP_SR_VERSION_*` is 0.8.0, defined token-identically in each umbrella
   header (checked by `tests/family/version_macros.cpp`) and returned bit-packed by each C ABI's
   `tap_sr_<engine>_version()` (pinned by `CApi.VersionIsBitPacked`). Tags are `vX.Y.Z`; bump all
   three headers and the root `project()` together (0.5.0 came with `rational`'s M6, 0.6.0 with the
   audit response's async vocabulary pass: `preset` retired for `profile`, `economy()` to `program()`,
   the async C ABI in the siblings' shape; 0.7.0 with A13: every engine's channel count a template
-  argument, D18, `docs/CHANNELS_PLAN.md`).
+  argument, D18, `docs/CHANNELS_PLAN.md`; 0.8.0 with `rational`'s ×4 / ×8 / ×16 plan: its vocabulary
+  respelled, the designer's β re-tuned, the 4th-band stage, a chain per attenuation tier and the
+  chains by 4, 8 and 16 named by intent, `docs/X4_X8_PLAN.md`, the old-to-new names in `CHANGELOG.md`).
 - **The DspTap floor (A9).** Each umbrella header also defines `TAP_SR_DSPTAP_MINIMUM` (0.2.0)
   token-identically and `static_assert`s it against DspTap's `TAP_DSP_VERSION`
   (`tap/dsp/version.h`); `family.VersionMacrosAgree` checks the three agree. DspTap is tagged on its

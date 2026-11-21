@@ -15,7 +15,7 @@ quantization, measurement instruments).
 |---|---|---|---|
 | **`async`** | `tap::sr::async` | Asynchronous, near-unity (±`max_deviation_ppm`, default 1000 ppm): two clock domains at nominally the same rate, one thread pushing at the input clock and one pulling at the output clock. **Absorbs the clock.** | [`async/`](async/README.md) |
 | **`bridge`** | `tap::sr::bridge` | Synchronous 44.1 ↔ 48 kHz (160/147 up, 147/160 down) and the pair at 2× and 4× (88.2 ↔ 96, 176.4 ↔ 192), direction and rate scale fixed at compile time, speed-first with Q15/Q31 profiles for M33/M55-class targets. **Converts the number.** | [`bridge/`](bridge/README.md) |
-| **`rational`** | `tap::sr::rational` | Synchronous small-factor L/M *within* a rate family (L, M ∈ {2^a·3^b}: ↑2, ↓3, 2/3, …), as chains of Nyquist (L-th-band) stages, the ratio a compile-time type. **Converts the number.** M1–M6 landed (ratio types, pinned designs, the single stages for every ratio of the vocabulary, the named chains and the 182-row coverage matrix generated from the measured lengths, the fixed-point profiles measured per stage, the C ABI, the executed matrix notebook and the instruction-count ratchet): its plan is complete. | [`rational/`](rational/README.md) |
+| **`rational`** | `tap::sr::rational` | Synchronous small-factor L/M *within* a rate family (L, M ∈ {2^a·3^b}: ↑2, ↓3, 2/3, …), as chains of Nyquist (L-th-band) stages, the ratio a compile-time type. **Converts the number.** M1–M6 landed (ratio types, pinned designs, the single stages for every ratio of the vocabulary, the named chains and the 182-row coverage matrix generated from the measured lengths, a chain per attenuation tier, the fixed-point profiles measured per stage, the C ABI, the executed matrix notebook and the instruction-count ratchet): its plan is complete. Since 0.8.0 the chains by 4, 8 and 16 have names by intent too, `down_by4` … `up_by16_transparent`, each a plain alias of the matrix's chain for that ratio, and [`rational/examples/low_band_fft.cpp`](rational/examples/low_band_fft.cpp) shows what they are for: a 4096-point FFT with 0.73 Hz bins in the low band of a 48 kHz signal, its change interpolated back and added to the input delayed by the round trip's exact latency. | [`rational/`](rational/README.md) |
 
 The engines never route by rate. The caller declares the clock topology by
 choosing a type: `async` when the clocks are independent, `bridge` when the
@@ -37,6 +37,15 @@ passband edge; `async`'s tiers are image rejection through its interpolated
 polyphase bank, a different kind of number, so they keep their own names
 (`preset` retired for `profile` in 0.6.0, and its program-weighted tier is
 `program`, not `economy`).
+
+`rational`'s coverage matrix selects a chain per attenuation tier: the 70 dB
+tier's at `economy`, run at the three 70 dB profiles, and the 120 dB tier's at
+`transparent`. Where the two differ the 120 dB tier's chain has a name ending
+in `_transparent` (`down_by16_transparent`, since 0.8.0): the suffix names the
+tier the chain is cheapest at, not a profile, and is no fifth profile name.
+Every chain runs at every profile, and the profile stays a run-time argument;
+`down_by16_transparent` built at `economy` is legal and costs more there than
+`down_by16`.
 
 | Engine | Profile | What the number is | Numbers |
 |---|---|---|---|
@@ -130,7 +139,9 @@ A retired pre-family option (`SRT_*`, `TAP_RATIO_*`) fails the configure
 loudly (`cmake/retired_options.cmake`) rather than dropping a gate silently.
 
 **Version.** One family version, `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}`
-(0.7.0, the minor bump A13 brought: every channel count the type's; 0.6.0 was the async vocabulary pass), defined
+(0.8.0, the minor bump `rational`'s ×4 / ×8 / ×16 plan brought: its vocabulary respelled, the designer re-tuned,
+the 4th-band stage, a chain per tier and the chains by 4, 8 and 16 named by intent, `CHANGELOG.md`; 0.7.0 was A13's,
+every channel count the type's, and 0.6.0 the async vocabulary pass), defined
 identically in each engine's umbrella header and returned bit-packed —
 `(major << 16) | (minor << 8) | patch` — by each C ABI's
 `tap_sr_async_version()` / `tap_sr_bridge_version()` /
@@ -207,6 +218,7 @@ equal). A commit that moves `submodules/dsptap` names the DspTap tag it pins.
 |---|---|---|
 | 0.6.0 | 0.1.0 | v0.1.0 |
 | 0.7.0 | 0.2.0 | v0.2.0 |
+| 0.8.0 | 0.2.0 | v0.2.0 |
 
 ## Provenance and license
 

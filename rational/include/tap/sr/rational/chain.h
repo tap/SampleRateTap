@@ -30,7 +30,9 @@
 // pinned per row by tests/test_matrix.cpp), at both attenuation tiers (X4):
 // one alias per distinct chain of two or more stages, named by its stages in
 // order; a one-stage chain is basic_converter<S, R>. The names are the C
-// ABI's enumerators (M6).
+// ABI's enumerators (M6). The chains by 4, 8 and 16 have a second name, by
+// intent (down_by4 ... up_by16_transparent, docs/X4_X8_PLAN.md X1): a plain
+// alias of the matrix's chain at its tier, written out, never a lookup.
 #pragma once
 
 #include <array>
@@ -252,5 +254,52 @@ namespace tap::sr::rational {
     template <tap::dsp::sample_type S, std::size_t Ch>
     using down4_down6_down2 = basic_chain<S, Ch, down4, down6, down2>; ///< 1/48 at 120 dB
     // ANCHOR_END: rational_named_chains
+
+    // ANCHOR: rational_by_aliases
+    /// The chains by 4, 8 and 16, named by intent (docs/X4_X8_PLAN.md X1,
+    /// X2, X4): each is a plain alias of the coverage matrix's chain for its
+    /// ratio at its attenuation tier, written out here, so nothing is looked
+    /// up (D12), and the same chain in both families, since a chain carries
+    /// no rate. A plain alias is the 70 dB tier's chain, which the matrix
+    /// selects at economy, and a _transparent alias the 120 dB tier's, which
+    /// it selects at transparent; a _transparent alias exists only where the
+    /// two differ, which is by 16 alone (by 4 and by 8 are one chain at both
+    /// tiers). The suffix names the tier a chain is cheapest at, not a
+    /// profile: every alias runs at every profile, at more MACs at the other
+    /// tier. Measured, MACs per output frame per channel going down
+    /// (matrix.py's `by` mode, pinned by
+    /// rational.Chain.ByAliasesAreTheCheapestWithinR3; going up the same
+    /// over the factor):
+    /// - down_by4 (two half-bands) and down_by8 (the 4th-band stage, then a
+    ///   half-band) are R3's choice at every profile: 43 and 71 at economy,
+    ///   89 and 149 at transparent (by 8 at balanced within R3's 10 % of
+    ///   three half-bands, with fewer stages);
+    /// - down_by16 is the cheapest at economy, where its tier is selected
+    ///   (143, tied with down4 . down2 . down2 at more latency); at
+    ///   super_economy and balanced down4 . down2 . down2 is cheaper (111
+    ///   against 139, 147 against 159), and at transparent it costs 301;
+    /// - down_by16_transparent is R3's choice at transparent, 277, within
+    ///   its 10 % of down4 . down2 . down2's 261 with fewer stages, and costs
+    ///   163 at economy.
+    /// Each alias is the cheapest chain; the single stage (down4 / up4,
+    /// down8 / up8) is lower latency at more MACs (X5), and by 16, which has
+    /// none, basic_chain<S, Ch, down4, down4> is.
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_by4 = down2_down2<S, Ch>; ///< 1/4 at both tiers
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_by8 = down4_down2<S, Ch>; ///< 1/8 at both tiers
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_by16 = down2_down4_down2<S, Ch>; ///< 1/16 at 70 dB
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down_by16_transparent = down8_down2<S, Ch>; ///< 1/16 at 120 dB
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_by4 = up2_up2<S, Ch>; ///< 4/1 at both tiers
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_by8 = up2_up4<S, Ch>; ///< 8/1 at both tiers
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_by16 = up2_up4_up2<S, Ch>; ///< 16/1 at 70 dB
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up_by16_transparent = up2_up8<S, Ch>; ///< 16/1 at 120 dB
+    // ANCHOR_END: rational_by_aliases
 
 } // namespace tap::sr::rational

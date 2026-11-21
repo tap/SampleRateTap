@@ -68,6 +68,10 @@ down4_down4_down3<float, 1> to_8k;         // 384 -> 8 kHz: the matrix's 1/48 ch
 // each stage designed at its own rate: divisors 12, 3, 1 of the chain's lowest rate (PLAN.md 3.1)
 static_assert(to_8k.k_divisors[0] == tap::dsp::exact_ratio{12, 1});
 chain<2, up2, ratio4over3> to_32k_from_12k; // 12 -> 32 kHz: 8/3 as the matrix factors it, stereo
+
+down_by8<float, 2> to_6k;                  // 48 -> 6 kHz by intent: the matrix's 1/8 chain, down4_down2, 71 MACs
+up_by8<float, 2>   from_6k;                // and back: up2_up4 (down8 / up8, one stage, is lower latency at more MACs)
+down_by16_transparent<float, 1> to_3k(profile::transparent()); // 1/16 at 120 dB: down8_down2, its tier's own chain
 ```
 
 The ratio is a compile-time type (`ratio<L, M>`, L and M of the form
@@ -119,8 +123,20 @@ chain's `validate` are the same verdict as a `noexcept` `const char*` reason
   the 120 dB tier's alone, selected at `transparent` (`up2_ratio3over2`,
   `up2_up6`, `up2_up8`, `up2_up6_up4`, `down6_down2`, `down8_down2`,
   `down4_down6_down2`). Every chain runs at every profile; the tier says
-  where the matrix selects it.
-- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.7.0 since A13; 0.6.0 from the audit response, 0.5.0 from M6);
+  where the matrix selects it. The chains by 4, 8 and 16 have a second name,
+  by intent: `down_by4<S, Ch>`, `down_by8`, `down_by16` and their `up_by`
+  twins are the 70 dB tier's chains (`down2_down2`, `down4_down2`,
+  `down2_down4_down2`), and `down_by16_transparent` / `up_by16_transparent`
+  the 120 dB tier's (`down8_down2`, `up2_up8`), the one ratio whose tiers
+  differ. Each is a plain alias written out in the header, the same chain in
+  both families, never a lookup; the suffix names the tier a chain is
+  cheapest at, not a profile, and every alias runs at every profile. They are
+  the cheapest chains (by 16 at `economy`, where its tier is selected;
+  `rational.Chain.ByAliasesAreTheCheapestWithinR3` pins the search behind
+  them); `down8` beside `down_by8` is one stage, lower latency at twice the
+  MACs.
+- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.8.0 since the ×4 / ×8 / ×16 plan, `../CHANGELOG.md`; 0.7.0 from A13,
+  0.6.0 from the audit response, 0.5.0 from M6);
   the named ratios of the vocabulary (`up2` … `ratio3over8`) are `ratio.h`'s.
 
 Against the general-purpose resampler libraries at four ratios of the
@@ -131,6 +147,48 @@ embedded instruction counts are measured in
 [docs/COMPARISON.md](docs/COMPARISON.md) (the notebook behind it:
 [notebooks/rational_comparison.ipynb](notebooks/rational_comparison.ipynb);
 the family index: [docs/COMPARISON.md](../docs/COMPARISON.md) at the root).
+
+## The low-band round trip
+
+[`examples/low_band_fft.cpp`](examples/low_band_fft.cpp) is what the chains by 16
+were named for: a 4096-point FFT with 0.73 Hz bins in the low band of a 48 kHz
+signal. It decimates with `down_by16` to 3 kHz, makes a spectral change there with a
+4096-point STFT (periodic Hann, overlap 4), and interpolates *the change alone* back
+with `up_by16`, adding it to the input delayed by the round trip's exact latency:
+
+```text
+out[n] = x[n - T] + up_by16(change(down_by16(x)))[n],   T = 16 tau_down + tau_up
+```
+
+The bins the change leaves alone, and everything above the low band, never pass
+through the chains, so no aliasing is re-injected and no crossover filter is designed.
+T is an integer for every alias. Measured at `economy` (GCC 13, x86-64, double, 12 s of
+200 Hz and 205 Hz at −12 dBFS and 5 kHz at −20 dBFS):
+
+| | |
+|---|---|
+| 4096 points at 48 kHz (11.7 Hz bins) | one peak: 200 and 205 Hz are 0.43 bins apart |
+| 4096 points at 3 kHz after `down_by16` (0.73 Hz bins) | two peaks, 46.7 dB of dip between them |
+| T | 16 × 189/16 + 189 = 378 samples (7.875 ms) |
+| the chains' cost | 17.875 MACs per full-rate sample (143 / 16 each way) |
+| an identity change | the input delayed by T, bit for bit |
+| removing 205 Hz (the 9 bins around it) | 205 Hz −70.27 dB; 200 Hz and 5 kHz unchanged (0.00 dB); with T ± 1 only −31.43 dB |
+
+`tests/test_low_band.cpp` pins the claims at ×4, ×8 and ×16, every profile and both
+float and double, streamed in blocks within about 1 MB of state
+(`rational.LowBand.IdentityChangeIsTheInputDelayedBitForBit`,
+`RemovalNeedsTheExactDelay`, `ResolvesTonesFiveHertzApartAfterDown16`,
+`RemovingOneToneLeavesTheOthers`): a removal at least 60 dB deep at the 70 dB profiles
+and 100 dB at `transparent` (by 16 through `down_by16_transparent` /
+`up_by16_transparent`), failing one sample early or late (−31.4 dB, which is
+2 sin(π f / fs) at 205 Hz), at least 40 dB between the two peaks, and the other tones
+within 0.01 dB. The removal there is of a tone on a bin of the low-rate FFT, so the
+change takes all of it and what is left is the round trip's ripple: −66.9 dB at worst
+at the 70 dB profiles (by 16 at `super_economy`), −119.2 dB at `transparent`. A tone
+between bins also leaves the window's tails outside the removed bins: the example's
+205 Hz measures −94.4 dB at `transparent`, the change's floor rather than the round
+trip's. Resolution is bought with time: a 4096-point frame at 3 kHz is 1.37 s, and a
+change spreads over it.
 
 ## The boundaries are identity, not policy
 
@@ -224,7 +282,10 @@ never a rate. The values are stable: a retired chain's value is never
 reused and `create` refuses it (ten were retired in 0.8.0, listed in the
 header), so the live values run from 0 to 42 with gaps and
 `TAP_SR_RATIONAL_CHAIN_END` (43), one past the largest value ever assigned,
-bounds them. `tap_sr_rational_create_stage(L, M, profile, divisor_num,
+bounds them. The chains by 4, 8 and 16 have their names by intent here too,
+`TAP_SR_RATIONAL_DOWN_BY4` … `TAP_SR_RATIONAL_UP_BY16_TRANSPARENT`, each
+`#define`d as its chain's constant: a second spelling, never a value of its
+own (`CApi.ByConstantsAreTheirChainsConstants`). `tap_sr_rational_create_stage(L, M, profile, divisor_num,
 divisor_den, channels)` is one stage of the vocabulary, any of its sixteen
 ratios, at a stated design divisor, what a chain through `bridge` composes. Each converter reports its
 exact accounting, its latency and its MACs per output as exact rationals,

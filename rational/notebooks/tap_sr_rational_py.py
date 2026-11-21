@@ -42,6 +42,15 @@ CHAINS = {
     "down4_down4_down2": 38, "down4_down4_down3": 39,
     "up2_ratio3over2": 40, "up2_up6_up4": 41, "down4_down6_down2": 42,
 }
+# The chains by 4, 8 and 16, named by intent (the TAP_SR_RATIONAL_*_BY*
+# constants, chain.h's down_by4 ... up_by16_transparent): second names of the
+# chains above, never values of their own (X7 of docs/X4_X8_PLAN.md).
+CHAINS.update({
+    "down_by4": CHAINS["down2_down2"], "down_by8": CHAINS["down4_down2"],
+    "down_by16": CHAINS["down2_down4_down2"], "down_by16_transparent": CHAINS["down8_down2"],
+    "up_by4": CHAINS["up2_up2"], "up_by8": CHAINS["up2_up4"],
+    "up_by16": CHAINS["up2_up4_up2"], "up_by16_transparent": CHAINS["up2_up8"],
+})
 PROFILES = {"economy": 0, "transparent": 1, "balanced": 2, "super_economy": 3}
 FORMATS = {"float": 0, "q15": 1, "q31": 2}  # the TAP_SR_RATIONAL_FORMAT_* constants
 
