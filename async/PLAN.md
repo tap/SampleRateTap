@@ -73,8 +73,10 @@ The boundaries are identity, not policy:
 
 ## 3. Status
 
-**v0.7.0** — the family version (D13), in the SampleRateTap tree since the
-2026 migration; 0.7.0 moved the channel count into the type (A13, the
+**v0.8.0** — the family version (D13), in the SampleRateTap tree since the
+2026 migration; 0.8.0 is `rational`'s release (`docs/X4_X8_PLAN.md`,
+`CHANGELOG.md`) and changes nothing here but the version; 0.7.0 moved the
+channel count into the type (A13, the
 record in section 6); before it, SampleRateTap v0.1.0 (the campaign's PR A–C6 in
 `docs/PERFORMANCE.md` "Sequencing & status"). The DspTap adoption
 (`bridge/PLAN.md` Appendix B) moved the FIR substrate out; the

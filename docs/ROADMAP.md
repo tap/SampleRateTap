@@ -267,7 +267,8 @@ writes the tooling and reads the results.
   symbols only; status through a size-tagged struct or `_v2`); `SOVERSION` on the three
   shared libraries; a compat test compiling a frozen copy of each 1.0 header and a C
   caller against HEAD; the statement that MAJOR is the ABI (Q2: no separate ABI
-  version; the bit-packed `tap_sr_<engine>_version()` is the probe); a `CHANGELOG.md` back-filled from v0.4.0; a
+  version; the bit-packed `tap_sr_<engine>_version()` is the probe); `CHANGELOG.md`, which 0.8.0
+  started with its old-to-new name map (Block X), back-filled from v0.4.0; a
   semver and deprecation statement reconciled with D7 (at 1.x every rename is a MAJOR,
   written down); the consumption model stated: `add_subdirectory`/FetchContent is the
   only supported model at 1.0, and `install()`/`find_package` is deferred (Q2);
@@ -352,3 +353,47 @@ engines and 352.8 kHz wait for a consumer (`PLAN.md`); the 4th-band stage, which
 too, shipped with X-a3 on the matrix's own cost (decision 6 as amended, `rational/PLAN.md`
 R3, `docs/X4_X8_PLAN.md` X3). The HiFi ISS Xtensa lane stays commented out until a self-hosted runner exists. The
 F25 banner template is a TapHouse PR.
+
+## 9. Block X: ×4, ×8 and ×16 by intent, and 0.8.0 (added 2026-11-21)
+
+The maintainer asked for ×4, ×8 and ×16 down and up stages named for the factor, for a
+4096-point FFT with finer resolution in the low bands (decimate, process, interpolate).
+Planned in [`X4_X8_PLAN.md`](X4_X8_PLAN.md) (audited in
+[`PLANS_AUDIT_2026-11.md`](PLANS_AUDIT_2026-11.md)); in this tree it is one breaking
+release, 0.8.0, on DspTap 0.2.0, ahead of the IIR plan's stages (its X13) and of C3,
+whose freeze covers what it ships and whose `CHANGELOG.md` it starts (its X16, taken on
+the recommendation). Its name map and breaking changes are `CHANGELOG.md`'s 0.8.0 entry.
+
+- **X-0. The spike.** *Landed (SampleRateTap#105, `rational/tools/spikes/x4x8/`).* The
+  counts exact, the 4th-band stage's case restated on R3's tie rule, its latency and
+  17–31 % fewer instructions on the M33, M55 and Hexagon, and a re-tuned Kaiser β that
+  needs no DspTap change.
+- **X-a1. The rename (X0).** *Landed (#107).* A factor joins its word, a mixed ratio
+  reads as a fraction, an underscore separates a chain's stages (`down8_down2`,
+  `ratio3over4`), the C ABI's constants with every value unchanged; the old spellings
+  in the vocabulary gate (D7). Nothing numeric moved.
+- **X-a2. The designer's β (X17).** *Landed (#109).* β for A + 4 dB, accepted at
+  A + 1 dB as before: 127 of 200 relaxation pins, every Q15 / Q31 table and the scipy
+  vectors re-pinned, every `rational` count and ceiling re-recorded with the reason;
+  the matrix's chains frozen for that one PR.
+- **X-a3. Decision 6 reopened (X3).** *Landed (#110).* `up4` / `down4` and the
+  selection restored with the 4th-band stage: 46 rows moved, twelve chains added and
+  ten retired with their C values refused (`CHAIN_END` for `CHAIN_COUNT`), new
+  ratchet rows and the 4th-band probes' ceilings.
+- **X-a4. A chain per tier (X4).** *Landed (#111).* The 70 dB tier's chain selected at
+  `economy`, the 120 dB tier's at `transparent`: 25 rows split, three chains added
+  (C values 40 to 42, `CHAIN_END` 43), the ratchet's `down8_down2_float_tr`.
+- **X-b. The aliases and the release.** *This block's last SampleRateTap PR.*
+  `down_by4` … `up_by16_transparent` as plain aliases of the matrix's chains (X1, X2;
+  a `_transparent` twin by 16 alone), their C constants (`TAP_SR_RATIONAL_DOWN_BY4` …,
+  each its chain's value), `matrix.py by` and the tests that pin the aliases to their
+  rows and to the cheapest chains, `rational/examples/low_band_fft.cpp` and
+  `rational.LowBand.*`, the family's D19 (rates named by ratio), and 0.8.0 with its
+  tested pair (DspTap 0.2.0) and `CHANGELOG.md`. No ratchet count and no ceiling moved.
+  The maintainer tags `v0.8.0`.
+- **X-c. DspTap's scaffold (X10)**, the low-band round trip as a DspTap primitive
+  generic over `sync_stage`, in DspTap 0.3.0 with the IIR plan's substrate (X13).
+  *Open.*
+- **Then TapTools:** its DspTap pin to `v0.3.0` first, then SampleRateTap as a
+  submodule (X11), `stft.h`'s change mode, the low-band EQ and notch object (X14) and a
+  notebook; then TapTools-Max. *Open.*

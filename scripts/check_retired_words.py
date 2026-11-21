@@ -37,6 +37,7 @@ HISTORY = (
     "docs/channels/multicount/CMakeLists.txt",  # compiles against the reference headers too)
     "docs/X4_X8_PLAN.md",                 # X0's plan and its audit spell the names X-a1 retired
     "docs/PLANS_AUDIT_2026-11.md",
+    "CHANGELOG.md",                       # each release's old-to-new name map spells the retired names
     "rational/tools/spikes/x4x8/",        # spikes measured against an older tree, kept as run
     "rational/tools/spikes/iir/",
     "scripts/retired_words.txt",

@@ -44,8 +44,8 @@ static_assert(k_async_dsptap_minimum == TAP_SR_DSPTAP_MINIMUM,
 static_assert(k_async_major == TAP_SR_VERSION_MAJOR && k_async_minor == TAP_SR_VERSION_MINOR
                   && k_async_patch == TAP_SR_VERSION_PATCH,
               "TAP_SR_VERSION_* must be identical in async.h and rational.h (D13)");
-static_assert(k_async_major == 0 && k_async_minor == 7 && k_async_patch == 0,
-              "the family version is 0.7.0 (D13); re-pin here when it is bumped");
+static_assert(k_async_major == 0 && k_async_minor == 8 && k_async_patch == 0,
+              "the family version is 0.8.0 (D13); re-pin here when it is bumped");
 static_assert(k_async_dsptap_minimum == TAP_DSP_VERSION_ENCODE(0, 2, 0),
               "the family's DspTap floor is 0.2.0 (A9; A13: chain.h's compile-time channel count); re-pin here, "
               "and in the root README's tested pairs, "

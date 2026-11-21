@@ -34,7 +34,7 @@
 #include "tap/dsp/version.h"
 
 #define TAP_SR_VERSION_MAJOR 0
-#define TAP_SR_VERSION_MINOR 7
+#define TAP_SR_VERSION_MINOR 8
 #define TAP_SR_VERSION_PATCH 0
 
 // The oldest DspTap this family was tested with (the roadmap's A9; the root
