@@ -82,3 +82,8 @@ add_library(tap::sr ALIAS tap_sr)
 if(TAP_SR_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
+
+# Interleaved against planar, every engine (informational; scripts/layout.py).
+if(TAP_SR_BUILD_ICOUNT_BENCH)
+    add_subdirectory(tools/layout)
+endif()

@@ -720,6 +720,29 @@ jobs:
           python3 scripts/icount.py --engine rational --target ${{ matrix.target }}
           --build-dir build --plugin /tmp/libinsncount.so
 
+      # Interleaved against planar (tools/layout, scripts/layout.py): every
+      # engine's float converter at 1, 2, 6 and 12 channels, one converter
+      # of Ch channels against Ch mono ones. Informational, never a gate:
+      # the binaries have their own prefix, the script gates nothing, and
+      # continue-on-error keeps a failure here from failing the job.
+      - name: Layout counts (informational, never a gate)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 scripts/layout.py --target ${{ matrix.target }} --build-dir build \
+            --plugin /tmp/libinsncount.so --json-out layout-${{ matrix.target }}.json | tee layout.txt
+          { echo "### layout ${{ matrix.target }} (informational)"; echo '```'; cat layout.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload layout counts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: layout-${{ matrix.target }}
+          path: layout-${{ matrix.target }}.json
+          if-no-files-found: ignore
+          retention-days: 30
+
       # The size and stack ceilings (scripts/ceilings.py, <engine>/bench/
       # ceilings.json): each engine's probes, built above in the same tree,
       # gated one-sided; on m33 also each call's static worst path and
@@ -823,6 +846,28 @@ jobs:
       - name: Ratchet rational
         if: ${{ !cancelled() }}
         run: python3 scripts/icount.py --engine rational --target host --build-dir build
+
+      # Interleaved against planar on the host (informational, never a gate;
+      # the QEMU job's step above has the details).
+      - name: Layout counts (informational, never a gate)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          targets=$(cmake --build build --target help | sed -n 's/^\(tap_sr_layout_[a-z0-9_]*\):.*/\1/p')
+          test -n "$targets"
+          cmake --build build -j 4 --target $targets
+          python3 scripts/layout.py --target host --build-dir build --json-out layout-host.json | tee layout.txt
+          { echo "### layout host (informational)"; echo '```'; cat layout.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload layout counts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: layout-host
+          path: layout-host.json
+          if-no-files-found: ignore
+          retention-days: 30
 
       # The exceptions-off configuration (A12), against the same baselines.
       - name: Build the host workloads without exceptions or RTTI
