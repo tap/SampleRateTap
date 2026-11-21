@@ -1,6 +1,13 @@
 # ×4, ×8 and ×16, by intent: aliases for `rational`, and the low-band FFT round trip: plan
 
-Status: **draft v7, 2026-11-20, for the maintainer's review.** v7 records the spike X-0
+Status: **v8, 2026-11-21: SampleRateTap's part landed.** X-a4 is done (SampleRateTap#111),
+and **X-b lands the aliases and 0.8.0** (section 8, item 6, as landed): X1's names as X2's
+plain aliases, the ×16 `_transparent` twins X4's rule keeps, X5, X7's alias constants,
+section 5's tests, 6.6's example and its tests, D19 and the release. X2, X5 and X16 are
+taken on the recommendation with the maintainer's go-ahead on X-b (section 10). What
+remains is DspTap's scaffold (X-c) and TapTools (section 8, items 7 and 8).
+
+v7 (2026-11-20) recorded the spike X-0
 (SampleRateTap#105; every number below marked **X-0** is in
 `rational/tools/spikes/x4x8/README.md` with the program that produced it) and the
 maintainer's answers to it:
@@ -52,8 +59,8 @@ for the whole round trip; the scaffold typed over float and double, with an exac
 delay and an alignment rule for composed bands; TapTools' DspTap pin bump; tests that pin T
 against the signal path; and corrected numbers and citations throughout.
 
-Every question is answered except X2 and X5 (recommended, never asked), X15 (the round
-trip's usable band) and X16 (the 1.0 freeze), in section 10.
+Every question is answered except X15 (the round trip's usable band); X2, X5 and X16 are
+taken on the recommendation with the maintainer's go-ahead on X-b (section 10).
 Sections 2 and 3.1–3.3 describe today's code and keep its spelling; from 3.4 on, the plan
 uses X0's.
 
@@ -412,10 +419,11 @@ a name chosen by intent.
 
 ### X2. What the aliases resolve to
 
-*Recommended (not yet asked):* each is a plain `using` of the matrix's chain for its ratio at
-its tier (the `economy` choice for the plain aliases, the `transparent` choice for the
-`_transparent` ones, X4), written out in the header (no metafunction over the matrix), so
-"the matrix dispatches nothing" stays literally true. A test pins each alias to its row's
+*Taken on the recommendation with the maintainer's go-ahead on X-b (v8):* each is a plain
+`using` of the matrix's chain for its ratio at its tier (the `economy` choice for the plain
+aliases, the `transparent` choice for the `_transparent` ones, X4), written out in the
+header (no metafunction over the matrix), so "the matrix dispatches nothing" stays
+literally true. A test pins each alias to its row's
 chain for its tier, in both families (section 5). The alias is family-free: section 3.2
 shows a chain type costs the same in either family.
 
@@ -687,9 +695,9 @@ The record of the question, as it stood before v5:
 
 ### X5. The low-latency spelling stays
 
-*Recommended (not yet asked):* `down8` and `up8` stay as they are, plus `down4` and `up4` with
-X3. At ×16 the low-latency spelling is `basic_chain<S, Ch, down4, down4>`, which needs
-`down4`. The aliases' docstring states section 3.4's trade in one line: "the cheapest chain;
+*Taken on the recommendation with the maintainer's go-ahead on X-b (v8):* `down8` and `up8`
+stay as they are, plus `down4` and `up4` with X3. At ×16 the low-latency spelling is
+`basic_chain<S, Ch, down4, down4>`, which needs `down4`. The aliases' docstring states section 3.4's trade in one line: "the cheapest chain;
 the single stage is lower latency at more MACs."
 
 ### X6. The 44.1 family's rows
@@ -773,7 +781,10 @@ Tests are named for the promise they pin.
   - `matrix.py` gains a `by` mode that searches section 3.1's space from the pins and prints
     the minimum per (ratio, profile).
   - The test pins that table, and pins the ×16 difference R3 keeps (165 against 157 at
-    `economy`).
+    `economy`, today's designer). *X-b (measured on X17's pins):* at `economy` the ×16
+    alias ↓2 · ↓4 · ↓2 is the minimum (143, tied with ↓4 · ↓2 · ↓2 at 0.875 output
+    frames more latency), so the difference R3 keeps is at `transparent`: ↓8 · ↓2 277
+    against ↓4 · ↓2 · ↓2's 261 (+6.13 %, two stages for three).
   - It also measures in C++ the named competitors: the single stage, the half-band cascade,
     and (with X3) the retired chain.
 - **`rational.CApi.ByConstantsAreTheirChainsConstants`,** for every alias.
@@ -1021,6 +1032,20 @@ What it shows:
 | an identity process | the input delayed by T, bit for bit, by construction (6.3) |
 | removing 205 Hz | **measured:** 205 Hz −64.05 dB; 200 Hz and 5 kHz unchanged (0.00 dB); with T + 1, only −31.46 dB |
 
+*X-b, re-measured* (`rational/examples/low_band_fft.cpp`, GCC 13, x86-64, double; the
+chains by 16 at `economy` are now ↓2 · ↓4 · ↓2 and ↑2 · ↑4 · ↑2, X17 and X3; levels by
+one bin of a rectangular DFT over 2.8 s, whole cycles of every tone, where v4 read a
+Hann frame's peak):
+
+| | |
+|---|---|
+| 4096 points at 48 kHz | one peak, as before |
+| 4096 points at 3 kHz after `down_by16` | two peaks, 46.7 dB of dip between them |
+| T | 16 × 189/16 + 189 = 378 samples exactly (7.875 ms) |
+| stages' cost | 17.875 MACs per full-rate sample (143 / 16 each way) |
+| an identity process | the input delayed by T, bit for bit |
+| removing 205 Hz | 205 Hz −70.27 dB; 200 Hz and 5 kHz unchanged (0.00 dB); with T − 1 or T + 1, −31.43 dB |
+
 *Recommended:* it ships as `rational/examples/low_band_fft.cpp` in X-b, written with X1's
 aliases, built by every CI job that builds the examples, with a section in
 `rational/README.md`. Its claims are pinned by tests in `rational/tests/`:
@@ -1038,6 +1063,10 @@ aliases, built by every CI job that builds the examples, with a section in
 4096-point frame at 3 kHz is already 512 KiB per double buffer at the full rate. The ×16
 double cases, which cannot fit (and run soft-float on the M33), are excluded by name in
 `bare_metal_main.cpp` with that reason and run hosted; the ×4 and ×8 cases run on every leg.
+*X-b, as it landed:* streamed end to end (the input from a recursion, the delayed input
+from a second one, every level by Goertzel's recursion, the change in 4096-point frames),
+a case holds well under 1 MB even ×16 in double, so nothing is excluded: every case runs
+on the M33, M55 and Hexagon legs too (section 8, item 6).
 
 The example runs offline, on whole buffers, so the structure is plain to read. A streaming
 version comes with the scaffold (X10), which replaces its hand-written delay and sum.
@@ -1051,7 +1080,13 @@ version comes with the scaffold (X10), which replaces its hand-written delay and
   `transparent`.
 - **Each alias is the cheapest chain at its own tier** (within R3's 10 % at ×16): `down_by8`
   at the 70 dB profiles, `down_by8_transparent` at 120 dB. Either one run at the other
-  tier costs more, by up to 43 % at ×16 (X4); the docstrings say so.
+  tier costs more, by up to 43 % at ×16 (X4); the docstrings say so. *X-b, measured on
+  X17's pins:* by 4 and by 8 the alias is R3's choice at every profile, so no ×8 twin;
+  by 16 the 70 dB tier's chain is the cheapest at `economy`, where its tier is selected,
+  but not at `super_economy` (139 against ↓4 · ↓2 · ↓2's 111) or `balanced` (159 against
+  147), and `down_by16_transparent` is R3's keep at `transparent` (277 against 261).
+  Run at the other tier, `down_by16` costs 301 at `transparent` and
+  `down_by16_transparent` 163 at `economy`.
 - **48 → 6, 48 → 3, 44.1 → 5.5125 and 44.1 → 2.75625 kHz are in the charter** under D19,
   since the designs are relative, but no matrix row pins them. The round trip's tests pin its
   own pairs.
@@ -1095,8 +1130,8 @@ version comes with the scaffold (X10), which replaces its hand-written delay and
    (9 and 16 unused); new ratchet rows `down4_down2_q15_eco`, `callmax_down4_float`,
    `callmax_down4_q15` and the host's `down4_float_2ch` / `_12ch`, and the 4th-band probes'
    ceilings (X3, "X-a3, as it landed").
-5. **X-a4, a chain per tier (X4):** the `ROW` format and its consumers, the per-tier matrix,
-   the chains used only at `transparent` and their constants, `book_figures.py` and the
+5. **X-a4, a chain per tier (X4): done** (SampleRateTap#111). The `ROW` format and its
+   consumers, the per-tier matrix, the chains used only at `transparent` and their constants, `book_figures.py` and the
    regenerated figure, and the per-tier record (X8). *As X-a3 leaves it:* 25 rows split per
    tier (17 within, 8 across); 7 chains used only at `transparent`, four of them X-a3's kept
    chains (C values 12, 13, 23, 24) and three new (`up2_ratio3over2`, `up2_up6_up4`,
@@ -1107,7 +1142,8 @@ version comes with the scaffold (X10), which replaces its hand-written delay and
    the 6th- and 8th-band designs at divisor 2 at `transparent` bit-pinned; a new ratchet
    row, `down8_down2_float_tr` (the 1/16 chain at `transparent`, the maintainer's), and
    no existing count, checksum or ceiling moved (X4, "X-a4, as it landed").
-6. **X-b, the aliases and the release:** X1, X2, X4's `_transparent` aliases where any
+6. **X-b, the aliases and the release: landed** (the PR that tags 0.8.0; as landed,
+   below). X1, X2, X4's `_transparent` aliases where any
    survive the re-tune, X5, X7's alias constants and X8, with section 5's tests, the `matrix.py:203-206` comment fixed, 6.6's
    example and its tests, and D19. It bumps SampleRateTap to 0.8.0 (D13: the three umbrella
    headers and the root `project()`), with its row in the root README's tested pairs (DspTap
@@ -1115,6 +1151,44 @@ version comes with the scaffold (X10), which replaces its hand-written delay and
    as a block, and writes 0.8.0's old-to-new name map where C3's CHANGELOG will be (X16), that file
    joining the gate's `HISTORY` list since it must spell the retired names
    (`rational/PLAN.md` and `PLAN.md`, which this plan's text goes to, are on it already).
+   *As it landed (measured):*
+   - **The aliases** (`chain.h`, X1 / X2): `down_by4` / `up_by4` are `down2_down2` /
+     `up2_up2` and `down_by8` / `up_by8` `down4_down2` / `up2_up4`, each its ratio's chain
+     at both tiers; `down_by16` / `up_by16` are `down2_down4_down2` / `up2_up4_up2` and
+     the surviving twins `down_by16_transparent` / `up_by16_transparent` are `down8_down2`
+     / `up2_up8`, as X-a4's rows have them (five 48-family and three 44.1-family rows by
+     4, three and two by 8, two and one by 16, every one pinned at its tier). The C ABI's
+     `TAP_SR_RATIONAL_DOWN_BY4` … `_UP_BY16_TRANSPARENT` are its chains' constants;
+     `CHAIN_END` stays 43 and the 23 exported symbols are unchanged.
+   - **`matrix.py by`** (29, 52 and 462 chains): the minimum per profile, MACs per output
+     frame down, `super_economy` / `economy` / `balanced` / `transparent`: 1/4 ↓2 · ↓2 35 /
+     43 / 47 / 89; 1/8 ↓4 · ↓2 67 / 71, three half-bands 83 at `balanced` (R3 keeps
+     ↓4 · ↓2 at 87, +4.8 %), ↓4 · ↓2 149; 1/16 ↓4 · ↓2 · ↓2 111, ↓2 · ↓4 · ↓2 143 at
+     `economy` (tied), ↓4 · ↓2 · ↓2 147 and 261 (R3 keeps ↓8 · ↓2 at 277, +6.13 %). Up is
+     the mirror. Competitors at `economy`: ↓4 61, ↓8 141, ↓3 · 3/4 · ↓2 87, 3/8 · ↓3 120,
+     four half-bands 151, ↓4 · ↓4 161.
+   - **The example and its tests** (6.6): T = 94 / 182 / 378 samples by 4 / 8 / 16 at
+     `economy` (910 by 16 at `transparent`); removing a tone on a low-rate bin leaves
+     −87.4 / −74.9 / −66.9 dB by 4 / 8 / 16 at `super_economy`, −100.9 / −78.0 / −70.1 at
+     `economy`, −104.2 / −90.6 / −76.1 at `balanced` and −131.7 / −139.7 / −119.2 at
+     `transparent` (double; float within 0.6 dB), −31.42 dB with T ± 1 everywhere;
+     46.6 to 46.9 dB of dip between 200 and 205 Hz after ↓16 at every profile; the other
+     tones within 3 × 10⁻⁵ dB. A tone between bins (the example's 205 Hz) leaves −67.0 /
+     −70.3 / −75.7 dB at the 70 dB profiles and −94.4 dB at `transparent`, where the
+     window's tails outside the removed bins, not the round trip, set the floor; the tests
+     remove a tone on a bin so they pin the round trip's.
+   - **D19** in the family plan, its 2.1, the root `CLAUDE.md`'s D12 sentence and
+     `rational/PLAN.md`'s non-goal and charter line.
+   - **0.8.0**: the three umbrella headers and the root `project()`, the three
+     `CApi.VersionIsBitPacked` pins, the tested pair (DspTap 0.2.0, `v0.2.0`),
+     `CHANGELOG.md` (on the gate's `HISTORY` list) and this plan's block in
+     `docs/ROADMAP.md`.
+   - **Nothing measured moved:** every ratchet count and checksum of every engine on every
+     key, in both builds, equals X-a4's (312 rows), every ceiling figure too (156), and no
+     baseline or ceiling is re-recorded; the four builds (GCC 13 and Clang 18, with and
+     without exceptions and RTTI) pass 361 of 361 tests, the emulated `rational` battery
+     109 of 109 on the M33 and M55 and 124 of 124 on Hexagon in both builds
+     (`rational/PLAN.md` section 6, the X-b record).
 7. **X-c, DspTap's scaffold** (X10), part of DspTap 0.3.0, landing as soon as it is ready
    (X13).
 8. **Then TapTools:** its DspTap pin to `v0.3.0` first, with its own battery; then X11's
@@ -1162,12 +1236,16 @@ Answered:
 14. Decided (v7, in the IIR plan's question 5): round trips are held to −60 dB at the 70 dB
     profiles and −100 dB at `transparent`, FIR and IIR alike (6.3).
 
-Open (each with a recommendation):
-15. X2 and X5, recommended and never asked: each alias a plain `using` of its tier's matrix
-    chain; the single stages stay the low-latency spelling.
+Taken on the recommendation with the maintainer's go-ahead on X-b (v8; recorded so, not
+as decided):
+15. X2 and X5: each alias a plain `using` of its tier's matrix chain; the single stages
+    stay the low-latency spelling.
+17. X16, the 1.0 freeze (new, v6): `docs/ROADMAP.md`'s block C3 freezes the surface for 1.0,
+    with its CHANGELOG, the D7-against-semver statement and the P14 configuration. Both
+    plans land before C3, the freeze covers what they ship, and 0.8.0's old-to-new name map
+    is the first entry of the root `CHANGELOG.md`, which C3 back-fills (X-b started it and
+    put it on the vocabulary gate's `HISTORY` list).
+
+Open (with a recommendation):
 16. X15: the usable band as a precondition on `Op` (recommended), or enforced in the
     scaffold.
-17. X16, the 1.0 freeze (new, v6): `docs/ROADMAP.md`'s block C3 freezes the surface for 1.0,
-    with its CHANGELOG, the D7-against-semver statement and the P14 configuration.
-    *Recommended:* both plans land before C3, the freeze covers what they ship, and 0.8.0's
-    old-to-new name map is the first entry of C3's CHANGELOG.
