@@ -27,9 +27,10 @@
 //
 // The named chains are the coverage matrix's within-family chains (3.3 /
 // 3.4, generated from the pinned lengths by tools/coverage/matrix.py and
-// pinned per row by tests/test_matrix.cpp): one alias per distinct chain of
-// two or more stages, named by its stages in order; a one-stage chain is
-// basic_converter<S, R>. The names are the C ABI's enumerators (M6).
+// pinned per row by tests/test_matrix.cpp), at both attenuation tiers (X4):
+// one alias per distinct chain of two or more stages, named by its stages in
+// order; a one-stage chain is basic_converter<S, R>. The names are the C
+// ABI's enumerators (M6).
 #pragma once
 
 #include <array>
@@ -188,13 +189,20 @@ namespace tap::sr::rational {
     /// The named chains of the coverage matrix (PLAN.md 3.3 / 3.4), one per
     /// distinct chain of two or more stages, named by its stages in order
     /// with an underscore between them (a one-stage chain is
-    /// basic_converter<S, Ch, R>): eighteen chains the matrix's rows run,
-    /// the same in both families since X-a3 admitted the 4th-band stage
-    /// (decision 6 as amended, docs/X4_X8_PLAN.md X3), and four kept for
-    /// X-a4: up2_up6, up2_up8, down6_down2 and down8_down2 are no row's
-    /// chain at economy, and the per-tier matrix (X4) selects them again
-    /// at transparent, so their names and C ABI values stay rather than
-    /// being retired and re-added. Ratios in comments are the chain's L/M.
+    /// basic_converter<S, Ch, R>). A row runs a chain per attenuation tier
+    /// (X4, docs/X4_X8_PLAN.md): the 70 dB tier's, selected at economy and
+    /// run at super_economy, economy and balanced, and the 120 dB tier's,
+    /// selected at transparent, the same chain where the two selections
+    /// agree. Eighteen chains are the 70 dB tier's, the same in both
+    /// families since X-a3 admitted the 4th-band stage (decision 6 as
+    /// amended, X3); seven serve only the 120 dB tier: up2_ratio3over2
+    /// (3/1), up2_up6 (12/1), up2_up8 (16/1), up2_up6_up4 (48/1) and the
+    /// mirrors down6_down2, down8_down2 and down4_down6_down2 (1/3 stays one
+    /// stage at both tiers, by the fewer-stages rule). Every chain runs at
+    /// every profile: a tier says where the matrix selects a chain, not a
+    /// profile it is limited to. Ratios in comments are the chain's L/M.
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up2_ratio3over2 = basic_chain<S, Ch, up2, ratio3over2>; ///< 3/1 at 120 dB (one up3 at 70 dB)
     template <tap::dsp::sample_type S, std::size_t Ch>
     using up2_up2 = basic_chain<S, Ch, up2, up2>; ///< 4/1
     template <tap::dsp::sample_type S, std::size_t Ch>
@@ -202,19 +210,21 @@ namespace tap::sr::rational {
     template <tap::dsp::sample_type S, std::size_t Ch>
     using up2_up4 = basic_chain<S, Ch, up2, up4>; ///< 8/1
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up3_up4 = basic_chain<S, Ch, up3, up4>; ///< 12/1
+    using up3_up4 = basic_chain<S, Ch, up3, up4>; ///< 12/1 at 70 dB
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up2_up6 = basic_chain<S, Ch, up2, up6>; ///< 12/1 at transparent (X-a4); no row at economy
+    using up2_up6 = basic_chain<S, Ch, up2, up6>; ///< 12/1 at 120 dB
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up2_up4_up2 = basic_chain<S, Ch, up2, up4, up2>; ///< 16/1
+    using up2_up4_up2 = basic_chain<S, Ch, up2, up4, up2>; ///< 16/1 at 70 dB
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up2_up8 = basic_chain<S, Ch, up2, up8>; ///< 16/1 at transparent (X-a4); no row at economy
+    using up2_up8 = basic_chain<S, Ch, up2, up8>; ///< 16/1 at 120 dB
     template <tap::dsp::sample_type S, std::size_t Ch>
     using up2_up3_up4 = basic_chain<S, Ch, up2, up3, up4>; ///< 24/1
     template <tap::dsp::sample_type S, std::size_t Ch>
     using up2_up4_up4 = basic_chain<S, Ch, up2, up4, up4>; ///< 32/1
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up3_up4_up4 = basic_chain<S, Ch, up3, up4, up4>; ///< 48/1
+    using up3_up4_up4 = basic_chain<S, Ch, up3, up4, up4>; ///< 48/1 at 70 dB
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up2_up6_up4 = basic_chain<S, Ch, up2, up6, up4>; ///< 48/1 at 120 dB
     template <tap::dsp::sample_type S, std::size_t Ch>
     using up2_ratio4over3 = basic_chain<S, Ch, up2, ratio4over3>; ///< 8/3
     template <tap::dsp::sample_type S, std::size_t Ch>
@@ -226,19 +236,21 @@ namespace tap::sr::rational {
     template <tap::dsp::sample_type S, std::size_t Ch>
     using down4_down2 = basic_chain<S, Ch, down4, down2>; ///< 1/8
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down4_down3 = basic_chain<S, Ch, down4, down3>; ///< 1/12
+    using down4_down3 = basic_chain<S, Ch, down4, down3>; ///< 1/12 at 70 dB
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down6_down2 = basic_chain<S, Ch, down6, down2>; ///< 1/12 at transparent (X-a4); no row at economy
+    using down6_down2 = basic_chain<S, Ch, down6, down2>; ///< 1/12 at 120 dB
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down2_down4_down2 = basic_chain<S, Ch, down2, down4, down2>; ///< 1/16
+    using down2_down4_down2 = basic_chain<S, Ch, down2, down4, down2>; ///< 1/16 at 70 dB
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down8_down2 = basic_chain<S, Ch, down8, down2>; ///< 1/16 at transparent (X-a4); no row at economy
+    using down8_down2 = basic_chain<S, Ch, down8, down2>; ///< 1/16 at 120 dB
     template <tap::dsp::sample_type S, std::size_t Ch>
     using down4_down3_down2 = basic_chain<S, Ch, down4, down3, down2>; ///< 1/24
     template <tap::dsp::sample_type S, std::size_t Ch>
     using down4_down4_down2 = basic_chain<S, Ch, down4, down4, down2>; ///< 1/32
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down4_down4_down3 = basic_chain<S, Ch, down4, down4, down3>; ///< 1/48
+    using down4_down4_down3 = basic_chain<S, Ch, down4, down4, down3>; ///< 1/48 at 70 dB
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down4_down6_down2 = basic_chain<S, Ch, down4, down6, down2>; ///< 1/48 at 120 dB
     // ANCHOR_END: rational_named_chains
 
 } // namespace tap::sr::rational

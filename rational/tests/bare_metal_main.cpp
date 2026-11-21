@@ -29,7 +29,8 @@ int main() {
                                     "Matrix.*:"
                                     "FixedPoint.QuantizedTablesAttainTheirStatedStopbands:"
                                     "FixedPoint.RelaxedQ15TablesStopbandsAreStated:"
-                                    "FixedPoint.FourthBandRelaxedQ15TablesStopbandsAreStated";
+                                    "FixedPoint.FourthBandRelaxedQ15TablesStopbandsAreStated:"
+                                    "FixedPoint.TheTransparentTiersNewRelaxedQ15TablesStopbandsAreStated";
     ::testing::InitGoogleTest();
     const int rc = RUN_ALL_TESTS();
     // A filter typo must not pass green: an empty run returns 0 from

@@ -80,11 +80,11 @@ measure the shipping C++, and Python can only call C. `rational`'s shim
 follows `bridge`'s shape with two decisions of its own.
 
 The first is the family rule at the C boundary. `tap_sr_rational_create`
-takes a *chain constant* — one of the 30 named within-family chains, the
-eight one-stage ratios and the twenty-two multi-stage names from the
+takes a *chain constant* — one of the 33 named within-family chains, the
+eight one-stage ratios and the twenty-five multi-stage names from the
 previous chapter — a profile, and a channel count. The values are stable:
 the ten chains the 4th-band stage displaced in 0.8.0 keep their values,
-retired and refused, so the live ones run from 0 to 39 with gaps and
+retired and refused, so the live ones run from 0 to 42 with gaps and
 `TAP_SR_RATIONAL_CHAIN_END`, not a count, bounds them. There is no function that takes
 two rates. The one escape hatch, `tap_sr_rational_create_stage(L, M,
 profile, divisor_num, divisor_den, channels)`, builds a single stage of the

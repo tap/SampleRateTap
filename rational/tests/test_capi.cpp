@@ -186,6 +186,9 @@ namespace {
         expect_named<down4, down3, down2>(TAP_SR_RATIONAL_DOWN4_DOWN3_DOWN2, "down4_down3_down2");
         expect_named<down4, down4, down2>(TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN2, "down4_down4_down2");
         expect_named<down4, down4, down3>(TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3, "down4_down4_down3");
+        expect_named<up2, ratio3over2>(TAP_SR_RATIONAL_UP2_RATIO3OVER2, "up2_ratio3over2");
+        expect_named<up2, up6, up4>(TAP_SR_RATIONAL_UP2_UP6_UP4, "up2_up6_up4");
+        expect_named<down4, down6, down2>(TAP_SR_RATIONAL_DOWN4_DOWN6_DOWN2, "down4_down6_down2");
     }
 
     // The values are stable (X7 of docs/X4_X8_PLAN.md): a retired chain's
@@ -224,11 +227,15 @@ namespace {
         TAP_SR_RATIONAL_DOWN4_DOWN3_DOWN2,
         TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN2,
         TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3,
+        TAP_SR_RATIONAL_UP2_RATIO3OVER2,
+        TAP_SR_RATIONAL_UP2_UP6_UP4,
+        TAP_SR_RATIONAL_DOWN4_DOWN6_DOWN2,
     };
 
     TEST(CApi, ChainValuesAreStableAndRetiredOnesAreRefused) {
-        EXPECT_EQ(TAP_SR_RATIONAL_CHAIN_END, 40);
-        EXPECT_EQ(std::size(k_live_chains), 30u);
+        // X-a4 (X4) took 40 to 42 for the 120 dB tier's new chains.
+        EXPECT_EQ(TAP_SR_RATIONAL_CHAIN_END, 43);
+        EXPECT_EQ(std::size(k_live_chains), 33u);
         EXPECT_EQ(std::size(k_live_chains) + std::size(k_retired_chains),
                   static_cast<std::size_t>(TAP_SR_RATIONAL_CHAIN_END));
         for (int v = 0; v < TAP_SR_RATIONAL_CHAIN_END; ++v) {

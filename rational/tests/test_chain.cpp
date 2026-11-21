@@ -184,6 +184,10 @@ namespace {
         check_chain_is_its_stages<sample, ratio3over8, down3>(profile::transparent());
         check_chain_is_its_stages<sample, up3, ratio8over3>(profile::super_economy());
         check_chain_is_its_stages<sample, down2, down6, down2>(profile::balanced());
+        // The 120 dB tier's own chains (X4), at the profile that selects them.
+        check_chain_is_its_stages<sample, up2, ratio3over2>(profile::transparent());
+        check_chain_is_its_stages<sample, up2, up6, up4>(profile::transparent());
+        check_chain_is_its_stages<sample, down4, down6, down2>(profile::transparent());
     }
 
     // ------------------------------------------------------------------
@@ -261,6 +265,7 @@ namespace {
     }
 
     TEST(Chain, AccountingExactFromEveryPositionOfEveryNamedChain) {
+        check_accounting_from_every_position<up2_ratio3over2<float, 1>>();
         check_accounting_from_every_position<up2_up2<float, 1>>();
         check_accounting_from_every_position<up2_up3<float, 1>>();
         check_accounting_from_every_position<up2_up4<float, 1>>();
@@ -271,6 +276,7 @@ namespace {
         check_accounting_from_every_position<up2_up3_up4<float, 1>>();
         check_accounting_from_every_position<up2_up4_up4<float, 1>>();
         check_accounting_from_every_position<up3_up4_up4<float, 1>>();
+        check_accounting_from_every_position<up2_up6_up4<float, 1>>();
         check_accounting_from_every_position<up2_ratio4over3<float, 1>>();
         check_accounting_from_every_position<ratio3over4_down2<float, 1>>();
         check_accounting_from_every_position<down2_down2<float, 1>>();
@@ -283,6 +289,7 @@ namespace {
         check_accounting_from_every_position<down4_down3_down2<float, 1>>();
         check_accounting_from_every_position<down4_down4_down2<float, 1>>();
         check_accounting_from_every_position<down4_down4_down3<float, 1>>();
+        check_accounting_from_every_position<down4_down6_down2<float, 1>>();
     }
 
     // ------------------------------------------------------------------
@@ -415,6 +422,7 @@ namespace {
         check_flush<sample, ratio3over8, down3>(profile::economy());
         check_flush<sample, up3, up4, up4>(profile::economy());
         check_flush<sample, down4, down4, down3>(profile::transparent());
+        check_flush<sample, down4, down6, down2>(profile::transparent());
     }
 
     // ------------------------------------------------------------------

@@ -39,7 +39,9 @@
 // A + 4 dB (X17, PLAN.md section 6), which moved every table. The 4th-band
 // stage's rows (up4, down4) joined 2026-11-21 with X-a3 (decision 6 as
 // amended, docs/X4_X8_PLAN.md X3), with its tables at every design divisor
-// the coverage matrix runs it at, bit-pinned below.
+// the coverage matrix runs it at, bit-pinned below; the 120 dB tier's chains
+// (X4, X-a4, 2026-11-21) added the 6th- and 8th-band designs at divisor 2
+// at transparent, bit-pinned below them.
 
 #include <algorithm>
 #include <array>
@@ -679,6 +681,89 @@ namespace {
                 EXPECT_LE(q15, -70.0) << row.profile << " " << row.divisor << ": the 70 dB tier";
             }
         });
+    }
+
+    // ------------------------------------------------------------------
+    // The designs the 120 dB tier's chains run that no row ran before X-a4
+    // (X4, docs/X4_X8_PLAN.md: the matrix selects a chain per tier, and at
+    // transparent 12/1, 16/1, 48/1 and their mirrors run up 6 / down 6 and up
+    // 8 / down 8 at divisor 2, m = 8: N = 95 and 127), in the style of the
+    // 4th-band rows above: the Q15 table (the decimator's is its band's
+    // interpolator table), the Q31 tables of the interpolator and the
+    // decimator, and the stopband the Q15 table attains on the 16384-point
+    // grid from the relaxed stage's own stopband edge. Every other design a
+    // transparent chain runs is one the 70 dB tier's chains already ran at
+    // transparent. Measured 2026-11-21 (gcc 13, x86-64), by the code of this
+    // file.
+    // clang-format off
+#define TAP_SR_RATIONAL_TRANSPARENT_TIER_ROWS(ROW) \
+        ROW(up6, down6, transparent, 2, 0x91ff4e9561a4e4e1ULL, 0x7fe625b658f78cb5ULL, 0x7f190ec2bb4cdd27ULL, -85.0) \
+        ROW(up8, down8, transparent, 2, 0x9cf00eb65308f921ULL, 0x29126a59f66e4569ULL, 0xdb97e4ca4af7781dULL, -82.6)
+    // clang-format on
+
+    struct relaxed_row {
+        const char*   up;
+        const char*   down;
+        const char*   profile;
+        std::uint64_t divisor;
+        std::uint64_t fnv_q15;
+        std::uint64_t fnv_q31_up;
+        std::uint64_t fnv_q31_down;
+        double        q15_stop_db;
+    };
+
+    template <rational_ratio Up, rational_ratio Down>
+    void expect_relaxed_tables_pinned(const relaxed_row& row, const profile& base) {
+        const profile p = base.relaxed(tap::dsp::exact_ratio{row.divisor, 1});
+        ASSERT_NE(p.pinned_taps_per_branch(Up::k_up), 0u) << row.up << " " << row.divisor << ": a pinned divisor";
+        const pin_row up{row.up, row.profile, 0, 0, 0, 0, 0.0, 0.0};
+        const pin_row down{row.down, row.profile, 0, 0, 0, 0, 0.0, 0.0};
+        expect_rows_sum_to_unity<std::int16_t, Up>(up, p);
+        expect_rows_sum_to_unity<std::int32_t, Up>(up, p);
+        expect_rows_sum_to_unity<std::int16_t, Down>(down, p);
+        expect_rows_sum_to_unity<std::int32_t, Down>(down, p);
+        EXPECT_EQ(table_fnv1a64(basic_stage<std::int16_t, 1, Up>(p)), row.fnv_q15) << row.up << " " << row.divisor;
+        EXPECT_EQ(table_fnv1a64(basic_stage<std::int16_t, 1, Down>(p)), row.fnv_q15)
+            << row.down << " " << row.divisor << ": the decimator's is the interpolator's table";
+        EXPECT_EQ(table_fnv1a64(basic_stage<std::int32_t, 1, Up>(p)), row.fnv_q31_up) << row.up << " " << row.divisor;
+        EXPECT_EQ(table_fnv1a64(basic_stage<std::int32_t, 1, Down>(p)), row.fnv_q31_down)
+            << row.down << " " << row.divisor;
+    }
+
+    template <rational_ratio Up, rational_ratio Down>
+    void expect_relaxed_stopbands_stated(const relaxed_row& row, const profile& base) {
+        const profile p        = base.relaxed(tap::dsp::exact_ratio{row.divisor, 1});
+        const double  q15      = quantized_stopband_db<std::int16_t, Up>(p);
+        const double  q15_down = quantized_stopband_db<std::int16_t, Down>(p);
+        const double  q31_up   = quantized_stopband_db<std::int32_t, Up>(p);
+        const double  q31_down = quantized_stopband_db<std::int32_t, Down>(p);
+        EXPECT_NEAR(q15, row.q15_stop_db, 0.5) << row.up << " " << row.divisor;
+        EXPECT_NEAR(q15_down, q15, 1e-9) << row.down << " " << row.divisor;
+        EXPECT_LE(q31_up, -(p.stopband_atten_db + 0.9)) << row.up << " " << row.divisor << ": Q31 keeps the spec";
+        EXPECT_LE(q31_down, -(p.stopband_atten_db + 0.9)) << row.down << " " << row.divisor << ": Q31 keeps the spec";
+    }
+
+    TEST(FixedPoint, TheTransparentTiersNewTablesAreBitPinned) {
+        std::size_t rows = 0;
+#define ROW(UP, DOWN, PROF, DIV, F15, F31U, F31D, STOP)                                                                \
+    expect_relaxed_tables_pinned<UP, DOWN>(                                                                            \
+        relaxed_row { #UP, #DOWN, #PROF, DIV, F15, F31U, F31D, STOP }, profile::PROF());                               \
+    ++rows;
+        TAP_SR_RATIONAL_TRANSPARENT_TIER_ROWS(ROW)
+#undef ROW
+        EXPECT_EQ(rows, 2u); // bands 6 and 8 at divisor 2
+    }
+
+    // Each attains its stated Q15 stopband within 0.5 dB (-85.0 and -82.6 dB,
+    // the format's floor, short of the 120 dB promise, which is float's and
+    // Q31's), and Q31 keeps the spec. A host suite (excluded on the QEMU legs,
+    // as the other stopband sweeps).
+    TEST(FixedPoint, TheTransparentTiersNewRelaxedQ15TablesStopbandsAreStated) {
+#define ROW(UP, DOWN, PROF, DIV, F15, F31U, F31D, STOP)                                                                \
+    expect_relaxed_stopbands_stated<UP, DOWN>(                                                                         \
+        relaxed_row { #UP, #DOWN, #PROF, DIV, F15, F31U, F31D, STOP }, profile::PROF());
+        TAP_SR_RATIONAL_TRANSPARENT_TIER_ROWS(ROW)
+#undef ROW
     }
 
     // ------------------------------------------------------------------

@@ -361,6 +361,12 @@ namespace {
             return make_chain<S, down4, down4, down2>(p, ch);
         case TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3:
             return make_chain<S, down4, down4, down3>(p, ch);
+        case TAP_SR_RATIONAL_UP2_RATIO3OVER2:
+            return make_chain<S, up2, ratio3over2>(p, ch);
+        case TAP_SR_RATIONAL_UP2_UP6_UP4:
+            return make_chain<S, up2, up6, up4>(p, ch);
+        case TAP_SR_RATIONAL_DOWN4_DOWN6_DOWN2:
+            return make_chain<S, down4, down6, down2>(p, ch);
         default:
             return nullptr;
         }

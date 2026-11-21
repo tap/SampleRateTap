@@ -51,13 +51,18 @@ typedef struct tap_sr_rational_converter tap_sr_rational_converter;
 /// docs/X4_X8_PLAN.md): a new chain takes a new value, a retired chain's
 /// value is never reused, and create rejects it.
 ///
+/// The coverage matrix selects a chain per attenuation tier (X4): the 70 dB
+/// tier's at economy, the 120 dB tier's at transparent. Seven chains serve
+/// only the 120 dB tier: UP2_RATIO3OVER2 (3/1), UP2_UP6 (12/1), UP2_UP8
+/// (16/1), UP2_UP6_UP4 (48/1), DOWN6_DOWN2 (1/12), DOWN8_DOWN2 (1/16) and
+/// DOWN4_DOWN6_DOWN2 (1/48). Every chain constructs at every profile: the
+/// tier says where the matrix selects it, not what it may run at.
+///
 /// Retired in 0.8.0 (X-a3, the 4th-band stage admitted to the matrix, which
 /// no longer runs them): 10 (up 2, 4/3, up 3), 11 (up 3, 8/3), 14 (up 2,
 /// up 6, up 2), 15 (up 2, up 8, up 2), 16 (up 2, up 8, up 3), 21 (down 3,
 /// 3/4, down 2), 22 (3/8, down 3), 25 (down 2, down 6, down 2), 26 (down 2,
-/// down 8, down 2), 27 (down 3, down 8, down 2). UP2_UP6, UP2_UP8,
-/// DOWN6_DOWN2 and DOWN8_DOWN2 run no row at economy since then and stay:
-/// the per-tier matrix (X-a4) selects them at transparent.
+/// down 8, down 2), 27 (down 3, down 8, down 2).
 #define TAP_SR_RATIONAL_UP2 0
 #define TAP_SR_RATIONAL_DOWN2 1
 #define TAP_SR_RATIONAL_UP3 2
@@ -88,9 +93,12 @@ typedef struct tap_sr_rational_converter tap_sr_rational_converter;
 #define TAP_SR_RATIONAL_DOWN4_DOWN3_DOWN2 37
 #define TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN2 38
 #define TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3 39
+#define TAP_SR_RATIONAL_UP2_RATIO3OVER2 40
+#define TAP_SR_RATIONAL_UP2_UP6_UP4 41
+#define TAP_SR_RATIONAL_DOWN4_DOWN6_DOWN2 42
 /// One past the largest chain value ever assigned: create rejects
 /// chain >= TAP_SR_RATIONAL_CHAIN_END and every retired value below it.
-#define TAP_SR_RATIONAL_CHAIN_END 40
+#define TAP_SR_RATIONAL_CHAIN_END 43
 
 /// The sample formats: float (the golden-model profile the notebooks
 /// measure), Q15 (int16_t Q0.15 samples) and Q31 (int32_t Q0.31), each the

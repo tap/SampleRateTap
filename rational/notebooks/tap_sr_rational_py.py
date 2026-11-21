@@ -40,6 +40,7 @@ CHAINS = {
     "up2_up4": 28, "up3_up4": 29, "up2_up4_up2": 30, "up2_up3_up4": 31, "up2_up4_up4": 32, "up3_up4_up4": 33,
     "down4_down2": 34, "down4_down3": 35, "down2_down4_down2": 36, "down4_down3_down2": 37,
     "down4_down4_down2": 38, "down4_down4_down3": 39,
+    "up2_ratio3over2": 40, "up2_up6_up4": 41, "down4_down6_down2": 42,
 }
 PROFILES = {"economy": 0, "transparent": 1, "balanced": 2, "super_economy": 3}
 FORMATS = {"float": 0, "q15": 1, "q31": 2}  # the TAP_SR_RATIONAL_FORMAT_* constants
