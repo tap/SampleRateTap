@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 # Copyright 2026 Timothy Place and the SampleRateTap contributors
-"""The coverage matrix of the rational engine (PLAN.md section 3): one chain
-for every ordered pair of the family's fourteen rates, chosen by the plan's
-rules over MEASURED stage lengths.
+"""The coverage matrix of the rational engine (PLAN.md section 3): a chain per
+attenuation tier for every ordered pair of the family's fourteen rates,
+chosen by the plan's rules over MEASURED stage lengths.
 
 For every pair the chain declares f_pass = p * r_min (the profile's passband
 fraction of the lower of the two rates). Every rational stage of a chain
@@ -37,12 +37,19 @@ minimum's around the same bridge stage (decision 2), then latency; a row
 whose bridge output rate is >= 2x the chain's output rate carries the flag
 (decision 3). best_chain() is that rule.
 
+The rule runs once per attenuation tier (X4, docs/X4_X8_PLAN.md, since
+X-a4): the 70 dB tier's chain is selected at economy and is the chain the
+row runs at super_economy, economy and balanced; the 120 dB tier's is
+selected at transparent and is the chain the row runs there. A row holds
+both chains (the same chain where the two selections agree), and every
+number of a profile is its tier's chain's.
+
 Usage (from the engine root):
     tools/coverage/matrix.py md      # section 3's tables (3.3-3.6), markdown
     tools/coverage/matrix.py pins    # design.h's relaxation tables
     tools/coverage/matrix.py rows    # writes tests/coverage/matrix_rows.h
-    tools/coverage/matrix.py diff    # chains that differ from PLAN.md's tables
-    tools/coverage/matrix.py rule    # rows where the fewest-stages rule overrode the minimum
+    tools/coverage/matrix.py diff    # chains that differ from PLAN.md's tables, per tier
+    tools/coverage/matrix.py rule    # rows where the fewest-stages rule overrode the minimum, per tier
 """
 import collections
 import functools
@@ -64,6 +71,12 @@ PROFILES = collections.OrderedDict([  # name: (A dB, p = f_pass / r_min)
     ("economy", (70.0, F(3, 8))),
     ("balanced", (70.0, F(19, 48))),
     ("transparent", (120.0, F(5, 12))),
+])
+# The attenuation tiers (X4): each tier's chain is selected at the profile
+# that names it and runs at the profiles listed.
+TIERS = collections.OrderedDict([
+    ("economy", ("super_economy", "economy", "balanced")),
+    ("transparent", ("transparent",)),
 ])
 # bridge's pinned taps per phase (bridge/design.h): (down 48 -> 44.1, up, passband Hz at k = 0).
 BRIDGE = {"super_economy": (40, 28, 16000), "economy": (58, 38, 18000),
@@ -267,15 +280,14 @@ def chains_by_stage_count(src, dst, prof, only_bridge=None):
     return out
 
 
-def rational_macs(r, dst):
+def rational_macs(r, dst, prof):
+    """A chain's MACs per output without its bridge stage's, at the profile
+    it was costed at (the fewest-stages rule compares the rational part)."""
     macs = r[0]
     for u, v, label, kind, N, d, m in r[3]:
         if kind == "bridge":
-            macs -= F(BRIDGE_COST[(label, u, v)]) * F(v, dst)
+            macs -= bridge(u, v, prof, min(r[3][0][0], dst))[0] * F(v, dst)
     return macs
-
-
-BRIDGE_COST = {}
 
 
 def best_chain(src, dst, prof):
@@ -286,27 +298,21 @@ def best_chain(src, dst, prof):
         return None, None
     minimal = min(per_n.values(), key=lambda r: (r[0], r[2], r[1]))
     br = [e for e in minimal[3] if e[3] == "bridge"]
-    for e in minimal[3]:
-        if e[3] == "bridge":
-            BRIDGE_COST[(e[2], e[0], e[1])] = bridge(e[0], e[1], prof, min(src, dst))[0]
     if br:
         per_n = chains_by_stage_count(src, dst, prof, only_bridge=(br[0][0], br[0][1], br[0][2]))
-        for r in per_n.values():
-            for e in r[3]:
-                if e[3] == "bridge":
-                    BRIDGE_COST[(e[2], e[0], e[1])] = bridge(e[0], e[1], prof, min(src, dst))[0]
     chosen = minimal
     for n in sorted(per_n):
         if n >= minimal[2]:
             break
-        if rational_macs(per_n[n], dst) <= rational_macs(minimal, dst) * (1 + FEWER_STAGES_TOL):
+        if rational_macs(per_n[n], dst, prof) <= rational_macs(minimal, dst, prof) * (1 + FEWER_STAGES_TOL):
             chosen = per_n[n]
             break
     return chosen, minimal
 
 
 def cost_chain(chain, src, dst, prof):
-    """The economy chain's cost under another profile: (macs/out, latency)."""
+    """A chain's cost under a profile, every stage designed at it:
+    (macs/out, latency, the stages with that profile's N, divisor and m)."""
     rmin = min(src, dst)
     macs = F(0)
     lat = F(0)
@@ -340,9 +346,30 @@ def fmt(x):
 
 
 @functools.lru_cache(maxsize=None)
-def economy_chains():
-    """The chain per ordered pair at economy (the table's chains): {(src, dst): (chosen, minimal)}."""
-    return {(s, d): best_chain(s, d, "economy") for s in RATES for d in RATES if s != d}
+def tier_chains(tier):
+    """The chain per ordered pair at a tier (TIERS), selected at the tier's
+    profile: {(src, dst): (chosen, minimal)}."""
+    return {(s, d): best_chain(s, d, tier) for s in RATES for d in RATES if s != d}
+
+
+def tier_of(prof):
+    """The tier whose chain a row runs at the profile."""
+    return next(t for t, profs in TIERS.items() if prof in profs)
+
+
+def row_chain(src, dst, prof):
+    """The chain the row runs at the profile (its tier's), as best_chain
+    returned it at the tier's profile."""
+    return tier_chains(tier_of(prof))[(src, dst)][0]
+
+
+def row_flagged(src, dst):
+    """The row's flag (R14): its bridge stage's output rate against the
+    chain's. Every tier's chain places bridge at the same rates (R13), so
+    the tiers agree; asserted."""
+    flags = {flagged(row_chain(src, dst, tier)[3], dst) for tier in TIERS}
+    assert len(flags) == 1, (src, dst, "the tiers disagree on the flag")
+    return flags.pop()
 
 
 def ratio_key(kv):
@@ -366,94 +393,131 @@ def g(x):
     return f"{float(x):g}"
 
 
+def tier_cells(s, d):
+    """(economy chain's shape, MACs, latency at economy; transparent chain's
+    shape, MACs, latency at transparent)."""
+    ce, ct = row_chain(s, d, "economy"), row_chain(s, d, "transparent")
+    me, le, _ = cost_chain(ce[3], s, d, "economy")
+    mt, lt, _ = cost_chain(ct[3], s, d, "transparent")
+    return shape(ce[3]), me, le, shape(ct[3]), mt, lt
+
+
 def md():
-    allc = economy_chains()
     for rates, title in ((A_RATES, "within 48"), (B_RATES, "within 44.1")):
         print(f"### {title}")
-        print("| Ratio L/M | Pairs (from → to, kHz) | Chain | MAC/out eco | Latency eco (out) | MAC/out tr | Latency tr (out) |")
-        print("|---|---|---|---|---|---|---|")
+        print("| Ratio L/M | Pairs (from → to, kHz) | Chain eco | MAC/out eco | Latency eco (out) "
+              "| Chain tr | MAC/out tr | Latency tr (out) |")
+        print("|---|---|---|---|---|---|---|---|")
         for (L, M), pairs in within_groups(rates):
-            cells = set()
-            for s, d in pairs:
-                r, _ = allc[(s, d)]
-                mt, lt, _ = cost_chain(r[3], s, d, "transparent")
-                cells.add((shape(r[3]), r[0], r[1], mt, lt))
+            cells = {tier_cells(s, d) for s, d in pairs}
             assert len(cells) == 1, (L, M, cells)
-            sh, me, le, mt, lt = cells.pop()
+            se, me, le, st, mt, lt = cells.pop()
             pl = ", ".join(f"{fmt(s)}→{fmt(d)}" for s, d in pairs)
-            print(f"| {L}/{M} | {pl} | {sh} | {float(me):.1f} | {float(le):.1f} | {float(mt):.1f} | {float(lt):.1f} |")
+            print(f"| {L}/{M} | {pl} | {se} | {float(me):.1f} | {float(le):.1f} | {st} | {float(mt):.1f} | "
+                  f"{float(lt):.1f} |")
         print()
     nflag = 0
     for name, srcs, dsts in (("48 → 44.1", A_RATES, B_RATES), ("44.1 → 48", B_RATES, A_RATES)):
         print(f"### {name}")
-        print("| From → To | Chain | f_pass eco (kHz) | MAC/out eco | Latency eco (ms) | MAC/out tr | Latency tr (ms) | ⚑ |")
-        print("|---|---|---|---|---|---|---|---|")
+        print("| From → To | Chain eco | f_pass eco (kHz) | MAC/out eco | Latency eco (ms) | Chain tr | MAC/out tr "
+              "| Latency tr (ms) | ⚑ |")
+        print("|---|---|---|---|---|---|---|---|---|")
         for s in srcs:
             for d in dsts:
-                r, _ = allc[(s, d)]
-                mt, lt, _ = cost_chain(r[3], s, d, "transparent")
-                fl = flagged(r[3], d)
+                se, me, le, st, mt, lt = tier_cells(s, d)
+                fl = row_flagged(s, d)
                 nflag += fl
                 fp = PROFILES["economy"][1] * min(s, d)
-                print(f"| {fmt(s)} → {fmt(d)} | {shape(r[3])} | {float(fp) / 1000:.3f} | {float(r[0]):.1f} | "
-                      f"{float(r[1]) / d * 1e3:.2f} | {float(mt):.1f} | {float(lt) / d * 1e3:.2f} | {'⚑' if fl else ''} |")
+                print(f"| {fmt(s)} → {fmt(d)} | {se} | {float(fp) / 1000:.3f} | {float(me):.1f} | "
+                      f"{float(le) / d * 1e3:.2f} | {st} | {float(mt):.1f} | {float(lt) / d * 1e3:.2f} | "
+                      f"{'⚑' if fl else ''} |")
         print()
     print(f"flagged rows: {nflag}")
 
 
 def rule():
-    """Rows (economy) where the fewest-stages rule overrode the MAC minimum."""
-    n = 0
-    for (s, d), (c, m) in economy_chains().items():
-        if c is not m:
-            n += 1
-            rm, rc = rational_macs(m, d), rational_macs(c, d)
-            print(f"{fmt(s)} → {fmt(d)}: {shape(m[3])} ({float(m[0]):.1f}, {m[2]} stages) → {shape(c[3])} "
-                  f"({float(c[0]):.1f}, {c[2]} stages)  rational {float(rm):.1f} → {float(rc):.1f}, +{100 * float(rc / rm - 1):.1f} %")
-    print("rows where the rule bit:", n)
+    """Rows where the fewest-stages rule overrode the MAC minimum, per tier."""
+    for tier in TIERS:
+        n = 0
+        for (s, d), (c, m) in tier_chains(tier).items():
+            if c is not m:
+                n += 1
+                rm, rc = rational_macs(m, d, tier), rational_macs(c, d, tier)
+                print(f"{tier}: {fmt(s)} → {fmt(d)}: {shape(m[3])} ({float(m[0]):.1f}, {m[2]} stages) → "
+                      f"{shape(c[3])} ({float(c[0]):.1f}, {c[2]} stages)  rational {float(rm):.1f} → "
+                      f"{float(rc):.1f}, +{100 * float(rc / rm - 1):.1f} %")
+        print(f"{tier}: rows where the rule bit: {n}")
 
 
 def used_divisors():
-    """{(profile, band): sorted divisors} every chain of the matrix uses."""
+    """{profile: divisors} the chain each row runs at the profile (its
+    tier's) uses."""
     used = collections.defaultdict(set)
-    for (s, d), (c, _) in economy_chains().items():
-        for prof in PROFILES:
-            _, _, stages = cost_chain(c[3], s, d, prof)
-            for u, v, label, kind, N, dv, m in stages:
-                if kind == "stage":
-                    fr = F(v, u)
-                    used[prof].add(dv)
+    for s in RATES:
+        for d in RATES:
+            if s == d:
+                continue
+            for prof in PROFILES:
+                _, _, stages = cost_chain(row_chain(s, d, prof)[3], s, d, prof)
+                for u, v, label, kind, N, dv, m in stages:
+                    if kind == "stage":
+                        used[prof].add(dv)
     return used
 
 
 def pins():
-    """design.h's relaxation tables: m per band at every divisor the matrix uses."""
+    """design.h's relaxation tables: m per band at every divisor a row runs a
+    stage at, under any profile. Every profile's table carries the union, so
+    a named chain runs at every profile without a search at construction,
+    whichever tier selected it."""
     used = used_divisors()
+    divs = sorted(set().union(*used.values()))
     for prof, (A, p) in PROFILES.items():
-        divs = sorted(set().union(*used.values()))
         print(f"// {prof}: A = {A:g} dB, p = {p}")
         for dv in divs:
             ms = [search_m(B, p / dv, A) for B in BANDS]
             print(f"    {{{{{dv.numerator}, {dv.denominator}}}, {{{', '.join(str(m) for m in ms)}}}}},")
 
 
+def stage_tuple(chain):
+    """A chain as the rows header spells it: (stage types...), (divisors...)."""
+    types = []
+    divs = []
+    for u, v, label, kind, N, dv, m in chain:
+        if kind == "bridge":
+            k = int(label[-1])
+            types.append(f"bridge_{'down' if '↓' in label else 'up'}<{k}>")
+            divs.append("d(0, 1)")
+        else:
+            fr = F(v, u)
+            L, M = fr.numerator, fr.denominator
+            types.append(f"up{L}" if M == 1 else f"down{M}" if L == 1 else f"ratio{L}over{M}")
+            divs.append(f"d({dv.numerator}, {dv.denominator})")
+    return f"({', '.join(types)}), ({', '.join(divs)})"
+
+
 def rows_header():
-    """tests/coverage/matrix_rows.h: every row as an X-macro over the chain's
-    stage types, its divisors and the exact (MACs/out, latency) per profile."""
-    allc = economy_chains()
+    """tests/coverage/matrix_rows.h: every row as an X-macro over its two
+    chains' stage types and divisors (the 70 dB tier's, then the 120 dB
+    tier's) and the exact (MACs/out, latency) per profile, each profile's
+    from its tier's chain."""
     out = []
     out.append("// Generated by tools/coverage/matrix.py — DO NOT EDIT.")
-    out.append("// The coverage matrix (PLAN.md section 3): one chain per ordered pair of")
-    out.append("// the fourteen rates, with the relaxation divisor of every rational stage")
-    out.append("// and the exact MACs per output (num, den) and latency in output frames")
-    out.append("// (num, den) per profile, in the order super_economy, economy, balanced,")
-    out.append("// transparent. See the generator for the rules and the provenance.")
+    out.append("// The coverage matrix (PLAN.md section 3): a chain per attenuation tier for")
+    out.append("// every ordered pair of the fourteen rates (X4: the 70 dB tier's selected at")
+    out.append("// economy, the 120 dB tier's at transparent, the same chain where the two")
+    out.append("// agree), with the relaxation divisor of every rational stage and the exact")
+    out.append("// MACs per output (num, den) and latency in output frames (num, den) per")
+    out.append("// profile, in the order super_economy, economy, balanced (the 70 dB tier's")
+    out.append("// chain), transparent (the 120 dB tier's). See the generator for the rules")
+    out.append("// and the provenance.")
     out.append("// SPDX-License-Identifier: MIT")
     out.append("// Copyright 2026 Timothy Place and the SampleRateTap contributors")
     out.append("#pragma once")
     out.append("")
     out.append("// clang-format off")
-    out.append("// ROW(src_hz, dst_hz, flagged, (stage types...), (divisors...),")
+    out.append("// ROW(src_hz, dst_hz, flagged, (economy stage types...), (divisors...),")
+    out.append("//     (transparent stage types...), (divisors...),")
     out.append("//     (macs_num, macs_den, lat_num, lat_den) x 4 profiles)")
     out.append("#define TAP_SR_RATIONAL_MATRIX_ROWS(ROW) \\")
     n = 0
@@ -461,25 +525,13 @@ def rows_header():
         for d in RATES:
             if s == d:
                 continue
-            c, _ = allc[(s, d)]
-            types = []
-            divs = []
-            for u, v, label, kind, N, dv, m in c[3]:
-                if kind == "bridge":
-                    k = int(label[-1])
-                    types.append(f"bridge_{'down' if '↓' in label else 'up'}<{k}>")
-                    divs.append("d(0, 1)")
-                else:
-                    fr = F(v, u)
-                    L, M = fr.numerator, fr.denominator
-                    types.append(f"up{L}" if M == 1 else f"down{M}" if L == 1 else f"ratio{L}over{M}")
-                    divs.append(f"d({dv.numerator}, {dv.denominator})")
+            tuples = [stage_tuple(row_chain(s, d, tier)[3]) for tier in TIERS]
             cells = []
             for prof in PROFILES:
-                mo, lat, _ = cost_chain(c[3], s, d, prof)
+                mo, lat, _ = cost_chain(row_chain(s, d, prof)[3], s, d, prof)
                 cells.append(f"{mo.numerator}, {mo.denominator}, {lat.numerator}, {lat.denominator}")
-            out.append(f"    ROW({s}, {d}, {'true' if flagged(c[3], d) else 'false'}, ({', '.join(types)}), "
-                       f"({', '.join(divs)}), {', '.join(cells)}) \\")
+            out.append(f"    ROW({s}, {d}, {'true' if row_flagged(s, d) else 'false'}, {', '.join(tuples)}, "
+                       f"{', '.join(cells)}) \\")
             n += 1
     out[-1] = out[-1].rstrip(" \\")
     out.append("// clang-format on")
@@ -491,29 +543,53 @@ def rows_header():
     print(f"wrote {path} ({n} rows)")
 
 
-def diff():
-    """Chains that differ from the tables PLAN.md carries (section 3)."""
+def plan_tables():
+    """The chains PLAN.md's section 3 tables carry, per tier:
+    {tier: {(src, dst): shape}}. A table with one chain column (before X-a4)
+    ran it at every profile, so it is read as both tiers' chain."""
     plan = (ROOT / "PLAN.md").read_text()
-    table = {}
+    table = {tier: {} for tier in TIERS}
+
+    def put(key, cells, tr_col):
+        # cells[0] is the economy chain; the transparent chain is the cell
+        # after the economy columns where the table has one (a number there
+        # is the one-chain table's transparent cost).
+        has_tr = tr_col < len(cells) and not re.fullmatch(r"[\d.]+", cells[tr_col])
+        table["economy"][key] = cells[0]
+        table["transparent"][key] = cells[tr_col] if has_tr else cells[0]
+
     for line in plan.splitlines():
-        m = re.match(r"\| (\d+(?:\.\d+)?) → (\d+(?:\.\d+)?) \| (.+?) \|", line)
+        m = re.match(r"\| (\d+(?:\.\d+)?) → (\d+(?:\.\d+)?) \|(.+)\|\s*$", line)
         if m:
-            table[(int(float(m.group(1)) * 1000), int(float(m.group(2)) * 1000))] = m.group(3).strip()
-        m = re.match(r"\| (\d+)/(\d+) \| (.+?) \| (.+?) \|", line)
+            cells = [c.strip() for c in m.group(3).split("|")]
+            put((int(float(m.group(1)) * 1000), int(float(m.group(2)) * 1000)), cells, 4)
+            continue
+        m = re.match(r"\| (\d+)/(\d+) \| (.+?) \|(.+)\|\s*$", line)
         if m:
+            cells = [c.strip() for c in m.group(4).split("|")]
             for pair in m.group(3).split(","):
                 if "→" not in pair:  # another table keyed by ratio (section 6's)
                     continue
                 a, b = pair.strip().split("→")
-                table[(int(float(a) * 1000), int(float(b) * 1000))] = m.group(4).strip()
-    n = 0
-    for (s, d), (c, _) in economy_chains().items():
-        old = table.get((s, d))
-        new = shape(c[3])
-        if old != new:
-            n += 1
-            print(f"{fmt(s)} → {fmt(d)}: {old}  →  {new}")
-    print("changed rows:", n, "of", len(table), "parsed")
+                put((int(float(a) * 1000), int(float(b) * 1000)), cells, 3)
+    return table
+
+
+def diff():
+    """Chains that differ from the tables PLAN.md carries (section 3), per tier."""
+    table = plan_tables()
+    total = 0
+    for tier in TIERS:
+        n = 0
+        for (s, d), (c, _) in tier_chains(tier).items():
+            old = table[tier].get((s, d))
+            new = shape(c[3])
+            if old != new:
+                n += 1
+                print(f"{tier}: {fmt(s)} → {fmt(d)}: {old}  →  {new}")
+        print(f"{tier}: changed rows: {n} of {len(table[tier])} parsed")
+        total += n
+    print("changed rows:", total)
 
 
 if __name__ == "__main__":

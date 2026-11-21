@@ -70,8 +70,9 @@ one accumulator and rounded once. The branch holding the centre tap is
 trimmed to that one tap, so a half-band decimator computes 2m + 1 of its
 4m − 1 taps.
 
-**Coverage matrix** — the `rational` engine's table of one chain per
-ordered pair of the family's fourteen rates, 182 rows, generated from the
+**Coverage matrix** — the `rational` engine's table of a chain per
+attenuation tier (70 dB and 120 dB) for every ordered pair of the family's
+fourteen rates, 182 rows, generated from the
 pinned stage lengths by `rational/tools/coverage/matrix.py` and pinned row
 by row (MACs per output and latency as exact rationals, the tone battery at
 four profiles) by `test_matrix.cpp`. It documents chains and dispatches

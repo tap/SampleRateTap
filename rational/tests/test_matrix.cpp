@@ -2,17 +2,21 @@
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // The coverage-matrix test (milestone M4, PLAN.md section 5 leg 3): every
-// one of the 182 ordered pairs of the family's fourteen rates, the chain
+// one of the 182 ordered pairs of the family's fourteen rates, the chains
 // of section 3 built in double from the generated row table
-// (tests/coverage/matrix_rows.h, tools/coverage/matrix.py). Per row and
-// profile it pins MACs per output and latency exactly against the table,
-// checks the within-family chain is the named chain (its divisors are
-// basic_chain's), measures the chain against its promise (f_pass, A, delta;
-// 2.1) with a tone battery (images and aliases at the bins arithmetic
-// predicts, the passband gain), checks accounting, flush and the impulse
-// against the latency. Cross-family rows build bridge through
-// support/bridge_stage.h (a test may name a sibling, 4.2); every row is
-// measured, none skipped (bridge's rate scale K = 1, 2 landed as 2.2).
+// (tests/coverage/matrix_rows.h, tools/coverage/matrix.py). A row holds a
+// chain per attenuation tier (X4, X-a4): the 70 dB tier's, which it runs
+// at super_economy, economy and balanced, and the 120 dB tier's, which it
+// runs at transparent, the same chain where the two selections agree. Per
+// row and profile it pins MACs per output and latency of the tier's chain
+// exactly against the table, checks a within-family chain is the named
+// chain (its divisors are basic_chain's), measures the chain against its
+// promise (f_pass, A, delta; 2.1) with a tone battery (images and aliases
+// at the bins arithmetic predicts, the passband gain), checks accounting,
+// flush and the impulse against the latency. Cross-family rows build
+// bridge through support/bridge_stage.h (a test may name a sibling, 4.2);
+// every row is measured, none skipped (bridge's rate scale K = 1, 2 landed
+// as 2.2).
 
 #include <algorithm>
 #include <array>
@@ -112,12 +116,20 @@ namespace {
         }
     }
 
+    /// The attenuation tiers (X4): a row runs the 70 dB tier's chain (tier
+    /// 0, selected at economy) at super_economy, economy and balanced, and
+    /// the 120 dB tier's (tier 1, selected at transparent) at transparent.
+    constexpr std::size_t                k_tiers                  = 2;
+    constexpr std::array<std::size_t, 2> k_tier_selecting_profile = {1, 3};
+    constexpr std::size_t                tier_of(std::size_t prof) noexcept {
+        return prof == 3 ? 1 : 0;
+    }
+
     struct row_spec {
         std::size_t                   src;
         std::size_t                   dst;
         bool                          flagged;
-        std::vector<exact_ratio>      divisors;
-        std::array<std::uint64_t, 16> pins; ///< (macs num, den, latency num, den) per profile
+        std::array<std::uint64_t, 16> pins; ///< (macs num, den, latency num, den) per profile, its tier's chain
 
         exact_ratio macs(std::size_t prof) const { return exact_ratio{pins[4 * prof], pins[4 * prof + 1]}; }
         exact_ratio latency(std::size_t prof) const { return exact_ratio{pins[4 * prof + 2], pins[4 * prof + 3]}; }
@@ -198,44 +210,64 @@ namespace {
     }
 
     template <typename... Descs, std::size_t... I>
-    row_chain<Descs...> build_chain(const row_spec& r, std::size_t prof, std::index_sequence<I...>) {
-        return row_chain<Descs...>(make_stage<double, Descs>(prof, r.divisors[I])...);
+    row_chain<Descs...> build_chain(const std::vector<exact_ratio>& divisors, std::size_t prof,
+                                    std::index_sequence<I...>) {
+        return row_chain<Descs...>(make_stage<double, Descs>(prof, divisors[I])...);
     }
 
-    /// A row of the matrix with its chain type erased: the spec, the rates,
-    /// a factory per profile, and for a within-family row the named chain's
-    /// compile-time divisors and its own exact numbers.
-    struct row {
-        row_spec                                                             spec;
+    /// One tier's chain of a row with its type erased: the rates, the
+    /// table's divisors, a factory per profile, and for a within-family
+    /// chain the named chain's compile-time divisors and its own exact
+    /// numbers.
+    struct tier_chain {
         std::vector<std::size_t>                                             rates;
         bool                                                                 has_bridge = false;
+        std::vector<exact_ratio>                                             divisors;
         std::vector<exact_ratio>                                             named_divisors;
         std::function<std::unique_ptr<chain_handle>(std::size_t prof)>       build;
         std::function<std::pair<exact_ratio, exact_ratio>(std::size_t prof)> named_numbers;
-        std::string                                                          name;
     };
 
     template <typename... Descs>
-    row make_row(row_spec spec) {
-        row r;
-        r.name             = std::to_string(spec.src) + " -> " + std::to_string(spec.dst);
-        r.rates            = chain_rates<Descs...>(spec.src);
-        r.has_bridge       = (is_bridge<Descs>::value || ...);
-        r.spec             = std::move(spec);
-        const row_spec& rs = r.spec;
-        r.build            = [rs, rates = r.rates](std::size_t prof) -> std::unique_ptr<chain_handle> {
-            auto c    = build_chain<Descs...>(rs, prof, std::index_sequence_for<Descs...>{});
+    tier_chain make_tier(std::size_t src, std::vector<exact_ratio> divisors) {
+        tier_chain t;
+        t.rates      = chain_rates<Descs...>(src);
+        t.has_bridge = (is_bridge<Descs>::value || ...);
+        t.divisors   = std::move(divisors);
+        t.build      = [divs = t.divisors, rates = t.rates](std::size_t prof) -> std::unique_ptr<chain_handle> {
+            auto c    = build_chain<Descs...>(divs, prof, std::index_sequence_for<Descs...>{});
             auto macs = chain_macs<Descs...>(c, rates);
             return std::make_unique<row_handle<Descs...>>(std::move(c), macs);
         };
         if constexpr (!(is_bridge<Descs>::value || ...)) {
-            constexpr auto divisors = basic_chain<double, 1, Descs...>::k_divisors;
-            r.named_divisors.assign(divisors.begin(), divisors.end());
-            r.named_numbers = [](std::size_t prof) {
-                basic_chain<double, 1, Descs...> named(rational_profile(prof));
-                return std::pair{named.macs_per_output_exact(), named.latency_output_frames()};
+            constexpr auto named = basic_chain<double, 1, Descs...>::k_divisors;
+            t.named_divisors.assign(named.begin(), named.end());
+            t.named_numbers = [](std::size_t prof) {
+                basic_chain<double, 1, Descs...> c(rational_profile(prof));
+                return std::pair{c.macs_per_output_exact(), c.latency_output_frames()};
             };
         }
+        return t;
+    }
+
+    /// A row of the matrix: the spec and its two tiers' chains.
+    struct row {
+        row_spec                        spec;
+        std::array<tier_chain, k_tiers> tiers;
+        std::string                     name;
+
+        /// The chain the row runs at a profile: its tier's.
+        const tier_chain&             at(std::size_t prof) const { return tiers[tier_of(prof)]; }
+        std::unique_ptr<chain_handle> build(std::size_t prof) const { return at(prof).build(prof); }
+        /// Whether the 120 dB tier runs a chain of its own (X4).
+        bool split() const { return tiers[0].rates != tiers[1].rates; }
+    };
+
+    row make_row(row_spec spec, tier_chain seventy, tier_chain one_twenty) {
+        row r;
+        r.name  = std::to_string(spec.src) + " -> " + std::to_string(spec.dst);
+        r.spec  = spec;
+        r.tiers = {std::move(seventy), std::move(one_twenty)};
         return r;
     }
 
@@ -245,8 +277,10 @@ namespace {
     const std::vector<row>& matrix_rows() {
         static const std::vector<row> k_rows = [] {
             std::vector<row> out;
-#define ROW(SRC, DST, FLAG, DESCS, DIVS, ...)                                                                          \
-    out.push_back(make_row<TAP_SR_UNPAREN DESCS>(row_spec{SRC, DST, FLAG, {TAP_SR_UNPAREN DIVS}, {{__VA_ARGS__}}}));
+#define ROW(SRC, DST, FLAG, DESCS, DIVS, TDESCS, TDIVS, ...)                                                           \
+    out.push_back(make_row(row_spec{SRC, DST, FLAG, {{__VA_ARGS__}}},                                                  \
+                           make_tier<TAP_SR_UNPAREN DESCS>(SRC, {TAP_SR_UNPAREN DIVS}),                                \
+                           make_tier<TAP_SR_UNPAREN TDESCS>(SRC, {TAP_SR_UNPAREN TDIVS})));
             TAP_SR_RATIONAL_MATRIX_ROWS(ROW)
 #undef ROW
             return out;
@@ -341,8 +375,9 @@ namespace {
         const profile         p        = rational_profile(prof);
         const double          f_pass   = p.passband_hz(r_min);
         const double          f_stop   = r_min - f_pass;
+        const auto&           rates    = r.at(prof).rates;
         auto                  c        = r.build(prof);
-        const std::size_t     n        = analysis_length(r.rates, 8192);
+        const std::size_t     n        = analysis_length(rates, 8192);
         const std::size_t     skip     = static_cast<std::size_t>(2.0 * c->latency_output_frames().value()) + 64;
         const double          bin_hz   = static_cast<double>(f_out) / static_cast<double>(n);
         const auto            pass_bin = static_cast<std::size_t>(f_pass / bin_hz);
@@ -355,7 +390,7 @@ namespace {
         }
         row_measurement m;
         for (const std::size_t b : bins) {
-            const tone_result t = measure_tone(*c, r.rates, n, b, skip, pass_bin);
+            const tone_result t = measure_tone(*c, rates, n, b, skip, pass_bin);
             m.worst_spur_db     = std::max(m.worst_spur_db, t.worst_spur_db);
             m.worst_ripple_db   = std::max(m.worst_ripple_db, std::fabs(t.gain_db));
             ++m.tones;
@@ -372,7 +407,7 @@ namespace {
                 }
             }
             for (const std::size_t b : sbins) {
-                const tone_result t = measure_tone(*c, r.rates, n, b, skip, pass_bin);
+                const tone_result t = measure_tone(*c, rates, n, b, skip, pass_bin);
                 // A stopband tone must not reach the passband: its own
                 // folded bin counts as a spur when it lands there.
                 m.worst_spur_db = std::max(m.worst_spur_db, t.worst_spur_db);
@@ -388,33 +423,46 @@ namespace {
     // ------------------------------------------------------------------
     // What every row is checked for.
     struct totals {
-        std::size_t                    rows = 0, flagged = 0, within = 0;
+        std::size_t                    rows = 0, flagged = 0, within = 0, split = 0, split_within = 0;
         std::array<row_measurement, 4> worst{};
     };
 
-    void check_row_structure(const row& r, totals& t) {
-        ++t.rows;
-        t.flagged += r.spec.flagged ? 1 : 0;
-        ASSERT_EQ(r.rates.back(), r.spec.dst) << r.name << ": the chain's ratio is not the pair's";
-        ASSERT_EQ(r.spec.divisors.size(), r.rates.size() - 1);
-        if (!r.has_bridge) {
-            // A within-family row: the named chain's divisors are the table's.
-            ++t.within;
-            ASSERT_EQ(r.named_divisors.size(), r.spec.divisors.size());
-            for (std::size_t i = 0; i < r.named_divisors.size(); ++i) {
-                EXPECT_EQ(r.named_divisors[i], r.spec.divisors[i]) << r.name << " stage " << i;
+    void check_tier_structure(const row& r, std::size_t tier) {
+        const tier_chain& tc = r.tiers[tier];
+        ASSERT_EQ(tc.rates.back(), r.spec.dst) << r.name << " tier " << tier << ": the chain's ratio is not the pair's";
+        ASSERT_EQ(tc.divisors.size(), tc.rates.size() - 1);
+        if (!tc.has_bridge) {
+            // A within-family chain: the named chain's divisors are the table's.
+            ASSERT_EQ(tc.named_divisors.size(), tc.divisors.size());
+            for (std::size_t i = 0; i < tc.named_divisors.size(); ++i) {
+                EXPECT_EQ(tc.named_divisors[i], tc.divisors[i]) << r.name << " tier " << tier << " stage " << i;
             }
         }
         else {
             // The flag (R14): bridge's output rate >= 2x the chain's. A
-            // bridge stage is the one whose divisor is 0/1 in the table.
+            // bridge stage is the one whose divisor is 0/1 in the table;
+            // both tiers place it at the same rates (R13), so one flag holds.
             bool expect_flag = false;
-            for (std::size_t i = 0; i < r.spec.divisors.size(); ++i) {
-                if (r.spec.divisors[i] == exact_ratio{0, 1} && r.rates[i + 1] >= 2 * r.spec.dst) {
+            for (std::size_t i = 0; i < tc.divisors.size(); ++i) {
+                if (tc.divisors[i] == exact_ratio{0, 1} && tc.rates[i + 1] >= 2 * r.spec.dst) {
                     expect_flag = true;
                 }
             }
-            EXPECT_EQ(r.spec.flagged, expect_flag) << r.name;
+            EXPECT_EQ(r.spec.flagged, expect_flag) << r.name << " tier " << tier;
+        }
+    }
+
+    void check_row_structure(const row& r, totals& t) {
+        ++t.rows;
+        t.flagged += r.spec.flagged ? 1 : 0;
+        for (std::size_t tier = 0; tier < k_tiers; ++tier) {
+            check_tier_structure(r, tier);
+        }
+        ASSERT_EQ(r.tiers[0].has_bridge, r.tiers[1].has_bridge) << r.name << ": a row is within a family or across";
+        t.within += r.tiers[0].has_bridge ? 0 : 1;
+        if (r.split()) {
+            ++t.split;
+            t.split_within += r.tiers[0].has_bridge ? 0 : 1;
         }
         for (std::size_t prof = 0; prof < 4; ++prof) {
             const auto c = r.build(prof);
@@ -422,17 +470,19 @@ namespace {
                 << r.name << " " << k_profile_names[prof] << " MACs per output";
             EXPECT_EQ(c->latency_output_frames(), r.spec.latency(prof))
                 << r.name << " " << k_profile_names[prof] << " latency";
-            if (!r.has_bridge) {
-                const auto [macs, latency] = r.named_numbers(prof);
+            if (!r.at(prof).has_bridge) {
+                const auto [macs, latency] = r.at(prof).named_numbers(prof);
                 EXPECT_EQ(macs, r.spec.macs(prof)) << r.name << " named chain";
                 EXPECT_EQ(latency, c->latency_output_frames()) << r.name << " named chain";
             }
         }
     }
 
-    void check_row_streaming(const row& r) {
-        auto              c  = r.build(1);
-        const std::size_t up = c->ratio_up();
+    /// One tier's chain, at the profile that selected it.
+    void check_row_streaming(const row& r, std::size_t tier) {
+        auto              c    = r.tiers[tier].build(k_tier_selecting_profile[tier]);
+        const std::size_t up   = c->ratio_up();
+        const std::string what = r.name + " tier " + std::to_string(tier);
         // Accounting from a few positions, the impulse at the latency, flush.
         const std::size_t   probe = 2 * up + 3;
         std::vector<double> x(c->frames_needed(probe) + 8, 0.25);
@@ -441,12 +491,12 @@ namespace {
             for (std::size_t n = 0; n <= 5; ++n) {
                 const auto probe_chain = c->clone();
                 EXPECT_EQ(probe_chain->process(x.data(), n, y.data()), c->outputs_for(n))
-                    << r.name << " pos " << pos << " n " << n;
+                    << what << " pos " << pos << " n " << n;
             }
             for (std::size_t k = 1; k <= probe; k += up) {
                 const std::size_t n = c->frames_needed(k);
-                EXPECT_GE(c->outputs_for(n), k) << r.name << " k " << k;
-                EXPECT_LT(c->outputs_for(n - 1), k) << r.name << " k " << k;
+                EXPECT_GE(c->outputs_for(n), k) << what << " k " << k;
+                EXPECT_LT(c->outputs_for(n - 1), k) << what << " k " << k;
             }
             c->process(x.data(), 1, y.data());
         }
@@ -463,18 +513,18 @@ namespace {
                 peak = n;
             }
         }
-        EXPECT_LE(std::fabs(static_cast<double>(peak) - lat), 0.5 + 1e-9) << r.name << " peak " << peak;
+        EXPECT_LE(std::fabs(static_cast<double>(peak) - lat), 0.5 + 1e-9) << what << " peak " << peak;
         // flush: the stated count, then silence.
         c->reset();
         c->process(x.data(), x.size(), y.data());
         const std::size_t   expect = c->flush_output_frames();
         std::vector<double> tail(expect + 1, 1.0);
-        EXPECT_EQ(c->flush(tail.data()), expect) << r.name;
+        EXPECT_EQ(c->flush(tail.data()), expect) << what;
         std::vector<double> z(c->frames_needed(8) + 8, 0.0);
         std::vector<double> yz(c->outputs_for(z.size()));
         c->process(z.data(), z.size(), yz.data());
         for (const double v : yz) {
-            EXPECT_EQ(v, 0.0) << r.name << " after flush";
+            EXPECT_EQ(v, 0.0) << what << " after flush";
         }
     }
 
@@ -485,7 +535,8 @@ namespace {
         // passband within the sum of the stages' ripple candidates (0.01
         // dB per 70 dB stage, 0.0001 per transparent stage; bridge's own
         // are 0.003 / 0.00001, held to the same).
-        const double delta = static_cast<double>(r.rates.size() - 1) * (p.stopband_atten_db >= 100.0 ? 0.0001 : 0.01);
+        const double delta =
+            static_cast<double>(r.at(prof).rates.size() - 1) * (p.stopband_atten_db >= 100.0 ? 0.0001 : 0.01);
         EXPECT_LE(m.worst_spur_db, -p.stopband_atten_db) << r.name << " " << k_profile_names[prof] << " worst spur";
         EXPECT_LE(m.worst_ripple_db, delta) << r.name << " " << k_profile_names[prof] << " ripple";
         t.worst[prof].worst_spur_db   = std::max(t.worst[prof].worst_spur_db, m.worst_spur_db);
@@ -502,11 +553,17 @@ namespace {
         EXPECT_EQ(t.rows, k_matrix_rows);
         EXPECT_EQ(t.flagged, 38u);
         EXPECT_EQ(t.within, 92u);
+        // X4 (X-a4): the 120 dB tier runs a chain of its own in 25 rows, 17
+        // of them within a family.
+        EXPECT_EQ(t.split, 25u);
+        EXPECT_EQ(t.split_within, 17u);
     }
 
     TEST(Matrix, EveryRowStreamsExactlyAndPeaksAtItsLatency) {
         for (const row& r : matrix_rows()) {
-            check_row_streaming(r);
+            for (std::size_t tier = 0; tier < k_tiers; ++tier) {
+                check_row_streaming(r, tier);
+            }
         }
     }
 

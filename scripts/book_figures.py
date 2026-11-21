@@ -499,14 +499,14 @@ def fig_alias_zone():
 def fig_coverage_matrix():
     """rational's coverage matrix at economy: MACs per output for every ordered
     pair of the family's fourteen rates, read from the engine's generator
-    (rational/tools/coverage/matrix.py), the flagged rows marked."""
+    (rational/tools/coverage/matrix.py; each row's 70 dB tier chain, the one it
+    runs at economy), the flagged rows marked."""
     import importlib.util
     spec = importlib.util.spec_from_file_location(
         "matrix", os.path.join(ROOT, "rational", "tools", "coverage", "matrix.py"))
     mx = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mx)
     rates = mx.RATES
-    allc = mx.economy_chains()
     n = len(rates)
     macs = np.full((n, n), np.nan)
     flags = np.zeros((n, n), dtype=bool)
@@ -514,9 +514,9 @@ def fig_coverage_matrix():
         for j, dst in enumerate(rates):
             if src == dst:
                 continue
-            chosen, _ = allc[(src, dst)]
+            chosen = mx.row_chain(src, dst, "economy")
             macs[i, j] = float(chosen[0])
-            flags[i, j] = mx.flagged(chosen[3], dst)
+            flags[i, j] = mx.row_flagged(src, dst)
 
     # Sequential, one hue, light -> dark: the surface to the categorical blue
     # to a deep ink-blue, on a log scale (the cells span 7.0 to about 500).

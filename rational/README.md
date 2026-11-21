@@ -28,8 +28,10 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > so the half-band decimator costs 21 MACs per output of its 39 taps and an
 > interpolator's centre phase is a copy. The chains ship too (`chain.h`):
 > `basic_chain<S, Ch, R...>` runs stages in sequence with each stage designed at
-> its own rate, and the 22 named multi-stage chains of the 14 × 14 coverage
-> matrix (PLAN.md section 3), pinned row by row by `tests/test_matrix.cpp`.
+> its own rate, and the 25 named multi-stage chains of the 14 × 14 coverage
+> matrix (PLAN.md section 3), which selects a chain per attenuation tier (the
+> 70 dB tier's at `economy`, the 120 dB tier's at `transparent`), pinned row by
+> row by `tests/test_matrix.cpp`.
 > The fixed-point profiles are measured per stage (`tests/test_fixed_point.cpp`,
 > PLAN.md section 6): exact-unity rows and full-scale DC in Q15 and Q31,
 > bit-pinned tables, saturation without wrap, Q31 within 2.5e−9 of double on the
@@ -110,11 +112,14 @@ chain's `validate` are the same verdict as a `noexcept` `const char*` reason
   largest 2^a · 3^b at or below it; `profile::relaxed`, the pinned
   relaxation tables of `design.h`); `chain<Ch, R...>` / `chain_q15` /
   `chain_q31`; `macs_per_output_exact()` the MACs per output as a reduced rational and
-  `macs_per_output()` its double; and the 22 named multi-stage
-  chains of the coverage matrix (`up2_up2<S, Ch>` … `down4_down4_down3<S, Ch>`;
-  four of them, `up2_up6`, `up2_up8`, `down6_down2` and `down8_down2`, run
-  no row at `economy` since the 4th-band stage was admitted and are kept for
-  the per-tier matrix, which selects them at `transparent`).
+  `macs_per_output()` its double; and the 25 named multi-stage
+  chains of the coverage matrix (`up2_ratio3over2<S, Ch>` …
+  `down4_down6_down2<S, Ch>`): eighteen the 70 dB tier's, selected at
+  `economy` and run at `super_economy`, `economy` and `balanced`, and seven
+  the 120 dB tier's alone, selected at `transparent` (`up2_ratio3over2`,
+  `up2_up6`, `up2_up8`, `up2_up6_up4`, `down6_down2`, `down8_down2`,
+  `down4_down6_down2`). Every chain runs at every profile; the tier says
+  where the matrix selects it.
 - `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.7.0 since A13; 0.6.0 from the audit response, 0.5.0 from M6);
   the named ratios of the vocabulary (`up2` … `ratio3over8`) are `ratio.h`'s.
 
@@ -213,12 +218,12 @@ profile, format, channels)` with `TAP_SR_RATIONAL_FORMAT_Q15` / `_Q31`, in the
 fixed-point profiles (`tap_sr_rational_process_q15` / `_q31` and the matching
 flush; a call in another format than the converter's returns 0 and touches
 nothing — the shape the siblings' ABIs share). `tap_sr_rational_create(chain, profile, channels)` takes
-one of the 30 named within-family chains of the coverage matrix as a
-constant (`TAP_SR_RATIONAL_UP2` … `TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3`),
+one of the 33 named within-family chains of the coverage matrix as a
+constant (`TAP_SR_RATIONAL_UP2` … `TAP_SR_RATIONAL_DOWN4_DOWN6_DOWN2`),
 never a rate. The values are stable: a retired chain's value is never
 reused and `create` refuses it (ten were retired in 0.8.0, listed in the
-header), so the live values run from 0 to 39 with gaps and
-`TAP_SR_RATIONAL_CHAIN_END` (40), one past the largest value ever assigned,
+header), so the live values run from 0 to 42 with gaps and
+`TAP_SR_RATIONAL_CHAIN_END` (43), one past the largest value ever assigned,
 bounds them. `tap_sr_rational_create_stage(L, M, profile, divisor_num,
 divisor_den, channels)` is one stage of the vocabulary, any of its sixteen
 ratios, at a stated design divisor, what a chain through `bridge` composes. Each converter reports its
@@ -353,9 +358,10 @@ which C++ leaves unspecified, so the test reports it and does not pin it. Stages
 Across the profiles a stage grows with its pins: `up2` f32 stereo holds 896 / 960 /
 1,024 / 1,440 bytes at `super_economy` / `economy` / `balanced` / `transparent`, and
 `down2` 1,536 / 1,632 / 1,728 / 2,352. The named chains hold 3.3 KB (`up2_up2`,
-`up2_up3`) to 10.9 KB (`up3_up4_up4`) at `economy`, f32 stereo, and up to 11.8 KB at
-`transparent` (the pins of the designer's β for A + 4 dB, X17; the chains since the
-4th-band stage, 0.8.0).
+`up2_up3`, `up2_ratio3over2`) to 10.9 KB (`up3_up4_up4`) at `economy`, f32 stereo, and up
+to 11.8 KB at `transparent`, where the 120 dB tier's own chains hold 4.0 KB
+(`up2_ratio3over2`) to 11.3 KB (`up2_up6_up4`) (the pins of the designer's β for A + 4 dB,
+X17; the chains since the 4th-band stage and the chain per tier, 0.8.0).
 
 The figures are bytes, and the formula has no pointer-sized term (the history is one
 allocation since the roadmap's A12; before it, each channel's each line was a vector of

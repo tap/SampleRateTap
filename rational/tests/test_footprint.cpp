@@ -234,6 +234,7 @@ namespace {
 
     TEST(Footprint, ChainHeapIsItsStagesAndScratch) {
         ASSERT_TRUE(heap_meter::installed());
+        check_chain<up2_ratio3over2<float, 2>>("up2_ratio3over2");
         check_chain<up2_up2<float, 2>>("up2_up2");
         check_chain<up2_up3<float, 2>>("up2_up3");
         check_chain<up2_up4<float, 2>>("up2_up4");
@@ -244,6 +245,7 @@ namespace {
         check_chain<up2_up3_up4<float, 2>>("up2_up3_up4");
         check_chain<up2_up4_up4<float, 2>>("up2_up4_up4");
         check_chain<up3_up4_up4<float, 2>>("up3_up4_up4");
+        check_chain<up2_up6_up4<float, 2>>("up2_up6_up4");
         check_chain<up2_ratio4over3<float, 2>>("up2_ratio4over3");
         check_chain<ratio3over4_down2<float, 2>>("ratio3over4_down2");
         check_chain<down2_down2<float, 2>>("down2_down2");
@@ -256,6 +258,7 @@ namespace {
         check_chain<down4_down3_down2<float, 2>>("down4_down3_down2");
         check_chain<down4_down4_down2<float, 2>>("down4_down4_down2");
         check_chain<down4_down4_down3<float, 2>>("down4_down4_down3");
+        check_chain<down4_down6_down2<float, 2>>("down4_down6_down2");
         check_chain<down3_down2<std::int16_t, 2>>("down3_down2 (q15)");
         check_chain<up2_up2<std::int32_t, 2>>("up2_up2 (q31)");
     }
