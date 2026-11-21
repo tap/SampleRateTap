@@ -7,7 +7,9 @@ otherwise run (`_p`). Workloads in `layout_main.cpp`, one binary per scenario
 (`tap_sr_layout_<engine>_ch<C>_<i|p>`, each including and linking one engine
 only), built with `TAP_SR_BUILD_ICOUNT_BENCH`. The configurations are the host
 ratchet's: async push/pull 1:1 at a two-block setpoint, bridge 44.1 -> 48 kHz,
-rational up2, float, 128-frame blocks, 1 s of audio.
+rational up2, float, 128-frame blocks, 1 s of audio drawn from a 2,048-frame
+table per channel, cycled and copied in a block at a time outside the counted
+region (a whole second of 12 channels does not fit the M55's image).
 
 `scripts/layout.py --target {host,m33,m55,hexagon}` counts only
 `tap_sr_layout_block()`, one block through every channel, summed over the run

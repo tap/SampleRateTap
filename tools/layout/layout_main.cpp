@@ -60,6 +60,10 @@ namespace {
     constexpr std::size_t k_block   = 128;
     constexpr std::size_t k_blocks  = 375; // 48,000 frames
     constexpr std::size_t k_out_max = 3 * k_block;
+    // The input: a 2,048-frame table per channel, cycled, copied one block at
+    // a time outside the counted region (a whole second of 12 channels,
+    // 2.3 MB, does not fit the M55's AN547 image).
+    constexpr std::size_t k_table = 2048;
 
     template <std::size_t Ch>
     struct engine {
@@ -86,7 +90,7 @@ namespace {
     struct state {
 #if TAP_SR_LY_PLANAR == 0
         std::unique_ptr<engine<k_ch>> e   = std::make_unique<engine<k_ch>>();
-        std::vector<float>            in  = std::vector<float>(k_block * k_blocks * k_ch);
+        std::vector<float>            in  = std::vector<float>(k_block * k_ch);
         std::vector<float>            out = std::vector<float>(k_out_max * k_ch);
 #else
         std::array<std::unique_ptr<engine<1>>, k_ch> e;
@@ -98,13 +102,22 @@ namespace {
 
 } // namespace
 
+// noipa under GCC: noinline alone lets GCC clone the function for its one
+// call site (a .constprop / .isra copy), and callgrind's toggle names this
+// symbol; clang makes no such clones.
+#if defined(__GNUC__) && !defined(__clang__)
+#define TAP_SR_LAYOUT_COUNTED __attribute__((noipa))
+#else
+#define TAP_SR_LAYOUT_COUNTED __attribute__((noinline))
+#endif
+
 /// The counted region: one block through every channel.
-extern "C" [[gnu::noinline]] void tap_sr_layout_block(state& s, std::size_t b) {
+extern "C" TAP_SR_LAYOUT_COUNTED void tap_sr_layout_block(state& s) {
 #if TAP_SR_LY_PLANAR == 0
-    s.made = s.e->process(s.in.data() + b * k_block * k_ch, k_block, s.out.data());
+    s.made = s.e->process(s.in.data(), k_block, s.out.data());
 #else
     for (std::size_t c = 0; c < k_ch; ++c) {
-        s.made = s.e[c]->process(s.in[c].data() + b * k_block, k_block, s.out[c].data());
+        s.made = s.e[c]->process(s.in[c].data(), k_block, s.out[c].data());
     }
 #endif
 }
@@ -114,20 +127,16 @@ int main() {
 #if TAP_SR_LY_PLANAR == 1
     for (std::size_t c = 0; c < k_ch; ++c) {
         s.e[c] = std::make_unique<engine<1>>();
-        s.in[c].resize(k_block * k_blocks);
+        s.in[c].resize(k_block);
         s.out[c].resize(k_out_max);
     }
 #endif
-    for (std::size_t i = 0; i < k_block * k_blocks; ++i) {
+    std::vector<float> table(k_table * k_ch);
+    for (std::size_t i = 0; i < k_table; ++i) {
         for (std::size_t c = 0; c < k_ch; ++c) {
             const double f = 997.0 + 101.0 * static_cast<double>(c);
-            const auto   v =
+            table[i * k_ch + c] =
                 static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * f * static_cast<double>(i) / 48000.0));
-#if TAP_SR_LY_PLANAR == 0
-            s.in[i * k_ch + c] = v;
-#else
-            s.in[c][i] = v;
-#endif
         }
     }
 
@@ -135,8 +144,18 @@ int main() {
     h.fill(0xcbf29ce484222325ull);
     bool nonzero = false;
     for (std::size_t b = 0; b < k_blocks; ++b) {
+        const std::size_t base = (b * k_block) % k_table;
+        for (std::size_t i = 0; i < k_block; ++i) {
+            for (std::size_t c = 0; c < k_ch; ++c) {
+#if TAP_SR_LY_PLANAR == 0
+                s.in[i * k_ch + c] = table[(base + i) * k_ch + c];
+#else
+                s.in[c][i] = table[(base + i) * k_ch + c];
+#endif
+            }
+        }
         tap_sr_call_begin();
-        tap_sr_layout_block(s, b);
+        tap_sr_layout_block(s);
         tap_sr_call_end();
         for (std::size_t i = 0; i < s.made; ++i) {
             for (std::size_t c = 0; c < k_ch; ++c) {
