@@ -264,6 +264,54 @@ namespace {
         }
     }
 
+    // The chains by 4, 8 and 16 (X7 of docs/X4_X8_PLAN.md): each _BY constant
+    // is its chain's constant, a second spelling of a live value and never a
+    // value of its own (CHAIN_END and the live set above are unchanged), and
+    // what it creates is chain.h's alias of the same name, at the profile its
+    // tier is selected at, bit for bit.
+    static_assert(TAP_SR_RATIONAL_DOWN_BY4 == TAP_SR_RATIONAL_DOWN2_DOWN2);
+    static_assert(TAP_SR_RATIONAL_DOWN_BY8 == TAP_SR_RATIONAL_DOWN4_DOWN2);
+    static_assert(TAP_SR_RATIONAL_DOWN_BY16 == TAP_SR_RATIONAL_DOWN2_DOWN4_DOWN2);
+    static_assert(TAP_SR_RATIONAL_DOWN_BY16_TRANSPARENT == TAP_SR_RATIONAL_DOWN8_DOWN2);
+    static_assert(TAP_SR_RATIONAL_UP_BY4 == TAP_SR_RATIONAL_UP2_UP2);
+    static_assert(TAP_SR_RATIONAL_UP_BY8 == TAP_SR_RATIONAL_UP2_UP4);
+    static_assert(TAP_SR_RATIONAL_UP_BY16 == TAP_SR_RATIONAL_UP2_UP4_UP2);
+    static_assert(TAP_SR_RATIONAL_UP_BY16_TRANSPARENT == TAP_SR_RATIONAL_UP2_UP8);
+
+    template <typename Alias>
+    void expect_by(int chain, int profile_tag, const profile& p, const char* name) {
+        EXPECT_NE(std::find(std::begin(k_live_chains), std::end(k_live_chains), chain), std::end(k_live_chains))
+            << name << ": a live chain value";
+        tap_sr_rational_converter* c = tap_sr_rational_create(chain, profile_tag, 2);
+        Alias                      ref(p);
+        expect_abi_is_the_chain(c, ref, name);
+        std::uint64_t num = 0, den = 0;
+        tap_sr_rational_macs_per_output(c, &num, &den);
+        EXPECT_EQ((exact_ratio{num, den}), ref.macs_per_output_exact()) << name;
+        tap_sr_rational_destroy(c);
+    }
+
+    TEST(CApi, ByConstantsAreTheirChainsConstants) {
+        expect_by<down_by4<float, 2>>(TAP_SR_RATIONAL_DOWN_BY4, 0, profile::economy(), "down_by4");
+        expect_by<down_by8<float, 2>>(TAP_SR_RATIONAL_DOWN_BY8, 0, profile::economy(), "down_by8");
+        expect_by<down_by16<float, 2>>(TAP_SR_RATIONAL_DOWN_BY16, 0, profile::economy(), "down_by16");
+        expect_by<down_by16_transparent<float, 2>>(TAP_SR_RATIONAL_DOWN_BY16_TRANSPARENT, 1, profile::transparent(),
+                                                   "down_by16_transparent");
+        expect_by<up_by4<float, 2>>(TAP_SR_RATIONAL_UP_BY4, 0, profile::economy(), "up_by4");
+        expect_by<up_by8<float, 2>>(TAP_SR_RATIONAL_UP_BY8, 0, profile::economy(), "up_by8");
+        expect_by<up_by16<float, 2>>(TAP_SR_RATIONAL_UP_BY16, 0, profile::economy(), "up_by16");
+        expect_by<up_by16_transparent<float, 2>>(TAP_SR_RATIONAL_UP_BY16_TRANSPARENT, 1, profile::transparent(),
+                                                 "up_by16_transparent");
+        // By 4 and by 8 are both tiers' chain: the plain name at transparent.
+        expect_by<down_by8<float, 2>>(TAP_SR_RATIONAL_DOWN_BY8, 1, profile::transparent(), "down_by8 at transparent");
+        // And in the fixed-point formats, as every chain value is.
+        tap_sr_rational_converter* q =
+            tap_sr_rational_create_format(TAP_SR_RATIONAL_DOWN_BY16, 0, TAP_SR_RATIONAL_FORMAT_Q15, 2);
+        down_by16<std::int16_t, 2> ref;
+        expect_abi_is_the_chain(q, ref, "down_by16 in Q15");
+        tap_sr_rational_destroy(q);
+    }
+
     TEST(CApi, ProfilesSelectTheirDesigns) {
         const int     tags[] = {0, 1, 2, 3};
         const profile ps[]   = {profile::economy(), profile::transparent(), profile::balanced(),

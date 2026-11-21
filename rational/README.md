@@ -68,6 +68,10 @@ down4_down4_down3<float, 1> to_8k;         // 384 -> 8 kHz: the matrix's 1/48 ch
 // each stage designed at its own rate: divisors 12, 3, 1 of the chain's lowest rate (PLAN.md 3.1)
 static_assert(to_8k.k_divisors[0] == tap::dsp::exact_ratio{12, 1});
 chain<2, up2, ratio4over3> to_32k_from_12k; // 12 -> 32 kHz: 8/3 as the matrix factors it, stereo
+
+down_by8<float, 2> to_6k;                  // 48 -> 6 kHz by intent: the matrix's 1/8 chain, down4_down2, 71 MACs
+up_by8<float, 2>   from_6k;                // and back: up2_up4 (down8 / up8, one stage, is lower latency at more MACs)
+down_by16_transparent<float, 1> to_3k(profile::transparent()); // 1/16 at 120 dB: down8_down2, its tier's own chain
 ```
 
 The ratio is a compile-time type (`ratio<L, M>`, L and M of the form
@@ -119,7 +123,18 @@ chain's `validate` are the same verdict as a `noexcept` `const char*` reason
   the 120 dB tier's alone, selected at `transparent` (`up2_ratio3over2`,
   `up2_up6`, `up2_up8`, `up2_up6_up4`, `down6_down2`, `down8_down2`,
   `down4_down6_down2`). Every chain runs at every profile; the tier says
-  where the matrix selects it.
+  where the matrix selects it. The chains by 4, 8 and 16 have a second name,
+  by intent: `down_by4<S, Ch>`, `down_by8`, `down_by16` and their `up_by`
+  twins are the 70 dB tier's chains (`down2_down2`, `down4_down2`,
+  `down2_down4_down2`), and `down_by16_transparent` / `up_by16_transparent`
+  the 120 dB tier's (`down8_down2`, `up2_up8`), the one ratio whose tiers
+  differ. Each is a plain alias written out in the header, the same chain in
+  both families, never a lookup; the suffix names the tier a chain is
+  cheapest at, not a profile, and every alias runs at every profile. They are
+  the cheapest chains (by 16 at `economy`, where its tier is selected;
+  `rational.Chain.ByAliasesAreTheCheapestWithinR3` pins the search behind
+  them); `down8` beside `down_by8` is one stage, lower latency at twice the
+  MACs.
 - `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.7.0 since A13; 0.6.0 from the audit response, 0.5.0 from M6);
   the named ratios of the vocabulary (`up2` … `ratio3over8`) are `ratio.h`'s.
 
@@ -224,7 +239,10 @@ never a rate. The values are stable: a retired chain's value is never
 reused and `create` refuses it (ten were retired in 0.8.0, listed in the
 header), so the live values run from 0 to 42 with gaps and
 `TAP_SR_RATIONAL_CHAIN_END` (43), one past the largest value ever assigned,
-bounds them. `tap_sr_rational_create_stage(L, M, profile, divisor_num,
+bounds them. The chains by 4, 8 and 16 have their names by intent here too,
+`TAP_SR_RATIONAL_DOWN_BY4` … `TAP_SR_RATIONAL_UP_BY16_TRANSPARENT`, each
+`#define`d as its chain's constant: a second spelling, never a value of its
+own (`CApi.ByConstantsAreTheirChainsConstants`). `tap_sr_rational_create_stage(L, M, profile, divisor_num,
 divisor_den, channels)` is one stage of the vocabulary, any of its sixteen
 ratios, at a stated design divisor, what a chain through `bridge` composes. Each converter reports its
 exact accounting, its latency and its MACs per output as exact rationals,

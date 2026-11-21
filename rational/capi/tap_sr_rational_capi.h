@@ -100,6 +100,23 @@ typedef struct tap_sr_rational_converter tap_sr_rational_converter;
 /// chain >= TAP_SR_RATIONAL_CHAIN_END and every retired value below it.
 #define TAP_SR_RATIONAL_CHAIN_END 43
 
+/// The chains by 4, 8 and 16, named by intent (chain.h's down_by4 …
+/// up_by16_transparent, docs/X4_X8_PLAN.md X1 and X7): each is its chain's
+/// constant, the coverage matrix's chain for that ratio at its attenuation
+/// tier, in both families. A _BY name is a second spelling of a chain value,
+/// never a value of its own, and it names the number, never a rate pair
+/// (D12). The plain names are the 70 dB tier's chains, selected at economy;
+/// a _TRANSPARENT name is the 120 dB tier's, which differs only by 16. Every
+/// one constructs at every profile, as every chain does.
+#define TAP_SR_RATIONAL_DOWN_BY4 TAP_SR_RATIONAL_DOWN2_DOWN2
+#define TAP_SR_RATIONAL_DOWN_BY8 TAP_SR_RATIONAL_DOWN4_DOWN2
+#define TAP_SR_RATIONAL_DOWN_BY16 TAP_SR_RATIONAL_DOWN2_DOWN4_DOWN2
+#define TAP_SR_RATIONAL_DOWN_BY16_TRANSPARENT TAP_SR_RATIONAL_DOWN8_DOWN2
+#define TAP_SR_RATIONAL_UP_BY4 TAP_SR_RATIONAL_UP2_UP2
+#define TAP_SR_RATIONAL_UP_BY8 TAP_SR_RATIONAL_UP2_UP4
+#define TAP_SR_RATIONAL_UP_BY16 TAP_SR_RATIONAL_UP2_UP4_UP2
+#define TAP_SR_RATIONAL_UP_BY16_TRANSPARENT TAP_SR_RATIONAL_UP2_UP8
+
 /// The sample formats: float (the golden-model profile the notebooks
 /// measure), Q15 (int16_t Q0.15 samples) and Q31 (int32_t Q0.31), each the
 /// C++ basic_chain / basic_stage of that sample type bit for bit, with the
