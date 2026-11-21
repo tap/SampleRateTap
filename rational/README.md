@@ -243,10 +243,11 @@ ctypes binding the notebook measures the shipping C++ through
 
 Every push runs this engine's emulation-sized battery on **Cortex-M33**
 (QEMU mps2-an505), **Cortex-M55** (mps3-an547) and **Hexagon**
-(qemu-hexagon, static musl), and gates fifteen fixed workloads — the by-2
+(qemu-hexagon, static musl), and gates sixteen fixed workloads — the by-2
 and by-3 stages both ways in float and Q15 at `economy`, the Q15 by-4
 chain and the Q15 by-8 chain (↓4 · ↓2, the 4th-band stage's, since 0.8.0),
-the by-2 pair in float at `transparent`, the 2/3 stage in float and
+the by-2 pair in float at `transparent` and the 1/16 chain the matrix runs
+there (↓8 · ↓2, the 120 dB tier's, since 0.8.0), the 2/3 stage in float and
 Q15, and the Q15 by-4 chain's construction with its input fixture (its
 stream removed, so the chain's row minus it is the streaming loop alone) —
 and the worst single call of the ↑2, ↓2 and ↓4 stages in float and Q15,
@@ -296,6 +297,7 @@ Executed instructions per fixed workload (`rational/bench/icount/`), measured un
 | `down3_float_eco` | 434,872,408 | 27,445,097 | 82,591,396 |
 | `down3_q15_eco` | 48,745,572 | 17,640,706 | 18,300,152 |
 | `down4_down2_q15_eco` | 47,659,519 | 18,466,975 | 16,790,347 |
+| `down8_down2_float_tr` | 538,963,615 | 31,889,072 | 104,910,201 |
 | `ratio23_float_eco` | 538,739,305 | 30,545,005 | 115,766,432 |
 | `ratio23_q15_eco` | 48,128,267 | 14,726,186 | 19,232,880 |
 | `up2_float_eco` | 650,842,262 | 38,707,334 | 123,990,515 |

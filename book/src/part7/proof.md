@@ -60,12 +60,13 @@ baked filter excludes the measurement suites (the 16,384-point sweeps, the
 unpinned searches, the matrix), and Hexagon under `qemu-hexagon`. The
 fixed-point chapter showed what the M33 leg is for: a second libm in CI.
 
-The instruction-count ratchet is Part II's, with fifteen fixed workloads:
+The instruction-count ratchet is Part II's, with sixteen fixed workloads:
 the by-2 and by-3 stages both ways in float and Q15 at `economy`, the Q15
 by-4 chain and, since the 4th-band stage shipped, the Q15 by-8 chain
-(↓4·↓2), the by-2 pair in float at `transparent`, the 2/3 stage in both
-formats, and construction alone — two seconds of stereo in 32-frame
-blocks, counted whole, construction included, gated two-sided at ±3 %
+(↓4·↓2), the by-2 pair in float at `transparent` and, since the matrix
+chose a chain per tier, the 1/16 chain it runs there (↓8·↓2), the 2/3
+stage in both formats, and construction alone — two seconds of stereo in
+32-frame blocks, counted whole, construction included, gated two-sided at ±3 %
 against `rational/bench/baselines.json` on all three targets. Construction
 is a ratcheted scenario from the first baseline because the ASRC's plan
 carries a debt for not having done that, and a new engine does not inherit

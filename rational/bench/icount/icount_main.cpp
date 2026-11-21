@@ -14,7 +14,9 @@
 // 7 down3_q15_eco, 8 down2_down2_q15_eco, 9 up2_float_tr, 10 down2_float_tr,
 // 11 construct_q15_eco, 12 ratio23_float_eco, 13 ratio23_q15_eco,
 // 14 down4_down2_q15_eco (the matrix's by-8 chain since X-a3: the 4th-band
-// stage, then a half-band).
+// stage, then a half-band), 15 down8_down2_float_tr (the matrix's 1/16 chain
+// at its 120 dB tier since X-a4, X4: the 8th-band stage, then a half-band,
+// in float at transparent as the by-2 pair's transparent workloads are).
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -124,6 +126,9 @@ namespace {
         return stage_workload<std::int16_t, rat::ratio2over3>(eco);
 #elif TAP_SR_RATIONAL_SC == 14
         rat::down4_down2<std::int16_t, k_channels> conv(eco);
+        return stream(conv);
+#elif TAP_SR_RATIONAL_SC == 15
+        rat::down8_down2<float, k_channels> conv(tr);
         return stream(conv);
 #else
         // The Q15 by-4 chain's workload (scenario 8) with its stream removed:
