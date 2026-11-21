@@ -147,6 +147,48 @@ embedded instruction counts are measured in
 [notebooks/rational_comparison.ipynb](notebooks/rational_comparison.ipynb);
 the family index: [docs/COMPARISON.md](../docs/COMPARISON.md) at the root).
 
+## The low-band round trip
+
+[`examples/low_band_fft.cpp`](examples/low_band_fft.cpp) is what the chains by 16
+were named for: a 4096-point FFT with 0.73 Hz bins in the low band of a 48 kHz
+signal. It decimates with `down_by16` to 3 kHz, makes a spectral change there with a
+4096-point STFT (periodic Hann, overlap 4), and interpolates *the change alone* back
+with `up_by16`, adding it to the input delayed by the round trip's exact latency:
+
+```text
+out[n] = x[n - T] + up_by16(change(down_by16(x)))[n],   T = 16 tau_down + tau_up
+```
+
+The bins the change leaves alone, and everything above the low band, never pass
+through the chains, so no aliasing is re-injected and no crossover filter is designed.
+T is an integer for every alias. Measured at `economy` (GCC 13, x86-64, double, 12 s of
+200 Hz and 205 Hz at −12 dBFS and 5 kHz at −20 dBFS):
+
+| | |
+|---|---|
+| 4096 points at 48 kHz (11.7 Hz bins) | one peak: 200 and 205 Hz are 0.43 bins apart |
+| 4096 points at 3 kHz after `down_by16` (0.73 Hz bins) | two peaks, 46.7 dB of dip between them |
+| T | 16 × 189/16 + 189 = 378 samples (7.875 ms) |
+| the chains' cost | 17.875 MACs per full-rate sample (143 / 16 each way) |
+| an identity change | the input delayed by T, bit for bit |
+| removing 205 Hz (the 9 bins around it) | 205 Hz −70.27 dB; 200 Hz and 5 kHz unchanged (0.00 dB); with T ± 1 only −31.43 dB |
+
+`tests/test_low_band.cpp` pins the claims at ×4, ×8 and ×16, every profile and both
+float and double, streamed in blocks within about 1 MB of state
+(`rational.LowBand.IdentityChangeIsTheInputDelayedBitForBit`,
+`RemovalNeedsTheExactDelay`, `ResolvesTonesFiveHertzApartAfterDown16`,
+`RemovingOneToneLeavesTheOthers`): a removal at least 60 dB deep at the 70 dB profiles
+and 100 dB at `transparent` (by 16 through `down_by16_transparent` /
+`up_by16_transparent`), failing one sample early or late (−31.4 dB, which is
+2 sin(π f / fs) at 205 Hz), at least 40 dB between the two peaks, and the other tones
+within 0.01 dB. The removal there is of a tone on a bin of the low-rate FFT, so the
+change takes all of it and what is left is the round trip's ripple: −66.9 dB at worst
+at the 70 dB profiles (by 16 at `super_economy`), −119.2 dB at `transparent`. A tone
+between bins also leaves the window's tails outside the removed bins: the example's
+205 Hz measures −94.4 dB at `transparent`, the change's floor rather than the round
+trip's. Resolution is bought with time: a 4096-point frame at 3 kHz is 1.37 s, and a
+change spreads over it.
+
 ## The boundaries are identity, not policy
 
 - **Within a family only.** The 48 kHz family (8, 12, 16, 24, 32, 48, 96,
