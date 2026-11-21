@@ -726,9 +726,9 @@ namespace {
         using by8           = down_by8<float, 1>;
         using by16          = down_by16<float, 1>;
         using by16_tr       = down_by16_transparent<float, 1>;
-        using up8           = up_by8<float, 1>;
-        using up16          = up_by16<float, 1>;
-        using up16_tr       = up_by16_transparent<float, 1>;
+        using by8_up        = up_by8<float, 1>;
+        using by16_up       = up_by16<float, 1>;
+        using by16_tr_up    = up_by16_transparent<float, 1>;
 
         // The table's minima, through the chains that attain them.
         EXPECT_EQ(macs_at_every_profile<by4>(), macs_list(35, 43, 47, 89));
@@ -743,9 +743,9 @@ namespace {
         const auto m16_top4 = macs_at_every_profile<top4_16>();
         EXPECT_EQ(m16_top4, macs_list(111, 143, 147, 261)); // the minimum at every profile, tied at economy
         // Up mirrors down: the same MACs over the factor, per output frame.
-        EXPECT_EQ(macs_at_every_profile<up8>()[1], (exact_ratio{71, 8}));
-        EXPECT_EQ(macs_at_every_profile<up16>()[1], (exact_ratio{143, 16}));
-        EXPECT_EQ(macs_at_every_profile<up16_tr>()[3], (exact_ratio{277, 16}));
+        EXPECT_EQ(macs_at_every_profile<by8_up>()[1], (exact_ratio{71, 8}));
+        EXPECT_EQ(macs_at_every_profile<by16_up>()[1], (exact_ratio{143, 16}));
+        EXPECT_EQ(macs_at_every_profile<by16_tr_up>()[3], (exact_ratio{277, 16}));
         EXPECT_EQ(macs_at_every_profile<top4_16_up>()[3], (exact_ratio{261, 16}));
 
         // R3 at the tier's selecting profile. By 16 at economy the tie goes
