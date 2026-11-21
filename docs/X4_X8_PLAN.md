@@ -12,6 +12,10 @@ maintainer's answers to it:
   offset is A + 4 dB, and at A + 4 the ×8 pair is dropped but the ×16 pair survives (X4).*
 - **X-a2 is done** (SampleRateTap#109), and **X-a3 reopens decision 6** (X3): its counts,
   measured with the generator's own `diff`, are X-a2's exactly (X3, section 8).
+- **X-a3 is done** (SampleRateTap#110), and **X-a4 selects a chain per tier** (X4): its
+  counts, measured with the generator's per-tier `diff`, are X-a2's and X-a3's exactly: 25
+  rows (17 within the families, 8 across), seven chains used only at `transparent`, three of
+  them new (C values 40 to 42), `CHAIN_END` 43, 33 live values (X4, section 8).
 - **IIR round trips are held to the FIR's floor** (the IIR plan's question 5): −60 dB at the
   70 dB profiles, −100 dB at `transparent` (6.3).
 
@@ -565,7 +569,8 @@ aliases exist (X-b), so `down_by8` is never another chain than the one it names.
     16 → 11.025 / 22.05 / 44.1 / 88.2, 384 → 11.025, 384 → 22.05, 11.025 → 384 and
     22.05 → 384. X-a4's new constants are `UP2_RATIO3OVER2`, `UP2_UP6_UP4` and
     `DOWN4_DOWN6_DOWN2` (40 to 42); `UP2_UP6`, `UP2_UP8`, `DOWN6_DOWN2` and `DOWN8_DOWN2`
-    (12, 13, 23, 24), kept by X-a3, serve it as they are.
+    (12, 13, 23, 24), kept by X-a3, serve it as they are. *X-a4, as it landed:* the same,
+    exactly (X4, "X-a4, as it landed").
   - **The ×8 `transparent` chains equal the `economy` ones** (↓4 · ↓2 / ↑2 · ↑4 at both
     tiers: 71 / 8.88 MACs at `economy`, 149 / 18.62 at `transparent`), so
     `down_by8_transparent` and `up_by8_transparent` are not added. **The ×16 ones do not:**
@@ -630,6 +635,39 @@ inside 0.8.0, sized first by X-0 and, after the re-tune, by X-a2.
   - `scripts/book_figures.py` (which imports `mx.economy_chains()` by name) and a
     regenerated `book/src/img/coverage-matrix.svg`, which CI does not regenerate;
   - `matrix.ipynb` (728 pairs through the C ABIs) and the book's tables.
+- **X-a4, as it landed (measured; `rational/PLAN.md` section 6, the X-a4 record):**
+  - `matrix.py` selects per tier (`TIERS`: `best_chain` at `economy` for the chain a row
+    runs at the three 70 dB profiles, at `transparent` for the 120 dB tier's) and its `md`,
+    `rows`, `diff` and `rule` modes report both tiers. `diff` against X-a3's tables: 0 rows
+    at `economy` and **25 at `transparent`, 17 within the families and 8 across**, the rows
+    X17 lists; 0 at both tiers after the regeneration. The mean `transparent` MAC/out over
+    the 182 rows falls from 211.89 to 210.18 (−0.8 %), 2.5 to 16.8 % on the 25 rows; the
+    70 dB profiles' numbers are unchanged. The fewer-stages rule bites on 18 rows at
+    `economy` (as at X-a3) and 25 at `transparent`.
+  - **The named chains (X7):** `up2_ratio3over2` (40), `up2_up6_up4` (41) and
+    `down4_down6_down2` (42) added; `CHAIN_END` 43; 33 live values, the 25 named multi-stage
+    chains (seven used only at `transparent`, four of them the X-a3 kept chains 12, 13, 23
+    and 24) and the eight one-stage chains. No alias and no alias constant (X-b's).
+  - **`transparent`'s pins did not change**, against this section's expectation:
+    `used_divisors()` now walks the chain each tier runs, but the 120 dB tier's chains run
+    no divisor the 70 dB tier's do not, and each tier's chains alone use all eight divisors
+    (147/160, 1, 2, 3, 4, 6, 8, 12), so `pins()`, which gives every profile the union as
+    before, regenerates `design.h`'s tables byte for byte.
+  - **Fixed point:** the one pair of designs no row ran before, the 6th and 8th band at
+    divisor 2 at `transparent` (m = 8, N = 95 and 127), bit-pinned like the 4th-band rows;
+    Q15 attains −85.0 and −82.6 dB, Q31 keeps the spec.
+  - `matrix_rows.h`'s `ROW` carries both chains (X-0's prototype format); the matrix test,
+    the notebook (re-executed: 728 / 728 pins, 182 / 182 rows at both tiers, worst −72.31
+    dB at `economy`, −123.23 dB at `transparent`) and `book_figures.py` read it. The
+    coverage figure is `economy`'s, unchanged: regenerated with matplotlib 3.11.2 it differs
+    only in its timestamp, so the committed SVG stays.
+  - The scipy vectors are not regenerated: `make_reference_vectors.py`'s chains are a fixed
+    list at `economy`, independent of the selection.
+  - **The ratchet and the ceilings:** nothing moves. No workload or probe runs a table,
+    stage or chain X-a4 changes, so every count and checksum of every engine on every key,
+    in both builds, equals X-a3's measurement, and every ceiling too; no baseline or ceiling
+    is re-recorded. No workload runs a chain used only at `transparent` (one is proposed to
+    the maintainer, not added).
 
 The record of the question, as it stood before v5:
 
@@ -706,6 +744,9 @@ X-a3, the per-tier rows' in X-a4, the aliases' in X-b.
   - `docs/ROADMAP.md:351`;
   - `tap_sr_rational_capi.h:117-118` ("fourteen" becomes sixteen).
 - **The per-tier rows (X-a4):** `rational/PLAN.md:373-374` and 3.3–3.6, the book's tables.
+  *Done in X-a4,* with R3, R16, 3.1's tier paragraph and section 6's record in
+  `rational/PLAN.md`, `rational/README.md`, `rational/CLAUDE.md`, `chain.h`, the C ABI header,
+  and the book's Part VII (`chain.md`, `proof.md`) and glossary.
 - **The aliases (X-b):**
   - `rational/README.md`: its quick start and the `chain.h` entry;
   - the book's Part VII, *The named chains and the matrix* (`book/src/part7/chain.md:125-139`),
@@ -1036,7 +1077,7 @@ version comes with the scaffold (X10), which replaces its hand-written delay and
    this PR, the named chains and C ABI unchanged), every `rational` count and ceiling
    re-recorded with the reason; the designer's record (X8); and the counts X-a3 and X-a4 will
    move, regenerated (X17).
-4. **X-a3, decision 6 reopened (X3):** `down4` / `up4`, the matrix's selection regenerated
+4. **X-a3, decision 6 reopened (X3): done** (SampleRateTap#110). `down4` / `up4`, the matrix's selection regenerated
    under the new designer with band 4 admitted (so its retirements and additions include
    the β-driven ones X-a2 froze: 46 rows, 12 chains added and up to 14 retired, X17), the
    named chains, the retirements under D7, the C ABI's stable values (X7: `CHAIN_END`, retired
@@ -1055,7 +1096,11 @@ version comes with the scaffold (X10), which replaces its hand-written delay and
    tier (17 within, 8 across); 7 chains used only at `transparent`, four of them X-a3's kept
    chains (C values 12, 13, 23, 24) and three new (`up2_ratio3over2`, `up2_up6_up4`,
    `down4_down6_down2`, values 40 to 42); `CHAIN_END` 43, 33 live values (X17, "What it does
-   to X3 and X4").
+   to X3 and X4"). *Its counts (measured):* the same, exactly: 25 rows split (17 within, 8
+   across), 0 at `economy`; 3 chains added (40 to 42), `CHAIN_END` 43, 33 live values; the
+   relaxation tables unchanged (`transparent`'s pins with them, against X4's expectation);
+   the 6th- and 8th-band designs at divisor 2 at `transparent` bit-pinned; no count,
+   checksum or ceiling moved (X4, "X-a4, as it landed").
 6. **X-b, the aliases and the release:** X1, X2, X4's `_transparent` aliases where any
    survive the re-tune, X5, X7's alias constants and X8, with section 5's tests, the `matrix.py:203-206` comment fixed, 6.6's
    example and its tests, and D19. It bumps SampleRateTap to 0.8.0 (D13: the three umbrella
