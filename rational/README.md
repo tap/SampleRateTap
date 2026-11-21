@@ -135,7 +135,8 @@ chain's `validate` are the same verdict as a `noexcept` `const char*` reason
   `rational.Chain.ByAliasesAreTheCheapestWithinR3` pins the search behind
   them); `down8` beside `down_by8` is one stage, lower latency at twice the
   MACs.
-- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.7.0 since A13; 0.6.0 from the audit response, 0.5.0 from M6);
+- `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.8.0 since the ×4 / ×8 / ×16 plan, `../CHANGELOG.md`; 0.7.0 from A13,
+  0.6.0 from the audit response, 0.5.0 from M6);
   the named ratios of the vocabulary (`up2` … `ratio3over8`) are `ratio.h`'s.
 
 Against the general-purpose resampler libraries at four ratios of the

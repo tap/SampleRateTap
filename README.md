@@ -139,7 +139,9 @@ A retired pre-family option (`SRT_*`, `TAP_RATIO_*`) fails the configure
 loudly (`cmake/retired_options.cmake`) rather than dropping a gate silently.
 
 **Version.** One family version, `TAP_SR_VERSION_{MAJOR,MINOR,PATCH}`
-(0.7.0, the minor bump A13 brought: every channel count the type's; 0.6.0 was the async vocabulary pass), defined
+(0.8.0, the minor bump `rational`'s ×4 / ×8 / ×16 plan brought: its vocabulary respelled, the designer re-tuned,
+the 4th-band stage, a chain per tier and the chains by 4, 8 and 16 named by intent, `CHANGELOG.md`; 0.7.0 was A13's,
+every channel count the type's, and 0.6.0 the async vocabulary pass), defined
 identically in each engine's umbrella header and returned bit-packed —
 `(major << 16) | (minor << 8) | patch` — by each C ABI's
 `tap_sr_async_version()` / `tap_sr_bridge_version()` /
@@ -216,6 +218,7 @@ equal). A commit that moves `submodules/dsptap` names the DspTap tag it pins.
 |---|---|---|
 | 0.6.0 | 0.1.0 | v0.1.0 |
 | 0.7.0 | 0.2.0 | v0.2.0 |
+| 0.8.0 | 0.2.0 | v0.2.0 |
 
 ## Provenance and license
 

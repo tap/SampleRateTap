@@ -67,7 +67,7 @@ typedef struct tap_sr_async_converter tap_sr_async_converter;
 
 /* ABI/version probe: the family version, bit-packed as
  * (TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH
- * (0x000700 for 0.7.0); tap_sr_bridge_version and tap_sr_rational_version
+ * (0x000800 for 0.8.0); tap_sr_bridge_version and tap_sr_rational_version
  * return the same value. */
 TAP_SR_ASYNC_API unsigned tap_sr_async_version(void);
 
