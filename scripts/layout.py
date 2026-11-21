@@ -33,6 +33,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import icount  # noqa: E402  (the shared QEMU command lines and host environment)
 
 PREFIX = "tap_sr_layout_"
+# tools/layout/layout_main.cpp's k_blocks: every workload brackets exactly
+# this many calls, so any other calls= is a counting fault (the plugin once
+# fired a marker twice when its code straddled a page boundary).
+EXPECTED_CALLS = 375
 DONE = re.compile(r"TAP_SR_LAYOUT_DONE ok=1 checksum=(\S+)")
 COUNTED = "tap_sr_layout_block"
 
@@ -69,6 +73,8 @@ def measure_qemu(target: str, plugin: str, binary: str) -> tuple[int, str]:
     if not done or not c:
         print(out, file=sys.stderr)
         raise SystemExit(f"{binary}: no count (markers or DONE line missing)")
+    if int(c.group(3)) != EXPECTED_CALLS:
+        raise SystemExit(f"{binary}: the plugin saw {c.group(3)} bracketed calls, not {EXPECTED_CALLS}")
     return int(c.group(4)), done.group(1)
 
 
