@@ -60,9 +60,10 @@ baked filter excludes the measurement suites (the 16,384-point sweeps, the
 unpinned searches, the matrix), and Hexagon under `qemu-hexagon`. The
 fixed-point chapter showed what the M33 leg is for: a second libm in CI.
 
-The instruction-count ratchet is Part II's, with fourteen fixed workloads:
+The instruction-count ratchet is Part II's, with fifteen fixed workloads:
 the by-2 and by-3 stages both ways in float and Q15 at `economy`, the Q15
-by-4 chain, the by-2 pair in float at `transparent`, the 2/3 stage in both
+by-4 chain and, since the 4th-band stage shipped, the Q15 by-8 chain
+(↓4·↓2), the by-2 pair in float at `transparent`, the 2/3 stage in both
 formats, and construction alone — two seconds of stereo in 32-frame
 blocks, counted whole, construction included, gated two-sided at ±3 %
 against `rational/bench/baselines.json` on all three targets. Construction
@@ -79,9 +80,12 @@ measure the shipping C++, and Python can only call C. `rational`'s shim
 follows `bridge`'s shape with two decisions of its own.
 
 The first is the family rule at the C boundary. `tap_sr_rational_create`
-takes a *chain constant* — one of the 28 named within-family chains, the
-eight one-stage ratios and the twenty multi-stage names from the previous
-chapter — a profile, and a channel count. There is no function that takes
+takes a *chain constant* — one of the 30 named within-family chains, the
+eight one-stage ratios and the twenty-two multi-stage names from the
+previous chapter — a profile, and a channel count. The values are stable:
+the ten chains the 4th-band stage displaced in 0.8.0 keep their values,
+retired and refused, so the live ones run from 0 to 39 with gaps and
+`TAP_SR_RATIONAL_CHAIN_END`, not a count, bounds them. There is no function that takes
 two rates. The one escape hatch, `tap_sr_rational_create_stage(L, M,
 profile, divisor_num, divisor_den, channels)`, builds a single stage of the
 vocabulary at a stated design divisor: the piece a cross-family chain

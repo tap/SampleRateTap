@@ -16,3 +16,15 @@ Status: M[0-5]\b        # the rational engine is at M6; a stale status line
 (?<![A-Za-z0-9])(up|down)_[23468](?![0-9])  # X0 (X-a1): a factor joins its word, up2 / down8, and an underscore separates a chain's stages (up2_up8_up3); 4 for X3's up4 / down4
 (?<![A-Za-z0-9])ratio_[0-9]_[0-9](?![0-9])  # X0: a mixed ratio reads as a fraction, ratio3over4 (the compile-fail fixtures ratio_5_1.cpp ... are allowed)
 TAP_SR_RATIONAL_(UP|DOWN|RATIO)_[0-9]  # X0: the C ABI's chain constants are spelled the same way, TAP_SR_RATIONAL_DOWN8_DOWN2, values unchanged
+\bup2_ratio4over3_up3\b  # X3 (X-a3): the matrix's 8/1 is up2_up4 since the 4th-band stage was admitted (C ABI value 10, retired)
+\bup3_ratio8over3\b     # X3: the 44.1 family's 8/1 is up2_up4 too (value 11, retired)
+\bup2_up6_up2\b         # X3: 24/1 is up2_up3_up4 (value 14, retired)
+\bup2_up8_up2\b         # X3: 32/1 is up2_up4_up4 (value 15, retired)
+\bup2_up8_up3\b         # X3: 48/1 is up3_up4_up4 (value 16, retired)
+\bdown3_ratio3over4_down2\b  # X3: the matrix's 1/8 is down4_down2 (value 21, retired)
+\bratio3over8_down3\b   # X3: the 44.1 family's 1/8 is down4_down2 too (value 22, retired)
+\bdown2_down6_down2\b   # X3: 1/24 is down4_down3_down2 (value 25, retired)
+\bdown2_down8_down2\b   # X3: 1/32 is down4_down4_down2 (value 26, retired)
+\bdown3_down8_down2\b   # X3: 1/48 is down4_down4_down3 (value 27, retired)
+TAP_SR_RATIONAL_(UP2_RATIO4OVER3_UP3|UP3_RATIO8OVER3|UP2_UP6_UP2|UP2_UP8_UP2|UP2_UP8_UP3|DOWN3_RATIO3OVER4_DOWN2|RATIO3OVER8_DOWN3|DOWN2_DOWN6_DOWN2|DOWN2_DOWN8_DOWN2|DOWN3_DOWN8_DOWN2)\b  # X3: the C constants of the ten retired chains; their values are never reused
+\bTAP_SR_RATIONAL_CHAIN_COUNT\b  # X7: TAP_SR_RATIONAL_CHAIN_END, one past the largest value ever assigned (values have gaps)

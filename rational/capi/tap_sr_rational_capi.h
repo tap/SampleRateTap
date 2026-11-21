@@ -46,8 +46,18 @@ extern "C" {
 typedef struct tap_sr_rational_converter tap_sr_rational_converter;
 
 /// The named within-family chains (PLAN.md 3.3 / 3.4): the eight one-stage
-/// chains, then the twenty multi-stage ones, named by their stages in order.
-/// The chain argument of tap_sr_rational_create; values are stable.
+/// chains, then the multi-stage ones, named by their stages in order. The
+/// chain argument of tap_sr_rational_create. Every value is stable (X7 of
+/// docs/X4_X8_PLAN.md): a new chain takes a new value, a retired chain's
+/// value is never reused, and create rejects it.
+///
+/// Retired in 0.8.0 (X-a3, the 4th-band stage admitted to the matrix, which
+/// no longer runs them): 10 (up 2, 4/3, up 3), 11 (up 3, 8/3), 14 (up 2,
+/// up 6, up 2), 15 (up 2, up 8, up 2), 16 (up 2, up 8, up 3), 21 (down 3,
+/// 3/4, down 2), 22 (3/8, down 3), 25 (down 2, down 6, down 2), 26 (down 2,
+/// down 8, down 2), 27 (down 3, down 8, down 2). UP2_UP6, UP2_UP8,
+/// DOWN6_DOWN2 and DOWN8_DOWN2 run no row at economy since then and stay:
+/// the per-tier matrix (X-a4) selects them at transparent.
 #define TAP_SR_RATIONAL_UP2 0
 #define TAP_SR_RATIONAL_DOWN2 1
 #define TAP_SR_RATIONAL_UP3 2
@@ -58,25 +68,29 @@ typedef struct tap_sr_rational_converter tap_sr_rational_converter;
 #define TAP_SR_RATIONAL_RATIO3OVER4 7
 #define TAP_SR_RATIONAL_UP2_UP2 8
 #define TAP_SR_RATIONAL_UP2_UP3 9
-#define TAP_SR_RATIONAL_UP2_RATIO4OVER3_UP3 10
-#define TAP_SR_RATIONAL_UP3_RATIO8OVER3 11
 #define TAP_SR_RATIONAL_UP2_UP6 12
 #define TAP_SR_RATIONAL_UP2_UP8 13
-#define TAP_SR_RATIONAL_UP2_UP6_UP2 14
-#define TAP_SR_RATIONAL_UP2_UP8_UP2 15
-#define TAP_SR_RATIONAL_UP2_UP8_UP3 16
 #define TAP_SR_RATIONAL_UP2_RATIO4OVER3 17
 #define TAP_SR_RATIONAL_RATIO3OVER4_DOWN2 18
 #define TAP_SR_RATIONAL_DOWN2_DOWN2 19
 #define TAP_SR_RATIONAL_DOWN3_DOWN2 20
-#define TAP_SR_RATIONAL_DOWN3_RATIO3OVER4_DOWN2 21
-#define TAP_SR_RATIONAL_RATIO3OVER8_DOWN3 22
 #define TAP_SR_RATIONAL_DOWN6_DOWN2 23
 #define TAP_SR_RATIONAL_DOWN8_DOWN2 24
-#define TAP_SR_RATIONAL_DOWN2_DOWN6_DOWN2 25
-#define TAP_SR_RATIONAL_DOWN2_DOWN8_DOWN2 26
-#define TAP_SR_RATIONAL_DOWN3_DOWN8_DOWN2 27
-#define TAP_SR_RATIONAL_CHAIN_COUNT 28
+#define TAP_SR_RATIONAL_UP2_UP4 28
+#define TAP_SR_RATIONAL_UP3_UP4 29
+#define TAP_SR_RATIONAL_UP2_UP4_UP2 30
+#define TAP_SR_RATIONAL_UP2_UP3_UP4 31
+#define TAP_SR_RATIONAL_UP2_UP4_UP4 32
+#define TAP_SR_RATIONAL_UP3_UP4_UP4 33
+#define TAP_SR_RATIONAL_DOWN4_DOWN2 34
+#define TAP_SR_RATIONAL_DOWN4_DOWN3 35
+#define TAP_SR_RATIONAL_DOWN2_DOWN4_DOWN2 36
+#define TAP_SR_RATIONAL_DOWN4_DOWN3_DOWN2 37
+#define TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN2 38
+#define TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3 39
+/// One past the largest chain value ever assigned: create rejects
+/// chain >= TAP_SR_RATIONAL_CHAIN_END and every retired value below it.
+#define TAP_SR_RATIONAL_CHAIN_END 40
 
 /// The sample formats: float (the golden-model profile the notebooks
 /// measure), Q15 (int16_t Q0.15 samples) and Q31 (int32_t Q0.31), each the
@@ -114,12 +128,12 @@ TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create(int chain,
 TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create_format(int chain, int profile, int format,
                                                                              unsigned channels);
 
-/// One stage at ratio L/M (one of the vocabulary's fourteen: 2/1, 1/2, 3/1,
-/// 1/3, 6/1, 1/6, 8/1, 1/8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8) designed at the
-/// profile relaxed by the design divisor divisor_num / divisor_den (the
-/// stage's lower rate over its chain's lowest, PLAN.md 3.1): what a chain
-/// through bridge composes, as the coverage-matrix test builds it. Returns
-/// NULL on invalid arguments.
+/// One stage at ratio L/M (one of the vocabulary's sixteen: 2/1, 1/2, 3/1,
+/// 1/3, 4/1, 1/4, 6/1, 1/6, 8/1, 1/8, 3/2, 2/3, 4/3, 3/4, 8/3, 3/8; the 4th
+/// band since 0.8.0) designed at the profile relaxed by the design divisor
+/// divisor_num / divisor_den (the stage's lower rate over its chain's
+/// lowest, PLAN.md 3.1): what a chain through bridge composes, as the
+/// coverage-matrix test builds it. Returns NULL on invalid arguments.
 TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create_stage(unsigned L, unsigned M, int profile,
                                                                             uint32_t divisor_num, uint32_t divisor_den,
                                                                             unsigned channels);

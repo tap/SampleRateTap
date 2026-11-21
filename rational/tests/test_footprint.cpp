@@ -164,6 +164,8 @@ namespace {
         check_stage<S, down2>(fmt, "down2");
         check_stage<S, up3>(fmt, "up3");
         check_stage<S, down3>(fmt, "down3");
+        check_stage<S, up4>(fmt, "up4");
+        check_stage<S, down4>(fmt, "down4");
         check_stage<S, up6>(fmt, "up6");
         check_stage<S, down6>(fmt, "down6");
         check_stage<S, up8>(fmt, "up8");
@@ -234,33 +236,35 @@ namespace {
         ASSERT_TRUE(heap_meter::installed());
         check_chain<up2_up2<float, 2>>("up2_up2");
         check_chain<up2_up3<float, 2>>("up2_up3");
-        check_chain<up2_ratio4over3_up3<float, 2>>("up2_ratio4over3_up3");
-        check_chain<up3_ratio8over3<float, 2>>("up3_ratio8over3");
+        check_chain<up2_up4<float, 2>>("up2_up4");
+        check_chain<up3_up4<float, 2>>("up3_up4");
         check_chain<up2_up6<float, 2>>("up2_up6");
+        check_chain<up2_up4_up2<float, 2>>("up2_up4_up2");
         check_chain<up2_up8<float, 2>>("up2_up8");
-        check_chain<up2_up6_up2<float, 2>>("up2_up6_up2");
-        check_chain<up2_up8_up2<float, 2>>("up2_up8_up2");
-        check_chain<up2_up8_up3<float, 2>>("up2_up8_up3");
+        check_chain<up2_up3_up4<float, 2>>("up2_up3_up4");
+        check_chain<up2_up4_up4<float, 2>>("up2_up4_up4");
+        check_chain<up3_up4_up4<float, 2>>("up3_up4_up4");
         check_chain<up2_ratio4over3<float, 2>>("up2_ratio4over3");
         check_chain<ratio3over4_down2<float, 2>>("ratio3over4_down2");
         check_chain<down2_down2<float, 2>>("down2_down2");
         check_chain<down3_down2<float, 2>>("down3_down2");
-        check_chain<down3_ratio3over4_down2<float, 2>>("down3_ratio3over4_down2");
-        check_chain<ratio3over8_down3<float, 2>>("ratio3over8_down3");
+        check_chain<down4_down2<float, 2>>("down4_down2");
+        check_chain<down4_down3<float, 2>>("down4_down3");
         check_chain<down6_down2<float, 2>>("down6_down2");
+        check_chain<down2_down4_down2<float, 2>>("down2_down4_down2");
         check_chain<down8_down2<float, 2>>("down8_down2");
-        check_chain<down2_down6_down2<float, 2>>("down2_down6_down2");
-        check_chain<down2_down8_down2<float, 2>>("down2_down8_down2");
-        check_chain<down3_down8_down2<float, 2>>("down3_down8_down2");
+        check_chain<down4_down3_down2<float, 2>>("down4_down3_down2");
+        check_chain<down4_down4_down2<float, 2>>("down4_down4_down2");
+        check_chain<down4_down4_down3<float, 2>>("down4_down4_down3");
         check_chain<down3_down2<std::int16_t, 2>>("down3_down2 (q15)");
         check_chain<up2_up2<std::int32_t, 2>>("up2_up2 (q31)");
     }
 
     TEST(Footprint, ProcessingAllocatesNothing) {
-        up2_ratio4over3_up3<float, 2> c;
-        std::vector<float>            in(256 * 2, 0.25F);
-        std::vector<float>            out(c.outputs_for(256) * 2 + 64);
-        const heap_meter              meter;
+        up3_up4_up4<float, 2> c;
+        std::vector<float>    in(256 * 2, 0.25F);
+        std::vector<float>    out(c.outputs_for(256) * 2 + 64);
+        const heap_meter      meter;
         for (int i = 0; i < 50; ++i) {
             static_cast<void>(c.process(in.data(), 256, out.data()));
         }

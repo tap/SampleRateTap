@@ -8,7 +8,9 @@
 # the streaming loop alone, as the siblings' construct legs) as its own
 # scenario from the first baseline, the fixture joining it 2026-10-10; the
 # mixed ratio 2/3 (48 -> 32 kHz) in float and Q15 at economy joined after
-# M6, when the sparse-row lever was measured on it (PLAN.md section 6).
+# M6, when the sparse-row lever was measured on it (PLAN.md section 6); the
+# matrix's by-8 chain (down 4 . down 2) in Q15 joined with X-a3, the first
+# workload to run the 4th-band stage (docs/X4_X8_PLAN.md X3).
 set(_rational_icount_scenarios
     up2_float_eco:0
     down2_float_eco:1
@@ -23,7 +25,8 @@ set(_rational_icount_scenarios
     down2_float_tr:10
     construct_q15_eco:11
     ratio23_float_eco:12
-    ratio23_q15_eco:13)
+    ratio23_q15_eco:13
+    down4_down2_q15_eco:14)
 
 foreach(_sc IN LISTS _rational_icount_scenarios)
     string(REPLACE ":" ";" _parts "${_sc}")
@@ -35,11 +38,13 @@ foreach(_sc IN LISTS _rational_icount_scenarios)
 endforeach()
 
 # The worst single call (callmax_main.cpp, the roadmap's A6): the most
-# instructions one process() executes over the by-2 stages' economy streams.
+# instructions one process() executes over the by-2 stages' economy streams,
+# and since X-a3 over the down 4 stage's (the 4th band).
 # Named tap_sr_rational_icount_callmax_*, so the ratchet gates them;
 # scripts/icount.py reads the plugin's per-call maximum for these instead of
 # the total.
-foreach(_sc IN ITEMS callmax_up2_float:0 callmax_down2_float:1 callmax_up2_q15:2 callmax_down2_q15:3)
+foreach(_sc IN ITEMS callmax_up2_float:0 callmax_down2_float:1 callmax_up2_q15:2 callmax_down2_q15:3
+                     callmax_down4_float:4 callmax_down4_q15:5)
     string(REPLACE ":" ";" _parts "${_sc}")
     list(GET _parts 0 _name)
     list(GET _parts 1 _id)
@@ -50,11 +55,11 @@ foreach(_sc IN ITEMS callmax_up2_float:0 callmax_down2_float:1 callmax_up2_q15:2
 endforeach()
 
 # The host ratchet's workloads (host_main.cpp, the roadmap's A8): the float stage in 128-frame blocks, up and down by 2,
-# stereo and 12 channels, counted under callgrind by scripts/icount.py
+# and down by 4 since X-a3, stereo and 12 channels, counted under callgrind by scripts/icount.py
 # --target host. Named tap_sr_rational_hostcount_*, apart from the QEMU glob;
 # host builds only.
 if(NOT CMAKE_CROSSCOMPILING)
-    foreach(_sc IN ITEMS up2:0 down2:1)
+    foreach(_sc IN ITEMS up2:0 down2:1 down4:2)
         string(REPLACE ":" ";" _parts "${_sc}")
         list(GET _parts 0 _name)
         list(GET _parts 1 _dir)
@@ -68,9 +73,12 @@ if(NOT CMAKE_CROSSCOMPILING)
 endif()
 
 # The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
-# them against bench/ceilings.json).
+# them against bench/ceilings.json): the by-2 pair, and since X-a3 a second
+# set, the 4th-band pair (up 4, down 4; tap_sr_rational_probe4_<fmt>).
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)
 tap_sr_add_probes(rational probe_main.cpp tap::sr::rational tap_sr_rational_warnings)
+tap_sr_add_probes(rational probe_main.cpp tap::sr::rational tap_sr_rational_warnings
+                  SUFFIX 4 DEFINITIONS TAP_SR_PROBE_BAND=4)
 
 # Cross-resampler comparison workloads (docs/COMPARISON.md): the same fixed
 # task through rational and through libsamplerate, r8brain and SpeexDSP,

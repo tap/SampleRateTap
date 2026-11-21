@@ -39,15 +39,19 @@ irreducible step, 147/160, which is `bridge`'s and nobody else's.
 
 So the engine's charter is one sentence: **L/M with L, M ∈ {2ᵃ·3ᵇ},
 gcd(L, M) = 1, L ≠ M, as chains of Nyquist (L-th-band) stages.** Every
-ratio a within-family pair needs is reachable from a vocabulary of fourteen
-single stages — ↑2, ↓2, ↑3, ↓3, ↑6, ↓6, ↑8, ↓8 and the mixed 3/2, 2/3, 4/3,
-3/4, 8/3, 3/8 — and what the vocabulary does not contain is as deliberate
-as what it does:
+ratio a within-family pair needs is reachable from a vocabulary of sixteen
+single stages — ↑2, ↓2, ↑3, ↓3, ↑4, ↓4, ↑6, ↓6, ↑8, ↓8 and the mixed 3/2,
+2/3, 4/3, 3/4, 8/3, 3/8 — and what the vocabulary does not contain, and
+what it took last, is as deliberate as what it does:
 
-- **No 4.** ↑4 and ↓4 are two half-band stages, never one 4th-band stage,
-  because the half-band pair is cheaper (the next chapter has the
-  arithmetic: 37 MACs per output against 55). `ratio<4, 1>` is a valid
-  *ratio* — the chain by 4 is named by it — but no stage is shipped for it.
+- **4 came last.** Until 0.8.0 there was no 4th-band stage: a factor of 4
+  is two half-band stages, because the half-band pair is cheaper (the
+  next chapter has the arithmetic: 37 MACs per output against 55,
+  measured 43 against 61), and it still is. The decision was amended
+  (decision 6, 2026-11-21) when the designer's re-tuned β made a short
+  4th-band stage at the high-rate end of a chain by 8 or more the cheapest
+  choice of all, so `up4` and `down4` ship and the matrix chooses them
+  where they win; the chain by 4 stays the half-band pair.
 - **No 7.** 37.8 and 50.4 kHz are ratios of 7 against the family bases and
   are outside the charter by construction, not by a table entry.
 - **No 1000/1001.** The pull-down rates are synchronous and not
@@ -149,10 +153,10 @@ compare it against a measured rate.
 ## The named vocabulary
 
 The header closes with aliases — `up2`, `down2`, `up3`, … `ratio3over8` —
-and nothing else. There is no `up4` alias for a stage, because none
-ships; there is no `up5`, because it would not compile. The aliases
+and nothing else. `up4` and `down4` joined them with the 4th-band stage;
+there is no `up5`, because it would not compile. The aliases
 are the engine's public vocabulary, the C ABI's chain constants are spelled
-from them (`TAP_SR_RATIONAL_RATIO2OVER3`, `TAP_SR_RATIONAL_DOWN3_DOWN8_DOWN2`),
+from them (`TAP_SR_RATIONAL_RATIO2OVER3`, `TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3`),
 and the coverage matrix two chapters from now is written entirely in them.
 
 A reader coming from the ASRC chapters may miss the `config` struct, the
@@ -169,7 +173,7 @@ wrong, `rational` cannot express.
 | `ratio<L, M>` as a template type | runtime `(L, M)` pair, validated in the constructor | the charter is a compile error with the charter's message; every schedule and trip count becomes a compile-time constant; a type cannot be derived from a measured rate (D12 by construction) |
 | L, M ∈ {2ᵃ·3ᵇ} | any coprime pair | the fourteen rates need exactly these; 7 (37.8 / 50.4 kHz) and 1001 are outside the family plan; `bridge` owns 147/160 |
 | `k_band = max(L, M)`, one filter per stage | a separate interpolator and decimator per mixed ratio | one filter keeps the exhaustive-phase discipline per stage and the alignment contract one sentence long; the composite rate is band × lower rate for every ratio, asserted in the traits |
-| No single 4th-band stage | `ratio<4, 1>` as its own stage | two half-bands cost 37 MACs per output against 55 (next chapter); the alias names the chain, not a stage |
+| The 4th-band stage, since 0.8.0 (decision 6 as amended) | ×4 always two half-bands and no 4th-band stage (until X-a3) | ×4 itself stays two half-bands, 43 MACs per output against 61; at the high-rate end of a chain by 8 or more the short 4th-band stage is the cheapest (1/8: 71 against 79 for three half-bands, next chapter) |
 | `k_rate_ratio` as `constexpr double`, documented informational | omit it | tests and notebooks print it; a constant cannot be compared against a measured clock by accident |
 | Compile-fail test via `try_compile` | trust the `static_assert` | the diagnostic's text is part of the contract; the test runs with the cross toolchains too |
 

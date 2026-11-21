@@ -34,7 +34,7 @@ namespace {
         case 3:
             return design_stage<up3>(p);
         case 4:
-            return design_stage<ratio<4, 1>>(p);
+            return design_stage<up4>(p);
         case 6:
             return design_stage<up6>(p);
         default:
@@ -253,6 +253,7 @@ namespace {
         expect_nyquist_structure<up6>(profile::economy());
         expect_nyquist_structure<down8>(profile::economy());
         expect_nyquist_structure<ratio4over3>(profile::economy()); // band 4: the mixed ratio's design
+        expect_nyquist_structure<down4>(profile::economy());       // band 4: its own stage since X-a3
         expect_nyquist_structure<down2>(profile::super_economy());
         expect_nyquist_structure<up3>(profile::balanced());
     }
@@ -322,7 +323,7 @@ namespace {
         expect_relaxations_are_the_search(profile::super_economy());
         expect_relaxations_are_the_search(profile::economy());
         expect_relaxations_are_the_search(profile::balanced());
-        EXPECT_EQ(profile::economy().relaxations.size(), 10u);
+        EXPECT_EQ(profile::economy().relaxations.size(), 8u); // the divisors the matrix uses (X-a3: 9 and 16 left)
     }
 
     TEST(Design, RelaxationTablesAreTheSearchAtTransparent) {

@@ -12,7 +12,9 @@
 // TAP_SR_RATIONAL_SC: 0 up2_float_eco, 1 down2_float_eco, 2 up3_float_eco,
 // 3 down3_float_eco, 4 up2_q15_eco, 5 down2_q15_eco, 6 up3_q15_eco,
 // 7 down3_q15_eco, 8 down2_down2_q15_eco, 9 up2_float_tr, 10 down2_float_tr,
-// 11 construct_q15_eco, 12 ratio23_float_eco, 13 ratio23_q15_eco.
+// 11 construct_q15_eco, 12 ratio23_float_eco, 13 ratio23_q15_eco,
+// 14 down4_down2_q15_eco (the matrix's by-8 chain since X-a3: the 4th-band
+// stage, then a half-band).
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -120,6 +122,9 @@ namespace {
         return stage_workload<float, rat::ratio2over3>(eco);
 #elif TAP_SR_RATIONAL_SC == 13
         return stage_workload<std::int16_t, rat::ratio2over3>(eco);
+#elif TAP_SR_RATIONAL_SC == 14
+        rat::down4_down2<std::int16_t, k_channels> conv(eco);
+        return stream(conv);
 #else
         // The Q15 by-4 chain's workload (scenario 8) with its stream removed:
         // the chain's construction (two designs at pinned lengths, no search,

@@ -143,10 +143,11 @@ namespace {
         tally.expect(bound, 4 * bound);
     }
 
-    // Measured (clang 19, x86-64, Release, economy; float and double alike):
-    // up 3, 114 outputs over a span of 134 against a bound of 139 (inside
-    // the span the copy phase's outputs of finite inputs stay clean); down
-    // 2, 33 over 33 against 34; the 8/1 chain, 401 over 419 against 448.
+    // Measured (gcc 13, x86-64, Release, economy, 2026-11-21 on X17's pins;
+    // float and double alike): up 3, 110 outputs over a span of 128 against a
+    // bound of 133 (inside the span the copy phase's outputs of finite inputs
+    // stay clean); down 2, 31 over 31 against 32; the 8/1 chain (up 2, up 4
+    // since X-a3), 343 over 367 against 389.
     TYPED_TEST(non_finite_test, BurstClearsAfterOneWindowInterpolator) {
         constexpr std::size_t          k_burst = 24;
         basic_stage<TypeParam, 2, up3> hit;
@@ -164,14 +165,13 @@ namespace {
     // A chain: the span widens stage by stage, each stage's reach applied to
     // the last one's.
     TYPED_TEST(non_finite_test, BurstClearsAfterOneWindowPerStageThroughAChain) {
-        using engine                  = up2_ratio4over3_up3<TypeParam, 2>; // 8/1: up 2, 4/3, up 3
+        using engine                  = up2_up4<TypeParam, 2>; // 8/1: up 2, up 4
         constexpr std::size_t k_burst = 24;
         engine                hit;
         engine                twin;
         std::size_t           span = k_burst;
         span                       = reach(span, hit.template stage<0>().window_frames(), 2, 1);
-        span                       = reach(span, hit.template stage<1>().window_frames(), 4, 3);
-        span                       = reach(span, hit.template stage<2>().window_frames(), 3, 1);
+        span                       = reach(span, hit.template stage<1>().window_frames(), 4, 1);
         check_burst<TypeParam>(hit, twin, k_burst, span);
     }
 

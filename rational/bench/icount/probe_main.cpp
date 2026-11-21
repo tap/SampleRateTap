@@ -2,10 +2,14 @@
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 // The size and stack probes (README, "Footprint"; scripts/ceilings.py): the
 // by-2 pair in one format at the default profile (economy), stereo, an up2
-// stage and a down2 stage each streaming 32-frame blocks through process(). Bare-metal targets have no argv, so the
-// format is chosen at compile time.
+// stage and a down2 stage each streaming 32-frame blocks through process();
+// and, as a second set since X-a3, the 4th-band pair, an up4 stage and a
+// down4 stage the same way. Bare-metal targets have no argv, so the format
+// and the band are chosen at compile time.
 //
 // TAP_SR_PROBE_TYPE:  0 = float, 1 = Q15, 2 = Q31
+// TAP_SR_PROBE_BAND:  2 = the by-2 pair (tap_sr_rational_probe_<fmt>), 4 =
+//                     the 4th-band pair (tap_sr_rational_probe4_<fmt>)
 // TAP_SR_PROBE_STACK: 0 = the size probe (no stdio: the image is the
 //                     startup, both stages and what they pull in,
 //                     measured for its .text and .rodata ceilings), 1 = the
@@ -30,6 +34,9 @@
 #ifndef TAP_SR_PROBE_TYPE
 #define TAP_SR_PROBE_TYPE 0
 #endif
+#ifndef TAP_SR_PROBE_BAND
+#define TAP_SR_PROBE_BAND 2
+#endif
 
 namespace {
 
@@ -41,12 +48,17 @@ namespace {
     using sample = std::int32_t;
 #endif
 
-    constexpr std::size_t k_ch     = 2;
-    using up_stage                 = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::up2>;
-    using down_stage               = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::down2>;
+    constexpr std::size_t k_ch = 2;
+#if TAP_SR_PROBE_BAND == 4
+    using up_stage   = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::up4>;
+    using down_stage = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::down4>;
+#else
+    using up_stage   = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::up2>;
+    using down_stage = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::down2>;
+#endif
     constexpr std::size_t k_block  = 32;
     constexpr std::size_t k_blocks = 1500;
-    constexpr std::size_t k_room   = 2 * k_block + 2; // outputs_for(n) <= floor(n L / M) + 2
+    constexpr std::size_t k_room   = up_stage::k_up * k_block + 2; // outputs_for(n) <= floor(n L / M) + 2
 
     sample g_in[k_block * k_ch];
     sample g_out[k_room * k_ch];

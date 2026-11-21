@@ -64,19 +64,27 @@ namespace {
     // ------------------------------------------------------------------
     // The design divisors (chain.h, PLAN.md 3.1): a stage's lower rate over
     // the chain's lowest, the largest 2^a 3^b at or below it.
-    static_assert(up2_up8_up3<float, 1>::k_divisors
-                  == std::array{exact_ratio{1, 1}, exact_ratio{2, 1}, exact_ratio{16, 1}});
-    static_assert(down3_down8_down2<float, 1>::k_divisors
-                  == std::array{exact_ratio{16, 1}, exact_ratio{2, 1}, exact_ratio{1, 1}});
-    static_assert(up2_up6_up2<float, 1>::k_divisors
-                  == std::array{exact_ratio{1, 1}, exact_ratio{2, 1}, exact_ratio{12, 1}});
-    static_assert(ratio3over8_down3<float, 1>::k_divisors == std::array{exact_ratio{3, 1}, exact_ratio{1, 1}});
-    static_assert(up3_ratio8over3<float, 1>::k_divisors == std::array{exact_ratio{1, 1}, exact_ratio{3, 1}});
-    static_assert(up2_ratio4over3_up3<float, 1>::k_divisors
-                  == std::array{exact_ratio{1, 1}, exact_ratio{2, 1}, exact_ratio{2, 1}});
-    static_assert(down3_ratio3over4_down2<float, 1>::k_divisors
-                  == std::array{exact_ratio{2, 1}, exact_ratio{2, 1}, exact_ratio{1, 1}});
+    static_assert(up3_up4_up4<float, 1>::k_divisors
+                  == std::array{exact_ratio{1, 1}, exact_ratio{3, 1}, exact_ratio{12, 1}});
+    static_assert(down4_down4_down3<float, 1>::k_divisors
+                  == std::array{exact_ratio{12, 1}, exact_ratio{3, 1}, exact_ratio{1, 1}});
+    static_assert(up2_up3_up4<float, 1>::k_divisors
+                  == std::array{exact_ratio{1, 1}, exact_ratio{2, 1}, exact_ratio{6, 1}});
+    static_assert(down2_down4_down2<float, 1>::k_divisors
+                  == std::array{exact_ratio{8, 1}, exact_ratio{2, 1}, exact_ratio{1, 1}});
+    static_assert(down4_down2<float, 1>::k_divisors == std::array{exact_ratio{2, 1}, exact_ratio{1, 1}});
+    static_assert(up2_up4<float, 1>::k_divisors == std::array{exact_ratio{1, 1}, exact_ratio{2, 1}});
     static_assert(ratio3over4_down2<float, 1>::k_divisors == std::array{exact_ratio{2, 1}, exact_ratio{1, 1}});
+    // Chains through the mixed ratios that no matrix row runs since X-a3:
+    // chains all the same, each stage at its divisor.
+    static_assert(basic_chain<float, 1, ratio3over8, down3>::k_divisors
+                  == std::array{exact_ratio{3, 1}, exact_ratio{1, 1}});
+    static_assert(basic_chain<float, 1, up3, ratio8over3>::k_divisors
+                  == std::array{exact_ratio{1, 1}, exact_ratio{3, 1}});
+    static_assert(basic_chain<float, 1, up2, ratio4over3, up3>::k_divisors
+                  == std::array{exact_ratio{1, 1}, exact_ratio{2, 1}, exact_ratio{2, 1}});
+    static_assert(basic_chain<float, 1, down3, ratio3over4, down2>::k_divisors
+                  == std::array{exact_ratio{2, 1}, exact_ratio{2, 1}, exact_ratio{1, 1}});
     static_assert(basic_chain<float, 1, up2>::k_divisors == std::array{exact_ratio{1, 1}});
     // A chain written outside the matrix's rules still gets a divisor: the
     // lattice floor (4/3 then down 2, 12 -> 16 -> 8: the 4/3's lower rate is
@@ -84,10 +92,10 @@ namespace {
     static_assert(basic_chain<float, 1, ratio4over3, down2>::k_divisors
                   == std::array{exact_ratio{1, 1}, exact_ratio{1, 1}});
     // The chain's own ratio, reduced, and its stage count.
-    static_assert(up2_up8_up3<float, 1>::k_up == 48 && up2_up8_up3<float, 1>::k_down == 1);
-    static_assert(ratio3over8_down3<float, 1>::k_up == 1 && ratio3over8_down3<float, 1>::k_down == 8);
+    static_assert(up3_up4_up4<float, 1>::k_up == 48 && up3_up4_up4<float, 1>::k_down == 1);
+    static_assert(down4_down2<float, 1>::k_up == 1 && down4_down2<float, 1>::k_down == 8);
     static_assert(up2_ratio4over3<float, 1>::k_up == 8 && up2_ratio4over3<float, 1>::k_down == 3);
-    static_assert(down2_down6_down2<float, 1>::k_stages == 3);
+    static_assert(down4_down3_down2<float, 1>::k_stages == 3);
 
     TEST(Chain, DesignDivisorIsTheLatticeFloorOrTheFractionBelowOne) {
         using tap::sr::rational::detail::design_divisor;
@@ -170,6 +178,9 @@ namespace {
         check_chain_is_its_stages<sample, up2, ratio4over3>(profile::economy());
         check_chain_is_its_stages<sample, up2, up8, up3>(profile::economy());
         check_chain_is_its_stages<sample, down3, down8, down2>(profile::economy());
+        check_chain_is_its_stages<sample, up3, up4, up4>(profile::economy());
+        check_chain_is_its_stages<sample, down4, down4, down3>(profile::economy());
+        check_chain_is_its_stages<sample, down2, down4, down2>(profile::transparent());
         check_chain_is_its_stages<sample, ratio3over8, down3>(profile::transparent());
         check_chain_is_its_stages<sample, up3, ratio8over3>(profile::super_economy());
         check_chain_is_its_stages<sample, down2, down6, down2>(profile::balanced());
@@ -208,12 +219,13 @@ namespace {
             rational_ref::k_chain_ratio3over4_down2);
         check_matches_scipy<sample, rational_ref::k_chain_up2_ratio4over3.size(), up2, ratio4over3>(
             rational_ref::k_chain_up2_ratio4over3);
-        check_matches_scipy<sample, rational_ref::k_chain_up2_up8_up3.size(), up2, up8, up3>(
-            rational_ref::k_chain_up2_up8_up3);
-        check_matches_scipy<sample, rational_ref::k_chain_down3_down8_down2.size(), down3, down8, down2>(
-            rational_ref::k_chain_down3_down8_down2);
-        check_matches_scipy<sample, rational_ref::k_chain_ratio3over8_down3.size(), ratio3over8, down3>(
-            rational_ref::k_chain_ratio3over8_down3);
+        check_matches_scipy<sample, rational_ref::k_chain_up3_up4_up4.size(), up3, up4, up4>(
+            rational_ref::k_chain_up3_up4_up4);
+        check_matches_scipy<sample, rational_ref::k_chain_down4_down4_down3.size(), down4, down4, down3>(
+            rational_ref::k_chain_down4_down4_down3);
+        check_matches_scipy<sample, rational_ref::k_chain_down4_down2.size(), down4, down2>(
+            rational_ref::k_chain_down4_down2);
+        check_matches_scipy<sample, rational_ref::k_chain_up2_up4.size(), up2, up4>(rational_ref::k_chain_up2_up4);
     }
 
     // ------------------------------------------------------------------
@@ -251,24 +263,26 @@ namespace {
     TEST(Chain, AccountingExactFromEveryPositionOfEveryNamedChain) {
         check_accounting_from_every_position<up2_up2<float, 1>>();
         check_accounting_from_every_position<up2_up3<float, 1>>();
-        check_accounting_from_every_position<up2_ratio4over3_up3<float, 1>>();
-        check_accounting_from_every_position<up3_ratio8over3<float, 1>>();
+        check_accounting_from_every_position<up2_up4<float, 1>>();
+        check_accounting_from_every_position<up3_up4<float, 1>>();
         check_accounting_from_every_position<up2_up6<float, 1>>();
+        check_accounting_from_every_position<up2_up4_up2<float, 1>>();
         check_accounting_from_every_position<up2_up8<float, 1>>();
-        check_accounting_from_every_position<up2_up6_up2<float, 1>>();
-        check_accounting_from_every_position<up2_up8_up2<float, 1>>();
-        check_accounting_from_every_position<up2_up8_up3<float, 1>>();
+        check_accounting_from_every_position<up2_up3_up4<float, 1>>();
+        check_accounting_from_every_position<up2_up4_up4<float, 1>>();
+        check_accounting_from_every_position<up3_up4_up4<float, 1>>();
         check_accounting_from_every_position<up2_ratio4over3<float, 1>>();
         check_accounting_from_every_position<ratio3over4_down2<float, 1>>();
         check_accounting_from_every_position<down2_down2<float, 1>>();
         check_accounting_from_every_position<down3_down2<float, 1>>();
-        check_accounting_from_every_position<down3_ratio3over4_down2<float, 1>>();
-        check_accounting_from_every_position<ratio3over8_down3<float, 1>>();
+        check_accounting_from_every_position<down4_down2<float, 1>>();
+        check_accounting_from_every_position<down4_down3<float, 1>>();
         check_accounting_from_every_position<down6_down2<float, 1>>();
+        check_accounting_from_every_position<down2_down4_down2<float, 1>>();
         check_accounting_from_every_position<down8_down2<float, 1>>();
-        check_accounting_from_every_position<down2_down6_down2<float, 1>>();
-        check_accounting_from_every_position<down2_down8_down2<float, 1>>();
-        check_accounting_from_every_position<down3_down8_down2<float, 1>>();
+        check_accounting_from_every_position<down4_down3_down2<float, 1>>();
+        check_accounting_from_every_position<down4_down4_down2<float, 1>>();
+        check_accounting_from_every_position<down4_down4_down3<float, 1>>();
     }
 
     // ------------------------------------------------------------------
@@ -297,8 +311,8 @@ namespace {
     TYPED_TEST(chain_test, ChunkingIsBitIdentical) {
         using sample = TypeParam;
         const auto x = reference_input<sample>();
-        check_chunking<sample, up2, up8, up3>(x);
-        check_chunking<sample, down3, down8, down2>(x);
+        check_chunking<sample, up3, up4, up4>(x);
+        check_chunking<sample, down4, down4, down3>(x);
         check_chunking<sample, ratio3over8, down3>(x);
     }
 
@@ -322,8 +336,9 @@ namespace {
     TYPED_TEST(chain_test, ResetReproducesBitExactly) {
         using sample = TypeParam;
         const auto x = reference_input<sample>();
-        check_chain_reset_reproduces<up2_ratio4over3_up3<sample, 1>>(x);
-        check_chain_reset_reproduces<down3_down8_down2<sample, 1>>(x);
+        check_chain_reset_reproduces<basic_chain<sample, 1, up2, ratio4over3, up3>>(x);
+        check_chain_reset_reproduces<basic_chain<sample, 1, down3, down8, down2>>(x);
+        check_chain_reset_reproduces<down4_down4_down3<sample, 1>>(x);
     }
 
     // A stage's pull() can stop with up to L - 1 outputs banked, outside the
@@ -361,7 +376,7 @@ namespace {
     }
     template <typename C>
     concept hands_out_a_mutable_stage = requires(C& c) { c.template stage<0>().reset(); };
-    static_assert(!hands_out_a_mutable_stage<up2_ratio4over3_up3<float, 1>>);
+    static_assert(!hands_out_a_mutable_stage<up3_up4_up4<float, 1>>);
 
     // ------------------------------------------------------------------
     // flush: flush_output_frames() frames, equal to zero-padding the chain's
@@ -398,6 +413,8 @@ namespace {
         check_flush<sample, up2, up8, up3>(profile::economy());
         check_flush<sample, down3, down8, down2>(profile::transparent());
         check_flush<sample, ratio3over8, down3>(profile::economy());
+        check_flush<sample, up3, up4, up4>(profile::economy());
+        check_flush<sample, down4, down4, down3>(profile::transparent());
     }
 
     // ------------------------------------------------------------------
@@ -423,14 +440,19 @@ namespace {
     }
 
     TEST(Chain, LatencyIsTheExactRationalSumAndMatchesTheImpulse) {
-        // Economy, the relaxation tables' m (X17's pins): up 2 (m = 10,
-        // N = 39: 19 frames at 2 r) then up 8 at divisor 2 (m = 5, N = 79:
-        // 39 at 16 r) then up 3 at divisor 16 (m = 3, N = 17: 8 at 48 r):
-        // 19 * 24 + 39 * 3 + 8 = 456 + 117 + 8 = 581.
-        check_latency_by_impulse<up2_up8_up3<float, 1>>(exact_ratio{581, 1}, 384000.0);
-        check_latency_by_impulse<down3_down8_down2<float, 1>>(exact_ratio{581, 48}, 8000.0);
-        check_latency_by_impulse<ratio3over8_down3<float, 1>>(exact_ratio{271, 24}, 11025.0);
-        check_latency_by_impulse<up3_ratio8over3<float, 1>>(exact_ratio{271, 3}, 88200.0);
+        // Economy, the relaxation tables' m (X17's pins): up 3 (m = 10,
+        // N = 59: 29 frames at 3 r) then up 4 at divisor 3 (m = 4, N = 31:
+        // 15 at 12 r) then up 4 at divisor 12 (m = 3, N = 23: 11 at 48 r):
+        // 29 * 16 + 15 * 4 + 11 = 464 + 60 + 11 = 535.
+        check_latency_by_impulse<up3_up4_up4<float, 1>>(exact_ratio{535, 1}, 384000.0);
+        check_latency_by_impulse<down4_down4_down3<float, 1>>(exact_ratio{535, 48}, 8000.0);
+        check_latency_by_impulse<up2_up4<float, 1>>(exact_ratio{91, 1}, 96000.0);
+        check_latency_by_impulse<down4_down2<float, 1>>(exact_ratio{91, 8}, 11025.0);
+        // A chain with a stage at the searched divisor 16 (no row of the
+        // tables since X-a3), and the mixed ratios' chains no row runs.
+        check_latency_by_impulse<basic_chain<float, 1, up2, up8, up3>>(exact_ratio{581, 1}, 384000.0);
+        check_latency_by_impulse<basic_chain<float, 1, ratio3over8, down3>>(exact_ratio{271, 24}, 11025.0);
+        check_latency_by_impulse<basic_chain<float, 1, up3, ratio8over3>>(exact_ratio{271, 3}, 88200.0);
         check_latency_by_impulse<up2_up2<float, 1>>(exact_ratio{47, 1}, 32000.0);
         check_latency_by_impulse<down2_down2<float, 1>>(exact_ratio{47, 4}, 8000.0);
     }
@@ -440,13 +462,13 @@ namespace {
     // rates over the chain's (the matrix's numbers; test_matrix.cpp pins
     // every row, this pins the shape of the sum).
     TEST(Chain, MacsPerOutputIsTheStagesSumAtTheOutputRate) {
-        up2_up8_up3<float, 1> up;
-        // 21/2 per output at 2 r (over 24 for the chain's rate) + (2 * 5 * 7 + 1) / 8 at 16 r (over 3) + (2 * 3 * 2 +
-        // 1) / 3
-        EXPECT_EQ(up.macs_per_output_exact(), (exact_ratio{371, 48}));
-        EXPECT_DOUBLE_EQ(up.macs_per_output(), 371.0 / 48.0);
-        down3_down8_down2<float, 1> down;
-        EXPECT_EQ(down.macs_per_output_exact(), (exact_ratio{371, 1})); // 13 * 16 + 71 * 2 + 21
+        up3_up4_up4<float, 1> up;
+        // 41/3 per output at 3 r (over 16 for the chain's rate) + (2 * 4 * 3 + 1) / 4 at 12 r (over 4) + (2 * 3 * 3 +
+        // 1) / 4
+        EXPECT_EQ(up.macs_per_output_exact(), (exact_ratio{43, 6}));
+        EXPECT_DOUBLE_EQ(up.macs_per_output(), 43.0 / 6.0);
+        down4_down4_down3<float, 1> down;
+        EXPECT_EQ(down.macs_per_output_exact(), (exact_ratio{344, 1})); // 19 * 12 + 25 * 3 + 41
         basic_chain<float, 1, up2> one;
         EXPECT_EQ(one.macs_per_output_exact(), (exact_ratio{21, 2}));
         EXPECT_DOUBLE_EQ(one.macs_per_output(), (basic_stage<float, 1, up2>().macs_per_output()));
@@ -457,14 +479,15 @@ namespace {
     // row sums to unity exactly, so a constant propagates exactly through
     // every stage), within rounding of the three stages' sums in float and
     // double (the single stages' bounds, test_stage.cpp, times the stages).
-    TYPED_TEST(chain_test, DcGainIsExactlyOne) {
-        using sample                          = TypeParam;
-        const sample                       dc = to_sample<sample>(0.5);
-        down3_ratio3over4_down2<sample, 1> c;
-        const std::size_t                  n_in = c.frames_needed(400);
-        std::vector<sample>                x(n_in, dc);
-        std::vector<sample>                y(c.outputs_for(n_in));
-        const std::size_t                  made = c.process(x.data(), n_in, y.data());
+    template <typename C>
+    void check_dc_gain() {
+        using sample           = typename C::sample;
+        const sample        dc = to_sample<sample>(0.5);
+        C                   c;
+        const std::size_t   n_in = c.frames_needed(400);
+        std::vector<sample> x(n_in, dc);
+        std::vector<sample> y(c.outputs_for(n_in));
+        const std::size_t   made = c.process(x.data(), n_in, y.data());
         ASSERT_GE(made, 400u);
         for (std::size_t n = made - 100; n < made; ++n) {
             if constexpr (std::is_same_v<sample, double>) {
@@ -477,6 +500,12 @@ namespace {
                 EXPECT_EQ(y[n], dc) << n;
             }
         }
+    }
+
+    TYPED_TEST(chain_test, DcGainIsExactlyOne) {
+        using sample = TypeParam;
+        check_dc_gain<basic_chain<sample, 1, down3, ratio3over4, down2>>(); // a mixed ratio's rows at gain 2 in Q15
+        check_dc_gain<down4_down4_down3<sample, 1>>();
     }
 
     TEST(Chain, TwoChannelsAreIndependentAndEqualTheMonoRuns) {

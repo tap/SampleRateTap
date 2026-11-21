@@ -29,14 +29,16 @@ namespace tap::sr::rational {
 
     // ANCHOR: rational_relaxations
     /// The relaxation tables (tools/coverage/matrix.py `pins`, 2026-10-02,
-    /// re-pinned 2026-11-20 with the designer's beta for A + 4 dB, X17;
-    /// verified against the shipping designer by test_design.cpp): for each
+    /// re-pinned 2026-11-20 with the designer's beta for A + 4 dB, X17, and
+    /// regenerated 2026-11-21 with the matrix's selection under X3, which no
+    /// longer uses the divisors 9 and 16; verified against the shipping
+    /// designer by test_design.cpp): for each
     /// named profile, the pinned m per band at every design divisor a chain
     /// of the coverage matrix uses (PLAN.md 3.1). The 1/1 row is the M2
     /// table; a divisor above 1 relaxes the passband (a stage further up a
     /// chain, exact 2^a 3^b within a family); 147/160 is the one stage that
     /// runs below a 48-family r_min, at bridge's rate, tightened.
-    inline constexpr std::array<relaxed_pins, 10> k_super_economy_relaxations = {{
+    inline constexpr std::array<relaxed_pins, 8> k_super_economy_relaxations = {{
         {{147, 160}, {9, 9, 9, 9, 9}},
         {{1, 1}, {8, 8, 8, 7, 7}},
         {{2, 1}, {4, 4, 4, 5, 5}},
@@ -44,11 +46,9 @@ namespace tap::sr::rational {
         {{4, 1}, {4, 4, 3, 4, 4}},
         {{6, 1}, {4, 3, 3, 4, 4}},
         {{8, 1}, {4, 3, 3, 3, 3}},
-        {{9, 1}, {4, 3, 3, 3, 3}},
         {{12, 1}, {3, 3, 3, 3, 3}},
-        {{16, 1}, {3, 3, 3, 3, 3}},
     }};
-    inline constexpr std::array<relaxed_pins, 10> k_economy_relaxations       = {{
+    inline constexpr std::array<relaxed_pins, 8> k_economy_relaxations       = {{
         {{147, 160}, {13, 13, 13, 13, 13}},
         {{1, 1}, {10, 10, 10, 10, 10}},
         {{2, 1}, {5, 4, 4, 5, 5}},
@@ -56,11 +56,9 @@ namespace tap::sr::rational {
         {{4, 1}, {4, 4, 4, 5, 5}},
         {{6, 1}, {4, 3, 3, 4, 4}},
         {{8, 1}, {4, 3, 3, 4, 4}},
-        {{9, 1}, {4, 3, 3, 3, 3}},
         {{12, 1}, {4, 3, 3, 3, 3}},
-        {{16, 1}, {3, 3, 3, 3, 3}},
     }};
-    inline constexpr std::array<relaxed_pins, 10> k_balanced_relaxations      = {{
+    inline constexpr std::array<relaxed_pins, 8> k_balanced_relaxations      = {{
         {{147, 160}, {17, 17, 17, 17, 17}},
         {{1, 1}, {12, 12, 12, 12, 12}},
         {{2, 1}, {5, 5, 5, 5, 5}},
@@ -68,11 +66,9 @@ namespace tap::sr::rational {
         {{4, 1}, {4, 4, 4, 5, 5}},
         {{6, 1}, {4, 3, 3, 4, 4}},
         {{8, 1}, {4, 3, 3, 4, 4}},
-        {{9, 1}, {4, 3, 3, 3, 3}},
         {{12, 1}, {4, 3, 3, 3, 3}},
-        {{16, 1}, {3, 3, 3, 3, 3}},
     }};
-    inline constexpr std::array<relaxed_pins, 10> k_transparent_relaxations   = {{
+    inline constexpr std::array<relaxed_pins, 8> k_transparent_relaxations   = {{
         {{147, 160}, {44, 44, 44, 44, 44}},
         {{1, 1}, {25, 25, 25, 25, 25}},
         {{2, 1}, {9, 8, 8, 8, 8}},
@@ -80,9 +76,7 @@ namespace tap::sr::rational {
         {{4, 1}, {9, 7, 7, 7, 7}},
         {{6, 1}, {9, 7, 5, 7, 7}},
         {{8, 1}, {9, 7, 5, 7, 7}},
-        {{9, 1}, {8, 7, 5, 7, 7}},
         {{12, 1}, {6, 7, 5, 7, 7}},
-        {{16, 1}, {6, 7, 5, 7, 7}},
     }};
     // ANCHOR_END: rational_relaxations
 

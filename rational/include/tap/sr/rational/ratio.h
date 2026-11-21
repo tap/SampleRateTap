@@ -27,10 +27,12 @@
 //   - k_pow2_up / k_pow3_up / k_pow2_down / k_pow3_down: the exponents a
 //     and b of L and M, read by the chain factoring (M4).
 //
-// ratio<4, 1> and ratio<1, 4> are valid ratios (the chain by 4 is named by
-// them) but no single 4th-band stage is shipped for them: a 4 is two
-// half-band stages (R3, decision 6). The stage headers, not this one, say
-// which ratios have a stage.
+// ratio<4, 1> and ratio<1, 4> are valid ratios, and since X-a3 each is one
+// 4th-band stage too (up4 / down4; decision 6 as amended 2026-11-21,
+// docs/X4_X8_PLAN.md X3 and X17): the matrix's chain by 4 stays two
+// half-band stages, cheaper by MACs (R3), and the single stage serves the
+// chains by 8 and above and a caller who wants its lower latency. The stage
+// headers, not this one, say which ratios have a stage.
 
 #pragma once
 
@@ -134,12 +136,14 @@ namespace tap::sr::rational {
 
     /// The single-stage vocabulary of the 48 kHz family (PLAN.md section 1):
     /// the integer factors and the mixed ratios one stage serves, as named
-    /// ratios. by_4 is a ratio the chain by 4 is named by, not a stage (R3,
-    /// decision 6: two half-bands).
+    /// ratios. up4 / down4 are one 4th-band stage each since X-a3 (decision
+    /// 6 as amended, X3); by_4, the chain by 4, stays two half-bands (R3).
     using up2   = ratio<2, 1>;
     using down2 = ratio<1, 2>;
     using up3   = ratio<3, 1>;
     using down3 = ratio<1, 3>;
+    using up4   = ratio<4, 1>;
+    using down4 = ratio<1, 4>;
     using up6   = ratio<6, 1>;
     using down6 = ratio<1, 6>;
     using up8   = ratio<8, 1>;

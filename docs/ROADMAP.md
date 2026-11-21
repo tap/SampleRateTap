@@ -348,6 +348,7 @@ for a consumer. Embedded channel-parallel dots wait for a DSP budget that demand
 The HOA channel-count validation was deferred to the embedded campaign and is a Block B
 item if a 16-channel fixture is on the bench, else it stays deferred. Hypothesis 5 (4-way
 double accumulation) is bit-changing and superseded for N ≥ 4. `pdm` and `varispeed`
-engines, a 4th-band stage and 352.8 kHz wait for a consumer (`PLAN.md`, `rational/PLAN.md`
-R3). The HiFi ISS Xtensa lane stays commented out until a self-hosted runner exists. The
+engines and 352.8 kHz wait for a consumer (`PLAN.md`); the 4th-band stage, which waited
+too, shipped with X-a3 on the matrix's own cost (decision 6 as amended, `rational/PLAN.md`
+R3, `docs/X4_X8_PLAN.md` X3). The HiFi ISS Xtensa lane stays commented out until a self-hosted runner exists. The
 F25 banner template is a TapHouse PR.

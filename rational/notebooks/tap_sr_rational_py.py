@@ -7,7 +7,7 @@ import: the build is incremental, and loading a library left over from an
 older checkout would silently measure old code.
 
     from tap_sr_rational_py import Chain, Stage
-    c = Chain("down3_down8_down2", profile="economy")
+    c = Chain("down4_down4_down3", profile="economy")
     y = c.process(x)                    # float32 in, float32 out
     q = Chain("down2", fmt="q15")       # int16 (Q0.15) in and out; "q31": int32
     s = Stage(2, 1, divisor=(147, 160))  # the up 2 after bridge in 48 -> 88.2
@@ -27,13 +27,20 @@ from fractions import Fraction
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build_capi"
 
-CHAINS = [  # the TAP_SR_RATIONAL_* chain constants, in value order
-    "up2", "down2", "up3", "down3", "ratio3over2", "ratio2over3", "ratio4over3", "ratio3over4",
-    "up2_up2", "up2_up3", "up2_ratio4over3_up3", "up3_ratio8over3", "up2_up6", "up2_up8",
-    "up2_up6_up2", "up2_up8_up2", "up2_up8_up3", "up2_ratio4over3", "ratio3over4_down2",
-    "down2_down2", "down3_down2", "down3_ratio3over4_down2", "ratio3over8_down3", "down6_down2",
-    "down8_down2", "down2_down6_down2", "down2_down8_down2", "down3_down8_down2",
-]
+# The TAP_SR_RATIONAL_* chain constants by name (capi/tap_sr_rational_capi.h):
+# an explicit table, since the values are stable and the retired ones leave
+# gaps (X7 of docs/X4_X8_PLAN.md: 10, 11, 14, 15, 16, 21, 22, 25, 26 and 27
+# are retired in 0.8.0 and never reused).
+CHAINS = {
+    "up2": 0, "down2": 1, "up3": 2, "down3": 3,
+    "ratio3over2": 4, "ratio2over3": 5, "ratio4over3": 6, "ratio3over4": 7,
+    "up2_up2": 8, "up2_up3": 9, "up2_up6": 12, "up2_up8": 13,
+    "up2_ratio4over3": 17, "ratio3over4_down2": 18, "down2_down2": 19, "down3_down2": 20,
+    "down6_down2": 23, "down8_down2": 24,
+    "up2_up4": 28, "up3_up4": 29, "up2_up4_up2": 30, "up2_up3_up4": 31, "up2_up4_up4": 32, "up3_up4_up4": 33,
+    "down4_down2": 34, "down4_down3": 35, "down2_down4_down2": 36, "down4_down3_down2": 37,
+    "down4_down4_down2": 38, "down4_down4_down3": 39,
+}
 PROFILES = {"economy": 0, "transparent": 1, "balanced": 2, "super_economy": 3}
 FORMATS = {"float": 0, "q15": 1, "q31": 2}  # the TAP_SR_RATIONAL_FORMAT_* constants
 
@@ -198,7 +205,7 @@ class Chain(_Converter):
 
     def __init__(self, name, profile="economy", channels=1, fmt="float"):
         super().__init__(
-            _LIB.tap_sr_rational_create_format(CHAINS.index(name), PROFILES[profile], FORMATS[fmt], channels),
+            _LIB.tap_sr_rational_create_format(CHAINS[name], PROFILES[profile], FORMATS[fmt], channels),
             channels,
             fmt,
         )
