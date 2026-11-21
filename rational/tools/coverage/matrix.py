@@ -50,10 +50,12 @@ Usage (from the engine root):
     tools/coverage/matrix.py rows    # writes tests/coverage/matrix_rows.h
     tools/coverage/matrix.py diff    # chains that differ from PLAN.md's tables, per tier
     tools/coverage/matrix.py rule    # rows where the fewest-stages rule overrode the minimum, per tier
+    tools/coverage/matrix.py by      # the chains by 4, 8 and 16: the minimum per (ratio, profile)
 """
 import collections
 import functools
 import heapq
+import itertools
 import pathlib
 import re
 import sys
@@ -217,10 +219,18 @@ def bridge(x, y, prof, rmin):
 
 def lattice_rates(lo, hi):
     out = set()
-    # Intermediate rates: the family's base times 2^a 3^b (b <= 3), the same
-    # relative lattice in both families, so a ratio's chain is the same chain
-    # in either (36 kHz and 33.075 kHz are both r_min * 3 for a 12 / 11.025
-    # kHz r_min; neither is a supported rate, both are stage boundaries).
+    # Intermediate rates: the family's base times 2^a 3^b (b <= 3). Relative
+    # to r_min the two families' lattices differ: a 48-family r_min of 12 kHz
+    # is 1000 * 2^2 * 3, so 1000 * 2^a sits at r_min * 2^(a - 2) / 3 and a
+    # chain may pass a factor of 3^-1 (32 kHz is 12 kHz * 8/3), while the
+    # 44.1 family's base is 11025 itself, so its lattice has no such point
+    # (29.4 kHz, 11.025 kHz * 8/3, is not on it). A ratio's chain can
+    # therefore differ between the families: v0.7's 1/8 was ↓3 · 3/4 · ↓2 at
+    # 96 -> 12 and 3/8 · ↓3 at 88.2 -> 11.025. Since the 4th-band stage
+    # (X-a3) every ratio the two families share runs the same chain at both
+    # tiers (docs/X4_X8_PLAN.md X6). 36 kHz and 33.075 kHz are both r_min * 3
+    # for a 12 / 11.025 kHz r_min: neither is a supported rate, both are
+    # stage boundaries.
     for base in (1000, 11025):
         for a in range(0, 12):
             for b in range(0, 4):
@@ -592,6 +602,92 @@ def diff():
     print("changed rows:", total)
 
 
+# --- the chains by 4, 8 and 16 (docs/X4_X8_PLAN.md 3.1 and section 5) --------
+
+# The single-stage vocabulary as ratios: every stage a chain composes.
+VOCABULARY = [F(L, M) for L, M in ((2, 1), (1, 2), (3, 1), (1, 3), (4, 1), (1, 4), (6, 1), (1, 6), (8, 1), (1, 8),
+                                    (3, 2), (2, 3), (4, 3), (3, 4), (8, 3), (3, 8))]
+# chain.h's aliases' ratios, each with the longest chain the search tries.
+BY_TARGETS = [(F(1, 4), 3), (F(4), 3), (F(1, 8), 3), (F(8), 3), (F(1, 16), 4), (F(16), 4)]
+
+
+def by_space(target, nmax):
+    """Every chain of 1..nmax vocabulary stages whose product is target and
+    whose every intermediate rate lies between the input and output rates:
+    those declare the same chain spec, f_pass = p * r_min, so they are true
+    alternatives (a chain that dips below its output rate has a narrower
+    passband, a different spec)."""
+    lo, hi = min(F(1), target), max(F(1), target)
+    out = []
+    for n in range(1, nmax + 1):
+        for combo in itertools.product(VOCABULARY, repeat=n):
+            r = F(1)
+            ok = True
+            for i, s in enumerate(combo):
+                r *= s
+                if i < n - 1 and not lo <= r <= hi:
+                    ok = False
+                    break
+            if ok and r == target:
+                out.append(combo)
+    return out
+
+
+def by_cost(ratios, prof):
+    """MACs per output and latency in output frames of a chain of stage
+    ratios, its rates relative to its input, each stage at its design divisor
+    over the chain's lowest rate as chain.h builds it: the same in either
+    family, since a chain carries no rate."""
+    rates = [F(1)]
+    for r in ratios:
+        rates.append(rates[-1] * r)
+    rmin, dst = min(rates), rates[-1]
+    macs, lat = F(0), F(0)
+    for u, v in zip(rates, rates[1:]):
+        mo, l = stage(u, v, prof, rmin)[:2]
+        macs += mo * v
+        lat += l * dst / v
+    return macs / dst, lat
+
+
+def by_label(ratios):
+    return " · ".join(f"↑{r.numerator}" if r.denominator == 1 else f"↓{r.denominator}" if r.numerator == 1
+                      else f"{r.numerator}/{r.denominator}" for r in ratios)
+
+
+def by_r3(rows):
+    """R3 over a ratio's chains (decision 2): the fewest stages whose MACs are
+    within 10 % of the minimum, then the fewest MACs, then the least latency.
+    rows: (macs, latency, stages, label)."""
+    least = min(r[0] for r in rows)
+    return min((r for r in rows if r[0] <= least * (1 + FEWER_STAGES_TOL)), key=lambda r: (r[2], r[0], r[1]))
+
+
+def by():
+    """chain.h's down_by4 ... up_by16_transparent: per ratio and profile, the
+    cheapest chain of the space above and R3's choice, the chain an alias
+    names at the profile's tier (the plain alias is R3's choice at economy,
+    run at the three 70 dB profiles; the _transparent one R3's choice at
+    transparent, where it differs). The R3 column at a 70 dB profile other
+    than economy is the chain R3 would pick there, which does not select
+    the row (the tier is selected at economy, X4). MACs per output frame per
+    channel, latency in output frames, both exact."""
+    print("The chains by 4, 8 and 16: the cheapest chain of 1..n vocabulary stages whose intermediate rates lie")
+    print("between the input and output rates, and R3's choice (the fewest stages within 10 % of it). MACs per")
+    print("output frame per channel (latency in output frames), exact; a chain carries no rate, so one table")
+    print("serves both families.")
+    for target, nmax in BY_TARGETS:
+        space = by_space(target, nmax)
+        print(f"\n## {target.numerator}/{target.denominator} (chains of 1..{nmax} stages: {len(space)})")
+        for prof in PROFILES:
+            rows = sorted(((*by_cost(c, prof), len(c), by_label(c)) for c in space),
+                          key=lambda r: (r[0], r[2], r[1]))
+            mn, r3 = rows[0], by_r3(rows)
+            note = "" if r3 is mn else f"; R3 keeps {r3[3]}, +{100 * float(r3[0] / mn[0] - 1):.2f} %"
+            print(f"  {prof:>13}: min {mn[3]} {mn[0]} = {float(mn[0]):.4g} ({mn[1]} = {float(mn[1]):.4g}); "
+                  f"R3 {r3[3]} {r3[0]} ({r3[1]}){note}")
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "md"
-    {"md": md, "pins": pins, "rows": rows_header, "diff": diff, "rule": rule}[cmd]()
+    {"md": md, "pins": pins, "rows": rows_header, "diff": diff, "rule": rule, "by": by}[cmd]()

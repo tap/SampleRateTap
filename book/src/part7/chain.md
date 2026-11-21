@@ -150,13 +150,40 @@ matrix runs at its 70 dB tier, the same in both families since the
 chains, and seven it runs only at its 120 dB tier (`up2_ratio3over2`,
 `up2_up6`, `up2_up8`, `up2_up6_up4` and the mirrors `down6_down2`,
 `down8_down2`, `down4_down6_down2`) — named by their stages in order,
-because the name *is* the chain and a name that said "times 8" would be a
-lookup. A one-stage chain is the converter from the previous chapter.
+because the name *is* the chain. A one-stage chain is the converter from
+the previous chapter.
 These names are the C ABI's enumerators, and they are the only things a
 foreign caller can construct: `TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3`, never
 `(384000, 8000)`. Their values are stable: a chain the matrix stops running
 is retired, its value never reused and refused by `create`, and
 `TAP_SR_RATIONAL_CHAIN_END` is one past the largest value ever assigned.
+
+A name that says "times 8" would be a lookup if it were resolved anywhere
+but here. It is not: the chains by 4, 8 and 16 have a second name, by
+intent, and each is a plain alias of the matrix's chain for its ratio at
+its tier, written out in the header beside the names it repeats:
+
+```cpp
+{{#include ../../../rational/include/tap/sr/rational/chain.h:rational_by_aliases}}
+```
+
+The type is fixed once, in the header, the same chain in both families
+(a chain carries no rate), and nothing dispatches on a factor any more
+than on a rate. `down_by8` is `down4_down2` at every profile; `down_by16`
+is the 70 dB tier's ↓2·↓4·↓2 and `down_by16_transparent` the 120 dB tier's
+↓8·↓2, the one ratio whose tiers choose differently. The suffix names the
+tier a chain is cheapest at, not a profile: `down_by16_transparent` built
+at `economy` is legal and costs 163 MACs per output where `down_by16` costs
+143. The aliases are the cheapest chains by the search the matrix itself
+runs — `matrix.py by` tries every chain of up to three stages (four by 16)
+of the vocabulary whose rates stay between the input's and the output's,
+and `Chain.ByAliasesAreTheCheapestWithinR3` pins what it finds — with one
+honest exception: by 16 the 70 dB tier's chain is selected at `economy`,
+and at `super_economy` and `balanced` ↓4·↓2·↓2 is cheaper (111 against
+139, 147 against 159). `down8` beside `down_by8` is one word apart and a
+different thing: one stage, lower latency, twice the MACs. The C ABI spells
+the aliases the same way, `TAP_SR_RATIONAL_DOWN_BY8` and its kin, each
+defined as its chain's constant: a second name, never a value of its own.
 
 The coverage matrix is the plan's section 3: for every one of the 14 × 13
 ordered pairs, a chain per attenuation tier, its MACs per output at the
@@ -239,6 +266,7 @@ for the cross rows.
 | Each stage at its design divisor | every stage at the chain's full profile | a wide transition is cheap taps; divisors are pinned rows found on the same grid |
 | `bridge` at the lowest k | at the chain's highest rate | `bridge`'s cost per output is fixed, so run it at the lowest rate the passband allows (62 % for 48 → 88.2) |
 | Named chains, no `(in_hz, out_hz)` | a rate-pair factory | the name is the chain; a factory would be the lookup the family forbids |
+| `down_by8` and its kin as plain aliases of the matrix's chains | a metafunction over the matrix; a tier in the type (`down_by8<S, Ch, tier>`) | written out, the alias is the chain and nothing is looked up; a tier parameter would be a second, compile-time profile beside the run-time one |
 | Dipping rows covered and flagged | excluded | every stage meets the rule; the price is printed; the flag dispatches nothing |
 | MACs and latency as `exact_ratio` pins | tolerances | `==` on a rational is a pin a drift cannot hide behind |
 
@@ -259,6 +287,11 @@ ctest --test-dir build -R 'rational\.Matrix\.' --output-on-failure
 # per tier, and `pins` prints design.h's relaxation tables:
 python3 rational/tools/coverage/matrix.py diff
 python3 rational/tools/coverage/matrix.py rule
+
+# The chains by 4, 8 and 16: each alias its rows' chain at its tier in both
+# families, and the cheapest by the search `by` prints (about 2 minutes):
+ctest --test-dir build -R 'rational\.Chain\.ByAliases' --output-on-failure
+python3 rational/tools/coverage/matrix.py by
 
 # Break it on purpose: in design_divisor, return {1, 1} for every q. Every
 # stage is now designed at the full profile — the chains still meet their
