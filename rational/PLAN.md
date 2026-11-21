@@ -26,6 +26,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.14 | 2026-10-08 | The siblings adopt this ABI's shape: `async`'s and `bridge`'s C ABIs carry Q15 and Q31 the same way (`create_format`, `_format`, the `_q15` / `_q31` entry points, hidden visibility, each format pinned bit for bit against the engine's `basic_converter`); the family keeps fixed point at every engine's C boundary rather than moving to a separate uniform ABI |
 | v0.15 | 2026-10-10 | The thirteen streaming ratchet rows re-recorded on all three targets with their reason (section 6: `ratio23_q15_eco` +1.93 % on the M55 is v0.11's stated move, the rest a sub-0.02 % construction-side residue from v0.13's designer and tap/DspTap#57), the first in-band re-record of this engine; `bridge` and `async` re-measure exact on every target |
 | v0.16 | 2026-11-18 | A13b: the channel count is the type's (R17, the family's D18): `basic_stage<S, Ch, R>` over `stage_base<S, R>`, `basic_chain<S, Ch, R...>`, the aliases `converter<Ch, R>` and the named chains count-first, zero channels a compile error; the C ABI one and two channels native and any other count a fan-out of one-channel converters; DspTap pinned at `v0.2.0` (the chain takes its count from its stages). The ratchet re-recorded on every target and the ceilings on the three, with the M55's `ratio23_q15_eco` gated at the midpoint of its two builds (section 6, the A13 record) |
+| v0.20 | 2026-11-21 | X-b (`docs/X4_X8_PLAN.md` X1, X2, X5, X7, section 5, 6.6, and the release): the chains by 4, 8 and 16 named by intent (R19: `down_by4` … `up_by16_transparent` in `chain.h`, plain aliases of the matrix's chains, a `_transparent` twin by 16 alone; their C constants, each its chain's value), the single stages the low-latency spelling (R20), the spelling recorded (R18), `matrix.py by` and the tests that pin the aliases to their rows and to the cheapest chains, `examples/low_band_fft.cpp` and `rational.LowBand.*`, the charter's rates named by ratio (the family's D19, section 1 and 7), and family version 0.8.0; no count or ceiling moved (section 6, the X-b record) |
 | v0.19 | 2026-11-21 | X-a4 (`docs/X4_X8_PLAN.md` X4): a chain per attenuation tier — the 70 dB tier's selected at `economy`, the 120 dB tier's at `transparent` (R3, 3.1); 25 rows split (17 within the families, 8 across), seven chains serve only the 120 dB tier, three of them new (`up2_ratio3over2`, `up2_up6_up4`, `down4_down6_down2`, C values 40 to 42, `CHAIN_END` 43, 33 live values); the generated row format holds both chains, the matrix test, the binding, `matrix.ipynb` and the coverage figure read it; the relaxation tables unchanged; the 6th- and 8th-band designs at divisor 2 at `transparent` bit-pinned; the ratchet's `down8_down2_float_tr` workload (the 1/16 chain at `transparent`), every existing count and ceiling unchanged (section 6, the X-a4 record) |
 | v0.18 | 2026-11-21 | X-a3 (`docs/X4_X8_PLAN.md` X3): decision 6 amended, the 4th-band stage admitted (`up4` / `down4` in `ratio.h`, the C ABI's `create_stage` at 4/1 and 1/4); X-a2's frozen selection removed and R3's restored, 46 rows moved at `economy` (30 within, 16 across; S1), the named chains twelve added and fourteen gone (ten retired under D7, four kept for X-a4), the C ABI's values stable (`CHAIN_END` 40 for the retired `CHAIN_COUNT`, retired values refused), band 4's tables bit-pinned at every matrix divisor, the scipy vectors with a 4th-band stage, the ratchet's `down4_down2_q15_eco`, `callmax_down4_*` and host `down4_*` workloads and the 4th-band probes' ceilings (section 6, the X-a3 record) |
 | v0.17 | 2026-11-20 | X17 (`docs/X4_X8_PLAN.md`, X-a2): the designer's Kaiser β for A + 4 dB, accepted at A + 1 dB as before (`k_design_beta_offset_db`, no DspTap change); x = 4 chosen over 3 on the measured Q15 / Q31 floors and ripple; every pin, relaxation table, Q15 / Q31 table and scipy vector re-pinned, the matrix re-costed with its chains frozen for one PR (R3 suspended until X-a3, 3.1), every ratchet row and the probes' ceilings re-recorded with the reason (section 6, "The designer's β, X17") |
@@ -127,6 +128,9 @@ The boundaries are identity, not policy, as `bridge`'s are
 | R15 | **384 kHz stays** (decision 5): the family plan's 14 rates are settled (`../PLAN.md:100-101`) | Its cost is 16 generated rows, the ↑8 / ↓8 stages already in the vocabulary and the 64 / 128 kHz intermediates; no new stage kind |
 | R16 | **The C ABI exposes the named within-family chains** of 3.3/3.4 as its `chain` enumerators (decision 9; 28 of them on the pinned lengths, v0.7 — the union of the two tables' chain columns) — chains, not rates, and not the single-stage ratios alone. **Every value is stable** (`docs/X4_X8_PLAN.md` X7): since X-a3 a new chain takes a new value (28 to 39), a retired chain's value is never reused and `create` refuses it (10, 11, 14, 15, 16, 21, 22, 25, 26, 27), and `TAP_SR_RATIONAL_CHAIN_END`, one past the largest value ever assigned, replaces the retired `CHAIN_COUNT`; since X-a4 the 120 dB tier's three new chains take 40 to 42 and `CHAIN_END` is 43: 33 live values, the 25 named chains of `chain.h` (seven of them used only at the 120 dB tier, X4) and the eight one-stage chains | D12 at the C boundary: an enumerator names what the caller composes, as `bridge`'s `int direction` does; the binding and the notebook then need no chain arithmetic of their own (4.4) |
 | R17 | **The channel count is the type's** (2026-11-17, the family's A13 and D18): `Ch`, a compile-time constant of at least 1, is `basic_stage<S, Ch, R>`'s and `basic_chain<S, Ch, R...>`'s second template parameter and the aliases' first; the count-independent state and cold code live in `stage_base<S, R>`, built once per format and ratio; `process`, `pull` and `flush` are each the out-of-line block for their count; the C ABI serves one and two channels natively and any other count as a fan-out of one-channel converters | The maintainer's decision that every count is known at compile time; the base keeps an image that runs a type at several counts from paying for its construction code per count (the plan's audit, design-2); the placement is gate 0's option 3, its three rows above the rule accepted (section 6) |
+| R18 | **The spelling** (`docs/X4_X8_PLAN.md` X0, the maintainer's rule, landed as X-a1): a factor joins its word (`up2`, `down8`), a mixed ratio reads as a fraction (`ratio3over4`), and an underscore separates a chain's stages (`down2_down4_down2`); the C ABI's constants are spelled the same way in capitals, every value unchanged (`TAP_SR_RATIONAL_DOWN8_DOWN2`). The old spellings were removed, not aliased (D7), and the vocabulary gate's patterns refuse them (`scripts/retired_words.txt`). The one exception is R19's `_by`, where the underscore marks a name chosen by intent | `down_3_ratio_3_4_down_2` read badly, and one rule spells every name a caller writes, in C++ and C alike; DspTap's `decimate_by_2/3/6` keep their spelling, another repository's vocabulary (X0) |
+| R19 | **The chains by 4, 8 and 16, named by intent** (X1 and X2, X4's twins, X7's constants; X-b): `down_by4<S, Ch>`, `down_by8`, `down_by16` and their `up_by` twins are plain `using`s of the coverage matrix's chain for the ratio at the 70 dB tier (`down2_down2`, `down4_down2`, `down2_down4_down2` and the mirrors), written out in `chain.h` beside the named chains, with no metafunction over the matrix; a `_transparent` twin names the 120 dB tier's chain only where it differs, which is by 16 alone (`down_by16_transparent` = `down8_down2`, `up_by16_transparent` = `up2_up8`). The suffix names the tier a chain is cheapest at, not a profile (A4): every alias runs at every profile, and the profile stays a run-time argument. The C ABI spells them `TAP_SR_RATIONAL_DOWN_BY4` … `_UP_BY16_TRANSPARENT`, each `#define`d as its chain's constant (no new value, no new symbol). Pinned by `Chain.ByAliasesAreTheirMatrixChains` (every within-family row of each ratio, in both families, runs the alias at its tier: `static_assert`s over `tests/coverage/matrix_rows.h`, then MACs and latency against the rows), `Chain.ByAliasesAreTheCheapestWithinR3` (`matrix.py by`'s table, below) and `CApi.ByConstantsAreTheirChainsConstants` | A plain alias fixed once in the header is no lookup: the matrix still dispatches nothing (D12), and the name and the chain cannot drift apart without the test failing. A chain carries no rate (its rates are relative to its input and its divisors to its lowest rate, 3.1), and since X-a3 the two families run the same chains at 4, 8 and 16 (X6), so one family-free alias is the matrix's chain in both. `matrix.py by` searches every chain of one to three stages (four by 16) whose intermediate rates lie between the input and output rates: by 4 and by 8 the alias is R3's choice at every profile (43 and 71 MACs per output at `economy`, 89 and 149 at `transparent`); by 16 the 70 dB tier's chain is the cheapest at `economy` (143, tied with ↓4 · ↓2 · ↓2 at more latency), where X4 selects it, but not at `super_economy` (139 against ↓4 · ↓2 · ↓2's 111) or `balanced` (159 against 147), and the 120 dB tier's ↓8 · ↓2 is R3's keep at `transparent`, 277 against 261 (+6.1 %, fewer stages). A tier template parameter was declined: a second, compile-time profile beside the run-time one |
+| R20 | **The single stages stay the low-latency spelling** (X5, X-b): `down4` / `up4` and `down8` / `up8` are one stage each, beside the aliases; by 16, which has no single stage, `basic_chain<S, Ch, down4, down4>` is. The aliases' docstring states the trade in one line | At `economy` the single stage costs more MACs for less latency: ↓4 61 against 43 MACs per output for 39/4 against 47/4 output frames, ↓8 141 against 71 for 79/8 against 91/8, ↓4 · ↓4 161 against 143 for 171/16 against 189/16; for an FFT frame of 4096 low-rate frames the stages are under 1 % of the latency, so the aliases take the MACs side, and a latency-first caller spells the stage |
 
 ### 2.1 Stage factoring: the arithmetic behind R3
 
@@ -953,6 +957,20 @@ Plus:
   chains have one: the matrix's 1/16 chain there, ↓8 · ↓2 in float at
   `transparent` (`down8_down2_float_tr`), the first workload to run the
   8th-band stage (section 6, the X-a4 record).
+- **The chains by 4, 8 and 16** (R19, X-b): each alias its rows' chain at
+  its tier in both families (`static_assert`s over the generated row
+  table, then MACs and latency against every row's pins), the cheapest
+  chains of `matrix.py by`'s search with R3's keeps and the named
+  competitors measured in C++, and each C constant its chain's value.
+- **The low-band round trip** (`test_low_band.cpp`, X-b; the use case of
+  `docs/X4_X8_PLAN.md` 6.6): down by 4, 8 and 16 through the aliases, a
+  4096-point STFT change at the low rate, the change alone back up and
+  added to the input delayed by T, streamed in blocks within about 1 MB, in
+  float and double at every profile, on every leg: an identity change is
+  the input delayed by T bit for bit, a removal reaches 60 dB at the 70 dB
+  profiles and 100 dB at `transparent` with T and fails with T ± 1, the
+  4096-point frame after ↓16 resolves 200 and 205 Hz, and the other tones
+  stay within 0.01 dB.
 
 ## 6. Milestones
 
@@ -1707,6 +1725,77 @@ That is 0.68, 0.78 and 0.73 of `down2_float_tr`'s count on the same input
 for 0.68 of its MACs (277 per output at 3 kHz against 51 at 24 kHz, per
 channel). The README's icount table is regenerated from the file
 (`scripts/update_icount_docs.py`).
+
+**The chains by 4, 8 and 16, and 0.8.0: X-b (2026-11-21, v0.20).**
+`docs/X4_X8_PLAN.md` section 8, item 6: X1's names as X2's plain aliases,
+X4's surviving twins, X5, X7's alias constants, section 5's tests, 6.6's
+example and its tests, the family's D19, and the release. X2, X5 and the
+plan's X16 (0.8.0's name map opening `../CHANGELOG.md`) were taken on the
+plan's recommendation with the maintainer's go-ahead on X-b. The plan's
+sections 2–5 are this plan's decisions now: the spelling as R18, the
+aliases as R19, the single stages as R20; the 4th-band stage (X3) as
+decision 6 as amended and R3, the chain per tier (X4) as R3 and R16, the
+C ABI's stable values (X7) as R16, the designer's β (X17) as 2.2, 2.3 and
+the record above; X6 needed nothing (R19's rationale).
+
+*The aliases.* As X-a4's rows have them, checked at compile time against
+`tests/coverage/matrix_rows.h`: `down_by4` / `up_by4` are `down2_down2` /
+`up2_up2` (five 48-family rows and three 44.1-family rows each way, both
+tiers), `down_by8` / `up_by8` `down4_down2` / `up2_up4` (three and two,
+both tiers), `down_by16` / `up_by16` `down2_down4_down2` / `up2_up4_up2`
+(two and one, the 70 dB tier) and `down_by16_transparent` /
+`up_by16_transparent` `down8_down2` / `up2_up8` (the 120 dB tier). No ×8
+twin: by 8 the tiers agree. The C ABI's eight `_BY` constants are their
+chains' values; `CHAIN_END` stays 43 and the exported symbols 23.
+
+*`matrix.py by`* (R19's rationale has the table): by 4 and by 8 the alias
+is R3's choice at every profile; by 16 at `economy` ↓2 · ↓4 · ↓2 and
+↓4 · ↓2 · ↓2 tie at 143 MACs per output and the lower latency wins, and at
+`transparent` R3 keeps ↓8 · ↓2 at 277 against ↓4 · ↓2 · ↓2's 261 (+6.13 %):
+that is the ×16 difference R3 keeps on X17's pins, where the plan's
+165 / 157 was v0.7's at `economy`. Not in the plan: by 16 the 70 dB tier's
+chain is not the cheapest at `super_economy` (139 against 111) or
+`balanced` (159 against 147); the tier is selected at `economy` (X4), and
+the docstring and the README say so.
+
+*The round trip* (`examples/low_band_fft.cpp`, `tests/test_low_band.cpp`).
+At `economy` by 16 the chains are ↓2 · ↓4 · ↓2 and ↑2 · ↑4 · ↑2 (6.6
+measured ↓8 · ↓2 and ↑2 · ↑8): T = 16 × 189/16 + 189 = 378 samples
+(7.875 ms, from 414), 17.875 MACs per full-rate sample (from 20.62), 46.7 dB
+of dip between 200 and 205 Hz in the 4096-point frame at 3 kHz (45 read
+from 6.6's bars), and removing 205 Hz leaves −70.27 dB with T (−64.05 in
+6.6, read from a Hann frame's peak rather than a bin of a rectangular DFT)
+and −31.43 dB with T ± 1, 200 Hz and 5 kHz unchanged. The tests remove a
+tone on a bin of the low-rate FFT, so the change takes all of it and the
+residue is the round trip's: worst −66.9 dB at the 70 dB profiles (by 16 at
+`super_economy`) and −119.2 dB at `transparent` (by 16, double), against
+floors of −60 and −100 dB; −31.42 dB with T ± 1 at every factor and
+profile. A tone between bins also leaves the window's tails outside the
+removed bins: the example's 205 Hz is −94.4 dB at `transparent`. Streamed,
+a case holds well under 1 MB even by 16 in double, so no case is excluded
+on the M33 or M55 (6.6 expected the ×16 double cases not to fit): the
+battery runs on every leg, the five tests about 80 s of the M33's one-shot
+run in soft double, 14 s of the M55's.
+
+*Verification* (the CI toolchains as at X-a4). GCC 13 and Clang 18 with
+`-Werror` for the three engines, the C ABIs and the examples on, each with
+and without exceptions and RTTI: 361 of 361 tests in each of the four
+builds (`rational` 152 with the family's, eight of them new), the README
+quick starts among them. clang-tidy 18 clean on the changed translation
+units, clang-format 18 on every changed source, the vocabulary gate clean,
+the icount and ceilings tables of every README fresh. Under emulation,
+`rational`'s battery in both builds: 109 of 109 on the M33 and on the M55
+(their one-shot filters unchanged), 124 of 124 on Hexagon (its exclusions
+unchanged). *The ratchet and the ceilings:* nothing moved. Every count and
+checksum of every engine on every key (M33, M55, Hexagon, host), in both
+builds, equals X-a4's measurement exactly (312 rows; every gate passes),
+and every ceiling figure of the three engines measures as X-a4 left it
+(156 figures, the by-2 probes' 80 B below their record since X-a3, not
+re-recorded); no baseline or ceiling is re-recorded. The aliases add no
+code a workload or probe runs, and the version reaches only the C ABIs'
+version functions. The notebooks that print the family version were
+re-executed (`matrix.ipynb`, `rational_comparison.ipynb`, and `bridge`'s
+two): every text output unchanged but that line.
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2
