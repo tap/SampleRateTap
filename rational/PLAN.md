@@ -26,7 +26,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.14 | 2026-10-08 | The siblings adopt this ABI's shape: `async`'s and `bridge`'s C ABIs carry Q15 and Q31 the same way (`create_format`, `_format`, the `_q15` / `_q31` entry points, hidden visibility, each format pinned bit for bit against the engine's `basic_converter`); the family keeps fixed point at every engine's C boundary rather than moving to a separate uniform ABI |
 | v0.15 | 2026-10-10 | The thirteen streaming ratchet rows re-recorded on all three targets with their reason (section 6: `ratio23_q15_eco` +1.93 % on the M55 is v0.11's stated move, the rest a sub-0.02 % construction-side residue from v0.13's designer and tap/DspTap#57), the first in-band re-record of this engine; `bridge` and `async` re-measure exact on every target |
 | v0.16 | 2026-11-18 | A13b: the channel count is the type's (R17, the family's D18): `basic_stage<S, Ch, R>` over `stage_base<S, R>`, `basic_chain<S, Ch, R...>`, the aliases `converter<Ch, R>` and the named chains count-first, zero channels a compile error; the C ABI one and two channels native and any other count a fan-out of one-channel converters; DspTap pinned at `v0.2.0` (the chain takes its count from its stages). The ratchet re-recorded on every target and the ceilings on the three, with the M55's `ratio23_q15_eco` gated at the midpoint of its two builds (section 6, the A13 record) |
-| v0.19 | 2026-11-21 | X-a4 (`docs/X4_X8_PLAN.md` X4): a chain per attenuation tier — the 70 dB tier's selected at `economy`, the 120 dB tier's at `transparent` (R3, 3.1); 25 rows split (17 within the families, 8 across), seven chains serve only the 120 dB tier, three of them new (`up2_ratio3over2`, `up2_up6_up4`, `down4_down6_down2`, C values 40 to 42, `CHAIN_END` 43, 33 live values); the generated row format holds both chains, the matrix test, the binding, `matrix.ipynb` and the coverage figure read it; the relaxation tables unchanged; the 6th- and 8th-band designs at divisor 2 at `transparent` bit-pinned (section 6, the X-a4 record) |
+| v0.19 | 2026-11-21 | X-a4 (`docs/X4_X8_PLAN.md` X4): a chain per attenuation tier — the 70 dB tier's selected at `economy`, the 120 dB tier's at `transparent` (R3, 3.1); 25 rows split (17 within the families, 8 across), seven chains serve only the 120 dB tier, three of them new (`up2_ratio3over2`, `up2_up6_up4`, `down4_down6_down2`, C values 40 to 42, `CHAIN_END` 43, 33 live values); the generated row format holds both chains, the matrix test, the binding, `matrix.ipynb` and the coverage figure read it; the relaxation tables unchanged; the 6th- and 8th-band designs at divisor 2 at `transparent` bit-pinned; the ratchet's `down8_down2_float_tr` workload (the 1/16 chain at `transparent`), every existing count and ceiling unchanged (section 6, the X-a4 record) |
 | v0.18 | 2026-11-21 | X-a3 (`docs/X4_X8_PLAN.md` X3): decision 6 amended, the 4th-band stage admitted (`up4` / `down4` in `ratio.h`, the C ABI's `create_stage` at 4/1 and 1/4); X-a2's frozen selection removed and R3's restored, 46 rows moved at `economy` (30 within, 16 across; S1), the named chains twelve added and fourteen gone (ten retired under D7, four kept for X-a4), the C ABI's values stable (`CHAIN_END` 40 for the retired `CHAIN_COUNT`, retired values refused), band 4's tables bit-pinned at every matrix divisor, the scipy vectors with a 4th-band stage, the ratchet's `down4_down2_q15_eco`, `callmax_down4_*` and host `down4_*` workloads and the 4th-band probes' ceilings (section 6, the X-a3 record) |
 | v0.17 | 2026-11-20 | X17 (`docs/X4_X8_PLAN.md`, X-a2): the designer's Kaiser β for A + 4 dB, accepted at A + 1 dB as before (`k_design_beta_offset_db`, no DspTap change); x = 4 chosen over 3 on the measured Q15 / Q31 floors and ripple; every pin, relaxation table, Q15 / Q31 table and scipy vector re-pinned, the matrix re-costed with its chains frozen for one PR (R3 suspended until X-a3, 3.1), every ratchet row and the probes' ceilings re-recorded with the reason (section 6, "The designer's β, X17") |
 
@@ -946,7 +946,10 @@ Plus:
   by-8 chain `down4_down2_q15_eco`, the worst single call of the ↓4 stage
   in float and Q15 (`callmax_down4_*`), the host's float ↓4 at 2 and 12
   channels, and a second probe set (↑4 and ↓4) for the size and stack
-  ceilings (section 6, the X-a3 record).
+  ceilings (section 6, the X-a3 record). Since X-a4 the 120 dB tier's own
+  chains have one: the matrix's 1/16 chain there, ↓8 · ↓2 in float at
+  `transparent` (`down8_down2_float_tr`), the first workload to run the
+  8th-band stage (section 6, the X-a4 record).
 
 ## 6. Milestones
 
@@ -1674,14 +1677,33 @@ and −82.6 dB (band 8), the format's floor, short of the 120 dB promise; Q31
 keeps the spec (−122.8 / −122.1 dB). Q15 RMS from double on the reference
 noise: ↑6 −94.2 dBFS, ↓6 −99.1, ↑8 −93.5, ↓8 −99.3; Q31 within 1.6e−9.
 
-*The ratchet and the ceilings.* Nothing moves. X-a4 changes no design
-table, stage or chain that a workload or a probe runs (the new chains and
-their C ABI factories are in neither), so every count and checksum of every
-engine on every key (M33, M55, Hexagon, host), in both builds, is X-a3's
-measurement exactly, with the CI toolchains as at X-a3; every gate passes
-against `bench/baselines.json` as it stands, and every ceiling of the three
-engines measures as X-a3 left it. No baseline or ceiling is re-recorded. No
-workload runs a chain used only at the 120 dB tier.
+*The ratchet and the ceilings.* No existing row moves. X-a4 changes no
+design table, stage or chain that a workload or a probe runs (the new chains
+and their C ABI factories are in neither), so every count and checksum of
+every engine on every key (M33, M55, Hexagon, host), in both builds, is
+X-a3's measurement exactly, with the CI toolchains as at X-a3; every gate
+passes, and every ceiling of the three engines measures as X-a3 left it. No
+existing baseline or ceiling is re-recorded. One workload joins, at the
+maintainer's direction: `down8_down2_float_tr`, the matrix's 1/16 chain at
+its 120 dB tier (↓8 · ↓2 in float at `transparent`), the first workload to
+run a chain only that tier selects and the first to run the 8th-band
+stage, on the M33, M55 and Hexagon (no host row and no `callmax_`
+scenario). Its input is the other float workloads' (2 s of stereo, the
+997 Hz sine drawn at 48 kHz, 32-frame blocks), so its count compares with
+`down2_float_tr`'s on the same stream. Both builds were counted on every
+key and agree within 0.01 %, so the file takes the exceptions build's
+count, as it always has:
+
+| Key | With exceptions | Without exceptions or RTTI | Recorded |
+|---|---:|---:|---:|
+| Cortex-M33 | 538,963,615 | 538,961,776 | 538,963,615 |
+| Cortex-M55 | 31,889,072 | 31,889,156 | 31,889,072 |
+| Hexagon | 104,910,201 | 104,903,330 | 104,910,201 |
+
+That is 0.68, 0.78 and 0.73 of `down2_float_tr`'s count on the same input
+for 0.68 of its MACs (277 per output at 3 kHz against 51 at 24 kHz, per
+channel). The README's icount table is regenerated from the file
+(`scripts/update_icount_docs.py`).
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2

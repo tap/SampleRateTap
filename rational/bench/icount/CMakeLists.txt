@@ -10,7 +10,10 @@
 # mixed ratio 2/3 (48 -> 32 kHz) in float and Q15 at economy joined after
 # M6, when the sparse-row lever was measured on it (PLAN.md section 6); the
 # matrix's by-8 chain (down 4 . down 2) in Q15 joined with X-a3, the first
-# workload to run the 4th-band stage (docs/X4_X8_PLAN.md X3).
+# workload to run the 4th-band stage (docs/X4_X8_PLAN.md X3); the matrix's
+# 1/16 chain at its 120 dB tier (down 8 . down 2) in float at transparent
+# joined with X-a4, the first workload to run a chain only that tier selects
+# and the first to run the 8th-band stage (X4).
 set(_rational_icount_scenarios
     up2_float_eco:0
     down2_float_eco:1
@@ -26,7 +29,8 @@ set(_rational_icount_scenarios
     construct_q15_eco:11
     ratio23_float_eco:12
     ratio23_q15_eco:13
-    down4_down2_q15_eco:14)
+    down4_down2_q15_eco:14
+    down8_down2_float_tr:15)
 
 foreach(_sc IN LISTS _rational_icount_scenarios)
     string(REPLACE ":" ";" _parts "${_sc}")

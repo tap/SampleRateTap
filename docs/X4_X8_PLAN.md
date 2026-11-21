@@ -663,11 +663,16 @@ inside 0.8.0, sized first by X-0 and, after the re-tune, by X-a2.
     only in its timestamp, so the committed SVG stays.
   - The scipy vectors are not regenerated: `make_reference_vectors.py`'s chains are a fixed
     list at `economy`, independent of the selection.
-  - **The ratchet and the ceilings:** nothing moves. No workload or probe runs a table,
-    stage or chain X-a4 changes, so every count and checksum of every engine on every key,
-    in both builds, equals X-a3's measurement, and every ceiling too; no baseline or ceiling
-    is re-recorded. No workload runs a chain used only at `transparent` (one is proposed to
-    the maintainer, not added).
+  - **The ratchet and the ceilings:** no existing row moves. No workload or probe runs a
+    table, stage or chain X-a4 changes, so every count and checksum of every engine on every
+    key, in both builds, equals X-a3's measurement, and every ceiling too; no existing
+    baseline or ceiling is re-recorded. One workload joins at the maintainer's direction,
+    `down8_down2_float_tr` (the 1/16 chain at `transparent`, ↓8 · ↓2 in float, the first
+    to run a `transparent`-only chain and the 8th-band stage), on the M33, M55 and Hexagon,
+    on the other float workloads' input: 538,963,615 / 31,889,072 / 104,910,201
+    instructions, the exceptions build's counts (the build without exceptions or RTTI
+    within 0.01 % on each key), 0.68 / 0.78 / 0.73 of `down2_float_tr`'s for 0.68 of its
+    MACs.
 
 The record of the question, as it stood before v5:
 
@@ -1099,8 +1104,9 @@ version comes with the scaffold (X10), which replaces its hand-written delay and
    to X3 and X4"). *Its counts (measured):* the same, exactly: 25 rows split (17 within, 8
    across), 0 at `economy`; 3 chains added (40 to 42), `CHAIN_END` 43, 33 live values; the
    relaxation tables unchanged (`transparent`'s pins with them, against X4's expectation);
-   the 6th- and 8th-band designs at divisor 2 at `transparent` bit-pinned; no count,
-   checksum or ceiling moved (X4, "X-a4, as it landed").
+   the 6th- and 8th-band designs at divisor 2 at `transparent` bit-pinned; a new ratchet
+   row, `down8_down2_float_tr` (the 1/16 chain at `transparent`, the maintainer's), and
+   no existing count, checksum or ceiling moved (X4, "X-a4, as it landed").
 6. **X-b, the aliases and the release:** X1, X2, X4's `_transparent` aliases where any
    survive the re-tune, X5, X7's alias constants and X8, with section 5's tests, the `matrix.py:203-206` comment fixed, 6.6's
    example and its tests, and D19. It bumps SampleRateTap to 0.8.0 (D13: the three umbrella
