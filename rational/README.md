@@ -15,8 +15,8 @@ and the stage composition landed there first, with the float/Q15/Q31
 sample-format traits, the dot kernels and the row-sum quantization).
 
 > **Status: M6 of [PLAN.md](PLAN.md) section 6, the plan complete.** The single stages ship
-> for every ratio of the vocabulary — ↑2, ↓2, ↑3, ↓3, ↑6, ↓6, ↑8, ↓8 and the
-> mixed 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 — as `converter<Ch, ratio<L, M>>` (float,
+> for every ratio of the vocabulary — ↑2, ↓2, ↑3, ↓3, ↑4, ↓4, ↑6, ↓6, ↑8, ↓8
+> and the mixed 3/2, 2/3, 4/3, 3/4, 8/3, 3/8 — as `converter<Ch, ratio<L, M>>` (float,
 > the golden model pinned sample-for-sample against committed scipy
 > `upfirdn` vectors), `converter_q15` and `converter_q31`, with the family's
 > call shapes: `process`, `pull`, exact `outputs_for` / `frames_needed`,
@@ -28,7 +28,7 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > so the half-band decimator costs 21 MACs per output of its 39 taps and an
 > interpolator's centre phase is a copy. The chains ship too (`chain.h`):
 > `basic_chain<S, Ch, R...>` runs stages in sequence with each stage designed at
-> its own rate, and the 20 named multi-stage chains of the 14 × 14 coverage
+> its own rate, and the 22 named multi-stage chains of the 14 × 14 coverage
 > matrix (PLAN.md section 3), pinned row by row by `tests/test_matrix.cpp`.
 > The fixed-point profiles are measured per stage (`tests/test_fixed_point.cpp`,
 > PLAN.md section 6): exact-unity rows and full-scale DC in Q15 and Q31,
@@ -62,9 +62,9 @@ down.flush(tail.data());                                 // end of stream
 converter<1, ratio2over3> to_32k;          // 48 -> 32 kHz: one mixed stage, 29.5 MACs per output
 auto lat = to_32k.latency_output_frames(); // exact: {29, 3} output frames = 29 / 3
 
-down3_down8_down2<float, 1> to_8k;         // 384 -> 8 kHz: the matrix's 1/48 chain, 371 MACs per output
-// each stage designed at its own rate: divisors 16, 2, 1 of the chain's lowest rate (PLAN.md 3.1)
-static_assert(to_8k.k_divisors[0] == tap::dsp::exact_ratio{16, 1});
+down4_down4_down3<float, 1> to_8k;         // 384 -> 8 kHz: the matrix's 1/48 chain, 344 MACs per output
+// each stage designed at its own rate: divisors 12, 3, 1 of the chain's lowest rate (PLAN.md 3.1)
+static_assert(to_8k.k_divisors[0] == tap::dsp::exact_ratio{12, 1});
 chain<2, up2, ratio4over3> to_32k_from_12k; // 12 -> 32 kHz: 8/3 as the matrix factors it, stereo
 ```
 
@@ -110,8 +110,11 @@ chain's `validate` are the same verdict as a `noexcept` `const char*` reason
   largest 2^a · 3^b at or below it; `profile::relaxed`, the pinned
   relaxation tables of `design.h`); `chain<Ch, R...>` / `chain_q15` /
   `chain_q31`; `macs_per_output_exact()` the MACs per output as a reduced rational and
-  `macs_per_output()` its double; and the 20 named multi-stage
-  chains of the coverage matrix (`up2_up2<S, Ch>` … `down3_down8_down2<S, Ch>`).
+  `macs_per_output()` its double; and the 22 named multi-stage
+  chains of the coverage matrix (`up2_up2<S, Ch>` … `down4_down4_down3<S, Ch>`;
+  four of them, `up2_up6`, `up2_up8`, `down6_down2` and `down8_down2`, run
+  no row at `economy` since the 4th-band stage was admitted and are kept for
+  the per-tier matrix, which selects them at `transparent`).
 - `rational.h` — the umbrella and `TAP_SR_VERSION_*` (0.7.0 since A13; 0.6.0 from the audit response, 0.5.0 from M6);
   the named ratios of the vocabulary (`up2` … `ratio3over8`) are `ratio.h`'s.
 
@@ -136,7 +139,9 @@ the family index: [docs/COMPARISON.md](../docs/COMPARISON.md) at the root).
   names the stages; there is no `(in_hz, out_hz)` lookup anywhere. The
   plan's coverage matrix documents chains and dispatches nothing.
 - **Speed-first.** The ratio is a compile-time type; the stage factoring
-  is chosen by MACs (↑4 is two half-bands); the default `economy` profile
+  is chosen by MACs (↑4 is two half-bands, and since 0.8.0 a 4th-band stage
+  sits at the high-rate end of every chain by 8 and above, where it is the
+  cheapest); the default `economy` profile
   takes the speed side of every inaudible trade, with a 120 dB
   `transparent` profile behind the same design path.
 
@@ -208,11 +213,15 @@ profile, format, channels)` with `TAP_SR_RATIONAL_FORMAT_Q15` / `_Q31`, in the
 fixed-point profiles (`tap_sr_rational_process_q15` / `_q31` and the matching
 flush; a call in another format than the converter's returns 0 and touches
 nothing — the shape the siblings' ABIs share). `tap_sr_rational_create(chain, profile, channels)` takes
-one of the 28 named within-family chains of the coverage matrix as a
-constant (`TAP_SR_RATIONAL_UP2` … `TAP_SR_RATIONAL_DOWN3_DOWN8_DOWN2`),
-never a rate; `tap_sr_rational_create_stage(L, M, profile, divisor_num,
-divisor_den, channels)` is one stage of the vocabulary at a stated design
-divisor, what a chain through `bridge` composes. Each converter reports its
+one of the 30 named within-family chains of the coverage matrix as a
+constant (`TAP_SR_RATIONAL_UP2` … `TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3`),
+never a rate. The values are stable: a retired chain's value is never
+reused and `create` refuses it (ten were retired in 0.8.0, listed in the
+header), so the live values run from 0 to 39 with gaps and
+`TAP_SR_RATIONAL_CHAIN_END` (40), one past the largest value ever assigned,
+bounds them. `tap_sr_rational_create_stage(L, M, profile, divisor_num,
+divisor_den, channels)` is one stage of the vocabulary, any of its sixteen
+ratios, at a stated design divisor, what a chain through `bridge` composes. Each converter reports its
 exact accounting, its latency and its MACs per output as exact rationals,
 per-stage design lengths, and the bit-packed family version
 (`tap_sr_rational_version()`). The C ABI takes the channel count at run time,
@@ -229,11 +238,13 @@ ctypes binding the notebook measures the shipping C++ through
 
 Every push runs this engine's emulation-sized battery on **Cortex-M33**
 (QEMU mps2-an505), **Cortex-M55** (mps3-an547) and **Hexagon**
-(qemu-hexagon, static musl), and gates fourteen fixed workloads — the by-2
+(qemu-hexagon, static musl), and gates fifteen fixed workloads — the by-2
 and by-3 stages both ways in float and Q15 at `economy`, the Q15 by-4
-chain, the by-2 pair in float at `transparent`, the 2/3 stage in float and
+chain and the Q15 by-8 chain (↓4 · ↓2, the 4th-band stage's, since 0.8.0),
+the by-2 pair in float at `transparent`, the 2/3 stage in float and
 Q15, and the Q15 by-4 chain's construction with its input fixture (its
 stream removed, so the chain's row minus it is the streaming loop alone) —
+and the worst single call of the ↑2, ↓2 and ↓4 stages in float and Q15,
 against committed per-target instruction counts (`bench/baselines.json`,
 two-sided ±3 %), measured by the family's shared harness from the
 repository root:
@@ -268,6 +279,8 @@ Executed instructions per fixed workload (`rational/bench/icount/`), measured un
 |---|---:|---:|---:|
 | `callmax_down2_float` | 107,977 | 7,605 | 21,543 |
 | `callmax_down2_q15` | 6,685 | 5,624 | 3,763 |
+| `callmax_down4_float` | 155,453 | 9,708 | 30,609 |
+| `callmax_down4_q15` | 8,101 | 6,241 | 5,603 |
 | `callmax_up2_float` | 210,879 | 12,524 | 40,873 |
 | `callmax_up2_q15` | 11,488 | 9,212 | 5,880 |
 | `construct_q15_eco` | 26,681,136 | 1,560,152 | 8,303,115 |
@@ -277,6 +290,7 @@ Executed instructions per fixed workload (`rational/bench/icount/`), measured un
 | `down2_q15_eco` | 45,602,994 | 16,879,879 | 16,905,026 |
 | `down3_float_eco` | 434,872,408 | 27,445,097 | 82,591,396 |
 | `down3_q15_eco` | 48,745,572 | 17,640,706 | 18,300,152 |
+| `down4_down2_q15_eco` | 47,659,519 | 18,466,975 | 16,790,347 |
 | `ratio23_float_eco` | 538,739,305 | 30,545,005 | 115,766,432 |
 | `ratio23_q15_eco` | 48,128,267 | 14,726,186 | 19,232,880 |
 | `up2_float_eco` | 650,842,262 | 38,707,334 | 123,990,515 |
@@ -291,6 +305,8 @@ On the host, the float converter in 128-frame blocks at 2 and 12 channels (`rati
 |---|---:|
 | `down2_float_12ch` | 146,817,769 |
 | `down2_float_2ch` | 26,912,629 |
+| `down4_float_12ch` | 194,807,923 |
+| `down4_float_2ch` | 34,142,581 |
 | `up2_float_12ch` | 256,387,855 |
 | `up2_float_2ch` | 48,551,143 |
 <!-- ICOUNT:END -->
@@ -321,6 +337,8 @@ which C++ leaves unspecified, so the test reports it and does not pin it. Stages
 | `down2` | 39 | 1,632 | 1,944 | 816 | 1,128 | 1,632 | 1,944 |
 | `up3` | 59 | 1,040 | 1,512 | 520 | 992 | 1,040 | 1,512 |
 | `down3` | 59 | 2,384 | 2,856 | 1,192 | 1,664 | 2,384 | 2,856 |
+| `up4` | 79 | 1,120 | 1,752 | 560 | 1,192 | 1,120 | 1,752 |
+| `down4` | 79 | 3,136 | 3,768 | 1,568 | 2,200 | 3,136 | 3,768 |
 | `up6` | 119 | 1,280 | 2,232 | 640 | 1,592 | 1,280 | 2,232 |
 | `down6` | 119 | 4,640 | 5,592 | 2,320 | 3,272 | 4,640 | 5,592 |
 | `up8` | 159 | 1,440 | 2,712 | 720 | 1,992 | 1,440 | 2,712 |
@@ -335,13 +353,14 @@ which C++ leaves unspecified, so the test reports it and does not pin it. Stages
 Across the profiles a stage grows with its pins: `up2` f32 stereo holds 896 / 960 /
 1,024 / 1,440 bytes at `super_economy` / `economy` / `balanced` / `transparent`, and
 `down2` 1,536 / 1,632 / 1,728 / 2,352. The named chains hold 3.3 KB (`up2_up2`,
-`up2_up3`) to 12.6 KB (`up2_up8_up3`) at `economy`, f32 stereo, and up to 13.5 KB at
-`transparent` (the pins of the designer's β for A + 4 dB, X17).
+`up2_up3`) to 10.9 KB (`up3_up4_up4`) at `economy`, f32 stereo, and up to 11.8 KB at
+`transparent` (the pins of the designer's β for A + 4 dB, X17; the chains since the
+4th-band stage, 0.8.0).
 
 The figures are bytes, and the formula has no pointer-sized term (the history is one
 allocation since the roadmap's A12; before it, each channel's each line was a vector of
 its own, `P ch sizeof(std::vector)` more), so a 32-bit target holds the same.
-`tests/test_footprint.cpp` pins the stage formulas, held and peak, for all 14 ratios
+`tests/test_footprint.cpp` pins the stage formulas, held and peak, for all 16 ratios
 of the vocabulary, every profile and format, and every named chain's held bytes,
 against DspTap's heap meter (`tap/dsp/analysis/heap_meter.h`) exactly, on the hosted legs
 (not under ASan or TSan, whose runtime owns the allocator) and on Hexagon (32-bit), and checks that processing allocates nothing. On Windows x64 the allocator asks for more than the formula: MSVC's `std::allocator` pads every
@@ -354,7 +373,9 @@ The code a deployment links and the stack each call needs are gated beside the
 instruction counts, by `scripts/ceilings.py` against `bench/ceilings.json`, on one
 probe per format (`bench/icount/probe_main.cpp`): the by-2 pair at the default
 profile, stereo, an `up2` stage and a `down2` stage each streaming 32-frame blocks
-through `process()` (the `up` and `down` calls), built Release in the ratchet's tree.
+through `process()` (the `up` and `down` calls), built Release in the ratchet's tree;
+and, since 0.8.0, a second probe per format the same way for the 4th-band pair, an
+`up4` and a `down4` stage (the rows marked "by 4").
 
 - **Engine `.text` and `.rodata`** are the probe's own translation unit, from its
   link map: the two stages as instantiated.
@@ -378,21 +399,36 @@ same PR, with the reason.
 | m33 | f32 | 9,288 | 9,600 | 1,050 | 1,088 | 43,849 | 45,184 |
 | m33 | q15 | 10,776 | 11,136 | 1,050 | 1,088 | 45,545 | 46,912 |
 | m33 | q31 | 10,492 | 10,816 | 1,050 | 1,088 | 45,249 | 46,656 |
+| m33 | f32 (by 4) | 9,308 | 9,600 | 978 | 1,024 | 43,785 | 45,120 |
+| m33 | q15 (by 4) | 10,836 | 11,200 | 978 | 1,024 | 45,529 | 46,912 |
+| m33 | q31 (by 4) | 10,512 | 10,880 | 978 | 1,024 | 45,209 | 46,592 |
 | m55 | f32 | 8,084 | 8,384 | 1,050 | 1,088 | 43,857 | 45,184 |
 | m55 | q15 | 9,480 | 9,792 | 1,050 | 1,088 | 45,561 | 46,976 |
 | m55 | q31 | 9,260 | 9,600 | 1,050 | 1,088 | 45,345 | 46,720 |
+| m55 | f32 (by 4) | 8,036 | 8,320 | 978 | 1,024 | 43,737 | 45,056 |
+| m55 | q15 (by 4) | 9,524 | 9,856 | 978 | 1,024 | 45,537 | 46,912 |
+| m55 | q31 (by 4) | 9,276 | 9,600 | 978 | 1,024 | 45,289 | 46,656 |
 | hexagon | f32 | 19,700 | 20,352 | 428 | 448 | 297,048 | 305,984 |
 | hexagon | q15 | 22,008 | 22,720 | 428 | 448 | 299,992 | 308,992 |
 | hexagon | q31 | 20,888 | 21,568 | 428 | 448 | 298,904 | 307,904 |
+| hexagon | f32 (by 4) | 22,356 | 23,040 | 356 | 384 | 299,664 | 308,672 |
+| hexagon | q15 (by 4) | 26,068 | 26,880 | 356 | 384 | 303,984 | 313,152 |
+| hexagon | q31 (by 4) | 23,952 | 24,704 | 356 | 384 | 301,904 | 310,976 |
 
 | M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|
 | `up` | f32 | 160 | 168 | 160 | 168 |
 | `up` | q15 | 144 | 152 | 128 | 136 |
 | `up` | q31 | 144 | 152 | 144 | 152 |
+| `up` | f32 (by 4) | 160 | 168 | 160 | 168 |
+| `up` | q15 (by 4) | 144 | 152 | 128 | 136 |
+| `up` | q31 (by 4) | 144 | 152 | 144 | 152 |
 | `down` | f32 | 184 | 192 | 184 | 192 |
 | `down` | q15 | 184 | 192 | 164 | 176 |
 | `down` | q31 | 160 | 168 | 160 | 168 |
+| `down` | f32 (by 4) | 200 | 208 | 200 | 208 |
+| `down` | q15 (by 4) | 208 | 216 | 188 | 200 |
+| `down` | q31 (by 4) | 184 | 192 | 184 | 192 |
 <!-- ceilings:end -->
 
 ## Non-finite input and denormals
@@ -401,7 +437,7 @@ A NaN or ±Inf input sample corrupts only the outputs whose windows, stage by st
 its own channel, and every output after them is bit-identical to a chain's that never saw it,
 because each stage is a pure FIR with nothing computed from a sample's value
 (`non_finite_test.*`, `tests/test_non_finite.cpp`, in float and double: a 24-frame burst reaches
-114 outputs through ↑3, 33 through ↓2 and 401 through the 8/1 chain). The float datapath accumulates in double, where every float denormal is a normal number, so no
+110 outputs through ↑3, 31 through ↓2 and 343 through the 8/1 chain, ↑2 · ↑4). The float datapath accumulates in double, where every float denormal is a normal number, so no
 denormal arises inside a dot product; the output, rounded back to float, may carry denormals onward
 (a decaying tail, a denormal input passed through), and the converter does not flush them. Q15 and Q31
 have neither.

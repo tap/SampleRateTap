@@ -201,6 +201,7 @@ namespace {
         check_ties_round_half_up<TypeParam, up3>(profile::economy());
         check_ties_round_half_up<TypeParam, ratio3over2>(profile::economy());
         check_ties_round_half_up<TypeParam, down2>(profile::economy());       // Q15: divided by 2
+        check_ties_round_half_up<TypeParam, down4>(profile::economy());       // Q15: divided by 4
         check_ties_round_half_up<TypeParam, down8>(profile::economy());       // Q15: divided by 8
         check_ties_round_half_up<TypeParam, ratio2over3>(profile::economy()); // Q15: rows at gain 2
         check_ties_round_half_up<TypeParam, ratio3over8>(profile::economy()); // Q15: rows at gain 4
@@ -212,6 +213,8 @@ namespace {
         check_impulse_reproduces_table<TypeParam, down2>(profile::economy());
         check_impulse_reproduces_table<TypeParam, up3>(profile::economy());
         check_impulse_reproduces_table<TypeParam, down3>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, up4>(profile::economy());
+        check_impulse_reproduces_table<TypeParam, down4>(profile::economy());
         check_impulse_reproduces_table<TypeParam, up6>(profile::economy());
         check_impulse_reproduces_table<TypeParam, down6>(profile::economy());
         check_impulse_reproduces_table<TypeParam, up8>(profile::economy());
@@ -317,6 +320,8 @@ namespace {
         check_matches_scipy<sample, down2>(rational_ref::k_down2, profile::economy());
         check_matches_scipy<sample, up3>(rational_ref::k_up3, profile::economy());
         check_matches_scipy<sample, down3>(rational_ref::k_down3, profile::economy());
+        check_matches_scipy<sample, up4>(rational_ref::k_up4, profile::economy());
+        check_matches_scipy<sample, down4>(rational_ref::k_down4, profile::economy());
         check_matches_scipy<sample, up6>(rational_ref::k_up6, profile::economy());
         check_matches_scipy<sample, down6>(rational_ref::k_down6, profile::economy());
         check_matches_scipy<sample, up8>(rational_ref::k_up8, profile::economy());
@@ -437,6 +442,8 @@ namespace {
         check_accounting_from_every_position<down2>();
         check_accounting_from_every_position<up3>();
         check_accounting_from_every_position<down3>();
+        check_accounting_from_every_position<up4>();
+        check_accounting_from_every_position<down4>();
         check_accounting_from_every_position<down8>();
         check_accounting_from_every_position<ratio3over2>();
         check_accounting_from_every_position<ratio2over3>();
@@ -569,6 +576,7 @@ namespace {
         check_reset_reproduces<sample, ratio3over4>(x);
         check_reset_reproduces<sample, down3>(x);
         check_reset_reproduces<sample, down8>(x);
+        check_reset_reproduces<sample, down4>(x);
     }
 
     // ------------------------------------------------------------------
@@ -656,6 +664,8 @@ namespace {
         check_latency_by_impulse<down2>();
         check_latency_by_impulse<up3>();
         check_latency_by_impulse<down3>();
+        check_latency_by_impulse<up4>();
+        check_latency_by_impulse<down4>();
         check_latency_by_impulse<up8>();
         check_latency_by_impulse<down8>();
         check_latency_by_impulse<ratio3over2>();
@@ -715,6 +725,11 @@ namespace {
         EXPECT_DOUBLE_EQ(d2.macs_per_output(), 21.0); // of 39 taps: the half-band's half
         converter<1, down3> d3;
         EXPECT_EQ(d3.macs_per_superblock(), 41u); // 2 m (M - 1) + 1
+        converter<1, up4> u4;
+        EXPECT_EQ(u4.macs_per_superblock(), 61u); // 2 * 10 * 3 + 1, of 79 taps
+        EXPECT_DOUBLE_EQ(u4.macs_per_output(), 15.25);
+        converter<1, down4> d4;
+        EXPECT_EQ(d4.macs_per_superblock(), 61u);
         converter<1, up8> u8;
         EXPECT_EQ(u8.macs_per_superblock(), 141u); // 2 * 10 * 7 + 1
         converter<1, down8> d8;

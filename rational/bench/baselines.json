@@ -2,6 +2,8 @@
   "hexagon": {
     "callmax_down2_float": 21543,
     "callmax_down2_q15": 3763,
+    "callmax_down4_float": 30609,
+    "callmax_down4_q15": 5603,
     "callmax_up2_float": 40873,
     "callmax_up2_q15": 5880,
     "construct_q15_eco": 8303115,
@@ -11,6 +13,7 @@
     "down2_q15_eco": 16905026,
     "down3_float_eco": 82591396,
     "down3_q15_eco": 18300152,
+    "down4_down2_q15_eco": 16790347,
     "ratio23_float_eco": 115766432,
     "ratio23_q15_eco": 19232880,
     "up2_float_eco": 123990515,
@@ -22,12 +25,16 @@
   "host": {
     "down2_float_12ch": 146817769,
     "down2_float_2ch": 26912629,
+    "down4_float_12ch": 194807923,
+    "down4_float_2ch": 34142581,
     "up2_float_12ch": 256387855,
     "up2_float_2ch": 48551143
   },
   "m33": {
     "callmax_down2_float": 107977,
     "callmax_down2_q15": 6685,
+    "callmax_down4_float": 155453,
+    "callmax_down4_q15": 8101,
     "callmax_up2_float": 210879,
     "callmax_up2_q15": 11488,
     "construct_q15_eco": 26681136,
@@ -37,6 +44,7 @@
     "down2_q15_eco": 45602994,
     "down3_float_eco": 434872408,
     "down3_q15_eco": 48745572,
+    "down4_down2_q15_eco": 47659519,
     "ratio23_float_eco": 538739305,
     "ratio23_q15_eco": 48128267,
     "up2_float_eco": 650842262,
@@ -48,6 +56,8 @@
   "m55": {
     "callmax_down2_float": 7605,
     "callmax_down2_q15": 5624,
+    "callmax_down4_float": 9708,
+    "callmax_down4_q15": 6241,
     "callmax_up2_float": 12524,
     "callmax_up2_q15": 9212,
     "construct_q15_eco": 1560152,
@@ -57,6 +67,7 @@
     "down2_q15_eco": 16879879,
     "down3_float_eco": 27445097,
     "down3_q15_eco": 17640706,
+    "down4_down2_q15_eco": 18466975,
     "ratio23_float_eco": 30545005,
     "ratio23_q15_eco": 14726186,
     "up2_float_eco": 38707334,

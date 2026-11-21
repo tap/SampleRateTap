@@ -9,9 +9,11 @@
 // at the same divisor; invalid arguments return NULL; and the version probe
 // pins the family encoding (D13). Links the shipped shared library, so it
 // exists wherever TAP_SR_BUILD_CAPI builds one.
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 #include <type_traits>
 #include <vector>
@@ -164,25 +166,95 @@ namespace {
         expect_named<ratio3over4>(TAP_SR_RATIONAL_RATIO3OVER4, "ratio3over4");
         expect_named<up2, up2>(TAP_SR_RATIONAL_UP2_UP2, "up2_up2");
         expect_named<up2, up3>(TAP_SR_RATIONAL_UP2_UP3, "up2_up3");
-        expect_named<up2, ratio4over3, up3>(TAP_SR_RATIONAL_UP2_RATIO4OVER3_UP3, "up2_ratio4over3_up3");
-        expect_named<up3, ratio8over3>(TAP_SR_RATIONAL_UP3_RATIO8OVER3, "up3_ratio8over3");
         expect_named<up2, up6>(TAP_SR_RATIONAL_UP2_UP6, "up2_up6");
         expect_named<up2, up8>(TAP_SR_RATIONAL_UP2_UP8, "up2_up8");
-        expect_named<up2, up6, up2>(TAP_SR_RATIONAL_UP2_UP6_UP2, "up2_up6_up2");
-        expect_named<up2, up8, up2>(TAP_SR_RATIONAL_UP2_UP8_UP2, "up2_up8_up2");
-        expect_named<up2, up8, up3>(TAP_SR_RATIONAL_UP2_UP8_UP3, "up2_up8_up3");
         expect_named<up2, ratio4over3>(TAP_SR_RATIONAL_UP2_RATIO4OVER3, "up2_ratio4over3");
         expect_named<ratio3over4, down2>(TAP_SR_RATIONAL_RATIO3OVER4_DOWN2, "ratio3over4_down2");
         expect_named<down2, down2>(TAP_SR_RATIONAL_DOWN2_DOWN2, "down2_down2");
         expect_named<down3, down2>(TAP_SR_RATIONAL_DOWN3_DOWN2, "down3_down2");
-        expect_named<down3, ratio3over4, down2>(TAP_SR_RATIONAL_DOWN3_RATIO3OVER4_DOWN2, "down3_ratio3over4_down2");
-        expect_named<ratio3over8, down3>(TAP_SR_RATIONAL_RATIO3OVER8_DOWN3, "ratio3over8_down3");
         expect_named<down6, down2>(TAP_SR_RATIONAL_DOWN6_DOWN2, "down6_down2");
         expect_named<down8, down2>(TAP_SR_RATIONAL_DOWN8_DOWN2, "down8_down2");
-        expect_named<down2, down6, down2>(TAP_SR_RATIONAL_DOWN2_DOWN6_DOWN2, "down2_down6_down2");
-        expect_named<down2, down8, down2>(TAP_SR_RATIONAL_DOWN2_DOWN8_DOWN2, "down2_down8_down2");
-        expect_named<down3, down8, down2>(TAP_SR_RATIONAL_DOWN3_DOWN8_DOWN2, "down3_down8_down2");
-        EXPECT_EQ(TAP_SR_RATIONAL_CHAIN_COUNT, 28);
+        expect_named<up2, up4>(TAP_SR_RATIONAL_UP2_UP4, "up2_up4");
+        expect_named<up3, up4>(TAP_SR_RATIONAL_UP3_UP4, "up3_up4");
+        expect_named<up2, up4, up2>(TAP_SR_RATIONAL_UP2_UP4_UP2, "up2_up4_up2");
+        expect_named<up2, up3, up4>(TAP_SR_RATIONAL_UP2_UP3_UP4, "up2_up3_up4");
+        expect_named<up2, up4, up4>(TAP_SR_RATIONAL_UP2_UP4_UP4, "up2_up4_up4");
+        expect_named<up3, up4, up4>(TAP_SR_RATIONAL_UP3_UP4_UP4, "up3_up4_up4");
+        expect_named<down4, down2>(TAP_SR_RATIONAL_DOWN4_DOWN2, "down4_down2");
+        expect_named<down4, down3>(TAP_SR_RATIONAL_DOWN4_DOWN3, "down4_down3");
+        expect_named<down2, down4, down2>(TAP_SR_RATIONAL_DOWN2_DOWN4_DOWN2, "down2_down4_down2");
+        expect_named<down4, down3, down2>(TAP_SR_RATIONAL_DOWN4_DOWN3_DOWN2, "down4_down3_down2");
+        expect_named<down4, down4, down2>(TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN2, "down4_down4_down2");
+        expect_named<down4, down4, down3>(TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3, "down4_down4_down3");
+    }
+
+    // The values are stable (X7 of docs/X4_X8_PLAN.md): a retired chain's
+    // value is never reused and create refuses it, CHAIN_END is one past the
+    // largest value ever assigned, and every other value below it is a live
+    // chain that constructs in every format.
+    constexpr int k_retired_chains[] = {10, 11, 14, 15, 16, 21, 22, 25, 26, 27};
+    constexpr int k_live_chains[]    = {
+        TAP_SR_RATIONAL_UP2,
+        TAP_SR_RATIONAL_DOWN2,
+        TAP_SR_RATIONAL_UP3,
+        TAP_SR_RATIONAL_DOWN3,
+        TAP_SR_RATIONAL_RATIO3OVER2,
+        TAP_SR_RATIONAL_RATIO2OVER3,
+        TAP_SR_RATIONAL_RATIO4OVER3,
+        TAP_SR_RATIONAL_RATIO3OVER4,
+        TAP_SR_RATIONAL_UP2_UP2,
+        TAP_SR_RATIONAL_UP2_UP3,
+        TAP_SR_RATIONAL_UP2_UP6,
+        TAP_SR_RATIONAL_UP2_UP8,
+        TAP_SR_RATIONAL_UP2_RATIO4OVER3,
+        TAP_SR_RATIONAL_RATIO3OVER4_DOWN2,
+        TAP_SR_RATIONAL_DOWN2_DOWN2,
+        TAP_SR_RATIONAL_DOWN3_DOWN2,
+        TAP_SR_RATIONAL_DOWN6_DOWN2,
+        TAP_SR_RATIONAL_DOWN8_DOWN2,
+        TAP_SR_RATIONAL_UP2_UP4,
+        TAP_SR_RATIONAL_UP3_UP4,
+        TAP_SR_RATIONAL_UP2_UP4_UP2,
+        TAP_SR_RATIONAL_UP2_UP3_UP4,
+        TAP_SR_RATIONAL_UP2_UP4_UP4,
+        TAP_SR_RATIONAL_UP3_UP4_UP4,
+        TAP_SR_RATIONAL_DOWN4_DOWN2,
+        TAP_SR_RATIONAL_DOWN4_DOWN3,
+        TAP_SR_RATIONAL_DOWN2_DOWN4_DOWN2,
+        TAP_SR_RATIONAL_DOWN4_DOWN3_DOWN2,
+        TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN2,
+        TAP_SR_RATIONAL_DOWN4_DOWN4_DOWN3,
+    };
+
+    TEST(CApi, ChainValuesAreStableAndRetiredOnesAreRefused) {
+        EXPECT_EQ(TAP_SR_RATIONAL_CHAIN_END, 40);
+        EXPECT_EQ(std::size(k_live_chains), 30u);
+        EXPECT_EQ(std::size(k_live_chains) + std::size(k_retired_chains),
+                  static_cast<std::size_t>(TAP_SR_RATIONAL_CHAIN_END));
+        for (int v = 0; v < TAP_SR_RATIONAL_CHAIN_END; ++v) {
+            const bool live =
+                std::find(std::begin(k_live_chains), std::end(k_live_chains), v) != std::end(k_live_chains);
+            const bool retired =
+                std::find(std::begin(k_retired_chains), std::end(k_retired_chains), v) != std::end(k_retired_chains);
+            EXPECT_NE(live, retired) << v << ": every value below CHAIN_END is live or retired, never both";
+            for (const int format :
+                 {TAP_SR_RATIONAL_FORMAT_FLOAT, TAP_SR_RATIONAL_FORMAT_Q15, TAP_SR_RATIONAL_FORMAT_Q31}) {
+                tap_sr_rational_converter* c = tap_sr_rational_create_format(v, 0, format, 1);
+                if (live) {
+                    EXPECT_NE(c, nullptr) << v << " format " << format;
+                }
+                else {
+                    EXPECT_EQ(c, nullptr) << v << " format " << format << ": a retired value";
+                }
+                tap_sr_rational_destroy(c);
+            }
+        }
+        EXPECT_EQ(tap_sr_rational_create(TAP_SR_RATIONAL_CHAIN_END, 0, 1), nullptr);
+        EXPECT_EQ(tap_sr_rational_create(TAP_SR_RATIONAL_CHAIN_END + 1, 0, 1), nullptr);
+        for (const int v : k_retired_chains) {
+            EXPECT_EQ(tap_sr_rational_create(v, 0, 1), nullptr) << v;
+            EXPECT_EQ(tap_sr_rational_create(v, 1, 2), nullptr) << v;
+        }
     }
 
     TEST(CApi, ProfilesSelectTheirDesigns) {
@@ -218,6 +290,14 @@ namespace {
         expect_stage<ratio3over4>(3, 4, 0, profile::economy(), exact_ratio{2, 1});
         expect_stage<ratio2over3>(2, 3, 2, profile::balanced(), exact_ratio{1, 1});
         expect_stage<down6>(1, 6, 3, profile::super_economy(), exact_ratio{9, 1}); // a searched divisor
+        // The 4th-band stage (X-a3): 192 -> 11.025's down 4 ahead of bridge
+        // (divisor 4), 11.025 -> 384's up 4 after it (divisor 8), and the
+        // single stages at their own rate.
+        expect_stage<down4>(1, 4, 0, profile::economy(), exact_ratio{4, 1});
+        expect_stage<up4>(4, 1, 0, profile::economy(), exact_ratio{8, 1});
+        expect_stage<up4>(4, 1, 1, profile::transparent(), exact_ratio{1, 1});
+        expect_stage<down4, std::int16_t>(1, 4, 0, profile::economy(), exact_ratio{1, 1});
+        expect_stage<up4, std::int32_t>(4, 1, 2, profile::balanced(), exact_ratio{3, 1});
         expect_stage<ratio3over4, std::int16_t>(3, 4, 0, profile::economy(), exact_ratio{2, 1});
         expect_stage<down6, std::int16_t>(1, 6, 0, profile::economy(), exact_ratio{1, 1});
         expect_stage<up8, std::int32_t>(8, 1, 1, profile::transparent(), exact_ratio{2, 1});
@@ -229,13 +309,34 @@ namespace {
         tap_sr_rational_destroy(c);
     }
 
+    // The 4th-band stage is one of the vocabulary since X-a3 (decision 6 as
+    // amended; it was refused before), so the cross-family rows that run a
+    // single down 4 or up 4 beside bridge can be built through the ABI.
+    TEST(CApi, StageConstructorAcceptsTheFourthBand) {
+        for (const int format :
+             {TAP_SR_RATIONAL_FORMAT_FLOAT, TAP_SR_RATIONAL_FORMAT_Q15, TAP_SR_RATIONAL_FORMAT_Q31}) {
+            for (const unsigned up : {1u, 4u}) {
+                const unsigned             down = up == 1 ? 4u : 1u;
+                tap_sr_rational_converter* c    = tap_sr_rational_create_stage_format(up, down, 0, 1, 1, format, 1);
+                ASSERT_NE(c, nullptr) << up << "/" << down << " format " << format;
+                unsigned l = 0, m = 0;
+                tap_sr_rational_ratio(c, &l, &m);
+                EXPECT_EQ(l, up);
+                EXPECT_EQ(m, down);
+                EXPECT_EQ(tap_sr_rational_stage_taps(c, 0), 79u); // N = 2 m B - 1, m = 10 at economy
+                tap_sr_rational_destroy(c);
+            }
+        }
+    }
+
     TEST(CApi, InvalidArgumentsReturnNull) {
         EXPECT_EQ(tap_sr_rational_create(-1, 0, 1), nullptr);
-        EXPECT_EQ(tap_sr_rational_create(TAP_SR_RATIONAL_CHAIN_COUNT, 0, 1), nullptr);
+        EXPECT_EQ(tap_sr_rational_create(TAP_SR_RATIONAL_CHAIN_END, 0, 1), nullptr);
         EXPECT_EQ(tap_sr_rational_create(0, 4, 1), nullptr);
         EXPECT_EQ(tap_sr_rational_create(0, -1, 1), nullptr);
         EXPECT_EQ(tap_sr_rational_create(0, 0, 0), nullptr);
-        EXPECT_EQ(tap_sr_rational_create_stage(4, 1, 0, 1, 1, 1), nullptr); // no single 4th-band stage (decision 6)
+        EXPECT_EQ(tap_sr_rational_create_stage(4, 3, 0, 1, 1, 0), nullptr); // no channel
+        EXPECT_EQ(tap_sr_rational_create_stage(4, 2, 0, 1, 1, 1), nullptr); // not in lowest terms
         EXPECT_EQ(tap_sr_rational_create_stage(5, 1, 0, 1, 1, 1), nullptr);
         EXPECT_EQ(tap_sr_rational_create_stage(2, 2, 0, 1, 1, 1), nullptr);
         EXPECT_EQ(tap_sr_rational_create_stage(2, 1, 0, 0, 1, 1), nullptr);

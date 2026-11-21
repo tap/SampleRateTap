@@ -188,28 +188,33 @@ namespace tap::sr::rational {
     /// The named chains of the coverage matrix (PLAN.md 3.3 / 3.4), one per
     /// distinct chain of two or more stages, named by its stages in order
     /// with an underscore between them (a one-stage chain is
-    /// basic_converter<S, Ch, R>): twenty in all, the 48 kHz family's
-    /// eighteen plus the two the 44.1 kHz family's lattice chooses for 8/1
-    /// and 1/8 (its r_min * 3 intermediate, 33.075 kHz, where the 48 family
-    /// has r_min * 8/3). Ratios in comments are the chain's L/M.
+    /// basic_converter<S, Ch, R>): eighteen chains the matrix's rows run,
+    /// the same in both families since X-a3 admitted the 4th-band stage
+    /// (decision 6 as amended, docs/X4_X8_PLAN.md X3), and four kept for
+    /// X-a4: up2_up6, up2_up8, down6_down2 and down8_down2 are no row's
+    /// chain at economy, and the per-tier matrix (X4) selects them again
+    /// at transparent, so their names and C ABI values stay rather than
+    /// being retired and re-added. Ratios in comments are the chain's L/M.
     template <tap::dsp::sample_type S, std::size_t Ch>
     using up2_up2 = basic_chain<S, Ch, up2, up2>; ///< 4/1
     template <tap::dsp::sample_type S, std::size_t Ch>
     using up2_up3 = basic_chain<S, Ch, up2, up3>; ///< 6/1
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up2_ratio4over3_up3 = basic_chain<S, Ch, up2, ratio4over3, up3>; ///< 8/1 (48 family)
+    using up2_up4 = basic_chain<S, Ch, up2, up4>; ///< 8/1
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up3_ratio8over3 = basic_chain<S, Ch, up3, ratio8over3>; ///< 8/1 (44.1 family)
+    using up3_up4 = basic_chain<S, Ch, up3, up4>; ///< 12/1
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up2_up6 = basic_chain<S, Ch, up2, up6>; ///< 12/1
+    using up2_up6 = basic_chain<S, Ch, up2, up6>; ///< 12/1 at transparent (X-a4); no row at economy
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up2_up8 = basic_chain<S, Ch, up2, up8>; ///< 16/1
+    using up2_up4_up2 = basic_chain<S, Ch, up2, up4, up2>; ///< 16/1
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up2_up6_up2 = basic_chain<S, Ch, up2, up6, up2>; ///< 24/1
+    using up2_up8 = basic_chain<S, Ch, up2, up8>; ///< 16/1 at transparent (X-a4); no row at economy
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up2_up8_up2 = basic_chain<S, Ch, up2, up8, up2>; ///< 32/1
+    using up2_up3_up4 = basic_chain<S, Ch, up2, up3, up4>; ///< 24/1
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using up2_up8_up3 = basic_chain<S, Ch, up2, up8, up3>; ///< 48/1
+    using up2_up4_up4 = basic_chain<S, Ch, up2, up4, up4>; ///< 32/1
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using up3_up4_up4 = basic_chain<S, Ch, up3, up4, up4>; ///< 48/1
     template <tap::dsp::sample_type S, std::size_t Ch>
     using up2_ratio4over3 = basic_chain<S, Ch, up2, ratio4over3>; ///< 8/3
     template <tap::dsp::sample_type S, std::size_t Ch>
@@ -219,19 +224,21 @@ namespace tap::sr::rational {
     template <tap::dsp::sample_type S, std::size_t Ch>
     using down3_down2 = basic_chain<S, Ch, down3, down2>; ///< 1/6
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down3_ratio3over4_down2 = basic_chain<S, Ch, down3, ratio3over4, down2>; ///< 1/8 (48 family)
+    using down4_down2 = basic_chain<S, Ch, down4, down2>; ///< 1/8
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using ratio3over8_down3 = basic_chain<S, Ch, ratio3over8, down3>; ///< 1/8 (44.1 family)
+    using down4_down3 = basic_chain<S, Ch, down4, down3>; ///< 1/12
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down6_down2 = basic_chain<S, Ch, down6, down2>; ///< 1/12
+    using down6_down2 = basic_chain<S, Ch, down6, down2>; ///< 1/12 at transparent (X-a4); no row at economy
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down8_down2 = basic_chain<S, Ch, down8, down2>; ///< 1/16
+    using down2_down4_down2 = basic_chain<S, Ch, down2, down4, down2>; ///< 1/16
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down2_down6_down2 = basic_chain<S, Ch, down2, down6, down2>; ///< 1/24
+    using down8_down2 = basic_chain<S, Ch, down8, down2>; ///< 1/16 at transparent (X-a4); no row at economy
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down2_down8_down2 = basic_chain<S, Ch, down2, down8, down2>; ///< 1/32
+    using down4_down3_down2 = basic_chain<S, Ch, down4, down3, down2>; ///< 1/24
     template <tap::dsp::sample_type S, std::size_t Ch>
-    using down3_down8_down2 = basic_chain<S, Ch, down3, down8, down2>; ///< 1/48
+    using down4_down4_down2 = basic_chain<S, Ch, down4, down4, down2>; ///< 1/32
+    template <tap::dsp::sample_type S, std::size_t Ch>
+    using down4_down4_down3 = basic_chain<S, Ch, down4, down4, down3>; ///< 1/48
     // ANCHOR_END: rational_named_chains
 
 } // namespace tap::sr::rational

@@ -36,7 +36,10 @@
 // Numbers measured 2026-10-02 (clang 18, x86-64; the formats are exact
 // integer arithmetic, so every host and target computes the same bits), and
 // re-measured 2026-11-20 (gcc 13, x86-64) with the designer's beta for
-// A + 4 dB (X17, PLAN.md section 6), which moved every table.
+// A + 4 dB (X17, PLAN.md section 6), which moved every table. The 4th-band
+// stage's rows (up4, down4) joined 2026-11-21 with X-a3 (decision 6 as
+// amended, docs/X4_X8_PLAN.md X3), with its tables at every design divisor
+// the coverage matrix runs it at, bit-pinned below.
 
 #include <algorithm>
 #include <array>
@@ -163,6 +166,14 @@ namespace {
         ROW(down3, economy, 41, 41, 0x51b3728312bde5adULL, 0x4d713712298a7d18ULL, -71.8, -97.7) \
         ROW(down3, balanced, 49, 49, 0x5b6cd18a34d851e5ULL, 0x5ea52a8b4fb88fc6ULL, -71.8, -96.2) \
         ROW(down3, transparent, 101, 87, 0x31f6906f83337a35ULL, 0x938fd7c8b56b8338ULL, -74.2, -95.6) \
+        ROW(up4, super_economy, 49, 49, 0x3e680ecc6a91c511ULL, 0xd54f53e0cc56c941ULL, -72.8, -94.9) \
+        ROW(up4, economy, 61, 61, 0xee3330ca24c8153dULL, 0x9316baef3b052ae9ULL, -73.9, -93.5) \
+        ROW(up4, balanced, 73, 73, 0x692ee42856a2b2d5ULL, 0x352b34c04a6ea715ULL, -70.4, -92.5) \
+        ROW(up4, transparent, 151, 131, 0x71a5a915c80aa3b1ULL, 0x0af398a526d71281ULL, -78.1, -90.7) \
+        ROW(down4, super_economy, 49, 49, 0x3e680ecc6a91c511ULL, 0x52816d59a984196dULL, -72.8, -98.7) \
+        ROW(down4, economy, 61, 61, 0xee3330ca24c8153dULL, 0x1a977d79bdbc5721ULL, -73.9, -97.0) \
+        ROW(down4, balanced, 73, 73, 0x692ee42856a2b2d5ULL, 0x297184edb89378fdULL, -70.4, -96.7) \
+        ROW(down4, transparent, 151, 131, 0x71a5a915c80aa3b1ULL, 0x72ab9c1f69c1b6f9ULL, -78.1, -96.3) \
         ROW(up6, super_economy, 71, 71, 0x76181d0d2bf49ea1ULL, 0x244bd5922fdd5e3dULL, -71.9, -93.6) \
         ROW(up6, economy, 101, 101, 0x7b8414715922f849ULL, 0xc3bd21df38e7a6e9ULL, -71.8, -93.5) \
         ROW(up6, balanced, 121, 121, 0xacc8d2a918ea7d61ULL, 0x83f620d66492377dULL, -71.0, -92.7) \
@@ -309,11 +320,13 @@ namespace {
     TEST(FixedPoint, Q15DecimatorTableIsTheInterpolatorsTable) {
         expect_shared_q15_table<up2, down2>();
         expect_shared_q15_table<up3, down3>();
+        expect_shared_q15_table<up4, down4>();
         expect_shared_q15_table<up6, down6>();
         expect_shared_q15_table<up8, down8>();
         static_assert(basic_stage<std::int16_t, 1, down6>::k_table_gain == 6);
         static_assert(basic_stage<std::int32_t, 1, down6>::k_table_gain == 1);
         static_assert(basic_stage<std::int16_t, 1, up6>::k_table_gain == 1);
+        static_assert(basic_stage<std::int16_t, 1, down4>::k_table_gain == 4);
     }
 
     // ------------------------------------------------------------------
@@ -450,7 +463,7 @@ namespace {
     // worst response from the stopband edge to F_hi / 2 on the 16384-point
     // design grid, relative to its DC gain. Q31 keeps the design's (within
     // 0.1 dB measured); Q15's is the format's, pinned per stage within
-    // 0.5 dB. A host suite (excluded on the QEMU legs): 112 tables through
+    // 0.5 dB. A host suite (excluded on the QEMU legs): 128 tables through
     // a 16384-point DFT.
     template <typename S, rational_ratio R>
     double quantized_stopband_db(const profile& p) {
@@ -541,11 +554,11 @@ namespace {
                 const double bands[] = {
                     row.taps_per_branch[0] ? relaxed_q15_stopband_db<up2>(base, row) : -400.0,
                     row.taps_per_branch[1] ? relaxed_q15_stopband_db<up3>(base, row) : -400.0,
-                    row.taps_per_branch[2] ? relaxed_q15_stopband_db<ratio4over3>(base, row) : -400.0,
+                    row.taps_per_branch[2] ? relaxed_q15_stopband_db<up4>(base, row) : -400.0,
                     row.taps_per_branch[3] ? relaxed_q15_stopband_db<up6>(base, row) : -400.0,
                     row.taps_per_branch[4] ? relaxed_q15_stopband_db<up8>(base, row) : -400.0,
                 };
-                static const char* const k_names[] = {"up2", "up3", "ratio4over3", "up6", "up8"};
+                static const char* const k_names[] = {"up2", "up3", "up4", "up6", "up8"};
                 for (std::size_t b = 0; b < 5; ++b) {
                     std::printf("[ measured ] relaxed Q15 %s divisor %llu/%llu %s: %.1f dB\n", stated[i].profile,
                                 static_cast<unsigned long long>(row.divisor.num),
@@ -560,6 +573,112 @@ namespace {
             EXPECT_NEAR(worst, stated[i].worst_db, 0.5) << stated[i].profile;
             EXPECT_LE(worst, -70.0) << stated[i].profile << ": every relaxed Q15 design attains the 70 dB tier";
         }
+    }
+
+    // ------------------------------------------------------------------
+    // The 4th-band stage at every design divisor the coverage matrix runs it
+    // at (X-a3: 2, 3, 4, 6, 8 and 12 above the 1/1 rows of the table at the
+    // top, up and down alike; matrix.py rows), every named profile: the
+    // Q15 table (one table, the decimator's being its band's interpolator
+    // table), the Q31 tables of up 4 and down 4, and the stopband the Q15
+    // table attains on the 16384-point grid from the relaxed stage's own
+    // stopband edge. Tables at one m are one design whatever the divisor
+    // (the divisor moves the edge the search measures from, not the
+    // window), so several rows share a hash; their stopbands differ.
+    // Measured 2026-11-21 (gcc 13, x86-64), by the code of this file.
+    // clang-format off
+#define TAP_SR_RATIONAL_BAND4_RELAXED_ROWS(ROW) \
+        ROW(super_economy, 2, 0xb575b3b7e9ee5ca5ULL, 0x26952a84d6aab9c1ULL, 0x059e8a5aba3763e5ULL, -70.9) \
+        ROW(super_economy, 3, 0xb575b3b7e9ee5ca5ULL, 0x26952a84d6aab9c1ULL, 0x059e8a5aba3763e5ULL, -70.9) \
+        ROW(super_economy, 4, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.0) \
+        ROW(super_economy, 6, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.3) \
+        ROW(super_economy, 8, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.4) \
+        ROW(super_economy, 12, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.4) \
+        ROW(economy, 2, 0xb575b3b7e9ee5ca5ULL, 0x26952a84d6aab9c1ULL, 0x059e8a5aba3763e5ULL, -70.9) \
+        ROW(economy, 3, 0xb575b3b7e9ee5ca5ULL, 0x26952a84d6aab9c1ULL, 0x059e8a5aba3763e5ULL, -70.9) \
+        ROW(economy, 4, 0xb575b3b7e9ee5ca5ULL, 0x26952a84d6aab9c1ULL, 0x059e8a5aba3763e5ULL, -70.9) \
+        ROW(economy, 6, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.3) \
+        ROW(economy, 8, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.3) \
+        ROW(economy, 12, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.4) \
+        ROW(balanced, 2, 0x6fcf943d2eaff42dULL, 0xebcf162091cca619ULL, 0xb5f2496dd4742559ULL, -74.7) \
+        ROW(balanced, 3, 0xb575b3b7e9ee5ca5ULL, 0x26952a84d6aab9c1ULL, 0x059e8a5aba3763e5ULL, -70.9) \
+        ROW(balanced, 4, 0xb575b3b7e9ee5ca5ULL, 0x26952a84d6aab9c1ULL, 0x059e8a5aba3763e5ULL, -70.9) \
+        ROW(balanced, 6, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.3) \
+        ROW(balanced, 8, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.3) \
+        ROW(balanced, 12, 0xb996279d33656921ULL, 0xf9390d1a5ab0c581ULL, 0x798a49656236da4dULL, -73.4) \
+        ROW(transparent, 2, 0xff70fb6f5c0e99adULL, 0xa66f79f6d2180f91ULL, 0xb02cbfe2dc3278f1ULL, -82.8) \
+        ROW(transparent, 3, 0x08c1a141c732ec49ULL, 0x126ce4efe70a98f5ULL, 0xf2f8f92784e372f1ULL, -84.0) \
+        ROW(transparent, 4, 0x08c1a141c732ec49ULL, 0x126ce4efe70a98f5ULL, 0xf2f8f92784e372f1ULL, -84.0) \
+        ROW(transparent, 6, 0x4a52e584fc12ef05ULL, 0x79eb5e51d4712015ULL, 0xee9db367de0da0d9ULL, -84.1) \
+        ROW(transparent, 8, 0x4a52e584fc12ef05ULL, 0x79eb5e51d4712015ULL, 0xee9db367de0da0d9ULL, -84.1) \
+        ROW(transparent, 12, 0x4a52e584fc12ef05ULL, 0x79eb5e51d4712015ULL, 0xee9db367de0da0d9ULL, -84.1)
+    // clang-format on
+
+    struct band4_row {
+        const char*   profile;
+        std::uint64_t divisor;
+        std::uint64_t fnv_q15;
+        std::uint64_t fnv_q31_up;
+        std::uint64_t fnv_q31_down;
+        double        q15_stop_db;
+    };
+
+    template <typename F>
+    void for_each_band4_row(F&& f) {
+#define ROW(PROF, DIV, F15, F31U, F31D, STOP)                                                                          \
+    f(band4_row{.profile      = #PROF,                                                                                 \
+                .divisor      = DIV,                                                                                   \
+                .fnv_q15      = F15,                                                                                   \
+                .fnv_q31_up   = F31U,                                                                                  \
+                .fnv_q31_down = F31D,                                                                                  \
+                .q15_stop_db  = STOP},                                                                                  \
+      profile::PROF());
+        TAP_SR_RATIONAL_BAND4_RELAXED_ROWS(ROW)
+#undef ROW
+    }
+
+    TEST(FixedPoint, FourthBandTablesAreBitPinnedAtEveryMatrixDivisor) {
+        std::size_t rows = 0;
+        for_each_band4_row([&](const band4_row& row, const profile& base) {
+            const profile p = base.relaxed(tap::dsp::exact_ratio{row.divisor, 1});
+            ASSERT_NE(p.pinned_taps_per_branch(4), 0u) << row.profile << " " << row.divisor << ": a pinned divisor";
+            const pin_row up{"up4", row.profile, 0, 0, 0, 0, 0.0, 0.0};
+            const pin_row down{"down4", row.profile, 0, 0, 0, 0, 0.0, 0.0};
+            expect_rows_sum_to_unity<std::int16_t, up4>(up, p);
+            expect_rows_sum_to_unity<std::int32_t, up4>(up, p);
+            expect_rows_sum_to_unity<std::int16_t, down4>(down, p);
+            expect_rows_sum_to_unity<std::int32_t, down4>(down, p);
+            EXPECT_EQ(table_fnv1a64(basic_stage<std::int16_t, 1, up4>(p)), row.fnv_q15)
+                << row.profile << " " << row.divisor;
+            EXPECT_EQ(table_fnv1a64(basic_stage<std::int16_t, 1, down4>(p)), row.fnv_q15)
+                << row.profile << " " << row.divisor << ": the decimator's is the interpolator's table";
+            EXPECT_EQ(table_fnv1a64(basic_stage<std::int32_t, 1, up4>(p)), row.fnv_q31_up)
+                << row.profile << " " << row.divisor;
+            EXPECT_EQ(table_fnv1a64(basic_stage<std::int32_t, 1, down4>(p)), row.fnv_q31_down)
+                << row.profile << " " << row.divisor;
+            ++rows;
+        });
+        EXPECT_EQ(rows, 24u); // 4 profiles x 6 divisors
+    }
+
+    // Each relaxed 4th-band Q15 table attains its stated stopband, within
+    // 0.5 dB, and at the 70 dB profiles the tier (the worst -70.9 dB, at the
+    // m = 4 design of divisors 2 to 4); Q31 keeps the spec. A host suite
+    // (excluded on the QEMU legs, as the other stopband sweeps).
+    TEST(FixedPoint, FourthBandRelaxedQ15TablesStopbandsAreStated) {
+        for_each_band4_row([&](const band4_row& row, const profile& base) {
+            const profile p   = base.relaxed(tap::dsp::exact_ratio{row.divisor, 1});
+            const double  q15 = quantized_stopband_db<std::int16_t, up4>(p);
+            EXPECT_NEAR(q15, row.q15_stop_db, 0.5) << row.profile << " " << row.divisor;
+            const double q15_down = quantized_stopband_db<std::int16_t, down4>(p);
+            const double q31_down = quantized_stopband_db<std::int32_t, down4>(p);
+            EXPECT_NEAR(q15_down, q15, 1e-9) << row.profile << " " << row.divisor;
+            EXPECT_LE(q31_down, -(p.stopband_atten_db + 0.9))
+                << row.profile << " " << row.divisor << ": Q31 keeps the spec";
+            if (p.stopband_atten_db < 100.0) {
+                EXPECT_LE(q15, -70.0) << row.profile << " " << row.divisor << ": the 70 dB tier";
+            }
+        });
     }
 
     // ------------------------------------------------------------------
@@ -683,11 +802,11 @@ namespace {
 
     TEST(FixedPoint, ChainsStackTheFloorStageByStage) {
         const profile eco = profile::economy();
-        const auto    a   = chain_floor<down3_down8_down2<std::int16_t, 1>, down3_down8_down2<double, 1>>(eco);
-        const auto    b   = chain_floor<up2_up8_up3<std::int16_t, 1>, up2_up8_up3<double, 1>>(eco);
-        const auto    c   = chain_floor<ratio3over8_down3<std::int16_t, 1>, ratio3over8_down3<double, 1>>(eco);
-        const auto    d   = chain_floor<down3_down8_down2<std::int32_t, 1>, down3_down8_down2<double, 1>>(eco);
-        std::printf("[ measured ] Q15 chains: 1/48 worst %.2e rms %.1f dBFS; 48/1 worst %.2e rms %.1f dBFS; 1/8 (44.1) "
+        const auto    a   = chain_floor<down4_down4_down3<std::int16_t, 1>, down4_down4_down3<double, 1>>(eco);
+        const auto    b   = chain_floor<up3_up4_up4<std::int16_t, 1>, up3_up4_up4<double, 1>>(eco);
+        const auto    c   = chain_floor<down4_down2<std::int16_t, 1>, down4_down2<double, 1>>(eco);
+        const auto    d   = chain_floor<down4_down4_down3<std::int32_t, 1>, down4_down4_down3<double, 1>>(eco);
+        std::printf("[ measured ] Q15 chains: 1/48 worst %.2e rms %.1f dBFS; 48/1 worst %.2e rms %.1f dBFS; 1/8 "
                     "worst %.2e rms %.1f dBFS; Q31 1/48 worst %.2e\n",
                     a.first, a.second, b.first, b.second, c.first, c.second, d.first);
         EXPECT_LT(a.first, 4e-4);

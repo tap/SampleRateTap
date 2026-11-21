@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 // The worst single call (the roadmap's A6): the most instructions one
-// process() executes over the streaming workload icount_main.cpp counts in
-// total (2 s of a 997 Hz tone at 48 kHz, 32-frame blocks, economy,
-// stereo). The counting plugin reports the largest count between the
+// process() executes over a stage's streaming workload, the shape
+// icount_main.cpp counts in total (2 s of a 997 Hz tone at 48 kHz, 32-frame
+// blocks, economy, stereo). The counting plugin reports the largest count between the
 // markers around each call (tools/probe/call_marker.h), and
 // scripts/icount.py gates that figure (scenarios callmax_*) two-sided like
 // a total.
@@ -13,8 +13,9 @@
 // a block runs out of the 64 frames of append slack (for a decimator, its M
 // branch lines at once). Two seconds visits every phase many times over.
 //
-// TAP_SR_RATIONAL_SC: 0 up2_float, 1 down2_float, 2 up2_q15, 3 down2_q15
-// (all at economy)
+// TAP_SR_RATIONAL_SC: 0 up2_float, 1 down2_float, 2 up2_q15, 3 down2_q15,
+// 4 down4_float, 5 down4_q15 (the 4th-band stage, since X-a3; all at
+// economy)
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -97,8 +98,12 @@ int main() {
     const double checksum = run<float, rat::down2>();
 #elif TAP_SR_RATIONAL_SC == 2
     const double checksum = run<std::int16_t, rat::up2>();
-#else
+#elif TAP_SR_RATIONAL_SC == 3
     const double checksum = run<std::int16_t, rat::down2>();
+#elif TAP_SR_RATIONAL_SC == 4
+    const double checksum = run<float, rat::down4>();
+#else
+    const double checksum = run<std::int16_t, rat::down4>();
 #endif
     const bool ok = checksum == checksum; // NaN check
     // The marker line is part of the count; its format string's alignment is

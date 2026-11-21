@@ -2,8 +2,8 @@
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
 // M1 battery for ratio.h: the charter's accepted set (every ratio of the
-// 48 and 44.1 kHz families' single-stage vocabulary and the chain-named
-// by-4, by-16), the traits' numbers (band index, composite factor, lower
+// 48 and 44.1 kHz families' single-stage vocabulary, by-4 among them since
+// X-a3, and the chain-named by-16), the traits' numbers (band index, composite factor, lower
 // rate, exponents, direction flags), the version macros, and that the
 // composite rate is k_band times the lower rate for every ratio the
 // engine names. The rejected set (ratio<5, 1>, <4, 2>, <2, 2>, <1, 1>) is
@@ -32,7 +32,9 @@ namespace {
         static_assert(down8::k_up == 1 && down8::k_down == 8);
         static_assert(ratio3over8::k_up == 3 && ratio3over8::k_down == 8);
         static_assert(is_ratio<ratio<16, 1>>::value); // the 44.1 family's by-16 chain, named by it
-        static_assert(is_ratio<ratio<4, 1>>::value);  // the by-4 chain (two half-bands, R3)
+        static_assert(is_ratio<ratio<4, 1>>::value);  // one 4th-band stage since X-a3 (decision 6 as amended, X3)
+        static_assert(up4::k_up == 4 && up4::k_down == 1 && down4::k_up == 1 && down4::k_down == 4);
+        static_assert(ratio_traits<down4>::k_band == 4 && ratio_traits<down4>::k_is_decimator);
         static_assert(is_ratio<ratio<32, 1>>::value); // 12 -> 384 kHz
         static_assert(is_ratio<ratio<48, 1>>::value); // 8 -> 384 kHz
         static_assert(is_ratio<ratio<1, 48>>::value);

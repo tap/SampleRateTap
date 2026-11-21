@@ -12,7 +12,9 @@ fails; one below it passes (a ceiling is a bound, not a pin).
                       [--ceilings FILE] [--update]
   ceilings.py docs --engine E [--check]
 
-Per target, for each format's size probe (tap_sr_<engine>_probe_<fmt>):
+Per target, for each format's size probe (tap_sr_<engine>_probe_<fmt>, and
+for an engine's second probe set tap_sr_<engine>_probe<suffix>_<fmt>, gated
+under the key <fmt><tag>: PROBE_SETS):
 
   image          the `size -A` rows .text + .rodata of the whole image: the
                  engine, the runtime it pulls in (newlib or musl, libstdc++
@@ -27,7 +29,7 @@ Per target, for each format's size probe (tap_sr_<engine>_probe_<fmt>):
                  objects)
 
 On m33 also, for each call of each format's stack probe
-(tap_sr_<engine>_stack_<fmt>):
+(tap_sr_<engine>_stack_<fmt>, and tap_sr_<engine>_stack<suffix>_<fmt>):
 
   static    the worst path in bytes from the call's noinline root
             (probe_<call>) through the call graph GCC writes under
@@ -58,6 +60,12 @@ import sys
 
 FORMATS = ["f32", "q15", "q31"]
 CALLS = {"async": ["push", "pull"], "bridge": ["up", "down"], "rational": ["up", "down"]}
+# Each engine's probe sets (tools/probe/probes.cmake): the binaries' name
+# suffix, the tag on the format's key in ceilings.json, and the README label.
+# rational's second set (X-a3) is the 4th-band pair, up 4 and down 4, beside
+# the by-2 pair its first set holds.
+PROBE_SETS = {"async": [("", "", "")], "bridge": [("", "", "")],
+              "rational": [("", "", ""), ("4", "_by4", " (by 4)")]}
 SIZE_GRAIN = 64
 STACK_GRAIN = 8
 MARGIN = 0.03
@@ -270,8 +278,9 @@ def worst_path(frames, externals, edges, root, runtime):
     return walk(root)
 
 
-def measure_stack(engine: str, build_dir: str, fmt: str) -> dict[str, dict[str, int]]:
-    binary = find_binary(build_dir, f"tap_sr_{engine}_stack_{fmt}")
+def measure_stack(engine: str, build_dir: str, fmt: str, suffix: str = "") -> dict[str, dict[str, int]]:
+    name = f"tap_sr_{engine}_stack{suffix}_{fmt}"
+    binary = find_binary(build_dir, name)
     proc = subprocess.run(["qemu-system-arm", "-M", "mps2-an505", "-nographic", "-semihosting",
                            "-kernel", binary], capture_output=True, text=True, timeout=900)
     out = proc.stdout + proc.stderr
@@ -279,10 +288,9 @@ def measure_stack(engine: str, build_dir: str, fmt: str) -> dict[str, dict[str, 
         print(out, file=sys.stderr)
         raise SystemExit(f"{binary}: the probe did not complete cleanly")
     painted = {m.group(1): int(m.group(2)) for m in re.finditer(r"TAP_SR_STACK (\w+) (\d+)", out)}
-    graphs = glob.glob(os.path.join(build_dir, "**", f"tap_sr_{engine}_stack_{fmt}.dir", "**", "*.ci"),
-                       recursive=True)
+    graphs = glob.glob(os.path.join(build_dir, "**", f"{name}.dir", "**", "*.ci"), recursive=True)
     if len(graphs) != 1:
-        raise SystemExit(f"expected one call graph for tap_sr_{engine}_stack_{fmt}, found {len(graphs)}"
+        raise SystemExit(f"expected one call graph for {name}, found {len(graphs)}"
                          " (built with GCC's -fcallgraph-info=su?)")
     frames, externals, edges = parse_callgraph(graphs[0])
     runtime = runtime_depths(binary)
@@ -290,15 +298,15 @@ def measure_stack(engine: str, build_dir: str, fmt: str) -> dict[str, dict[str, 
     for call in CALLS[engine]:
         roots = [t for t in frames if re.search(rf"\dprobe_{call}E", t)]
         if not roots or call not in painted:
-            raise SystemExit(f"{engine} {fmt}: no root or no painted figure for {call}")
+            raise SystemExit(f"{name}: no root or no painted figure for {call}")
         bound, reached = max(worst_path(frames, externals, edges, r, runtime) for r in roots)
         if painted[call] > bound:
             # The bound is every frame on every path, the runtime's
             # included: a deeper painted figure means it missed one.
-            raise SystemExit(f"{engine} {fmt} {call}: painted {painted[call]} B exceeds the static bound "
+            raise SystemExit(f"{name} {call}: painted {painted[call]} B exceeds the static bound "
                              f"{bound} B; the analysis missed a frame")
         result[call] = {"static": bound, "measured": painted[call]}
-        print(f"{engine} {fmt} {call}: static {bound} B, measured {painted[call]} B; "
+        print(f"{name} {call}: static {bound} B, measured {painted[call]} B; "
               f"runtime routines on the paths: {', '.join(sorted(reached)) or 'none'}")
     return result
 
@@ -321,11 +329,13 @@ def cmd_measure(args) -> int:
         raise SystemExit(f"ceilings file {path} not found")
     base = doc.get(args.target, {})
     measured = {"size": {}}
-    for fmt in FORMATS:
-        probe = f"tap_sr_{args.engine}_probe_{fmt}"
-        measured["size"][fmt] = measure_size(args.target, probe, find_binary(args.build_dir, probe))
+    for suffix, tag, _ in PROBE_SETS[args.engine]:
+        for fmt in FORMATS:
+            probe = f"tap_sr_{args.engine}_probe{suffix}_{fmt}"
+            measured["size"][fmt + tag] = measure_size(args.target, probe, find_binary(args.build_dir, probe))
     if args.target == "m33":
-        measured["stack"] = {fmt: measure_stack(args.engine, args.build_dir, fmt) for fmt in FORMATS}
+        measured["stack"] = {fmt + tag: measure_stack(args.engine, args.build_dir, fmt, suffix)
+                             for suffix, tag, _ in PROBE_SETS[args.engine] for fmt in FORMATS}
 
     if args.update:
         rec = {"size": {f: {k: {"recorded": v, "ceiling": ceiling(v, SIZE_GRAIN)} for k, v in s.items()}
@@ -362,19 +372,26 @@ def cmd_measure(args) -> int:
 def render(engine: str, doc: dict) -> str:
     rows = ["| target | format | engine `.text` (bytes) | ceiling | engine `.rodata` (bytes) | ceiling "
             "| image (bytes) | ceiling |", "|---|---|--:|--:|--:|--:|--:|--:|"]
+    keys = [(fmt + tag, fmt + label) for _, tag, label in PROBE_SETS[engine] for fmt in FORMATS]
     for target in ("m33", "m55", "hexagon"):
-        for fmt, figs in doc.get(target, {}).get("size", {}).items():
+        size = doc.get(target, {}).get("size", {})
+        for key, name in keys:
+            if key not in size:
+                continue
+            figs = size[key]
             t, r, i = figs["engine_text"], figs["engine_rodata"], figs["image"]
-            rows.append(f"| {target} | {fmt} | {t['recorded']:,} | {t['ceiling']:,} "
+            rows.append(f"| {target} | {name} | {t['recorded']:,} | {t['ceiling']:,} "
                         f"| {r['recorded']:,} | {r['ceiling']:,} | {i['recorded']:,} | {i['ceiling']:,} |")
     stack = doc.get("m33", {}).get("stack", {})
     if stack:
         rows += ["", "| M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) "
                  "| ceiling |", "|---|---|--:|--:|--:|--:|"]
         for call in CALLS[engine]:
-            for fmt, calls in stack.items():
-                s, m = calls[call]["static"], calls[call]["measured"]
-                rows.append(f"| `{call}` | {fmt} | {s['recorded']} | {s['ceiling']} "
+            for key, name in keys:
+                if key not in stack:
+                    continue
+                s, m = stack[key][call]["static"], stack[key][call]["measured"]
+                rows.append(f"| `{call}` | {name} | {s['recorded']} | {s['ceiling']} "
                             f"| {m['recorded']} | {m['ceiling']} |")
     return "\n".join(rows)
 

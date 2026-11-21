@@ -16,6 +16,11 @@ k_design_beta_offset_db), with the stage's gain rule (stage.h): going up the tab
 the design; a decimator's is h / M; a mixed ratio going down has each of its
 L phases normalized to sum 1. Cast to float32.
 
+The 4th-band stage (up4, down4) joined the single-stage vectors and the
+chains with X-a3 (decision 6 as amended, docs/X4_X8_PLAN.md X3): the chain
+vectors are the matrix's 48/1, 1/48 and by-8 chains, which run it at the
+divisors 1, 2, 3 and 12, beside the by-4, by-6, 3/8 and 8/3 chains.
+
 The chain vectors (M4) apply the stages' upfirdn in sequence, each stage at
 the economy profile relaxed by its design divisor (chain.h, PLAN.md 3.1;
 the pins of design.h's economy relaxation table), each stage's output cut
@@ -101,7 +106,7 @@ ATTEN = {"economy": 70.0, "transparent": 120.0}
 # economy's relaxation rows (design.h k_economy_relaxations): the pins of a
 # stage whose lower rate is `divisor` times the chain's lowest (M4).
 RELAXED_ECONOMY = {1: {2: 10, 3: 10, 4: 10, 6: 10, 8: 10}, 2: {2: 5, 3: 4, 4: 4, 6: 5, 8: 5},
-                   3: {2: 4, 3: 4, 4: 4, 6: 5, 8: 5}, 16: {2: 3, 3: 3, 4: 3, 6: 3, 8: 3}}
+                   3: {2: 4, 3: 4, 4: 4, 6: 5, 8: 5}, 12: {2: 4, 3: 3, 4: 3, 6: 3, 8: 3}}
 
 # The chain vectors (M4): the stages' upfirdn applied in sequence, each
 # stage at the chain's economy profile relaxed by its design divisor
@@ -112,14 +117,16 @@ CHAINS = [  # tag, input frames (the prefix of k_input), [(L, M, divisor), ...]
     ("chain_down3_down2", 480, [(1, 3, 2), (1, 2, 1)]),
     ("chain_ratio3over4_down2", 480, [(3, 4, 2), (1, 2, 1)]),
     ("chain_up2_ratio4over3", 96, [(2, 1, 1), (4, 3, 2)]),
-    ("chain_up2_up8_up3", 96, [(2, 1, 1), (8, 1, 2), (3, 1, 16)]),
-    ("chain_down3_down8_down2", 480, [(1, 3, 16), (1, 8, 2), (1, 2, 1)]),
-    ("chain_ratio3over8_down3", 480, [(3, 8, 3), (1, 3, 1)]),
+    ("chain_up3_up4_up4", 96, [(3, 1, 1), (4, 1, 3), (4, 1, 12)]),
+    ("chain_down4_down4_down3", 480, [(1, 4, 12), (1, 4, 3), (1, 3, 1)]),
+    ("chain_down4_down2", 480, [(1, 4, 2), (1, 2, 1)]),
+    ("chain_up2_up4", 96, [(2, 1, 1), (4, 1, 2)]),
 ]
 
 CASES = [  # tag, L, M, profile
     ("up2", 2, 1, "economy"), ("down2", 1, 2, "economy"),
     ("up3", 3, 1, "economy"), ("down3", 1, 3, "economy"),
+    ("up4", 4, 1, "economy"), ("down4", 1, 4, "economy"),
     ("up6", 6, 1, "economy"), ("down6", 1, 6, "economy"),
     ("up8", 8, 1, "economy"), ("down8", 1, 8, "economy"),
     ("ratio3over2", 3, 2, "economy"), ("ratio2over3", 2, 3, "economy"),
