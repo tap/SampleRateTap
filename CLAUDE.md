@@ -26,8 +26,11 @@ made this tree (sections 5–6). Do not re-derive what it settles.
   their composition for 44.1 ↔ 48 across independent clocks (`bridge/examples/bluetooth_bridge.cpp`)
   or across families (a chain through `bridge`, written by the caller). There is no
   `(in_hz, out_hz)` lookup anywhere, `async` is never chained behind one, and no rate is served by
-  an engine whose charter does not name it (the 1000/1001 pull-down rates sit inside async's
-  ±1000 ppm and must still never be served by it).
+  an engine whose charter does not name it. Rates are named by ratio (D19): `rational`'s charter
+  names L/M of 2^a·3^b inside a family, so any rate a family rate reaches by such a ratio is in it
+  (48 → 3 kHz is the ratio 1/16), and the family's 14 rates are the coverage matrix's pinned set,
+  not a limit. The 1000/1001 pull-down rates are no such ratio: they sit inside async's ±1000 ppm
+  and must still never be served by it.
 - **The dependency rule (PLAN.md 4.2).** Each engine depends on `tap::dsp` only. A sibling appears
   only under an engine's `tests/` and `examples/`; `capi/` is per engine; nothing shipped links two
   engines (the umbrella `tap::sr` is the caller's choice). The root `tests/` enforces it per engine

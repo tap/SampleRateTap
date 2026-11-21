@@ -66,7 +66,10 @@ clock (D5, `../PLAN.md:40`).
 The boundaries are identity, not policy, as `bridge`'s are
 (`../bridge/PLAN.md` §1):
 
-- **Within a family only.** The 14 supported rates (`../PLAN.md:100-101`)
+- **Within a family only.** The 14 rates the coverage matrix pins
+  (`../PLAN.md` 2.1; since 0.8.0 its pinned set and not a limit, D19: the
+  charter names the ratios, so a rate a family rate reaches by one of them,
+  48 → 3 kHz by 1/16, is in it with no row of the matrix)
   fall into two families, and `rational` serves pairs inside one family:
   - the 48 kHz family: 8, 12, 16, 24, 32, 48, 96, 192, 384 kHz
     (8 kHz · 2^a · 3^b with b ≤ 1);
@@ -1729,8 +1732,17 @@ carries its measurements, as `bridge`'s M7 entries do.
 - **A `(f_pass, A)` other than the four profiles' per chain**: custom
   profiles exist as `bridge`'s do (runtime-length instantiation), but the
   matrix pins only the named four.
-- **352.8 kHz, 768 kHz, 7.35 kHz**: not in the 14; adding a rate is a
-  family-plan change (384 kHz stays, decision 5, R15).
+- **352.8 kHz, 768 kHz, 7.35 kHz in the coverage matrix**: not among its
+  pinned 14, and pinning a rate there is a family-plan change (384 kHz
+  stays, decision 5, R15). *Amended in 0.8.0* (the family's D19, rates
+  named by ratio, `docs/X4_X8_PLAN.md` 6.4): this read "not in the 14;
+  adding a rate is a family-plan change", as if the 14 bounded the charter.
+  The charter names ratios (R1), and each of the three is a 2^a · 3^b ratio
+  of a family rate (176.4 × 2, 384 × 2, 44.1 / 6), so a chain to or from it
+  inside its family is in the charter, the caller's to write with no row to
+  pin it, as 48 → 6 and 48 → 3 kHz are (the low-band round trip's, 6.6 of
+  that plan). Crossing the families at 352.8 kHz stays outside `bridge`'s
+  k ≤ 2.
 - ~~**A single 4th-band stage**~~ (`ratio<4, 1>`, `<1, 4>`): a non-goal
   until X-a3, which admitted it on the matrix's cost (decision 6 as
   amended 2026-11-21, R3, `docs/X4_X8_PLAN.md` X3).

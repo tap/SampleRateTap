@@ -51,6 +51,7 @@ How to read it:
 | D17 | **One error model (A3, the roadmap's Block A):** construction is where an engine rejects, processing is `noexcept`; each engine states the rejection twice in the same words — `validate(...)`, a `noexcept` precheck returning the reason as a `const char*` (nullptr when the converter constructs), and the constructor, which raises that reason through `tap::dsp::raise` (DspTap's `detail/expects.h`: a throw where the build has exceptions, `std::terminate()` where it does not). Every header compiles under `-fno-exceptions`; the C ABIs validate before constructing and return NULL. Gated by `<engine>.Family.HeadersCompileWithoutExceptions` and the `no-exceptions` CI job, which since A12 runs every battery under `-fno-exceptions -fno-rtti` (`TAP_SR_NO_EXCEPTIONS_RTTI`), as nine QEMU legs do on the M33, M55 and Hexagon. | A3 (2026-10-10). The shared piece landed in DspTap first (tap/DspTap#59), per the substrate discipline. A12 (2026-11-04, Q5's answer: a current project forbids both) made it every battery's configuration, the substrate first again (tap/DspTap#63). |
 | D16 | **Tests carry an engine prefix:** `gtest_discover_tests(… TEST_PREFIX "async." / "bridge.")`, plus a `LABELS` value of `async` / `bridge` on every test, including the bare-metal `*_tests_emulated` entries. Lands in step P.2, so the snapshot already has it, **with RatioTap's pre-rename spelling `ratio.` / `ratio`**; step 3.4 renames it to `bridge.` / `bridge`, and G1/G2 compare through `rename.py`'s name map | CTest applies a duplicate name's properties to both tests. `FixedPoint.FullScaleSineDoesNotWrapQ15` exists in both engines, so labels alias and `ctest -L ratio` selects async's copy (reproduced, R2-GATE-4). Unique names fix G1 and engine selection |
 | D18 | **Every channel count is the type's (A13, `docs/CHANNELS_PLAN.md`):** an engine's channel count is a compile-time template parameter of at least 1 — second, after the sample format, on every engine type, and first on the aliases (`async::converter<2>`, `rational::converter<2, down2>`, `bridge::converter_to_44k1<2>`) — never a constructor argument or a configuration field; zero fails to compile. Each engine's count-independent state and cold code are built once per format and rate (the plan's K12), and only the per-count hot paths are compiled per count. The C ABIs keep a run-time count: `bridge` and `rational` serve one and two channels natively and any other count as that many one-channel converters behind the handle, bit for bit the native type; `async` serves one and two and refuses the rest (one clock servo per stream). DspTap's `chain` takes its count from its stages (`sync_stage` requires a `static constexpr channels()`, DspTap 0.2.0). | The maintainer's decision (2026-11-13), the plan's decisions K1, K2, K8, K10 and K11 taken 2026-11-17, and gate 0's option 3 the same day: `rational`'s per-count blocks out of line, three rows above the gate's rule accepted. Landed engine by engine (A13a DspTap, A13b `rational`, A13c `bridge`, A13d `async` with 0.7.0); before 0.7.0, `async` took its count at run time (`config::channels`). |
+| D19 | **Rates are named by ratio (`docs/X4_X8_PLAN.md` 6.4):** `rational`'s charter names ratios inside a family, L/M with L, M ∈ {2^a·3^b} (`ratio<L, M>`'s `static_assert`), not a list of rates, so any rate a family rate reaches by such a ratio is in its charter: 48 → 3 kHz is the ratio 1/16, and 6, 5.5125, 3 and 2.75625 kHz are `rational`'s as 48 and 44.1 kHz are. The 14 rates of 2.1 are the coverage matrix's pinned set, the pairs whose chains it pins row by row, not a limit; a rate outside them has no row, so its chain is the caller's to write (the aliases by 4, 8 and 16 name the matrix's chains for those ratios, which carry no rate). D12's rule keeps its purpose: the 1000/1001 pull-down rates are no 2^a·3^b ratio of a family rate, so they stay outside `rational`'s charter, and they are still never `async`'s; ratios of 7 (37.8, 50.4 kHz) stay outside it too, by the `static_assert`. | The maintainer's A (the 2026-11 audit of the ×4 / ×8 / ×16 plan, `docs/PLANS_AUDIT_2026-11.md`): the plan's low-band round trip and its tests run at 6, 5.5125, 3 and 2.75625 kHz, which the old wording ("no rate is served by an engine whose charter does not name it" over a list of 14) put outside every charter although `ratio<1, 16>` always compiled for them; the charter had named the number all along (R1). Recorded with the aliases in 0.8.0 (X-b), with 2.1, the root `CLAUDE.md`'s D12 sentence and `rational/PLAN.md`'s non-goal amended in the same change. |
 
 ---
 
@@ -99,16 +100,26 @@ Checks against the rows below:
   at attenuation `A`. That rules out an L-th-band ↑3 stage whose transition
   band leaves images at 8–9 kHz, which v2's rules let through.
 
-**Supported rates:** exactly these 14: 8, 11.025, 12, 16, 22.05, 24, 32,
-44.1, 48, 88.2, 96, 176.4, 192 and 384 kHz.
+**The pinned rates:** these 14: 8, 11.025, 12, 16, 22.05, 24, 32, 44.1,
+48, 88.2, 96, 176.4, 192 and 384 kHz, the coverage matrix's set (its 182
+ordered pairs). *Amended in 0.8.0 (D19):* until then this line read
+"Supported rates: exactly these 14", a limit. Rates are named by ratio:
+`rational`'s charter names L/M with L, M ∈ {2^a·3^b} inside a family, so any
+rate a family rate reaches by such a ratio is in it (48 → 3 kHz is the ratio
+1/16, 44.1 → 2.75625 kHz too), and the 14 are the rates whose pairs the
+matrix pins, not the rates the family serves. `bridge`'s and `async`'s
+charters are unchanged.
 
 **Excluded, with reasons:**
 
-- **352.8 kHz (DXD):** `bridge`'s k stops at 2 and no consumer has asked.
+- **352.8 kHz (DXD) across the families:** `bridge`'s k stops at 2 and no
+  consumer has asked. Within its family it is 176.4 kHz × 2, a ratio
+  `rational`'s charter names (D19), with no row of the matrix.
 - **37.8 and 50.4 kHz:** ratios of 7.
 - **1000/1001 pull-down rates:** these are synchronous ratios that happen to
   sit inside `async`'s ±1000 ppm. They must never be served by `async`, since
-  that would be routing by rate.
+  that would be routing by rate, and they are no 2^a·3^b ratio of a family
+  rate, so `rational`'s charter does not name them either (D19).
 
 The **full 14 × 14 matrix is generated** in `rational`'s plan. Illustrative
 rows:
