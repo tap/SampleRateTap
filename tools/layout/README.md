@@ -32,9 +32,20 @@ Host, x86-64 (GCC 13.3 `-O3`, valgrind 3.22, the pinned glibc dispatch;
 | bridge | 43,246,713 | 44,969,562 | 1.040 | 127,737,465 | 134,913,561 | 1.056 | 252,581,211 | 269,819,997 | 1.068 |
 | rational | 24,421,446 | 27,477,588 | 1.125 | 66,488,151 | 82,437,639 | 1.240 | 128,191,290 | 164,868,153 | 1.286 |
 
-Interleaved is never the more expensive layout. Async gains the most: its
-per-frame blend is shared by every channel, and from four channels on hosts it
-puts the channels in SIMD lanes (the book's Part III, C6), which no mono
-converter can. Rational shares its per-frame polyphase bookkeeping; bridge,
-whose cost is almost all filter dot products, differs by 4 to 7 %. The M33, M55
-and Hexagon figures are in each CI run's step summary.
+Per target, planar / interleaved (CI run 413, workflow_dispatch on this
+branch, 2026-11-21; every pair's outputs bit-identical; `hexagon` counts
+packets, as its ratchet does; the M55 row follows when that job finishes):
+
+| target | async 2 | async 6 | async 12 | bridge 2 | bridge 6 | bridge 12 | rational 2 | rational 6 | rational 12 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| host (x86-64) | 1.270 | 1.863 | 2.285 | 1.040 | 1.056 | 1.068 | 1.125 | 1.240 | 1.286 |
+| m33 | 1.002 | 1.024 | 1.030 | 1.002 | 1.003 | 1.005 | 1.007 | 1.014 | 1.015 |
+| hexagon | 1.078 | 1.115 | 1.126 | 1.011 | 1.018 | 1.020 | 1.032 | 1.061 | 1.067 |
+
+Interleaved is never the more expensive layout, on any target. On the host
+async gains the most: its per-frame blend is shared by every channel, and
+from four channels it puts the channels in SIMD lanes (the book's Part III,
+C6), which no mono converter can; rational shares its per-frame polyphase
+bookkeeping; bridge, almost all filter dot products, differs by 4 to 7 %.
+On the M33, where the dots dominate and C6's path is compiled out, the two
+layouts are within 3 % of each other; Hexagon sits between.
