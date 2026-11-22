@@ -29,6 +29,7 @@ add_executable(tap_sr_rational_tests
     test_chain.cpp
     test_design.cpp
     test_fixed_point.cpp
+    test_iir_stage.cpp
     test_low_band.cpp
     test_non_finite.cpp
     test_output_hash.cpp
@@ -93,6 +94,35 @@ else()
                          PROPERTIES TIMEOUT 900 LABELS rational)
 endif()
 
+# The recursive stages without the host's flush-to-zero
+# (test_iir_subnormals.cpp, docs/IIR_PLAN.md I9): an executable of its own,
+# because TAP_DSP_ALLOW_SUBNORMALS compiles the stages' debug-build
+# precondition out and must be one setting per image (an ODR rule:
+# tap/dsp/subnormals.h). Hosted and on every bare-metal leg, with its own
+# one-shot runner there.
+add_executable(tap_sr_rational_iir_subnormals test_iir_subnormals.cpp)
+target_compile_definitions(tap_sr_rational_iir_subnormals PRIVATE TAP_DSP_ALLOW_SUBNORMALS)
+target_include_directories(tap_sr_rational_iir_subnormals PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(tap_sr_rational_iir_subnormals PRIVATE tap::sr::rational tap_sr_rational_warnings)
+if(Threads_FOUND)
+    target_link_libraries(tap_sr_rational_iir_subnormals PRIVATE Threads::Threads)
+endif()
+if(TAP_SR_BARE_METAL)
+    target_sources(tap_sr_rational_iir_subnormals PRIVATE bare_metal_main.cpp)
+    target_compile_definitions(tap_sr_rational_iir_subnormals PRIVATE TAP_SR_RATIONAL_BARE_METAL_SUBNORMALS)
+    target_link_libraries(tap_sr_rational_iir_subnormals PRIVATE GTest::gtest)
+    add_test(NAME tap_sr_rational_iir_subnormals_emulated COMMAND tap_sr_rational_iir_subnormals)
+    set_tests_properties(tap_sr_rational_iir_subnormals_emulated PROPERTIES
+        PASS_REGULAR_EXPRESSION "TAP_SR_TESTS_COMPLETE rc=0"
+        FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
+        TIMEOUT 1800
+        LABELS rational)
+else()
+    target_link_libraries(tap_sr_rational_iir_subnormals PRIVATE GTest::gtest_main)
+    gtest_discover_tests(tap_sr_rational_iir_subnormals TEST_PREFIX "rational." DISCOVERY_TIMEOUT 120
+                         PROPERTIES TIMEOUT 900 LABELS rational)
+endif()
+
 # The footprint contract (test_footprint.cpp): an executable of its own,
 # because DspTap's heap meter replaces the global operator new for the whole
 # program. Hosted and on the Hexagon leg (where sizeof(std::vector) is 12, the
@@ -142,3 +172,16 @@ add_test(NAME rational.Stage.ZeroChannelsFailToCompileWithTheMessage
                  -DTAP_SR_RATIONAL_INCLUDE=${CMAKE_CURRENT_SOURCE_DIR}/../include
                  -DTAP_DSP_INCLUDE=${SampleRateTap_SOURCE_DIR}/submodules/dsptap/include)
 set_tests_properties(rational.Stage.ZeroChannelsFailToCompileWithTheMessage PROPERTIES LABELS rational TIMEOUT 300)
+# The recursive stages (docs/IIR_PLAN.md I2, X10): by 3 refused with the
+# message that names it as planned, the near-linear four-path stage refused,
+# the nonlinear variant refused by the round-trip scaffold (it has no exact
+# delay path) and by a chain's exact latency (it has none).
+add_test(NAME rational.IirStage.RefusedShapesFailToCompileWithTheMessage
+         COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
+                 -S ${CMAKE_CURRENT_SOURCE_DIR}/compile_fail
+                 -B ${CMAKE_CURRENT_BINARY_DIR}/compile_fail_iir
+                 ${_compiler_args}
+                 -DTAP_SR_RATIONAL_COMPILE_FAIL_SET=iir
+                 -DTAP_SR_RATIONAL_INCLUDE=${CMAKE_CURRENT_SOURCE_DIR}/../include
+                 -DTAP_DSP_INCLUDE=${SampleRateTap_SOURCE_DIR}/submodules/dsptap/include)
+set_tests_properties(rational.IirStage.RefusedShapesFailToCompileWithTheMessage PROPERTIES LABELS rational TIMEOUT 300)
