@@ -32,13 +32,14 @@
 #pragma once
 
 #include "tap/dsp/version.h"
-#include "tap/sr/rational/chain.h"     // IWYU pragma: export
-#include "tap/sr/rational/converter.h" // IWYU pragma: export
-#include "tap/sr/rational/design.h"    // IWYU pragma: export
-#include "tap/sr/rational/iir_chain.h" // IWYU pragma: export
-#include "tap/sr/rational/iir_stage.h" // IWYU pragma: export
-#include "tap/sr/rational/ratio.h"     // IWYU pragma: export
-#include "tap/sr/rational/stage.h"     // IWYU pragma: export
+#include "tap/sr/rational/chain.h"      // IWYU pragma: export
+#include "tap/sr/rational/converter.h"  // IWYU pragma: export
+#include "tap/sr/rational/design.h"     // IWYU pragma: export
+#include "tap/sr/rational/guard_band.h" // IWYU pragma: export
+#include "tap/sr/rational/iir_chain.h"  // IWYU pragma: export
+#include "tap/sr/rational/iir_stage.h"  // IWYU pragma: export
+#include "tap/sr/rational/ratio.h"      // IWYU pragma: export
+#include "tap/sr/rational/stage.h"      // IWYU pragma: export
 
 #define TAP_SR_VERSION_MAJOR 0
 #define TAP_SR_VERSION_MINOR 8
