@@ -35,32 +35,42 @@
 // Settings (guard_band_settings): the passband edge p as a fraction of the
 // filter's own rate (the chain's lowest, where it sits: the profile's p), A,
 // and the Chebyshev II order, which sets the stop edge of both forms. The
-// named settings take the profiles' numbers and the order of I7's rule: the
-// lowest odd order whose worst alias in the guard band, after the nonlinear
-// half-band at its own design, is at or below -A/2 (the maintainer's
-// decision, docs/IIR_PLAN.md question 14;
-// rational.guard_band.OrderIsTheLowestOddOrderWhoseGuardBandAliasIsAtHalfA
-// recomputes it from the designs: -40.1 / -43.5 / -40.2 / -61.6 dB at the
-// named orders):
+// named settings take the profiles' numbers and the order of I7's rule behind
+// the half-band the filter serves, which each names (half_band_kind): the
+// lowest odd order whose worst alias in the guard band, after that half-band
+// at its own design, is at or below -A/2 (the maintainer's decisions,
+// docs/IIR_PLAN.md questions 14 and 20: "The settings can be different for
+// the fir and near linear chains than the nonlinear chains"). The rule picks
+// 5 / 7 / 7 / 7 behind the nonlinear half-band and 7 / 7 / 7 / 11 behind the
+// FIR and the near-linear ones, so economy and balanced are one design behind
+// every kind and super_economy and transparent two
+// (rational.guard_band.OrderIsTheLowestOddOrderWhoseGuardBandAliasIsAtHalfA
+// recomputes every kind's pick from the designs: -40.1 / -43.5 / -40.2 /
+// -61.6 dB at the named orders behind the nonlinear half-band, -39.6 / -39.2
+// / -37.8 / -64.6 behind the near-linear and -40.9 / -37.0 / -37.0 / -62.1
+// behind the FIR):
 //
-//   | settings      | A      | p     | order | stop edge | Chebyshev II      | linear (type II FIR) |
-//   |---------------|--------|-------|-------|-----------|-------------------|----------------------|
-//   | super_economy |  70 dB | 1/3   | 5     | 0.4657    | 3 sections, 15    | 30 taps, 29/2 frames |
-//   | economy       |  70 dB | 3/8   | 7     | 0.4530    | 4 sections, 20    | 50 taps, 49/2 frames |
-//   | balanced      |  70 dB | 19/48 | 7     | 0.4614    | 4 sections, 20    | 58 taps, 57/2 frames |
-//   | transparent   | 120 dB | 5/12  | 7     | 0.4862    | 4 sections, 20    | 72 taps, 71/2 frames |
+//   | settings      | half-band        | A      | p     | order | stop edge | Chebyshev II   | linear (type II FIR)   |
+//   |---------------|------------------|--------|-------|-------|-----------|----------------|------------------------|
+//   | super_economy | nonlinear        |  70 dB | 1/3   | 5     | 0.4657    | 3 sections, 15 | 30 taps, 29/2 frames   |
+//   | super_economy | FIR, near-linear |  70 dB | 1/3   | 7     | 0.4350    | 4 sections, 20 | 38 taps, 37/2 frames   |
+//   | economy       | every kind       |  70 dB | 3/8   | 7     | 0.4530    | 4 sections, 20 | 50 taps, 49/2 frames   |
+//   | balanced      | every kind       |  70 dB | 19/48 | 7     | 0.4614    | 4 sections, 20 | 58 taps, 57/2 frames   |
+//   | transparent   | nonlinear        | 120 dB | 5/12  | 7     | 0.4862    | 4 sections, 20 | 72 taps, 71/2 frames   |
+//   | transparent   | FIR, near-linear | 120 dB | 5/12  | 11    | 0.4669    | 6 sections, 30 | 102 taps, 101/2 frames |
 //
 // (the stop edge as a fraction of the filter's rate: 21.7 kHz at 48 kHz for
 // economy, the zero at 24; the Chebyshev II's multiplies per output frame per
 // channel, five per section as the kernel runs them; the FIR's N taps, its
 // multiplies, since its dot does not fold its symmetric pairs, and its exact
-// latency). The rule is the nonlinear half-band's: behind the near-linear and
-// the FIR half-band the same orders leave the guard band's worst alias at
-// -31.4 / -39.2 / -37.8 / -48.8 and -31.6 / -37.0 / -37.0 / -45.6 dB, above
-// -A/2 at super_economy and transparent (the rule would pick 7 / 7 / 7 / 11
-// behind either); the passband and the band past the stop edge keep their
-// contracts behind every half-band
-// (rational.guard_band.AliasesLandOnlyAboveThePassbandEdge). Where the
+// latency; the rows in this order are the "named settings" every list of six
+// numbers below runs over). Behind the kinds it names, a named setting leaves
+// every alias in the guard band at or below -A/2, and behind every half-band
+// the passband and the band past the stop edge keep their contracts
+// (rational.guard_band.AliasesLandOnlyAboveThePassbandEdge); the nonlinear
+// half-band's orders 5 and 7 at super_economy and transparent would leave
+// -31.4 and -48.8 dB behind the near-linear half-band and -31.6 and -45.6
+// behind the FIR, which is why the settings differ by kind. Where the
 // coefficients come from (I4):
 //   - nonlinear: the named settings are compile-time constants
 //     (tap::dsp::k_guard_band_cheby2: the poles, zeros and pairing constexpr,
@@ -70,15 +80,15 @@
 //     apply_section_gains, Jackson 1970), within 1e-13 of the compile-time
 //     design at a committed spec point;
 //   - linear: the named settings run DspTap's committed Parks-McClellan rows
-//     (tap::dsp::k_guard_band_fir: attained stopbands -71.4 / -73.3 / -71.2
-//     / -123.0 dB, ripple 0.0086 / 0.0068 / 0.0088 / 0.0062 dB peak to
-//     peak); any other setting designs at construction through DspTap's
-//     Kaiser designer (design_guard_band_linear at the shortest even length
-//     search_guard_band_linear_length finds: A + 1 dB on 4097 points, up to
-//     512 taps), which is not equiripple and so runs longer than a committed
-//     row at the same spec (82 taps against 64 at economy's numbers and order
-//     9), held to its spec by tolerance; validate() states a setting no length
-//     up to 512 taps meets.
+//     (tap::dsp::k_guard_band_fir: attained stopbands -71.4 / -70.9 / -73.3
+//     / -71.2 / -123.0 / -120.1 dB, ripple 0.0086 / 0.0091 / 0.0068 / 0.0088
+//     / 0.0062 / 0.0093 dB peak to peak); any other setting designs at
+//     construction through DspTap's Kaiser designer (design_guard_band_linear
+//     at the shortest even length search_guard_band_linear_length finds: A +
+//     1 dB on 4097 points, up to 512 taps), which is not equiripple and so
+//     runs longer than a committed row at the same spec (82 taps against 64
+//     at economy's numbers and order 9), held to its spec by tolerance;
+//     validate() states a setting no length up to 512 taps meets.
 //
 // Contract, as numbers:
 //   - 1:1 (k_up = k_down = 1): outputs_for(n) = n and frames_needed(k) = k
@@ -90,40 +100,42 @@
 //     over the passband) and group_delay_output_frames(f) (f in cycles per
 //     frame, from the coefficients), never latency_output_frames(); at
 //     economy 0.54 frames at DC and 5.04 at the passband edge (deviation
-//     4.51; 0.38 to 0.54 at DC and 1.84 to 6.76 of deviation across the named
-//     settings). The linear form reports latency_output_frames() = (N - 1) /
-//     2 frames, an exact_ratio (49/2 at economy), which tap::dsp::chain sums
-//     exactly;
+//     4.51; 0.38 to 0.75 at DC and 1.84 to 14.07 of deviation across the
+//     named settings, the most at transparent's order 11). The linear form
+//     reports latency_output_frames() = (N - 1) / 2 frames, an exact_ratio
+//     (49/2 at economy), which tap::dsp::chain sums exactly;
 //   - flush() feeds window_frames() zeros and writes as many outputs, bit
 //     for bit the zero-padded stream's. The linear form's window is its
 //     history, N - 1 frames, after which every output is exactly zero. The
 //     nonlinear form's is the count to an exactly zero state (I6): floating
 //     point, tap::dsp::floating_flush_frames over the largest pole radius
 //     (from the format's largest finite state to its smallest normal, plus
-//     one frame per section) under the host's flush-to-zero, 1,032 to 2,402
-//     frames in float and 8,286 to 19,315 in double at the named settings;
+//     one frame per section) under the host's flush-to-zero, 1,032 to 3,564
+//     frames in float and 8,286 to 28,660 in double at the named settings;
 //     fixed point, twice the sum over the sections of each one's
 //     magnitude-truncated decay through its pole radius from the full state
 //     headroom to one LSB, plus one (the near-linear half-band's rule,
-//     iir_stage.h): 420 to 1,072 frames in Q15 and 828 to 2,130 in Q31, where
-//     every state is zero within 321 and 691 after full-scale drive. One
+//     iir_stage.h): 420 to 1,750 frames in Q15 and 828 to 3,480 in Q31, where
+//     every state is zero within 365 and 802 after full-scale drive. One
 //     exception, an honest limit (the maintainer's decision, docs/IIR_PLAN.md
 //     question 19, R28): the floating Chebyshev II of order 7 or more holds a
 //     zero-input limit cycle under flush-to-zero, from some states and not
 //     others: once |a2 y| falls below the smallest normal its product
 //     flushes and the section, run for that sample as a first-order
-//     recursion with |a1| > 1, lifts the state again (iir_kernels.h). At
-//     order 7, the named settings' and the custom ones' at their numbers, its
-//     state then settles below 16 times the smallest normal (measured up to
-//     8.7 times in float and 10.4 in double, over 20 starts per design;
+//     recursion with |a1| > 1, lifts the state again (iir_kernels.h). At the
+//     named settings' orders 7 and 11 its state then settles below 16 times
+//     the smallest normal (measured up to 8.7 times in float and 10.4 in
+//     double at order 7, and 8.4 and 7.7 at transparent's order 11, over 20
+//     starts per design;
 //     rational.guard_band_float_test.TheChebyshevLimitCycleIsBounded; a
-//     custom order of 9 or more is not measured here, and DspTap's survey
-//     found up to 13.1 times, iir_kernels.h), so
-//     after flush() the output is that residue, not silence; the stage's
+//     custom setting of order 7 or more is not measured here, and DspTap's
+//     survey found up to 13.1 times, iir_kernels.h), so after flush() the
+//     output is that residue, not silence; the stage's
 //     flush() still equals its zero padding bit for bit, and a chain whose
 //     later stages follow it flushes within the residue of zero padding.
 //     Orders 3 and 5 drain to an exactly zero state at every named spec point
-//     (so super_economy's does), and fixed point always does (magnitude
+//     (so super_economy's behind the nonlinear half-band does), and fixed
+//     point always does (magnitude
 //     truncation leaves no limit cycle, I8);
 //   - flush-to-zero is the host's job (I9), for the nonlinear form only:
 //     process(), pull() and flush() check TAP_DSP_EXPECTS_SUBNORMALS_FLUSHED
@@ -132,7 +144,7 @@
 //     filter reads-and-writes the environment. The linear form is an FIR and
 //     needs nothing: its history empties after one window. Without the bits
 //     (or where none governs S: double on the M33, Hexagon) the Chebyshev's
-//     state sticks at a few multiples of the smallest subnormal (at most 10
+//     state sticks at a few multiples of the smallest subnormal (at most 11
 //     measured, bound 32:
 //     rational.iir_subnormals.WithoutFlushToZeroTheGuardBandResidueIsBounded);
 //   - formats: the nonlinear form as tap/dsp/iir_kernels.h states it (float
@@ -143,19 +155,19 @@
 //     in Q2.30, so validate() has no format rejection: the denominators by
 //     stability (|a1| < 2 r < 2, a2 = r^2 < 1), the numerators below 2 at
 //     every point of a grid over p, A and the order (at most 1.99996). Under
-//     full-scale drive the largest state is 1.67 of full scale (limit 4), the
+//     full-scale drive the largest state is 1.71 of full scale (limit 4), the
 //     Q15 output within half an LSB of the double filter's (bound 2) and the
-//     Q31 within 1.3e-8, and the Q15 floor is -101.1 dB RMS against double. The linear
-//     form as tap/dsp/sample_traits.h states it (float taps accumulated in
-//     double; Q15 in Q1.14 taps and Q31 in Q1.30, one rounding, saturating),
-//     its table symmetric bit for bit in every format (the first half
-//     quantized with tap::dsp::quantize_row_preserving_sum and mirrored), so
-//     its zero at Nyquist holds in the quantized taps too. Against the golden
-//     leg (scipy): 8.2e-15 / 4.4e-16 of full scale in double, 9.0e-7 /
-//     6.8e-8 in float, 1.5e-5 / 2.4e-4 in Q15 and 5.1e-9 / 3.9e-9 in Q31
-//     (Chebyshev II / FIR); the Q15 and Q31 outputs of both forms bit-pinned,
-//     the float and double ones tolerances (this tree does not pass
-//     -ffp-contract=off);
+//     Q31 within 1.3e-8, and the Q15 floor is -101.1 dB RMS against double.
+//     The linear form as tap/dsp/sample_traits.h states it (float taps
+//     accumulated in double; Q15 in Q1.14 taps and Q31 in Q1.30, one
+//     rounding, saturating), its table symmetric bit for bit in every format
+//     (the first half quantized with tap::dsp::quantize_row_preserving_sum
+//     and mirrored), so its zero at Nyquist holds in the quantized taps too.
+//     Against the golden leg (scipy): 8.2e-15 / 5.6e-16 of full scale in
+//     double, 1.1e-6 / 6.8e-8 in float, 1.5e-5 / 2.5e-4 in Q15 and 5.1e-9 /
+//     4.0e-9 in Q31 (Chebyshev II / FIR); the Q15 and Q31 outputs of both
+//     forms bit-pinned, the float and double ones tolerances (this tree does
+//     not pass -ffp-contract=off);
 //   - the constructor designs and allocates; process(), pull(), flush() and
 //     reset() are noexcept and allocation-free; one stream per instance, of
 //     Ch channels, a compile-time count of at least 1 (D18); the count-
@@ -164,11 +176,11 @@
 //     flush() are compiled per count, out of line (A12), each against a
 //     cursor;
 //   - honest limits: the linear form in Q15 is format-limited: its Q1.14
-//     taps attain -67.1 / -66.8 / -64.6 / -70.9 dB from the stop edge at
-//     super_economy / economy / balanced / transparent, below the 70 dB tier,
-//     and its output stays -77.8 dB RMS from double's (Q31 keeps the designs:
-//     -71.4 / -73.3 / -71.2 / -123.0 dB; at Q15 the Chebyshev II, whose Q2.30
-//     coefficients keep its design, holds the tier:
+//     taps attain -67.1 / -68.9 / -66.8 / -64.6 / -70.9 / -69.2 dB from the
+//     stop edge at the named settings, below each one's A, and its output
+//     stays -77.8 dB RMS from double's (Q31 keeps the designs: -71.4 / -70.9
+//     / -73.3 / -71.2 / -123.0 / -120.1 dB; at Q15 the Chebyshev II, whose
+//     Q2.30 coefficients keep its design, holds each one's A:
 //     guard_band_fixed_test.QuantizedLinearTablesAttainTheirStatedStopbands);
 //     a non-finite input poisons the nonlinear form's state until reset(), and
 //     clears from the linear form after its window, as from an FIR stage (I9);
@@ -227,26 +239,51 @@ namespace tap::sr::rational {
     };
     // ANCHOR_END: rational_guard_phase
 
+    // ANCHOR: rational_half_band_kind
+    /// The half-band a guard band filter serves, the one beside it in the
+    /// chain (docs/IIR_PLAN.md question 20): the guard band's aliases are that
+    /// half-band's, so a named setting's order depends on it (the file header).
+    enum class half_band_kind : std::uint8_t {
+        fir,         ///< the FIR Nyquist half-band, basic_stage by 2
+        nonlinear,   ///< the recursive half-band, iir_phase::nonlinear
+        near_linear, ///< the recursive half-band, iir_phase::near_linear
+    };
+    // ANCHOR_END: rational_half_band_kind
+
     // ANCHOR: rational_guard_band_settings
     /// What a guard band filter is designed from (the file header): the
     /// passband edge as a fraction of the filter's own rate (a chain's lowest,
     /// where it sits), the stopband A, and the Chebyshev II order, which sets
     /// the stop edge of both forms. The named settings are the profiles'
-    /// numbers at I7's order; any other is a custom setting, designed at
-    /// construction.
+    /// numbers at I7's order behind the half-band the filter serves, so each
+    /// names its half_band_kind; any other is a custom setting, designed at
+    /// construction. A default-constructed guard_band_settings is economy's,
+    /// the same behind every kind.
     struct guard_band_settings {
         double passband_frac     = 3.0 / 8.0; ///< f_pass over the filter's rate, in (0, 1/2)
         double stopband_atten_db = 70.0;      ///< A, dB, from the stop edge the order sets
         int    order             = 7;         ///< the Chebyshev II order: odd, 3 to 15
 
-        /// 70 dB, flat to 1/3, order 5 (16 kHz at 48, 70 dB from 22.4).
-        static constexpr guard_band_settings super_economy() noexcept { return {1.0 / 3.0, 70.0, 5}; }
-        /// 70 dB, flat to 3/8, order 7 (18 kHz at 48, 70 dB from 21.7).
-        static constexpr guard_band_settings economy() noexcept { return {}; }
-        /// 70 dB, flat to 19/48, order 7 (19 kHz at 48, 70 dB from 22.1).
-        static constexpr guard_band_settings balanced() noexcept { return {19.0 / 48.0, 70.0, 7}; }
-        /// 120 dB, flat to 5/12, order 7 (20 kHz at 48, 120 dB from 23.3).
-        static constexpr guard_band_settings transparent() noexcept { return {5.0 / 12.0, 120.0, 7}; }
+        /// 70 dB, flat to 1/3 (16 kHz at 48): order 5 behind the nonlinear
+        /// half-band (70 dB from 22.4 kHz), 7 behind the FIR and near-linear
+        /// ones (from 20.9).
+        static constexpr guard_band_settings super_economy(half_band_kind kind) noexcept {
+            return {1.0 / 3.0, 70.0, kind == half_band_kind::nonlinear ? 5 : 7};
+        }
+        /// 70 dB, flat to 3/8 (18 kHz at 48), order 7 behind every kind (70 dB
+        /// from 21.7 kHz); the kind is named all the same.
+        static constexpr guard_band_settings economy(half_band_kind /*kind*/) noexcept { return {}; }
+        /// 70 dB, flat to 19/48 (19 kHz at 48), order 7 behind every kind (70
+        /// dB from 22.1 kHz).
+        static constexpr guard_band_settings balanced(half_band_kind /*kind*/) noexcept {
+            return {19.0 / 48.0, 70.0, 7};
+        }
+        /// 120 dB, flat to 5/12 (20 kHz at 48): order 7 behind the nonlinear
+        /// half-band (120 dB from 23.3 kHz), 11 behind the FIR and near-linear
+        /// ones (from 22.4).
+        static constexpr guard_band_settings transparent(half_band_kind kind) noexcept {
+            return {5.0 / 12.0, 120.0, kind == half_band_kind::nonlinear ? 7 : 11};
+        }
 
         /// Where both forms reach A, a fraction of the filter's rate: the
         /// order-`order` Chebyshev II's stop edge (tap::dsp::
@@ -291,11 +328,17 @@ namespace tap::sr::rational {
 
     namespace detail {
 
-        /// The named settings, in profile order (super_economy, economy,
-        /// balanced, transparent).
-        inline constexpr std::array<guard_band_settings, 4> k_guard_band_named = {
-            guard_band_settings::super_economy(), guard_band_settings::economy(), guard_band_settings::balanced(),
-            guard_band_settings::transparent()};
+        /// The six distinct named settings, in profile order: super_economy
+        /// behind the nonlinear half-band and behind the others, economy,
+        /// balanced, transparent behind the nonlinear half-band and behind
+        /// the others.
+        inline constexpr std::array<guard_band_settings, 6> k_guard_band_named = {
+            guard_band_settings::super_economy(half_band_kind::nonlinear),
+            guard_band_settings::super_economy(half_band_kind::fir),
+            guard_band_settings::economy(half_band_kind::fir),
+            guard_band_settings::balanced(half_band_kind::fir),
+            guard_band_settings::transparent(half_band_kind::nonlinear),
+            guard_band_settings::transparent(half_band_kind::fir)};
 
         /// Which named setting s is, by number (an index into
         /// k_guard_band_named), or -1 for a custom one.
@@ -312,12 +355,13 @@ namespace tap::sr::rational {
 
         /// The named settings' Chebyshev II designs, compile-time constants
         /// (I4: constexpr, no libm at construction).
-        inline constexpr std::array<tap::dsp::cheby2_design, 4> k_guard_band_cheby2_designs = {
-            tap::dsp::k_guard_band_cheby2<70, 1, 3, 5>, tap::dsp::k_guard_band_cheby2<70, 3, 8, 7>,
-            tap::dsp::k_guard_band_cheby2<70, 19, 48, 7>, tap::dsp::k_guard_band_cheby2<120, 5, 12, 7>};
+        inline constexpr std::array<tap::dsp::cheby2_design, 6> k_guard_band_cheby2_designs = {
+            tap::dsp::k_guard_band_cheby2<70, 1, 3, 5>,   tap::dsp::k_guard_band_cheby2<70, 1, 3, 7>,
+            tap::dsp::k_guard_band_cheby2<70, 3, 8, 7>,   tap::dsp::k_guard_band_cheby2<70, 19, 48, 7>,
+            tap::dsp::k_guard_band_cheby2<120, 5, 12, 7>, tap::dsp::k_guard_band_cheby2<120, 5, 12, 11>};
 
         /// The taps of a committed row copied at compile time, so an image
-        /// holds the four named rows and not DspTap's whole table.
+        /// holds the six named rows and not DspTap's whole table.
         template <std::size_t N>
         constexpr std::array<double, N> guard_band_taps(std::span<const double> taps) noexcept {
             std::array<double, N> out{};
@@ -342,9 +386,9 @@ namespace tap::sr::rational {
             return {k_guard_band_fir_taps<StopDb, PassNum, PassDen, Order>,
                     tap::dsp::k_guard_band_fir<StopDb, PassNum, PassDen, Order>.stop_edge};
         }
-        inline constexpr std::array<guard_band_linear_row, 4> k_guard_band_linear_rows = {
-            guard_band_row<70, 1, 3, 5>(), guard_band_row<70, 3, 8, 7>(), guard_band_row<70, 19, 48, 7>(),
-            guard_band_row<120, 5, 12, 7>()};
+        inline constexpr std::array<guard_band_linear_row, 6> k_guard_band_linear_rows = {
+            guard_band_row<70, 1, 3, 5>(),   guard_band_row<70, 1, 3, 7>(),   guard_band_row<70, 3, 8, 7>(),
+            guard_band_row<70, 19, 48, 7>(), guard_band_row<120, 5, 12, 7>(), guard_band_row<120, 5, 12, 11>()};
 
         /// A custom setting's Chebyshev II: the run-time design at unity DC
         /// gain per section, then the L-inf section gains (Jackson 1970).
@@ -390,7 +434,7 @@ namespace tap::sr::rational {
         /// rejects with the same text through tap::dsp::raise
         /// (std::invalid_argument, or std::runtime_error for the unmeetable
         /// linear design), so a build without exceptions calls this first.
-        static const char* validate(const guard_band_settings& s = guard_band_settings::economy()) noexcept {
+        static const char* validate(const guard_band_settings& s = guard_band_settings{}) noexcept {
             if (const char* why = tap::sr::rational::validate(s)) {
                 return why;
             }
@@ -681,7 +725,7 @@ namespace tap::sr::rational {
 
         /// Designs or looks up the filter and allocates; setup time only.
         /// Rejects what validate() rejects, with its text.
-        explicit guard_band_filter(const guard_band_settings& s = guard_band_settings::economy())
+        explicit guard_band_filter(const guard_band_settings& s = guard_band_settings{})
             : base(Ch, s) {}
 
         /// Push-transform: consumes all in_frames interleaved frames and
