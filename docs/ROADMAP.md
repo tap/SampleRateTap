@@ -395,9 +395,9 @@ the recommendation). Its name map and breaking changes are `CHANGELOG.md`'s 0.8.
 - **X-c. DspTap's scaffold (X10)**, the low-band round trip as a DspTap primitive
   generic over `sync_stage`, in DspTap 0.3.0 with the IIR plan's substrate (X13).
   *Open.*
-- **Then TapTools:** its DspTap pin to `v0.3.0` first, then SampleRateTap as a
-  submodule (X11), `stft.h`'s change mode, the low-band EQ and notch object (X14) and a
-  notebook; then TapTools-Max. *Open.*
+- **Then TapTools:** its DspTap pin to `v0.4.0` (the family's floor since the guard band's Q15
+  rows) first, then SampleRateTap as a submodule (X11), `stft.h`'s change mode, the low-band EQ
+  and notch object (X14) and a notebook; then TapTools-Max. *Open.*
 
 ## 10. Block IIR: recursive stages for `rational`, and 0.9.0 (added 2026-11-22)
 
@@ -428,12 +428,20 @@ D20 (a stage type of its own), on DspTap 0.3.0, released as SampleRateTap 0.9.0.
   put to the maintainer: the order rule is the nonlinear half-band's (question 20), and the linear
   form in Q15 misses the 70 dB tier (question 21). No ratchet count or ceiling moved.
 - **IIR-c's follow-up. The guard band per half-band kind** (questions 20 and 21, decided after
-  IIR-c landed: the IIR plan's v12). *This block's PR in review.* The named settings take the
+  IIR-c landed: the IIR plan's v12). *In review (#115).* The named settings take the
   half-band the filter serves, `half_band_kind` (`fir`, `nonlinear`, `near_linear`): 5 / 7 / 7 /
   7 behind the nonlinear half-band, 7 / 7 / 7 / 11 behind the FIR and near-linear ones, six
   designs per form from DspTap's committed rows, with no DspTap change; the floating limit cycle
   at the new orders inside its bound of 16. The linear form's Q15 limit stays pinned until DspTap
   commits Q15 rows designed with margin and a pin bump brings them (question 21). No ratchet
   count or ceiling moved.
+- **The DspTap 0.4.0 pin move. Question 21's limit lifted** (the IIR plan's v13). *This block's
+  PR in review, after #115.* DspTap 0.4.0 (tap/DspTap#69) commits the guard band filter's Q15
+  rows and the symmetric quantizer; `submodules/dsptap` moves to `v0.4.0` and the family's floor
+  to 0.4.0. The guard band filter builds its linear table with the DspTap quantizer, and in Q15
+  at the four 70 dB named settings runs the Q15 rows, which hold the tier (−70.4 to −89.2 dB, 32
+  to 60 taps); `transparent` keeps the double rows in Q15, format-limited as the FIR stages are.
+  Every ratchet binary of the three engines is byte-identical across the move; no count or
+  ceiling moved.
 - **IIR-d. The C ABI, the binding, the notebooks, the ratchet workloads and ceilings** (I11),
   and the release: 0.9.0 with its tested pair; the maintainer tags `v0.9.0`. *Open.*

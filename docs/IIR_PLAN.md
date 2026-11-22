@@ -1,7 +1,25 @@
 # Recursive polyphase stages for `rational` (the IIR options): plan
 
-Status: **v12, 2026-11-22: IIR-a, IIR-b and IIR-c landed, IIR-c's follow-up in review.** v12
-records the maintainer's answers to the two questions IIR-c put to him, given after it landed
+Status: **v13, 2026-11-22: IIR-a, IIR-b and IIR-c landed; IIR-c's follow-up
+(tap/SampleRateTap#115) and the DspTap 0.4.0 pin move in review.** v13 records question 21's
+answer as it lands:
+- **DspTap 0.4.0** (tap/DspTap#69, tagged `v0.4.0`) commits the Q15 rows question 21 asked for,
+  `k_guard_band_fir_q15<A, num, den, Order>` at the three 70 dB spec points and orders 3 to 11
+  (none at 120 dB, which Q1.14 cannot carry), and the quantizer they are measured through,
+  `quantize_symmetric_row_preserving_sum` (the half-then-mirror `rational` ran inline, bit for
+  bit). Additive: no committed row before it moved.
+- **The pin move** (`rational/PLAN.md` R26 and its v0.24 record): `submodules/dsptap` at
+  `v0.4.0` and the family's floor 0.4.0; the guard band filter's table built by the DspTap
+  quantizer, and its linear form in Q15 at the four 70 dB named settings running the Q15 rows,
+  which attain the tier from the double row's stop edge: −89.2 / −70.4 / −72.3 / −70.7 dB, flat
+  to 0.0090 / 0.0098 / 0.0097 / 0.0096 dB, at 32 / 40 / 50 / 60 taps (30 / 38 / 50 / 58 in the
+  other formats, so its latency and window differ in Q15 at `super_economy` and `balanced`).
+  **Question 21's limit is lifted there.** At `transparent` the Q15 linear form keeps the double
+  rows, format-limited (−70.9 / −69.2 dB), as `rational`'s FIR stages are in Q15 at
+  `transparent`. Every float, double and Q31 output, and the Q15 Chebyshev II's, is unchanged,
+  and every ratchet binary of the three engines is byte-identical across the pin move.
+
+v12 records the maintainer's answers to the two questions IIR-c put to him, given after it landed
 (tap/SampleRateTap#114), and the follow-up that implements them (section 5 item 4):
 - **Question 20, the guard band settings behind the near-linear and the FIR half-band: decided,
   per kind.** The maintainer: "The settings can be different for the fir and near linear chains
@@ -1029,6 +1047,15 @@ reserves, with P = 4.
    - the limit cycle as I6 states it (v12); the offering table's near-linear rows with a filter
      at their kind's settings (↓2 at `super_economy` 25 and 43 multiplies, at `transparent` 49
      and 121).
+
+   *The pin move (v13, question 21's limit lifted), in review:* DspTap at `v0.4.0` (tap/DspTap#69),
+   the family's floor 0.4.0; `build_rows()` through DspTap's
+   `quantize_symmetric_row_preserving_sum`; the linear form in Q15 at the 70 dB named settings on
+   `k_guard_band_fir_q15` (32 / 40 / 50 / 60 taps, −89.2 / −70.4 / −72.3 / −70.7 dB from the
+   stop edge, 0.0090 / 0.0098 / 0.0097 / 0.0096 dB), its golden leg through those rows' design
+   taps and its Q15 bit pin re-recorded; `transparent`'s Q15 limit stays pinned (−70.9 / −69.2
+   dB). A custom linear setting keeps the run-time Kaiser design in Q15, its Q15 stopband not
+   stated.
 5. **IIR-d, the C ABI, the binding, the notebooks, the ratchet workloads and ceilings**
    (I11, section 4), and the release: SampleRateTap 0.9.0 (D13: the three umbrella headers
    and the root `project()`), with its tested-pairs row; the maintainer tags `v0.9.0`.
@@ -1199,7 +1226,9 @@ Decided:
     to `iir_tables.h`, longer rows); or the linear form not offered in Q15. The second is taken,
     in a DspTap PR of its own; `rational` keeps the limit pinned as it is (over the six designs
     since question 20: −67.1 / −68.9 / −66.8 / −64.6 / −70.9 / −69.2 dB), and the pin bump that
-    brings the rows lifts it.
+    brings the rows lifts it. *Lifted (v13)* at DspTap 0.4.0 for the four 70 dB named settings
+    (−89.2 / −70.4 / −72.3 / −70.7 dB in Q15); at 120 dB, where DspTap commits no Q15 row, the
+    limit stays pinned (−70.9 / −69.2 dB).
 
 Recommended, not yet put to the maintainer (your word settles each):
 16. I11: new C ABI entry points, the notebooks (IIR-d). I10, composition through
