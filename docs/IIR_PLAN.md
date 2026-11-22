@@ -1,6 +1,38 @@
 # Recursive polyphase stages for `rational` (the IIR options): plan
 
-Status: **draft v9, 2026-11-20, for the maintainer's review.** v9 records the design spike
+Status: **v10, 2026-11-22: IIR-a landed, IIR-b in review.** v10 records IIR-a as it landed in
+DspTap (tap/DspTap#68, tagged `v0.3.0`), the maintainer's answers that settled I3, I6, I8, I13,
+I14 and the names for IIR-b, and IIR-b's own results (`rational`'s stages, section 5 item 3):
+- **IIR-a's findings** (DspTap's `iir_design.h`, `iir_kernels.h`, `NOTICE.md`):
+  - every committed L∞ section gain of the Chebyshev II is exactly 1.0: with the sections ordered
+    by pole radius, each at unity DC gain, every partial cascade peaks at DC (I8);
+  - the floating Chebyshev II cascade of order 7 or more holds a zero-input limit cycle at a few
+    times the smallest normal under flush-to-zero (up to 13.1 times from full-scale starts), so I6's
+    exactly zero window cannot hold for the floating guard band filter at those orders: IIR-c's to
+    settle. The half-bands' first-order sections drain; IIR-b found one near-linear design that does
+    not (below);
+  - the nonlinear half-band's design takes two algebraic rewrites beyond IIR-0's nome step (the last
+    step's 1 − x and the band edge's 1 − w² / k), bringing every tabulated coefficient within 13.20
+    ulps of the mpmath leg (15.4 without the last);
+  - the constexpr math's exact product (`detail/cx_math.h`, under the constexpr sqrt) is formed in
+    integers: GCC's FMA contraction changed Dekker's two-product, whose split product is inexact by
+    design, and put sqrt an ulp from libm; the Q31 kernels' 96-bit products are integer too;
+  - the constexpr designs stay small: 11,090 Clang constant-evaluation steps for the order-17
+    half-band, the largest tabulated, against MSVC's documented default of 100,000.
+- **IIR-b** (`rational/include/tap/sr/rational/iir_stage.h`, `iir_chain.h`): the names
+  (`basic_iir_stage<S, Ch, R, P>`, `iir_phase`, `iir_stage_base<S, R, P>`, `iir_converter`,
+  `iir_converter_near_linear`, `iir_down_by`, `iir_up_by`), both variants ↑2 / ↓2 at every profile
+  and the design divisors 1, 2, 4 and 8, the cascades by 2 to 16, the golden leg, the battery and
+  the documents. Two findings:
+  - **the four-path stage does not ship** (I12): measured on the shipping machine over DspTap's
+    kernels, it does not beat the two half-bands it would replace by R3's 10 % on all three
+    targets (2.4);
+  - **one design holds a limit cycle under flush-to-zero** (I6): the floating near-linear stage at
+    `transparent` and divisor 1 (order 19) settles at about four times the smallest normal, so its
+    state never reaches exactly zero, for the reason IIR-a found in the Chebyshev II. It is pinned as
+    an honest limit and put to the maintainer (question 19).
+
+v9 records the design spike
 IIR-0 (SampleRateTap#104; every number below marked **IIR-0** is in
 `rational/tools/spikes/iir/README.md` with the program that produced it) and the
 maintainer's answers to it:
@@ -47,13 +79,15 @@ What v8 changes, in short:
 - **The spike gets a go/no-go list** and commits its programs (section 5).
 
 Decided: the scope, the formats and the release shape (section 1); the substrate in DspTap
-0.3.0 (I1); the stage's shape (I2); compile-time design (I4); the latency contract (I5);
-the guard band filter's name, an order per profile and both forms (I7); non-finite input,
-and flush-to-zero as the host's job (I9, v9); the bar for a four-path stage (I12); the
-round trip's target (question 5, v9); the order (section 5). Recommended and not yet put
-to the maintainer: I3, I6, I7's order rule, I8, I10, I11, I13 and I14, listed in section 8.
-Open until IIR-b: the stages' names. Numbers marked *est.* are arithmetic; numbers marked
-**IIR-0** are the spike's measurements.
+0.3.0 (I1); the stage's shape and, since v10, its names (I2); the profiles (I3, v10);
+compile-time design (I4); the latency contract (I5); the flush window (I6, v10); the guard band
+filter's name, an order per profile and both forms (I7); the fixed-point datapath (I8, v10);
+non-finite input, and flush-to-zero as the host's job (I9, v9); the bar for a four-path stage
+(I12), and IIR-b's measurement against it (v10); the relaxed designs and the cascade helper (I13,
+v10); float states in the float profile (I14, v10); the round trip's target (question 5, v9); the
+order (section 5). Recommended and not yet put to the maintainer: I7's order rule, I10 and I11,
+listed in section 8; open: question 19 (v10). Numbers marked *est.* are arithmetic; numbers
+marked **IIR-0** are the spike's measurements, **IIR-b** the shipping stages'.
 
 The plan lives at `docs/IIR_PLAN.md` (it carries a family decision and a DspTap part, as
 `docs/CHANNELS_PLAN.md` did), a draft until the maintainer approves it, and is respelled
@@ -317,6 +351,26 @@ margin is between the spike's own kernels, and Q15 on the M33 is near the bar, s
 ratchet confirms it on the shipping code before it is offered. The near-linear four-path
 stage was not measured.
 
+**What IIR-b measured on the shipping code** (`rational/tools/spikes/iir/iirb_fourpath/`, its
+README and `outputs/`): the four-path stage in IIR-b's draft of `basic_iir_stage`, over DspTap
+0.3.0's kernels, against the pair it replaces (↓2 at divisor 4 then at 2), 2 s of stereo at
+48 kHz in 32-frame blocks, streaming instructions, `economy` (the other 70 dB profiles within
+0.01 % of it); negative is fewer:
+
+| target | float ↓ | Q15 ↓ | float ↑ | Q15 ↑ | float in ×8 ↓ | Q15 in ×8 ↓ |
+|---|---:|---:|---:|---:|---:|---:|
+| M33 | +10.7 % | +14.6 % | +2.1 % | −14.7 % | +8.9 % | +12.1 % |
+| M55 | +9.2 % | −10.1 % | −1.2 % | −5.0 % | +7.5 % | −8.3 % |
+| Hexagon | −19.5 % | −24.1 % | −7.7 % | −10.7 % | −16.2 % | −19.7 % |
+
+No format and direction clears the bar on all three targets at either placement (the ×16 middle
+replaces the same pair at the same divisors, with smaller shares: +4.2 / +3.6 / −9.4 % in float
+going down), so **the four-path stage does not ship** and every cascade is half-bands (I12).
+IIR-0's kernels had the section counts as compile-time facts; DspTap's are generic over them, and
+on the in-order Arm cores the four-path stage pays four path set-ups and its path array per
+output for one or two sections each. A four-path stage that passed there would need a kernel
+specialized to its [2, 2, 1, 1] layout in DspTap.
+
 **Why measure it anyway.**
 - **Group delay:** one four-path stage may delay less than two cascaded half-bands, which
   matters to a latency-first caller and to the near-linear variant's delay path.
@@ -347,7 +401,13 @@ reserves, with P = 4.
   - **The design note.** `kaiser.h:14-22` and `nyquist.h:54` say every DspTap designer is
     runtime double. IIR-a adds the constexpr designers (I4) and amends that note to state
     their scope: a handful of coefficients per design, not long FIR tables.
-- **I2. The public shape. *Decided (v5);* the names are chosen in IIR-b.** A stage
+- **I2. The public shape. *Decided (v5);* the names *decided (v10, the maintainer):*
+  `basic_iir_stage<S, Ch, R, P>` with `P` an `iir_phase` (`nonlinear`, `near_linear`), its
+  count-independent base `iir_stage_base<S, R, P>`, the aliases `iir_converter<Ch, R>` (nonlinear)
+  and `iir_converter_near_linear<Ch, R>` with their `_q15` / `_q31` siblings, and the cascades
+  `iir_down_by<S, Ch, P, D>` / `iir_up_by<S, Ch, P, D>` (I13). R is `up2` / `down2`: the four-path
+  stage did not pass I12 (2.4), and the `static_assert`'s message names ↑3 / ↓3 as planned and
+  ↑4 / ↓4 as measured.** A stage
   template of its own beside `basic_stage`, `basic_iir_stage<S, Ch, R, P>` with `P` an
   `iir_phase` (`nonlinear`, `near_linear`), a `static_assert` that R is `up2` or `down2`
   (its message names ↑3 / ↓3 as planned, and admits `up4` / `down4` if I12's four-path stage
@@ -370,7 +430,8 @@ reserves, with P = 4.
       `TAP_SR_EXPECT_REJECTED`, for custom profiles and guard band settings above all;
     - each PR that adds a public header updates `_header_count_rational`
       (`rational.Family.HeaderCountIsPinned`).
-- **I3. Profiles.** *Recommended:* the same four names at the same (A, passband edge)
+- **I3. Profiles.** *Decided (v10, the maintainer), as recommended; IIR-b: every profile reaches
+  both variants, at every divisor 1, 2, 4 and 8.* The same four names at the same (A, passband edge)
   numbers, so `economy` means 70 dB flat to 3/8 in every stage kind; each variant pins its
   section count per profile in the spike. If the near-linear variant (or float at 120 dB)
   cannot reach a profile, that profile is not offered for it, stated rather than
@@ -450,9 +511,21 @@ reserves, with P = 4.
 - **I6. Flush.** `flush()` feeds `window_frames()` zeros, and DspTap's chain defines that
   count as the zero input frames after which the stage's output is silence
   (`chain.h:45-54`), pinned bit for bit by `FlushEqualsZeroPaddingBitForBit` in DspTap and
-  in `rational`. A recursive stage's tail never ends on its own. *Recommended (v8, restated
-  by the audit):* `window_frames()` is the count after which the state is **exactly zero**,
-  so the contract holds unchanged.
+  in `rational`. A recursive stage's tail never ends on its own. *Decided (v10, the
+  maintainer), as recommended (v8, restated by the audit):* `window_frames()` is the count after
+  which the state is **exactly zero**, plus one frame per section, so the contract holds
+  unchanged. IIR-b implements it with DspTap's `floating_flush_frames` (floating point) and, in
+  fixed point, IIR-0's bound for the first-order sections (per path 1 plus each section's longest
+  floor-truncated decay from the full headroom) and twice a per-section radius bound for the
+  near-linear second-order ones; `rational.iir_fixed_test.FixedPointSilenceIsExactlyZeroAfterTheWindow`
+  drives every fixed-point stage at full scale and finds every state zero inside its window.
+  **IIR-b's finding:** the floating near-linear stage at `transparent` and divisor 1 holds a
+  zero-input limit cycle at 3.7 to 4.1 times the smallest normal under flush-to-zero (in float
+  and double, from 12 to 20 of 39 noise starts): a second-order section's product falls below the
+  smallest normal and flushes, and the section, run without it for that sample, lifts the state
+  again, IIR-a's Chebyshev II mechanism. Every other stage drains to exactly zero. Pinned as an
+  honest limit (the residue within eight times the smallest normal; a chain whose later stages
+  follow that one flushes within it of zero padding), and question 19.
   - **Floating point:** the count from the format's largest finite value (over the state
     headroom) down to its smallest normal value, through the stage's largest coefficient,
     computed at design time, plus a margin of one frame per section (IIR-0 found a whole
@@ -510,7 +583,14 @@ reserves, with P = 4.
     its fixed-point tables; for the linear form also its symmetry and its exact latency
     inside an all-FIR chain. Each form has a ratchet workload, a C ABI entry and a row in
     the offering table (I10, I11).
-- **I8. Fixed point.** *Recommended* (v9: rounding and headroom from IIR-0):
+- **I8. Fixed point.** *Decided (v10, the maintainer), as IIR-a implemented it in DspTap's
+  `iir_kernels.h`:* floor truncation in the one-multiplier sections, magnitude truncation in the
+  second-order ones, two integer guard bits (Q15 in Q2.29 states, Q31 in Q2.60), the difference
+  nodes in the accumulator, saturation at the output only. **IIR-b** measured on the stages: the
+  largest state under full-scale square and clipped drive 1.99 of full scale in Q15 and 1.92 in
+  Q31 (limit 4), every output within 2 LSB of the double stage clamped (Q15; 1e-8 in Q31), the
+  Q15 floor −100.8 dB RMS against double, DC at full scale within 1 LSB. *Recommended* (v9: rounding
+  and headroom from IIR-0):
   - **Formats:** Q15 samples with Q31 coefficients (every aₖ is in (0, 1)); Q31 samples with
     64-bit states; the biquads in Q2.30 coefficients (|a₁| < 2); 64-bit accumulation, one
     rounding point per section, saturation at the output, all stated as numbers in the
@@ -677,7 +757,10 @@ reserves, with P = 4.
     joins IIR-b, offered only where IIR-b's ratchet confirms the margin on the shipping
     code (Q15 on the M33 is near the bar). ×4 stays two half-bands, and so does
     `transparent`. The near-linear four-path stage is not part of the release.
-- **I13. Relaxed designs for cascades (v8, new).** *Recommended:* an IIR stage, like an FIR
+- **I13. Relaxed designs for cascades (v8, new).** *Decided (v10, the maintainer), as
+  recommended; the helper is `iir_down_by` / `iir_up_by<S, Ch, P, D>`, D = 2, 4, 8 or 16 (I2),
+  and its cascades cost 2.4's relaxed rows exactly (`rational.IirChain.CascadesCostTheRelaxedRow`).*
+  An IIR stage, like an FIR
   stage, is designed at its design divisor d within a chain (its lower rate over the chain's
   lowest), with the passband edge fixed at p · r_min and the stopband mirrored about its own
   low Nyquist. Each profile's `relaxed(d)` has compile-time tables (I4) at the divisors a
@@ -686,7 +769,9 @@ reserves, with P = 4.
   composes a power-of-2 cascade with each stage relaxed to its divisor, since a raw
   `tap::dsp::chain` does not. Without it, the cascades cost 2.4's unrelaxed row, 1.5 to 2.5
   times the relaxed one at `economy`.
-- **I14. The float profile inside the recursion (v8, new).** `sample_traits<float>` is float
+- **I14. The float profile inside the recursion (v8, new).** *Decided (v10, the maintainer), as
+  recommended below; IIR-b's float stages are within 3.8e-7 of full scale of the direct-form golden
+  leg at every profile and divisor.* `sample_traits<float>` is float
   input and output with double accumulation, and DspTap runs numerically fragile recursions
   in double even in the float profile. On the M33 and M4F double is soft-float, about 19
   times a Q15 instruction count by `sample_traits.h`'s own comment. *Recommended:* the IIR
@@ -760,7 +845,8 @@ reserves, with P = 4.
 
    Not measured: MSVC and AppleClang, Apple silicon, Hexagon silicon, cycle counts on any
    target, and the near-linear four-path stage.
-2. **IIR-a, DspTap** (part of DspTap 0.3.0): the design math and kernels, the four-path
+2. **IIR-a, DspTap: landed** (tap/DspTap#68, DspTap 0.3.0 at bd9617a, tagged `v0.3.0`; its
+   findings are v10's status above). The design math and kernels, the four-path
    ↓4 / ↑4 kernel (I12), `subnormals_flushed<S>()` and the per-target flush-to-zero
    documentation (I9), the chain's latency members (I5), their battery and fingerprints,
    the constexpr bit test from IIR-0 so CI's MSVC and AppleClang legs run it (I4), DspTap's
@@ -769,7 +855,18 @@ reserves, with P = 4.
    tags the commit `v0.3.0`.
 3. **IIR-b, `rational`'s ↑2 / ↓2 stages**, both variants, and the four-path ↓4 / ↑4 where I12
    admits it (I2–I6, I8, I9, I12–I14), with the
-   golden leg, the README and the book's Part VII. It also:
+   golden leg, the README and the book's Part VII. *In review (v10):* the stages and the cascades
+   by 2 to 16 as I2 names them; the four-path stage measured and not shipped (2.4); the golden leg
+   (`rational/tools/reference/make_iir_reference_vectors.py`: each stage's transfer function in one
+   direct form through `scipy.signal.lfilter`, 64 stages), met within 9.6e-14 (double), 3.8e-7
+   (float), 1.5e-5 (Q15) and 5.2e-9 (Q31) of full scale, the Q15 and Q31 outputs bit-pinned; the
+   stopbands at every profile and divisor −71.3 to −145.6 dB (each at least A + 1); the
+   near-linear phase error per stage 0.0116° at the 70 dB profiles and 0.00005° at `transparent`;
+   the round trip through `tap::dsp::subband_delta` at ×2 to ×16 leaving a removed tone −64.5 /
+   −70.0 / −68.6 dB down at `super_economy` / `economy` / `balanced` and −114.8 dB at `transparent`
+   (thresholds −60 and −100, question 5); without flush-to-zero the residue at most 7 times the
+   smallest subnormal (bound 16); every FIR pin, ratchet count and ceiling unchanged (the DspTap pin
+   move A/B'd exactly on the M33, M55, Hexagon and host in both builds). It also:
    - moves `submodules/dsptap` to `v0.3.0` and raises `TAP_SR_DSPTAP_MINIMUM` to 0.3.0 in all
      three umbrella headers, with the root README's tested pairs (A9);
    - amends `rational`'s charter, which today says a stage is one Nyquist FIR filter and
@@ -921,17 +1018,28 @@ Decided:
 11. Followed from IIR-0 (v9), by the plan's own rules: the four-path ↓4 / ↑4 joins IIR-b
     where it passes I12's bar (I12); the constexpr amendments (I4).
 
+12. Decided (v10, the maintainer): I3, the same four profiles at the same numbers; IIR-b found
+    every profile reachable by both variants.
+13. Decided (v10, the maintainer): I6, `window_frames()` is the count to an exactly zero state
+    under flush-to-zero, plus one frame per section (with question 19's exception).
+15. Decided (v10, the maintainer): I8, as IIR-a implemented it (floor truncation in the
+    one-multiplier sections, magnitude truncation in the second-order ones, two integer guard
+    bits, the difference nodes in the accumulator).
+17. Decided (v10, the maintainer): I13, relaxed designs per divisor and the cascade helper,
+    named `iir_down_by` / `iir_up_by`.
+18. Decided (v10, the maintainer): I14, float states and products in the float profile.
+
 Recommended, not yet put to the maintainer (your word settles each):
-12. I3: the same four profiles at the same numbers. A profile is not offered where a variant
-    cannot reach it; IIR-0 found none.
-13. I6: `window_frames()` is the count to an exactly zero state under flush-to-zero, plus one
-    frame per section, so DspTap's flush contract holds; the flush's output grows by that
-    count.
 14. I7's order rule: the lowest odd order whose worst guard-band alias is at or below −A/2
     (orders 5 / 7 / 7 / 7).
-15. I8: floor truncation in the allpass sections and magnitude truncation in the biquads,
-    two integer guard bits in every state with the difference node formed in the
-    accumulator, direct form I biquads ordered by pole radius, L∞ scaling.
 16. I10 and I11: composition through `tap::dsp::chain`, new C ABI entry points, the notebooks.
-17. I13: relaxed IIR designs per divisor, and a power-of-2 cascade helper.
-18. I14: float states and products in the float profile (IIR-0: −137 dB at `transparent`).
+
+Open (v10, IIR-b's finding):
+19. **The near-linear `transparent` stage at divisor 1 under flush-to-zero** (I6). Its floating
+    state holds a zero-input limit cycle at about four times the smallest normal, so its flush
+    window ends in that residue rather than silence, and a chain whose later stages follow it
+    flushes within the residue of zero padding, not bit for bit. IIR-b pins it as an honest limit
+    (residue within eight times the smallest normal). The choices: keep the honest limit (as IIR-c
+    may for the Chebyshev II at order 7 and above); a committed design at that spec point whose
+    sections drain (a DspTap change to its tables, at the same order or one more); or the
+    near-linear `transparent` stage at divisor 1 not offered in floating point.
