@@ -902,6 +902,29 @@ namespace {
     constexpr double k_normal_residue =
         std::is_floating_point_v<S> ? 8.0 * static_cast<double>(std::numeric_limits<S>::min()) : 0.0;
 
+    /// Where no control bit governs a floating S (double on the M33, float and
+    /// double on Hexagon: tap/dsp/subnormals.h), the fixture's flush-to-zero
+    /// reaches nothing and the state sticks at the subnormal residue, the
+    /// honest limit test_iir_subnormals.cpp pins at 16 times the smallest
+    /// subnormal for a stage; through a chain's FIR stages, a few times that.
+    template <typename S>
+    constexpr bool k_no_flush_control = std::is_floating_point_v<S> && !tap::dsp::k_subnormal_control<S>;
+    template <typename S>
+    constexpr double k_subnormal_residue =
+        std::is_floating_point_v<S> ? 64.0 * static_cast<double>(std::numeric_limits<S>::denorm_min()) : 0.0;
+
+    /// What a stage at p leaves after its flush window here: 0 (an exactly
+    /// zero state), the limit cycle's bound, or the subnormal residue.
+    template <typename S>
+    double flush_residue(iir_phase phase, const profile& p) {
+        if constexpr (k_no_flush_control<S>) {
+            return k_subnormal_residue<S>;
+        }
+        else {
+            return holds_normal_limit_cycle<S>(phase, p) ? k_normal_residue<S> : 0.0;
+        }
+    }
+
     /// flush() equals zero padding bit for bit, and past it the output is
     /// silence and the state exactly zero (under the host's flush-to-zero);
     /// where a stage holds the limit cycle above, both to within `residue`.
@@ -953,12 +976,11 @@ namespace {
         using sample = TypeParam;
         for_each_shape<sample, 2>([]<typename Stage>() {
             for (int pi = 0; pi < 4; ++pi) {
-                const bool cycle = holds_normal_limit_cycle<sample>(Stage::k_phase, named(pi));
+                const double residue = flush_residue<sample>(Stage::k_phase, named(pi));
                 // The stage alone: its flush runs the same block as process(),
                 // so flush() is the padded prefix bit for bit even where the
-                // state holds the limit cycle; past it, silence or the residue.
-                expect_flush_is_zero_padding<Stage>([pi] { return Stage(named(pi)); }, 300,
-                                                    cycle ? k_normal_residue<sample> : 0.0);
+                // state holds a residue; past it, silence or the residue.
+                expect_flush_is_zero_padding<Stage>([pi] { return Stage(named(pi)); }, 300, residue);
                 Stage               st(named(pi));
                 const auto          x = noise<sample>(2 * 300, 0x6262u);
                 std::vector<sample> out(st.outputs_for(300) * 2);
@@ -966,8 +988,8 @@ namespace {
                 std::vector<sample> tail(st.flush_output_frames() * 2 + 2);
                 st.flush(tail.data());
                 for (const auto v : st.states()) {
-                    if (cycle) {
-                        ASSERT_LE(std::fabs(static_cast<double>(v)), k_normal_residue<sample>) << "the honest limit";
+                    if (residue != 0.0) {
+                        ASSERT_LE(std::fabs(static_cast<double>(v)), residue) << "the honest limit";
                     }
                     else {
                         ASSERT_EQ(v, typename Stage::state{}) << "an exactly zero state after the window (I6)";
@@ -982,6 +1004,9 @@ namespace {
         // chain, a caller's tap::dsp::chain), and the cascades.
         using sample      = TypeParam;
         const profile eco = profile::economy();
+        // Where no bit governs the type, every chain flushes to within the
+        // subnormal residue of zero padding, not bit for bit.
+        const double none = k_no_flush_control<sample> ? k_subnormal_residue<sample> : 0.0;
         using mixed_down =
             tap::dsp::chain<basic_stage<sample, 1, down3>, basic_iir_stage<sample, 1, down2, k_nonlinear>>;
         expect_flush_is_zero_padding<mixed_down>(
@@ -989,29 +1014,32 @@ namespace {
                 return mixed_down(basic_stage<sample, 1, down3>(eco.relaxed({2, 1})),
                                   basic_iir_stage<sample, 1, down2, k_nonlinear>(eco));
             },
-            600);
+            600, none);
         using mixed_up = tap::dsp::chain<basic_iir_stage<sample, 1, up2, k_near_linear>, basic_stage<sample, 1, up3>>;
         expect_flush_is_zero_padding<mixed_up>(
             [&] {
                 return mixed_up(basic_iir_stage<sample, 1, up2, k_near_linear>(eco),
                                 basic_stage<sample, 1, up3>(eco.relaxed({2, 1})));
             },
-            200);
+            200, none);
         using nl8 = iir_down_by<sample, 2, k_nonlinear, 8>;
-        expect_flush_is_zero_padding<nl8>([&] { return nl8(eco); }, 800);
+        expect_flush_is_zero_padding<nl8>([&] { return nl8(eco); }, 800, none);
         using nr8 = iir_up_by<sample, 1, k_near_linear, 8>;
-        expect_flush_is_zero_padding<nr8>([&] { return nr8(profile::balanced()); }, 100);
+        expect_flush_is_zero_padding<nr8>([&] { return nr8(profile::balanced()); }, 100, none);
         // At transparent the cascade's first stage up is the near-linear
         // divisor-1 stage that holds the limit cycle: tap::dsp::chain's flush
         // feeds each later stage exact zeros where padding feeds it the
         // residue, so the two agree to within it, and past the flush the
         // output is the residue, not silence (the honest limit above).
-        expect_flush_is_zero_padding<nr8>([&] { return nr8(profile::transparent()); }, 100, k_normal_residue<sample>);
+        expect_flush_is_zero_padding<nr8>([&] { return nr8(profile::transparent()); }, 100,
+                                          std::max(none, k_normal_residue<sample>));
     }
 
     TYPED_TEST(iir_float_test, SilenceDecaysToExactZero) {
         // Under the host's flush-to-zero the floating states reach exactly
-        // zero within window_frames() (I9), from a full-scale start.
+        // zero within window_frames() (I9), from a full-scale start, on every
+        // leg where a bit governs the type; elsewhere (double on the M33, float
+        // and double on Hexagon) the subnormal residue is all that is left.
         using sample = TypeParam;
         for_each_shape<sample, 1>([]<typename Stage>() {
             for (int pi = 0; pi < 4; ++pi) {
@@ -1022,9 +1050,10 @@ namespace {
                 std::vector<sample> z(st.window_frames(), sample{});
                 std::vector<sample> y(st.outputs_for(z.size()));
                 st.process(z.data(), z.size(), y.data());
+                const double residue = flush_residue<sample>(Stage::k_phase, named(pi));
                 for (const auto v : st.states()) {
-                    if (holds_normal_limit_cycle<sample>(Stage::k_phase, named(pi))) {
-                        ASSERT_LE(std::fabs(static_cast<double>(v)), k_normal_residue<sample>);
+                    if (residue != 0.0) {
+                        ASSERT_LE(std::fabs(static_cast<double>(v)), residue);
                     }
                     else {
                         ASSERT_EQ(v, sample{}) << k_names[static_cast<std::size_t>(pi)];
