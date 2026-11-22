@@ -52,7 +52,7 @@ profile name.
 
 | Engine | Profile | What the number is | Numbers |
 |---|---|---|---|
-| `bridge`, `rational` | `super_economy` | stopband A, passband edge as a fraction of the lower rate | 70 dB, 1/3 (16 kHz at 48) |
+| `bridge`, `rational` (its FIR and IIR stages alike) | `super_economy` | stopband A, passband edge as a fraction of the lower rate | 70 dB, 1/3 (16 kHz at 48) |
 | | `economy` (default) | | 70 dB, 3/8 (18 kHz at 48) |
 | | `balanced` | | 70 dB, 19/48 (19 kHz at 48) |
 | | `transparent` | | 120 dB, 5/12 (20 kHz at 48) |
