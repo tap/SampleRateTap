@@ -1964,6 +1964,35 @@ a chain holding the Chebyshev; the offering table pinned cell by cell
 `tap::dsp::chain` cannot flush (DspTap's chain reports no `window_frames()`),
 so the flush test writes `down_by8`'s stages out flat.
 
+*Verification* (GCC 13.3, Clang 18.1, arm-none-eabi-gcc 13.2.1, QEMU 8.2.2,
+the CodeLinaro Hexagon clang 19.1.5). GCC 13 and Clang 18 with `-Werror` for
+the three engines, the C ABIs and the examples, and GCC without exceptions
+and RTTI: 488 of 488 tests in each (`rational` 289: the new executable's 79,
+the subnormal image's 6, the compile-fail case set's fifth case); a Debug
+build's `rational` 291 of 291, both precondition death tests among them. The
+new translation units compile clean under Clang's `-Wshadow-all`; clang-tidy
+18 clean on them, clang-format 18 on every changed source, the vocabulary
+gate clean, the book built by mdBook 0.4.40 without a warning. Under
+emulation, in both builds: on the M33 the main battery 169 of 169, the guard
+band executable 74 of 75 with one skipped (the double limit-cycle test, where
+no control bit governs double), the subnormal image 6 of 6, and the label's
+other 10 ctest entries; on the M55 169, 75 and 6 of 6, the 10 others; on
+Hexagon 271 of 271 in each build with `ci.yml`'s exclusions (75 guard band
+and composition tests). The bit pins are the same on x86-64, the M55 and
+Hexagon; on the M55 the Chebyshev's limit cycle settles at most 6.2 (float)
+and 6.5 (double) times the smallest normal. The main battery's M55 image is
+2,042,664 bytes of its 2 MiB CODE region (as before IIR-c); the guard band
+executable's 953,400. *The ratchet and the ceilings:* no input of `async` or
+`bridge` changed. Every `rational` workload, probe and stack binary built
+from this tree is byte-identical (stripped) to the parent commit's built with
+the same toolchain: 34 on each of the M33, M55 and Hexagon in both builds and
+40 on the host. Against the committed baselines every row passes the ±3 %
+gate (22 rows per target and build, the host's 6 exactly), the few that are
+not exact differing by the start-up offsets the parent's identical binaries
+share here; every `rational` ceiling measures within its file (M33, M55,
+Hexagon). No baseline or ceiling is re-recorded. MSVC and AppleClang were not
+run here.
+
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2
 follow-up landed before M4, so nothing waits for it. Every milestone's PR
