@@ -11,6 +11,11 @@
 //     multiples of the smallest subnormal, which the stated bound holds, and
 //     the output past the flush window is that residue, not silence; the
 //     counterpart of IirStage.SilenceDecaysToExactZero;
+//   - WithoutFlushToZeroTheGuardBandResidueIsBounded: the same for the guard
+//     band filter (guard_band.h): the Chebyshev II's state sticks at a few
+//     multiples of the smallest subnormal, within its own stated bound, and
+//     the linear form, an FIR, is exactly zero after its window without the
+//     bits too;
 //   - NeverTouchesTheFloatingPointEnvironment in the other host state (the
 //     bits clear), the counterpart of IirStage's;
 //   - the precondition compiled out: in a Debug build these calls would
@@ -125,6 +130,70 @@ namespace {
                     std::is_same_v<sample, float> ? "float" : "double", state, out, k_residue_bound);
     }
 
+    /// The guard band filter's Chebyshev II, in multiples of the smallest
+    /// subnormal: each second-order section sticks where its rounded product
+    /// returns its state, a cascade of four at most their sum through the
+    /// sections after it. Stated as one number for the named settings: 32
+    /// (measured at most 10 in float and double, states and output alike, on
+    /// x86-64; the test prints it; DspTap's IIR-a measured 4 to 20 from its
+    /// own starts, which this bound covers).
+    constexpr double k_guard_band_residue_bound = 32.0;
+
+    guard_band_settings named_guard(int i) {
+        switch (i) {
+        case 0:
+            return guard_band_settings::super_economy();
+        case 1:
+            return guard_band_settings::economy();
+        case 2:
+            return guard_band_settings::balanced();
+        default:
+            return guard_band_settings::transparent();
+        }
+    }
+
+    TYPED_TEST(iir_subnormals, WithoutFlushToZeroTheGuardBandResidueIsBounded) {
+        using sample                 = TypeParam;
+        constexpr double dmin        = static_cast<double>(std::numeric_limits<sample>::denorm_min());
+        double           worst_state = 0.0;
+        double           worst_out   = 0.0;
+        for (int si = 0; si < 4; ++si) {
+            guard_band_filter<sample, 1, guard_phase::nonlinear> nl(named_guard(si));
+            guard_band_filter<sample, 1, guard_phase::linear>    li(named_guard(si));
+            const auto          x = noise<sample>(1200, 0x9999u + static_cast<std::uint32_t>(si));
+            std::vector<sample> y(x.size());
+            nl.process(x.data(), x.size(), y.data());
+            li.process(x.data(), x.size(), y.data());
+            std::vector<sample> tail(std::max(nl.flush_output_frames(), li.flush_output_frames()));
+            nl.flush(tail.data());
+            li.flush(tail.data());
+            std::vector<sample> z(2048, sample{});
+            std::vector<sample> w(z.size());
+            nl.process(z.data(), z.size(), w.data());
+            double out = 0.0;
+            for (const sample v : w) {
+                out = std::max(out, std::fabs(static_cast<double>(v)));
+            }
+            double state = 0.0;
+            for (const auto v : nl.states()) {
+                state = std::max(state, std::fabs(static_cast<double>(v)));
+            }
+            worst_state = std::max(worst_state, state / dmin);
+            worst_out   = std::max(worst_out, out / dmin);
+            EXPECT_LE(state, k_guard_band_residue_bound * dmin) << "setting " << si;
+            EXPECT_LE(out, k_guard_band_residue_bound * dmin) << "a residue, not a signal; setting " << si;
+            EXPECT_LT(state, static_cast<double>(std::numeric_limits<sample>::min())) << "only subnormals are left";
+            li.process(z.data(), z.size(), w.data());
+            for (const sample v : w) {
+                ASSERT_EQ(v, sample{}) << "the linear form is an FIR: silence after its window, bits or none";
+            }
+        }
+        std::printf("[ measured ] %s without flush-to-zero: past the window the guard band filter's Chebyshev II holds "
+                    "%.0f x (states) and %.0f x (output) the smallest subnormal at worst (bound %.0f)\n",
+                    std::is_same_v<sample, float> ? "float" : "double", worst_state, worst_out,
+                    k_guard_band_residue_bound);
+    }
+
     TYPED_TEST(iir_subnormals, NeverTouchesTheFloatingPointEnvironment) {
         using sample = TypeParam;
         basic_iir_stage<sample, 2, down2, iir_phase::nonlinear> a;
@@ -137,6 +206,11 @@ namespace {
         std::vector<sample> tail(std::max(a.flush_output_frames(), b.flush_output_frames()) * 2 + 2);
         a.flush(tail.data());
         b.flush(tail.data());
+        guard_band_filter<sample, 2, guard_phase::nonlinear> g;
+        std::vector<sample>                                  gy(x.size());
+        g.process(x.data(), x.size() / 2, gy.data());
+        std::vector<sample> gtail(2 * g.flush_output_frames());
+        g.flush(gtail.data());
         EXPECT_EQ(tap::dsp::floating_point_control() & tap::sr::rational::test::k_control_mask, before);
     }
 

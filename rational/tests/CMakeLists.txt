@@ -94,6 +94,37 @@ else()
                          PROPERTIES TIMEOUT 900 LABELS rational)
 endif()
 
+# The guard band filter's battery (test_guard_band.cpp, docs/IIR_PLAN.md I7):
+# an executable of its own, because with them in it the main battery's
+# Hexagon image passes the +-8 MiB reach of a direct call (lld's
+# R_HEX_B22_PCREL "out of range") and its M55 image the 2 MiB CODE region
+# (platform/mps3_an547). Hosted and on every bare-metal leg, with its own
+# one-shot runner there (bare_metal_main.cpp names the host measurements it
+# leaves out).
+add_executable(tap_sr_rational_guard_band_tests test_guard_band.cpp)
+target_compile_options(tap_sr_rational_guard_band_tests PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/bigobj>")
+target_include_directories(tap_sr_rational_guard_band_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+    ${SampleRateTap_SOURCE_DIR}/tests/support)
+target_link_libraries(tap_sr_rational_guard_band_tests PRIVATE tap::sr::rational tap_sr_rational_warnings)
+if(Threads_FOUND)
+    target_link_libraries(tap_sr_rational_guard_band_tests PRIVATE Threads::Threads)
+endif()
+if(TAP_SR_BARE_METAL)
+    target_sources(tap_sr_rational_guard_band_tests PRIVATE bare_metal_main.cpp)
+    target_compile_definitions(tap_sr_rational_guard_band_tests PRIVATE TAP_SR_RATIONAL_BARE_METAL_GUARD_BAND)
+    target_link_libraries(tap_sr_rational_guard_band_tests PRIVATE GTest::gtest)
+    add_test(NAME tap_sr_rational_guard_band_tests_emulated COMMAND tap_sr_rational_guard_band_tests)
+    set_tests_properties(tap_sr_rational_guard_band_tests_emulated PROPERTIES
+        PASS_REGULAR_EXPRESSION "TAP_SR_TESTS_COMPLETE rc=0"
+        FAIL_REGULAR_EXPRESSION "\\[  FAILED  \\]"
+        TIMEOUT 1800
+        LABELS rational)
+else()
+    target_link_libraries(tap_sr_rational_guard_band_tests PRIVATE GTest::gtest_main)
+    gtest_discover_tests(tap_sr_rational_guard_band_tests TEST_PREFIX "rational." DISCOVERY_TIMEOUT 120
+                         PROPERTIES TIMEOUT 900 LABELS rational)
+endif()
+
 # The recursive stages without the host's flush-to-zero
 # (test_iir_subnormals.cpp, docs/IIR_PLAN.md I9): an executable of its own,
 # because TAP_DSP_ALLOW_SUBNORMALS compiles the stages' debug-build
