@@ -10,11 +10,11 @@ the engine's charter, which is what makes it different from its siblings.
 **`rational`** (`tap::sr::rational`) — synchronous small-factor L/M sample rate conversion
 *within* a rate family, as fast as possible: ratios L/M with L, M ∈ {2^a · 3^b}, gcd(L, M) = 1,
 realised as chains of Nyquist (L-th-band) stages and, beside them, recursive (IIR) half-band
-stages by 2 and their cascades (R21–R25, the family's D20). Header-only C++20 under
-`include/tap/sr/rational/`, built on the shared substrate from DspTap (`tap::dsp`: the L-th-band
+stages by 2 and their cascades (R21–R25, the family's D20) and a 1:1 guard band filter
+(R26–R28). Header-only C++20 under `include/tap/sr/rational/`, built on the shared substrate from DspTap (`tap::dsp`: the L-th-band
 designer `nyquist.h` and the stage composition `chain.h` landed there first, with the
 sample-format traits, dot kernels and row-sum quantization). **`PLAN.md` is the authoritative
-roadmap** — charter, the settled decisions R1–R25, the generated 14 × 14 coverage matrix,
+roadmap** — charter, the settled decisions R1–R28, the generated 14 × 14 coverage matrix,
 layout, test strategy, milestones M0–M6 and acceptance criteria. Read it before implementing
 anything; do not re-derive what it settles (the compile-time ratio, one Nyquist filter per stage,
 stage factoring by MACs then by stage count, `bridge` at the lowest k, the profile vocabulary,
@@ -69,7 +69,12 @@ PLAN.md section 6, the X-a4 record). X-b (R18–R20) named the chains by 4, 8 an
 cascades `iir_down_by` / `iir_up_by` (`iir_chain.h`), their golden leg
 (`tools/reference/make_iir_reference_vectors.py`) and battery (`tests/test_iir_stage.cpp`,
 `tests/test_iir_subnormals.cpp`); the four-path stage by 4 was measured and does not ship
-(`tools/spikes/iir/iirb_fourpath/`).
+(`tools/spikes/iir/iirb_fourpath/`). IIR-c (R26–R28) added the guard band filter:
+`guard_band_filter<S, Ch, P>` (`guard_band.h`), a 1:1 stage in two forms (`guard_phase::nonlinear`,
+the odd-order Chebyshev II; `guard_phase::linear`, the type II FIR) at the orders 5 / 7 / 7 / 7,
+its golden leg (`tools/reference/make_guard_band_reference_vectors.py`) and battery
+(`tests/test_guard_band.cpp`), and the composition tests (`tests/test_iir_composition.cpp`): a
+mixed chain is the caller's `tap::dsp::chain`, with no named IIR chain or matrix row.
 
 ## The charter constraints (load-bearing)
 
@@ -77,6 +82,8 @@ cascades `iir_down_by` / `iir_up_by` (`iir_chain.h`), their golden leg
   (11.025 … 176.4 kHz). Crossing them is `bridge` (147/160), reached by a chain the caller
   writes; absorbing a clock is `async`, by composition. The charter is a `static_assert` on
   `ratio<L, M>`: L and M of the form 2^a · 3^b, lowest terms, L ≠ M. Nothing else compiles.
+  A 1:1 guard band filter is admitted beside the ratios (R26): it changes no rate, so the
+  charter's `static_assert` stays as it is.
 - **Never routed to by rate (D12).** `ratio<L, M>` names the number, a chain names the stages;
   there is no `(in_hz, out_hz)` lookup here or in the C ABI (whose constants name chains). The
   coverage matrix in PLAN.md documents chains; it dispatches nothing.
@@ -109,6 +116,18 @@ cascades `iir_down_by` / `iir_up_by` (`iir_chain.h`), their golden leg
   direct-form golden leg by tolerance (R25). Every recursive test runs under the host's
   flush-to-zero (`tests/support/flush_to_zero.h`), and the no-flush honest limit runs in an image
   of its own (`TAP_DSP_ALLOW_SUBNORMALS` is one setting per image).
+- **The guard band filter is a 1:1 stage of its own (R26–R28), never a ratio or an option on a
+  stage.** `guard_band_filter<S, Ch, P>` over `guard_band_filter_base<S, P>` (K12), `P` a
+  `guard_phase` (`nonlinear`: the odd-order Chebyshev II over DspTap's `biquad_cascade`, its
+  latency nominal; `linear`: the even-length symmetric FIR over `dot_row`, its latency exact,
+  (N − 1) / 2 frames), `guard_band_settings` the profiles' numbers at the orders 5 / 7 / 7 / 7
+  (the IIR plan's question 14) plus a custom form designed at run time. The designs are
+  DspTap's (`k_guard_band_cheby2`, `k_guard_band_fir`, `design_cheby2_lowpass`,
+  `design_guard_band_linear`), never forked here. A mixed chain is the caller's
+  `tap::dsp::chain` (R27): no named IIR chains, no coverage-matrix rows. The floating Chebyshev
+  II at orders 7 and above, like the near-linear `transparent` stage at divisor 1, may settle in
+  a zero-input limit cycle under flush-to-zero, an honest limit pinned below 16 (and 8) times
+  the smallest normal (R28); everything else flushes exactly.
 - **Two machines for the FIR stage, chosen by the ratio at compile time.** An interpolator or a mixed ratio runs
   bridge's L-phase schedule machine with each phase row trimmed to its nonzero span (an
   interpolator's centre phase is one tap, a copy); a decimator runs the M-branch commutator,

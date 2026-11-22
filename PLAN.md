@@ -69,7 +69,7 @@ How to read it:
 Not engines:
 
 - **Timestamp clock recovery** is an `async` feature.
-- **Minimum-phase tiers** are profiles. **IIR stages** are a stage type of their own, neither a profile nor an engine (D20).
+- **Minimum-phase tiers** are profiles. **IIR stages** are a stage type of their own, neither a profile nor an engine (D20); so is `rational`'s 1:1 guard band filter, admitted beside its ratios (`rational/PLAN.md` R26).
 - **An offline FFT tier** is built only on request.
 - **`decimate.h`** stays in DspTap, where MuTap consumes it.
 

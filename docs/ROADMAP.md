@@ -414,11 +414,18 @@ D20 (a stage type of its own), on DspTap 0.3.0, released as SampleRateTap 0.9.0.
 - **IIR-a. DspTap's substrate.** *Landed (tap/DspTap#68, DspTap `v0.3.0` with X-c).* The
   constexpr and committed designs, the kernels per format, `subnormals_flushed<S>()` and the
   per-target flush-to-zero table, the chain's nominal latency members.
-- **IIR-b. `rational`'s stages.** *This block's PR in review.* `basic_iir_stage<S, Ch, R, P>`
+- **IIR-b. `rational`'s stages.** *Landed (on `main` at f9e0c2b).* `basic_iir_stage<S, Ch, R, P>`
   by 2 in both variants at every profile, the cascades `iir_down_by` / `iir_up_by`, the golden
   leg and the battery, the charter amended (`rational/PLAN.md` R21–R25), D20, DspTap pinned at
   `v0.3.0` with the floor 0.3.0. The four-path stage was measured on the shipping code and
   does not ship. No ratchet count or ceiling moved.
-- **IIR-c. The guard band filter** (I7), both forms, and the composition tests (I10). *Open.*
+- **IIR-c. The guard band filter** (I7), both forms, and the composition tests (I10). *This
+  block's PR in review.* `guard_band_filter<S, Ch, guard_phase>`, a 1:1 stage beside the ratios:
+  the odd-order Chebyshev II and the linear-phase type II FIR, at the orders 5 / 7 / 7 / 7 the
+  maintainer chose (question 14), in every format, with its golden leg and battery; mixed chains
+  as the caller's `tap::dsp::chain` and the offering table (question 16's part); the floating
+  limit cycle kept as an honest limit (question 19). `rational/PLAN.md` R26–R28. Two findings
+  put to the maintainer: the order rule is the nonlinear half-band's (question 20), and the linear
+  form in Q15 misses the 70 dB tier (question 21). No ratchet count or ceiling moved.
 - **IIR-d. The C ABI, the binding, the notebooks, the ratchet workloads and ceilings** (I11),
   and the release: 0.9.0 with its tested pair; the maintainer tags `v0.9.0`. *Open.*

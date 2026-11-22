@@ -129,9 +129,9 @@ stage at `transparent` and divisor 1, nine second-order sections deep, settles
 into a zero-input limit cycle at about four times the smallest normal: a
 section's product falls below the smallest normal and flushes, and the
 section, run without it for one sample, lifts the state again. It is the
-mechanism DspTap's IIR-a found in the guard band filter's Chebyshev II, and
-the plan leaves it to the maintainer as a question, with the residue pinned
-in the meantime.
+mechanism DspTap's IIR-a found in the guard band filter's Chebyshev II. The
+maintainer kept it as an honest limit, with the residue pinned, for this stage
+and for that filter alike (the next chapter).
 
 ## The stage that lost
 
