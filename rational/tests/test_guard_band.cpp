@@ -284,16 +284,16 @@ namespace {
             tap::dsp::k_guard_band_cheby2<A, Num, Den, 3>, tap::dsp::k_guard_band_cheby2<A, Num, Den, 5>,
             tap::dsp::k_guard_band_cheby2<A, Num, Den, 7>, tap::dsp::k_guard_band_cheby2<A, Num, Den, 9>,
             tap::dsp::k_guard_band_cheby2<A, Num, Den, 11>};
-        const auto& nonlinear   = tap::dsp::k_nonlinear_halfband<A, Num, Den, 1>;
-        const auto& near_linear = tap::dsp::k_near_linear_halfband<A, Num, Den, 1>;
         // The FIR half-band's Nyquist design (DC gain 2: each branch sums to 1).
+        // The recursive designs are named in the lambda, not captured: GCC
+        // 15.3 fails internally (mark_use) on a captured reference to them.
         const std::vector<double> fir = design_stage<down2>(fir_profile);
         const auto                hb  = [&](std::size_t kind, double f_hi) {
             switch (kind) {
             case 0:
-                return std::abs(tap::dsp::halfband_response(nonlinear, f_hi));
+                return std::abs(tap::dsp::halfband_response(tap::dsp::k_nonlinear_halfband<A, Num, Den, 1>, f_hi));
             case 1:
-                return std::abs(tap::dsp::halfband_response(near_linear, f_hi));
+                return std::abs(tap::dsp::halfband_response(tap::dsp::k_near_linear_halfband<A, Num, Den, 1>, f_hi));
             default:
                 return std::abs(dtft(fir, f_hi)) / 2.0;
             }
