@@ -226,7 +226,7 @@ equal). A commit that moves `submodules/dsptap` names the DspTap tag it pins.
 | 0.6.0 | 0.1.0 | v0.1.0 |
 | 0.7.0 | 0.2.0 | v0.2.0 |
 | 0.8.0 | 0.2.0 | v0.2.0 |
-| 0.9.0 (unreleased: `main` since IIR-b) | 0.3.0 | v0.3.0 |
+| 0.9.0 (unreleased: `main` since IIR-b, at DspTap 0.3.0 until the guard band's Q15 rows) | 0.4.0 | v0.4.0 |
 
 ## Provenance and license
 
