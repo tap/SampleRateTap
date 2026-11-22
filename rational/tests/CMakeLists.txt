@@ -94,14 +94,15 @@ else()
                          PROPERTIES TIMEOUT 900 LABELS rational)
 endif()
 
-# The guard band filter's battery (test_guard_band.cpp, docs/IIR_PLAN.md I7):
+# The guard band filter's battery and the composition tests
+# (test_guard_band.cpp, test_iir_composition.cpp; docs/IIR_PLAN.md I7, I10):
 # an executable of its own, because with them in it the main battery's
 # Hexagon image passes the +-8 MiB reach of a direct call (lld's
 # R_HEX_B22_PCREL "out of range") and its M55 image the 2 MiB CODE region
 # (platform/mps3_an547). Hosted and on every bare-metal leg, with its own
 # one-shot runner there (bare_metal_main.cpp names the host measurements it
 # leaves out).
-add_executable(tap_sr_rational_guard_band_tests test_guard_band.cpp)
+add_executable(tap_sr_rational_guard_band_tests test_guard_band.cpp test_iir_composition.cpp)
 target_compile_options(tap_sr_rational_guard_band_tests PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/bigobj>")
 target_include_directories(tap_sr_rational_guard_band_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
     ${SampleRateTap_SOURCE_DIR}/tests/support)
@@ -206,7 +207,8 @@ set_tests_properties(rational.Stage.ZeroChannelsFailToCompileWithTheMessage PROP
 # The recursive stages (docs/IIR_PLAN.md I2, X10): by 3 refused with the
 # message that names it as planned, the near-linear four-path stage refused,
 # the nonlinear variant refused by the round-trip scaffold (it has no exact
-# delay path) and by a chain's exact latency (it has none).
+# delay path) and by a chain's exact latency (it has none), and so is a chain
+# holding the guard band filter's Chebyshev II form (I5, I7).
 add_test(NAME rational.IirStage.RefusedShapesFailToCompileWithTheMessage
          COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
                  -S ${CMAKE_CURRENT_SOURCE_DIR}/compile_fail
