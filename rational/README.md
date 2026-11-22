@@ -9,7 +9,8 @@ rate family, as fast as possible.**
 
 Ratios L/M with L, M ∈ {2^a · 3^b} and gcd(L, M) = 1 — ↑2, ↓3, 2/3, ↑8,
 3/8 … — realised as chains of Nyquist (L-th-band) stages whose structural
-zeros cost nothing. Header-only C++20, built on the Tap family's shared
+zeros cost nothing, and, beside them, recursive (IIR) half-band stages by 2
+for the conversions by powers of 2 (below). Header-only C++20, built on the Tap family's shared
 substrate ([DspTap](https://github.com/tap/DspTap): the L-th-band designer
 and the stage composition landed there first, with the float/Q15/Q31
 sample-format traits, the dot kernels and the row-sum quantization).
@@ -43,7 +44,7 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > holds its rows at a power-of-two gain, shifted out the same way; the relaxed designs a chain runs are
 > measured too, and since the designer's β was re-tuned (X17) every one of them attains 70 dB as well, PLAN.md section 6). The C ABI, the executed coverage-matrix notebook and
 > the instruction-count ratchet landed at M6 (below). The
-> plan is authoritative: charter, the decisions R1–R16, the generated
+> plan is authoritative: charter, the decisions R1–R25, the generated
 > matrix, layout, test strategy, non-goals and risks.
 
 ## Quick start
@@ -189,6 +190,110 @@ between bins also leaves the window's tails outside the removed bins: the exampl
 205 Hz measures −94.4 dB at `transparent`, the change's floor rather than the round
 trip's. Resolution is bought with time: a 4096-point frame at 3 kHz is 1.37 s, and a
 change spreads over it.
+
+## The recursive stages (IIR)
+
+Beside the FIR stages, `iir_stage.h` and `iir_chain.h` add recursive half-band stages
+by 2 (the IIR plan, [`docs/IIR_PLAN.md`](../docs/IIR_PLAN.md); [PLAN.md](PLAN.md)
+R21–R25): a stage type of their own, never a profile of the FIR stage (the family's D20).
+Each is the two-path allpass half-band H(z) = ½ [A0(z²) + z⁻¹ A1(z²)] (Valenzuela and
+Constantinides), its phase variant in the type:
+
+- `iir_phase::nonlinear`: both paths cascades of first-order allpass sections, the
+  elliptic (power-complementary) half-band. The fewest multiplies and the lowest delay;
+  its group delay rises toward the passband edge.
+- `iir_phase::near_linear`: one path a pure delay, the other an allpass that approximates
+  it, so the passband is delayed by a whole number of samples within a stated deviation,
+  at more multiplies.
+
+```cpp
+#include <tap/sr/rational/rational.h>
+namespace rat = tap::sr::rational;
+
+// 48 -> 24 kHz, stereo: the nonlinear and the near-linear variant, float and Q15.
+rat::iir_converter<2, rat::down2>                 down;            // economy by default
+rat::iir_converter_near_linear_q15<2, rat::up2>   up(rat::profile::transparent());
+// 48 -> 3 kHz and back: cascades by 16, each half-band relaxed to its divisor.
+rat::iir_down_by<float, 1, rat::iir_phase::near_linear, 16> to_low;
+rat::iir_up_by<float, 1, rat::iir_phase::near_linear, 16>   from_low;
+```
+
+They keep the family's call shapes (`process`, `pull`, exact `outputs_for` /
+`frames_needed`, `flush`, `reset`, `validate`), the four profiles at the FIR stages'
+numbers, and every profile in both variants. At divisor 1, going down (the tables
+`tap/dsp/iir_design.h` and `iir_tables.h` hold, pinned by
+`rational.iir_stage_test.MatchesTheDirectFormGoldenLeg` and
+`rational.iir_double.EveryStageMeetsItsSpecAtEveryProfileAndDivisor`):
+
+| profile | nonlinear: order, multiplies per output | its delay, output frames (DC … passband edge) | near-linear: order N = multiplies | its delay path, output frames (deviation) |
+|---|---:|---:|---:|---:|
+| `super_economy` | 9, 4 | 1.27 … 2.11 | 5 | 5 (0.0078) |
+| `economy` | 9, 4 | 1.20 … 2.48 | 7 | 7 (0.0087) |
+| `balanced` | 9, 4 | 1.16 … 2.77 | 8 | 8 (0.0134) |
+| `transparent` | 17, 8 | 2.08 … 5.96 | 19 | 19 (0.0002) |
+
+Against the FIR half-band's 21 MACs per output and 19/2 frames of delay at `economy`
+(↓2), and going up the same multiplies over the factor and twice the frames. The
+cascades `iir_down_by` / `iir_up_by<S, Ch, P, D>` (D = 2, 4, 8, 16) build each stage at
+its design divisor, so a stage further up is shorter: at `economy` 4 / 8 / 16 / 24
+multiplies per output going down by 2 / 4 / 8 / 16 (nonlinear) and 7 / 13 / 21 / 29
+(near-linear), against 43 / 71 / 143 for `down_by4` … `down_by16`
+(`rational.IirChain.CascadesCostTheRelaxedRow`).
+
+- **Latency is nominal** (PLAN.md R23): a recursive stage has no exact
+  `latency_output_frames()`; it reports `nominal_latency_output_frames()`,
+  `latency_deviation_output_frames()` and `group_delay_output_frames(f)`, which
+  `tap::dsp::chain` composes. The near-linear variant also reports its
+  `delay_path_output_frames()`, exact, so its cascades enter DspTap's round-trip scaffold
+  `tap::dsp::subband_delta` as the FIR chains do: removing a tone of the usable band by
+  2 to 16 leaves it −64.5 / −70.0 / −68.6 dB down at `super_economy` / `economy` /
+  `balanced` and −114.8 dB at `transparent`
+  (`rational.iir_double.RoundTripCancelsToTheProfilesThreshold`, thresholds −60 and
+  −100). The nonlinear variant has no delay path, and the scaffold refuses it at compile
+  time (`rational.IirStage.RefusedShapesFailToCompileWithTheMessage`).
+- **Formats** (R25): float states and products in float, double the golden model, Q15 in
+  Q2.29 and Q31 in Q2.60 states (two integer guard bits), saturation at the output only.
+  Against the stages' transfer functions in one direct form through
+  `scipy.signal.lfilter` (`tools/reference/make_iir_reference_vectors.py`, 64 stages):
+  9.6e-14 of full scale in double, 3.8e-7 in float, 1.5e-5 in Q15, 5.2e-9 in Q31, the Q15
+  and Q31 outputs bit-pinned. The Q15 floor is the output's own rounding, −100.8 dB RMS.
+- **Flush** (R24) feeds `window_frames()` zeros, the count to an exactly zero state, so
+  it equals zero padding bit for bit and every output after it is silence.
+- **By 4 and by 3.** Every cascade is half-bands. A four-path stage by 4 was measured on
+  this machine and does not beat the two half-bands it would replace by 10 % on the M33,
+  the M55 and Hexagon ([`tools/spikes/iir/iirb_fourpath/`](tools/spikes/iir/iirb_fourpath/README.md));
+  by 3 is planned and not implemented. Both are `static_assert`s that say so.
+
+**Flushing subnormals is the host's job** (R24, the IIR plan's I9). After the input goes
+silent a floating recursive state decays into the subnormal range, where it is slow on x86
+and some A-class Arm cores and, under round to nearest, never reaches zero. No stage reads
+and writes the floating-point environment; each checks it as a debug-build precondition
+(`TAP_DSP_EXPECTS_SUBNORMALS_FLUSHED`: an assert in a Debug build, nothing in Release,
+nothing under `TAP_DSP_ALLOW_SUBNORMALS`, which must be one setting per image), and
+`tap::dsp::subnormals_flushed<S>()` answers the same question for a host. What a host sets
+on each audio thread before it runs:
+
+| target | what the host sets | governs |
+|---|---|---|
+| x86-64 | MXCSR FTZ (bit 15) and DAZ (bit 6): `_mm_setcsr(_mm_getcsr() \| 0x8040)` (`<xmmintrin.h>`) | float and double |
+| AArch64 (Apple silicon, Arm Linux, Windows on Arm) | FPCR.FZ (bit 24): `msr fpcr` (GCC, Clang), `_WriteStatusReg` (MSVC) | float and double |
+| Cortex-M with an FPU (M4F, M33, M55), AArch32 | FPSCR.FZ (bit 24), and FPDSCR (0xE000EF3C) so exception handlers start with it: `__builtin_arm_set_fpscr`, at reset | float on the M4F and M33; float and double on the M55 |
+| Cortex-M without an FPU, double on the M4F and M33, Hexagon | nothing: no bit exists | an honest limit |
+
+Honest limits, each pinned:
+- without flush-to-zero, or where no bit governs the type, the state sticks at a few
+  multiples of the smallest subnormal (at most 7 measured in float and double, bound 16:
+  `rational.iir_subnormals.WithoutFlushToZeroTheResidueIsBounded`, an image of its own),
+  so the output after a flush is that residue, not silence;
+- the floating near-linear stage at `transparent` and divisor 1 holds a zero-input limit
+  cycle at about four times the smallest normal even under flush-to-zero (a second-order
+  section's product flushes and the section lifts the state again), so its flush ends in
+  that residue (within eight times the smallest normal), and a chain whose later stages
+  follow it flushes within the residue of zero padding: the IIR plan's open question 19;
+- a non-finite input poisons the recursive state until `reset()` (an FIR stage clears it
+  after one window): `rational.iir_float_test.NonFiniteInputPoisonsTheStateUntilReset`;
+- the contracts hold without `-ffast-math` (or `/fp:fast`): reassociation moves the float
+  outputs past their tolerances, and `-ffinite-math-only` deletes non-finite checks.
 
 ## The boundaries are identity, not policy
 
@@ -509,4 +614,6 @@ because each stage is a pure FIR with nothing computed from a sample's value
 110 outputs through ↑3, 31 through ↓2 and 343 through the 8/1 chain, ↑2 · ↑4). The float datapath accumulates in double, where every float denormal is a normal number, so no
 denormal arises inside a dot product; the output, rounded back to float, may carry denormals onward
 (a decaying tail, a denormal input passed through), and the converter does not flush them. Q15 and Q31
-have neither.
+have neither. The recursive stages are different on both counts, and
+[the recursive stages](#the-recursive-stages-iir) say how: a non-finite input poisons
+their state until `reset()`, and their subnormals are the host's to flush.

@@ -341,8 +341,9 @@ confirm them.
 
 ## 8. Stays deferred, on purpose
 
-Multistage decomposition, minimum-phase economy, the IIR pre-filter and the FFT offline
-path change the output contract and wait for a consumer (`bridge/PLAN.md` §7). Coefficient
+Multistage decomposition, minimum-phase economy and the FFT offline path change the
+output contract and wait for a consumer (`bridge/PLAN.md` §7); the IIR pre-filter, which
+waited too, is the maintainer's request now (section 10, Block IIR). Coefficient
 baking does not change the output but would move the M33/Hexagon fixed-point counts
 without touching the audio path, and stays un-pulled. The `bridge` C ABI above K = 0 waits
 for a consumer. Embedded channel-parallel dots wait for a DSP budget that demands them.
@@ -397,3 +398,27 @@ the recommendation). Its name map and breaking changes are `CHANGELOG.md`'s 0.8.
 - **Then TapTools:** its DspTap pin to `v0.3.0` first, then SampleRateTap as a
   submodule (X11), `stft.h`'s change mode, the low-band EQ and notch object (X14) and a
   notebook; then TapTools-Max. *Open.*
+
+## 10. Block IIR: recursive stages for `rational`, and 0.9.0 (added 2026-11-22)
+
+The maintainer asked for recursive (IIR) stages beside `rational`'s FIR stages, which lifts
+section 8's deferral of the IIR pre-filter. Planned in [`IIR_PLAN.md`](IIR_PLAN.md) (audited in
+[`PLANS_AUDIT_2026-11.md`](PLANS_AUDIT_2026-11.md)): ↑2 / ↓2 as two-path allpass half-bands in
+a nonlinear and a near-linear phase variant, a guard band filter in two forms, the family's
+D20 (a stage type of its own), on DspTap 0.3.0, released as SampleRateTap 0.9.0.
+
+- **IIR-0. The spike.** *Landed (SampleRateTap#104, `rational/tools/spikes/iir/`).* The
+  near-linear designs at every profile, float at 120 dB, the fixed-point rounding (floor and
+  magnitude truncation), the constexpr designs, the round trip's −60 / −100 dB, and a
+  four-path stage passing on its own kernels' instructions.
+- **IIR-a. DspTap's substrate.** *Landed (tap/DspTap#68, DspTap `v0.3.0` with X-c).* The
+  constexpr and committed designs, the kernels per format, `subnormals_flushed<S>()` and the
+  per-target flush-to-zero table, the chain's nominal latency members.
+- **IIR-b. `rational`'s stages.** *This block's PR in review.* `basic_iir_stage<S, Ch, R, P>`
+  by 2 in both variants at every profile, the cascades `iir_down_by` / `iir_up_by`, the golden
+  leg and the battery, the charter amended (`rational/PLAN.md` R21–R25), D20, DspTap pinned at
+  `v0.3.0` with the floor 0.3.0. The four-path stage was measured on the shipping code and
+  does not ship. No ratchet count or ceiling moved.
+- **IIR-c. The guard band filter** (I7), both forms, and the composition tests (I10). *Open.*
+- **IIR-d. The C ABI, the binding, the notebooks, the ratchet workloads and ceilings** (I11),
+  and the release: 0.9.0 with its tested pair; the maintainer tags `v0.9.0`. *Open.*

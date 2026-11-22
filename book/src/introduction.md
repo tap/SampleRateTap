@@ -140,7 +140,8 @@ other's golden reference.
 converter whose every degree of freedom is a compile-time constant —
 header by header the same way: the ratio as a type, the Nyquist filter
 that gives away half its taps, the two machines that run it, the chains
-and the 182-row coverage matrix, the fixed-point limits lifted one by one,
+and the 182-row coverage matrix, the recursive stages that remember their
+past, the fixed-point limits lifted one by one,
 and a host-versus-target bug that turned out to be in the designer. The
 asynchronous converter earned its numbers against a moving clock; these
 engines pin theirs with `==`.

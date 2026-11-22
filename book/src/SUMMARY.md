@@ -53,6 +53,7 @@
 - [One filter per stage: nyquist.h and design.h](part7/nyquist.md)
 - [Two machines, one filter: stage.h](part7/stage.md)
 - [Chains and the coverage matrix: chain.h](part7/chain.md)
+- [A filter that remembers: iir_stage.h](part7/iir.md)
 - [Sixteen bits, per stage](part7/fixed-point.md)
 - [The proof, the ABI, and the levers that lost](part7/proof.md)
 

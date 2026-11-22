@@ -9,11 +9,12 @@ the engine's charter, which is what makes it different from its siblings.
 
 **`rational`** (`tap::sr::rational`) — synchronous small-factor L/M sample rate conversion
 *within* a rate family, as fast as possible: ratios L/M with L, M ∈ {2^a · 3^b}, gcd(L, M) = 1,
-realised as chains of Nyquist (L-th-band) stages. Header-only C++20 under
+realised as chains of Nyquist (L-th-band) stages and, beside them, recursive (IIR) half-band
+stages by 2 and their cascades (R21–R25, the family's D20). Header-only C++20 under
 `include/tap/sr/rational/`, built on the shared substrate from DspTap (`tap::dsp`: the L-th-band
 designer `nyquist.h` and the stage composition `chain.h` landed there first, with the
 sample-format traits, dot kernels and row-sum quantization). **`PLAN.md` is the authoritative
-roadmap** — charter, the settled decisions R1–R16, the generated 14 × 14 coverage matrix,
+roadmap** — charter, the settled decisions R1–R25, the generated 14 × 14 coverage matrix,
 layout, test strategy, milestones M0–M6 and acceptance criteria. Read it before implementing
 anything; do not re-derive what it settles (the compile-time ratio, one Nyquist filter per stage,
 stage factoring by MACs then by stage count, `bridge` at the lowest k, the profile vocabulary,
@@ -60,7 +61,15 @@ ones refused, `TAP_SR_RATIONAL_CHAIN_END` for the retired `CHAIN_COUNT`; PLAN.md
 X-a3 record). X-a4 (X4) selects a chain per attenuation tier: the 70 dB tier's at `economy`,
 run at the three 70 dB profiles, and the 120 dB tier's at `transparent`; they differ in 25
 rows, and the 120 dB tier's three new chains took the C values 40 to 42 (`CHAIN_END` 43;
-PLAN.md section 6, the X-a4 record).
+PLAN.md section 6, the X-a4 record). X-b (R18–R20) named the chains by 4, 8 and 16 by intent:
+`down_by4` … `up_by16_transparent` in `chain.h`, plain aliases of the matrix's chains with a
+`_transparent` twin by 16 alone, and the single stages the low-latency spelling. IIR-b
+(`docs/IIR_PLAN.md`, R21–R25) added the recursive stages: `basic_iir_stage<S, Ch, R, P>`
+(`iir_stage.h`) by 2 in the nonlinear and the near-linear phase variant at every profile, the
+cascades `iir_down_by` / `iir_up_by` (`iir_chain.h`), their golden leg
+(`tools/reference/make_iir_reference_vectors.py`) and battery (`tests/test_iir_stage.cpp`,
+`tests/test_iir_subnormals.cpp`); the four-path stage by 4 was measured and does not ship
+(`tools/spikes/iir/iirb_fourpath/`).
 
 ## The charter constraints (load-bearing)
 
@@ -83,11 +92,24 @@ PLAN.md section 6, the X-a4 record).
   divisor (PLAN.md 3.1), computed by `chain.h` at compile time, with pinned lengths per divisor.
   Change the matrix only through the generator, then regenerate the rows header and the plan's
   tables.
-- **One Nyquist filter per stage (R2, R4).** Length N = 2mL − 1, centre tap exactly 1, every
+- **One Nyquist filter per FIR stage (R2, R4).** Length N = 2mL − 1, centre tap exactly 1, every
   L-th tap from it exactly 0, every polyphase branch at DC gain 1 — `tap::dsp::nyquist.h`'s
   contract, pinned by `test_design.cpp` through this engine's build. The up and down designs of
   one band are the same prototype; a mixed ratio's band is its larger factor.
-- **Two machines, chosen by the ratio at compile time.** An interpolator or a mixed ratio runs
+- **Recursive stages are a stage type of their own (R21, D20), never a profile.**
+  `basic_iir_stage<S, Ch, R, P>` over `iir_stage_base<S, R, P>` (K12): R `up2` / `down2` only
+  (by 3 is planned, by 4 measured and not shipped, both `static_assert`s that say so), `P` an
+  `iir_phase` (`nonlinear`, `near_linear`), the four profiles at the FIR stages' numbers with
+  compile-time or committed designs at the divisors 1, 2, 4 and 8 (R22). The machine is the
+  engine's (the commutator and its latch, the near-linear delay ring, the accounting, flush, A12's
+  out-of-line blocks against a cursor); the designs and step kernels are DspTap's (`iir_design.h`,
+  `iir_kernels.h`), never forked here. Its latency is nominal, never `latency_output_frames()`
+  (R23); its flush ends in an exactly zero state under the host's flush-to-zero, which no stage
+  ever sets (R24, I9); its Q15 / Q31 outputs are bit-pinned and its float ones held to the
+  direct-form golden leg by tolerance (R25). Every recursive test runs under the host's
+  flush-to-zero (`tests/support/flush_to_zero.h`), and the no-flush honest limit runs in an image
+  of its own (`TAP_DSP_ALLOW_SUBNORMALS` is one setting per image).
+- **Two machines for the FIR stage, chosen by the ratio at compile time.** An interpolator or a mixed ratio runs
   bridge's L-phase schedule machine with each phase row trimmed to its nonzero span (an
   interpolator's centre phase is one tap, a copy); a decimator runs the M-branch commutator,
   its nonzero branches summed under one finalize (`tap::dsp::accumulate_row`). MACs per output
