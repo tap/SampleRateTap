@@ -49,6 +49,6 @@
 // README's tested pairs), defined token-identically in each engine's
 // umbrella header like the family version (D13) and checked against the
 // pinned substrate's tap/dsp/version.h.
-#define TAP_SR_DSPTAP_MINIMUM TAP_DSP_VERSION_ENCODE(0, 3, 0)
+#define TAP_SR_DSPTAP_MINIMUM TAP_DSP_VERSION_ENCODE(0, 4, 0)
 static_assert(TAP_DSP_VERSION >= TAP_SR_DSPTAP_MINIMUM,
-              "tap::sr::rational needs DspTap 0.3.0 or newer (submodules/dsptap)");
+              "tap::sr::rational needs DspTap 0.4.0 or newer (submodules/dsptap)");

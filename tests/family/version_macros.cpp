@@ -46,7 +46,7 @@ static_assert(k_async_major == TAP_SR_VERSION_MAJOR && k_async_minor == TAP_SR_V
               "TAP_SR_VERSION_* must be identical in async.h and rational.h (D13)");
 static_assert(k_async_major == 0 && k_async_minor == 8 && k_async_patch == 0,
               "the family version is 0.8.0 (D13); re-pin here when it is bumped");
-static_assert(k_async_dsptap_minimum == TAP_DSP_VERSION_ENCODE(0, 3, 0),
-              "the family's DspTap floor is 0.3.0 (A9; IIR-b: the recursive substrate, iir_kernels.h, and "
-              "chain.h's nominal latency); re-pin here, and in the root README's tested pairs, when it moves");
+static_assert(k_async_dsptap_minimum == TAP_DSP_VERSION_ENCODE(0, 4, 0),
+              "the family's DspTap floor is 0.4.0 (A9; the guard band filter's Q15 rows, iir_tables.h, and "
+              "quantize.h's symmetric form); re-pin here, and in the root README's tested pairs, when it moves");
 static_assert(TAP_DSP_VERSION >= k_async_dsptap_minimum, "the pinned DspTap is older than the family's floor");
