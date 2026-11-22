@@ -71,8 +71,9 @@ cascades `iir_down_by` / `iir_up_by` (`iir_chain.h`), their golden leg
 `tests/test_iir_subnormals.cpp`); the four-path stage by 4 was measured and does not ship
 (`tools/spikes/iir/iirb_fourpath/`). IIR-c (R26–R28) added the guard band filter:
 `guard_band_filter<S, Ch, P>` (`guard_band.h`), a 1:1 stage in two forms (`guard_phase::nonlinear`,
-the odd-order Chebyshev II; `guard_phase::linear`, the type II FIR) at the orders 5 / 7 / 7 / 7,
-its golden leg (`tools/reference/make_guard_band_reference_vectors.py`) and battery
+the odd-order Chebyshev II; `guard_phase::linear`, the type II FIR) at the orders 5 / 7 / 7 / 7
+behind the nonlinear half-band and 7 / 7 / 7 / 11 behind the FIR and near-linear ones, its golden
+leg (`tools/reference/make_guard_band_reference_vectors.py`) and battery
 (`tests/test_guard_band.cpp`), and the composition tests (`tests/test_iir_composition.cpp`): a
 mixed chain is the caller's `tap::dsp::chain`, with no named IIR chain or matrix row.
 
@@ -120,8 +121,11 @@ mixed chain is the caller's `tap::dsp::chain`, with no named IIR chain or matrix
   stage.** `guard_band_filter<S, Ch, P>` over `guard_band_filter_base<S, P>` (K12), `P` a
   `guard_phase` (`nonlinear`: the odd-order Chebyshev II over DspTap's `biquad_cascade`, its
   latency nominal; `linear`: the even-length symmetric FIR over `dot_row`, its latency exact,
-  (N − 1) / 2 frames), `guard_band_settings` the profiles' numbers at the orders 5 / 7 / 7 / 7
-  (the IIR plan's question 14) plus a custom form designed at run time. The designs are
+  (N − 1) / 2 frames), `guard_band_settings` the profiles' numbers at the order I7's rule picks
+  behind the half-band the filter serves, which each named setting takes as a `half_band_kind`
+  (no default): 5 / 7 / 7 / 7 behind the nonlinear half-band, 7 / 7 / 7 / 11 behind the FIR and
+  near-linear ones (the IIR plan's questions 14 and 20; `guard_band_settings{}` is `economy`'s,
+  one design behind every kind), plus a custom form designed at run time. The designs are
   DspTap's (`k_guard_band_cheby2`, `k_guard_band_fir`, `design_cheby2_lowpass`,
   `design_guard_band_linear`), never forked here. A mixed chain is the caller's
   `tap::dsp::chain` (R27): no named IIR chains, no coverage-matrix rows. The floating Chebyshev

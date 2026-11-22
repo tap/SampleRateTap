@@ -39,32 +39,46 @@ The linear form is an even-length symmetric FIR, type II, whose symmetry puts
 the same zero at Nyquist. The first is the cheaper; the second keeps a
 chain's phase linear, which is the only reason it exists.
 
-## Three numbers and an order
+## Three numbers, an order and a half-band
 
 A Chebyshev II has no single corner frequency. It has a passband edge, the
 profile's, shared with the stages so that `economy` means one thing
-everywhere; a stopband edge, set by its order; and its zero at Nyquist. The
-settings name the first two and the order:
+everywhere; a stopband edge, set by its order; and its zero at Nyquist.
+
+The order is a rule's. The spike proposed it and the maintainer took it: the
+lowest odd order whose worst alias in the guard band, behind the half-band
+the filter serves, is at or below −A/2. The half-bands do not agree on it.
+Behind the nonlinear half-band the rule picks 5 at `super_economy` and 7 at
+the other three. Behind the near-linear one or the FIR one, whose transitions
+are shaped differently, those orders would leave the guard band's worst alias
+at −31 dB at `super_economy` and −46 to −49 dB at `transparent`, above −A/2,
+and the rule picks 7 and 11 there. Asked which to keep, the maintainer
+answered in one sentence: "The settings can be different for the fir and near
+linear chains than the nonlinear chains." So a named setting names the
+half-band it serves:
+
+```cpp
+{{#include ../../../rational/include/tap/sr/rational/guard_band.h:rational_half_band_kind}}
+```
+
+and the settings carry the first two numbers and the order:
 
 ```cpp
 {{#include ../../../rational/include/tap/sr/rational/guard_band.h:rational_guard_band_settings}}
 ```
 
-The order is a rule's. The spike proposed it and the maintainer took it: the
-lowest odd order whose worst alias in the guard band, behind the nonlinear
-half-band, is at or below −A/2. That is 5 at `super_economy` and 7 at the
-other three, and the battery recomputes it from the designs: −40.1, −43.5,
-−40.2 and −61.6 dB at those orders. The linear form reaches A from the same
-stop edge, from DspTap's committed Parks–McClellan rows: 30, 50, 58 and 72
-taps.
-
-The rule belongs to the half-band it was computed behind. Behind the
-near-linear half-band or the FIR one, whose transitions are shaped
-differently, the same orders leave the guard band's worst alias at −31 dB at
-`super_economy` and −46 to −49 dB at `transparent`, above −A/2; the rule would
-pick 7 and 11 there. Nothing the filter promises moves (the passband, and A
-from the stop edge, hold behind every half-band), so the battery pins the
-numbers and the plan puts the choice to the maintainer.
+`economy` and `balanced` are one design behind every kind, at order 7, and
+take the kind all the same, so that a chain's code reads the same at every
+profile. `super_economy` and `transparent` are two designs each. The battery
+recomputes every kind's pick from the designs: −40.1, −43.5, −40.2 and
+−61.6 dB behind the nonlinear half-band, −39.6, −39.2, −37.8 and −64.6
+behind the near-linear one, −40.9, −37.0, −37.0 and −62.1 behind the FIR.
+The linear form reaches A from the same stop edge, from DspTap's committed
+Parks–McClellan rows: 30 or 38 taps at `super_economy`, 50 at `economy`, 58
+at `balanced`, 72 or 102 at `transparent`. The higher orders are not free:
+`transparent` behind the near-linear half-band runs a Chebyshev II of six
+sections, 30 multiplies per output, whose delay grows by 14 frames from DC to
+the passband edge.
 
 ## The same machine, twice
 
@@ -140,8 +154,9 @@ Under flush-to-zero, once a biquad's |a2 y| falls below the smallest normal
 its product flushes, and the section, for that one sample a first-order
 recursion with |a1| > 1, lifts the state again. A Chebyshev II of order 7 or
 more settles there, from some states and not others, a few times the smallest
-normal above zero: at most 8.7 times in float and 10.4 in double here, over
-twenty starts per design. Orders 3 and 5 drain. So does fixed point, always,
+normal above zero: at most 8.7 times in float and 10.4 in double at order
+7 here, and 8.4 and 7.7 at `transparent`'s order 11, over twenty starts per
+design. Orders 3 and 5 drain. So does fixed point, always,
 because magnitude truncation leaves no limit cycle.
 
 The plan offered three answers: a deadband in the hot loop, designs that

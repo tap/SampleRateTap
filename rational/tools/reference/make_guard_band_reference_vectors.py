@@ -5,8 +5,11 @@
 of the guard band filter (docs/IIR_PLAN.md I7 and section 4), independent of
 its structure and, for the Chebyshev II, of its designer.
 
-For each named setting (rational's guard_band_settings: the profiles' A and
-passband edge p at I7's order, 5 / 7 / 7 / 7), both forms:
+For each of the six distinct named settings (rational's guard_band_settings:
+the profiles' A and passband edge p at I7's order behind the half-band the
+filter serves, docs/IIR_PLAN.md questions 14 and 20: 5 / 7 / 7 / 7 behind the
+nonlinear half-band, 7 / 7 / 7 / 11 behind the FIR and near-linear ones), both
+forms:
   - nonlinear: the odd-order Chebyshev II designed by scipy.signal.cheby2 at
     the stop edge the order sets (the closed form Os = Op cosh(acosh(D) / n)
     with Op = tan(pi p) and D^2 = (10^(A/10) - 1) / (10^(0.01/10) - 1),
@@ -17,8 +20,8 @@ passband edge p at I7's order, 5 / 7 / 7 / 7), both forms:
     are one transfer function (DspTap's mpmath leg, submodules/dsptap/tools/
     iir/iir_design.py, against scipy's on 4097 frequencies), that the
     direct form b(z) / a(z) through scipy.signal.lfilter agrees with
-    sosfilt, and that the stop edge is the one DspTap's committed rows
-    carry;
+    sosfilt (within 1e-8: the order-11 polynomials lose digits), and that
+    the stop edge is the one DspTap's committed rows carry;
   - linear: DspTap's committed type II row (include/tap/dsp/detail/
     iir_tables_data.h, read from the header) through scipy.signal.lfilter:
     independent of the stage's history, compaction and channel machine.
@@ -58,10 +61,12 @@ DSPTAP = ROOT.parent / "submodules" / "dsptap"
 sys.path.insert(0, str(DSPTAP / "tools" / "iir"))
 import iir_design  # noqa: E402  (DspTap's mpmath leg of the Chebyshev II)
 
-# The named settings (A, p num, p den, order), in profile order (rational's
-# guard_band.h; DspTap's tables key them by number).
-SETTINGS = [("super_economy", 70, 1, 3, 5), ("economy", 70, 3, 8, 7), ("balanced", 70, 19, 48, 7),
-            ("transparent", 120, 5, 12, 7)]
+# The six distinct named settings (A, p num, p den, order), in the order of
+# rational's guard_band.h detail::k_guard_band_named; DspTap's tables key them by
+# number.
+SETTINGS = [("super_economy_nonlinear", 70, 1, 3, 5), ("super_economy_fir", 70, 1, 3, 7),
+            ("economy", 70, 3, 8, 7), ("balanced", 70, 19, 48, 7),
+            ("transparent_nonlinear", 120, 5, 12, 7), ("transparent_fir", 120, 5, 12, 11)]
 RIPPLE_DB = 0.01
 N_FRAMES = 256
 DPS = 60
@@ -149,7 +154,8 @@ def main():
     out.append("};")
     out.append("")
     out.append("// One case per named setting and form: form (0 nonlinear, 1 linear), setting")
-    out.append("// index (super_economy, economy, balanced, transparent), the Chebyshev II")
+    out.append("// index (super_economy behind the nonlinear half-band, then behind the FIR and")
+    out.append("// near-linear ones, economy, balanced, transparent likewise), the Chebyshev II")
     out.append("// order, the FIR's taps (0 for the Chebyshev), the stop edge (a fraction of")
     out.append("// the rate), the expected outputs, and for the Chebyshev the direct form's")
     out.append("// group delay at 0, half and all of the passband edge.")
@@ -177,9 +183,11 @@ def main():
         y_nl = signal.sosfilt(sos, x)
         b, a = signal.sos2tf(sos)
         y_df = signal.lfilter(b, a, x)
-        assert np.max(np.abs(y_nl - y_df)) < 1e-11, (name, np.max(np.abs(y_nl - y_df)))
+        # The direct form's polynomials, their zeros on the unit circle, lose
+        # digits as the order grows: 4.6e-12 at order 7, 1.7e-9 at order 11.
+        assert np.max(np.abs(y_nl - y_df)) < 1e-8, (name, np.max(np.abs(y_nl - y_df)))
         # The group delay of scipy's sections, summed (the direct form's
-        # polynomial, its seven zeros on the unit circle, loses digits there).
+        # polynomial, its zeros on the unit circle, loses digits there).
         f_gd = np.array([0.0, 0.5 * p, p])
         gd = sum(signal.group_delay((sec[:3], sec[3:]), w=2.0 * np.pi * f_gd)[1] for sec in sos)
         tag = f"k_nonlinear_{name}"
@@ -187,7 +195,8 @@ def main():
         out.append(fmt(y_nl))
         out.append("};")
         cases.append((0, si, order, 0, float(edge), tag, len(y_nl), list(f_gd), list(gd)))
-        print(f"{name}: order {order}, stop edge {float(edge):.6f}, scipy and DspTap within {worst:.2g}")
+        print(f"{name}: order {order}, stop edge {float(edge):.6f}, scipy and DspTap within {worst:.2g}, "
+              f"sosfilt and the direct form within {np.max(np.abs(y_nl - y_df)):.2g}")
         # linear: the committed row through lfilter.
         y_li = signal.lfilter(taps, [1.0], x)
         tag = f"k_linear_{name}"

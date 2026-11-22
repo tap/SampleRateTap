@@ -97,15 +97,17 @@ namespace {
     template <typename S, std::size_t Ch, guard_phase G>
     struct mixed {
         using guard_t = guard_band_filter<S, Ch, G>;
-        static guard_band_settings settings(const profile& p) {
-            return p.stopband_atten_db == 120.0     ? guard_band_settings::transparent()
-                   : p.passband_frac == 1.0 / 3.0   ? guard_band_settings::super_economy()
-                   : p.passband_frac == 19.0 / 48.0 ? guard_band_settings::balanced()
-                                                    : guard_band_settings::economy();
+        /// The named setting at p behind the half-band kind the filter serves.
+        static guard_band_settings settings(const profile& p, half_band_kind kind) {
+            return p.stopband_atten_db == 120.0     ? guard_band_settings::transparent(kind)
+                   : p.passband_frac == 1.0 / 3.0   ? guard_band_settings::super_economy(kind)
+                   : p.passband_frac == 19.0 / 48.0 ? guard_band_settings::balanced(kind)
+                                                    : guard_band_settings::economy(kind);
         }
-        /// Whether the guard band filter at p may hold the limit cycle.
-        static bool guard_cycles(const profile& p) {
-            return std::is_floating_point_v<S> && G == k_chebyshev && settings(p).order >= 7;
+        /// Whether the guard band filter at p behind kind may hold the limit
+        /// cycle (the floating Chebyshev II of order 7 or more).
+        static bool guard_cycles(const profile& p, half_band_kind kind) {
+            return std::is_floating_point_v<S> && G == k_chebyshev && settings(p, kind).order >= 7;
         }
         /// Whether a near-linear stage at divisor 1 and transparent may.
         static bool near_linear_cycles(const profile& p) {
@@ -116,23 +118,23 @@ namespace {
         // band filter before them.
         using up_t = tap::dsp::chain<guard_t, basic_iir_stage<S, Ch, up2, k_nonlinear>, basic_stage<S, Ch, up3>>;
         static up_t make_up(const profile& p) {
-            return up_t(guard_t{settings(p)}, basic_iir_stage<S, Ch, up2, k_nonlinear>{p},
+            return up_t(guard_t{settings(p, half_band_kind::nonlinear)}, basic_iir_stage<S, Ch, up2, k_nonlinear>{p},
                         basic_stage<S, Ch, up3>{p.relaxed({2, 1})});
         }
         // The mirror: an FIR down3 and an IIR down2, then the guard band filter.
         using down_t = tap::dsp::chain<basic_stage<S, Ch, down3>, basic_iir_stage<S, Ch, down2, k_nonlinear>, guard_t>;
         static down_t make_down(const profile& p) {
             return down_t(basic_stage<S, Ch, down3>{p.relaxed({2, 1})}, basic_iir_stage<S, Ch, down2, k_nonlinear>{p},
-                          guard_t{settings(p)});
+                          guard_t{settings(p, half_band_kind::nonlinear)});
         }
         // Before an FIR interpolator and after an FIR decimator.
         using fir_up_t   = tap::dsp::chain<guard_t, basic_stage<S, Ch, up2>>;
         using fir_down_t = tap::dsp::chain<basic_stage<S, Ch, down2>, guard_t>;
         static fir_up_t make_fir_up(const profile& p) {
-            return fir_up_t(guard_t{settings(p)}, basic_stage<S, Ch, up2>{p});
+            return fir_up_t(guard_t{settings(p, half_band_kind::fir)}, basic_stage<S, Ch, up2>{p});
         }
         static fir_down_t make_fir_down(const profile& p) {
-            return fir_down_t(basic_stage<S, Ch, down2>{p}, guard_t{settings(p)});
+            return fir_down_t(basic_stage<S, Ch, down2>{p}, guard_t{settings(p, half_band_kind::fir)});
         }
         // Before a near-linear interpolator, and after a near-linear cascade by 8.
         using nl_up_t     = tap::dsp::chain<guard_t, basic_iir_stage<S, Ch, up2, k_near_linear>>;
@@ -142,17 +144,19 @@ namespace {
         // window_frames(), so a chain holding a chain cannot flush).
         using flat_fir_t = tap::dsp::chain<basic_stage<S, Ch, down4>, basic_stage<S, Ch, down2>, guard_t>;
         static nl_up_t make_nl_up(const profile& p) {
-            return nl_up_t(guard_t{settings(p)}, basic_iir_stage<S, Ch, up2, k_near_linear>{p});
+            return nl_up_t(guard_t{settings(p, half_band_kind::near_linear)},
+                           basic_iir_stage<S, Ch, up2, k_near_linear>{p});
         }
         static cascade_t make_cascade(const profile& p) {
-            return cascade_t(iir_down_by<S, Ch, k_near_linear, 8>{p}, guard_t{settings(p)});
+            return cascade_t(iir_down_by<S, Ch, k_near_linear, 8>{p},
+                             guard_t{settings(p, half_band_kind::near_linear)});
         }
         static named_fir_t make_named_fir(const profile& p) {
-            return named_fir_t(down_by8<S, Ch>{p}, guard_t{settings(p)});
+            return named_fir_t(down_by8<S, Ch>{p}, guard_t{settings(p, half_band_kind::fir)});
         }
         static flat_fir_t make_flat_fir(const profile& p) {
             return flat_fir_t(basic_stage<S, Ch, down4>{p.relaxed({2, 1})}, basic_stage<S, Ch, down2>{p},
-                              guard_t{settings(p)});
+                              guard_t{settings(p, half_band_kind::fir)});
         }
     };
 
@@ -271,7 +275,10 @@ namespace {
 
     TYPED_TEST(iir_composition_test, FlushEqualsZeroPaddingBitForBitInMixedChains) {
         // Over chains holding recursive stages and both guard band forms, at
-        // economy and transparent. Bit for bit and silent after, but for the
+        // super_economy (where the order behind the nonlinear half-band, 5,
+        // drains and the order behind the others, 7, may cycle), economy and
+        // transparent, each filter at its half-band's setting. Bit for bit
+        // and silent after, but for the
         // honest limit: a floating stage that holds the zero-input limit
         // cycle leaves its residue after the flush, and where stages follow it
         // the chain's flush (which feeds each later stage exact zeros where
@@ -280,39 +287,43 @@ namespace {
         using sample    = TypeParam;
         const auto both = [&]<guard_phase G>() {
             using m = mixed<sample, 1, G>;
-            for (const profile& p : {profile::economy(), profile::transparent()}) {
-                const bool   guard_cycles = m::guard_cycles(p);
-                const bool   nl_cycles    = m::near_linear_cycles(p);
-                const double r            = k_cycle_residue<sample>;
-                const double none         = k_no_flush_control<sample> ? k_subnormal_residue<sample> : 0.0;
-                const auto   limit        = [&](bool followed, bool last) {
+            for (const profile& p : {profile::super_economy(), profile::economy(), profile::transparent()}) {
+                const bool   nonlinear_guard_cycles   = m::guard_cycles(p, half_band_kind::nonlinear);
+                const bool   fir_guard_cycles         = m::guard_cycles(p, half_band_kind::fir);
+                const bool   near_linear_guard_cycles = m::guard_cycles(p, half_band_kind::near_linear);
+                const bool   nl_cycles                = m::near_linear_cycles(p);
+                const double r                        = k_cycle_residue<sample>;
+                const double none                     = k_no_flush_control<sample> ? k_subnormal_residue<sample> : 0.0;
+                const auto   limit                    = [&](bool followed, bool last) {
                     // (within, after) for a chain whose cycling stage is
                     // followed by others, or is the last.
                     return std::array<double, 2>{std::max(none, followed ? r : 0.0),
                                                  std::max(none, followed || last ? r : 0.0)};
                 };
                 // The guard band filter first, before interpolators.
-                auto l = limit(guard_cycles, false);
+                auto l = limit(nonlinear_guard_cycles, false);
                 expect_flush_is_zero_padding<typename m::up_t>([&] { return m::make_up(p); }, 120, l[0], l[1]);
+                l = limit(fir_guard_cycles, false);
                 expect_flush_is_zero_padding<typename m::fir_up_t>([&] { return m::make_fir_up(p); }, 120, l[0], l[1]);
                 // ... before the near-linear interpolator, itself the cycling
                 // stage at transparent, and the chain's last.
-                l = limit(guard_cycles, nl_cycles);
+                l = limit(near_linear_guard_cycles, nl_cycles);
                 expect_flush_is_zero_padding<typename m::nl_up_t>([&] { return m::make_nl_up(p); }, 120, l[0], l[1]);
                 // The guard band filter last, after decimators: its own flush
                 // is bit for bit; past it, its residue.
-                l = limit(false, guard_cycles);
+                l = limit(false, nonlinear_guard_cycles);
                 expect_flush_is_zero_padding<typename m::down_t>([&] { return m::make_down(p); }, 600, l[0], l[1]);
+                l = limit(false, fir_guard_cycles);
                 expect_flush_is_zero_padding<typename m::fir_down_t>([&] { return m::make_fir_down(p); }, 300, l[0],
                                                                      l[1]);
                 // After the near-linear cascade by 8, whose last stage (divisor
                 // 1) cycles at transparent and is followed by the filter.
-                l = limit(nl_cycles, guard_cycles);
+                l = limit(nl_cycles, near_linear_guard_cycles);
                 expect_flush_is_zero_padding<typename m::cascade_t>([&] { return m::make_cascade(p); }, 800, l[0],
                                                                     l[1]);
                 // After down_by8's FIR stages: the linear form keeps the chain
                 // an FIR chain, exact without flush-to-zero too.
-                l = G == k_fir_form ? std::array<double, 2>{0.0, 0.0} : limit(false, guard_cycles);
+                l = G == k_fir_form ? std::array<double, 2>{0.0, 0.0} : limit(false, fir_guard_cycles);
                 expect_flush_is_zero_padding<typename m::flat_fir_t>([&] { return m::make_flat_fir(p); }, 800, l[0],
                                                                      l[1]);
             }
@@ -424,28 +435,33 @@ namespace {
         // here; README.md and the book quote it.
         const std::array<profile, 4> profiles = {profile::super_economy(), profile::economy(), profile::balanced(),
                                                  profile::transparent()};
-        const std::array<guard_band_settings, 4> settings = {
-            guard_band_settings::super_economy(), guard_band_settings::economy(), guard_band_settings::balanced(),
-            guard_band_settings::transparent()};
+        // The named settings behind each variant's half-band (question 20).
+        const auto setting = [](std::size_t i, half_band_kind kind) {
+            return i == 0   ? guard_band_settings::super_economy(kind)
+                   : i == 1 ? guard_band_settings::economy(kind)
+                   : i == 2 ? guard_band_settings::balanced(kind)
+                            : guard_band_settings::transparent(kind);
+        };
         const std::array<const char*, 4> names = {"super_economy", "economy", "balanced", "transparent"};
         // [direction][variant][guard][profile]: down / up, nonlinear /
         // near-linear, none / Chebyshev II / linear.
         std::array<std::array<std::array<std::array<offering, 4>, 3>, 2>, 2> m{};
         for (std::size_t i = 0; i < 4; ++i) {
-            const profile&             p = profiles[i];
-            const guard_band_settings& s = settings[i];
-            m[0][0][0][i]                = offered<k_nonlinear, true, -1>(p, s);
-            m[0][0][1][i]                = offered<k_nonlinear, true, 0>(p, s);
-            m[0][0][2][i]                = offered<k_nonlinear, true, 1>(p, s);
-            m[0][1][0][i]                = offered<k_near_linear, true, -1>(p, s);
-            m[0][1][1][i]                = offered<k_near_linear, true, 0>(p, s);
-            m[0][1][2][i]                = offered<k_near_linear, true, 1>(p, s);
-            m[1][0][0][i]                = offered<k_nonlinear, false, -1>(p, s);
-            m[1][0][1][i]                = offered<k_nonlinear, false, 0>(p, s);
-            m[1][0][2][i]                = offered<k_nonlinear, false, 1>(p, s);
-            m[1][1][0][i]                = offered<k_near_linear, false, -1>(p, s);
-            m[1][1][1][i]                = offered<k_near_linear, false, 0>(p, s);
-            m[1][1][2][i]                = offered<k_near_linear, false, 1>(p, s);
+            const profile&            p  = profiles[i];
+            const guard_band_settings sn = setting(i, half_band_kind::nonlinear);
+            const guard_band_settings sl = setting(i, half_band_kind::near_linear);
+            m[0][0][0][i]                = offered<k_nonlinear, true, -1>(p, sn);
+            m[0][0][1][i]                = offered<k_nonlinear, true, 0>(p, sn);
+            m[0][0][2][i]                = offered<k_nonlinear, true, 1>(p, sn);
+            m[0][1][0][i]                = offered<k_near_linear, true, -1>(p, sl);
+            m[0][1][1][i]                = offered<k_near_linear, true, 0>(p, sl);
+            m[0][1][2][i]                = offered<k_near_linear, true, 1>(p, sl);
+            m[1][0][0][i]                = offered<k_nonlinear, false, -1>(p, sn);
+            m[1][0][1][i]                = offered<k_nonlinear, false, 0>(p, sn);
+            m[1][0][2][i]                = offered<k_nonlinear, false, 1>(p, sn);
+            m[1][1][0][i]                = offered<k_near_linear, false, -1>(p, sl);
+            m[1][1][1][i]                = offered<k_near_linear, false, 0>(p, sl);
+            m[1][1][2][i]                = offered<k_near_linear, false, 1>(p, sl);
         }
         const std::array<const char*, 2> dirs     = {"down 2", "up 2"};
         const std::array<const char*, 2> variants = {"nonlinear", "near-linear"};
@@ -462,45 +478,63 @@ namespace {
                 }
             }
         }
-        // The pins, [direction][variant][guard][profile] as above: multiplies
-        // per output frame per channel, exact, and the nominal latency and its
-        // deviation in output frames, to 0.0005.
-        constexpr std::array<std::array<std::array<std::array<double, 4>, 3>, 2>, 2> k_macs      = {{
-            {{{{{4, 4, 4, 8}, {19, 24, 24, 28}, {34, 54, 62, 80}}},
-                   {{{5, 7, 8, 19}, {20, 27, 28, 39}, {35, 57, 66, 91}}}}},
-            {{{{{2, 2, 2, 4}, {9.5, 12, 12, 14}, {17, 27, 31, 40}}},
-                   {{{2.5, 3.5, 4, 9.5}, {10, 13.5, 14, 19.5}, {17.5, 28.5, 33, 45.5}}}}},
+        // The pins, a row per line printed above ((down, up) x (nonlinear,
+        // near-linear) x (none, Chebyshev II, linear form)) and a column per
+        // profile: multiplies per output frame per channel, exact, and the
+        // nominal latency and its deviation in output frames, to 0.0005. The
+        // near-linear rows with a filter run the FIR and near-linear setting,
+        // order 7 at super_economy and 11 at transparent (question 20).
+        constexpr std::array<std::array<double, 4>, 12> k_macs      = {{
+            {4, 4, 4, 8},
+            {19, 24, 24, 28},
+            {34, 54, 62, 80},
+            {5, 7, 8, 19},
+            {25, 27, 28, 49},
+            {43, 57, 66, 121},
+            {2, 2, 2, 4},
+            {9.5, 12, 12, 14},
+            {17, 27, 31, 40},
+            {2.5, 3.5, 4, 9.5},
+            {12.5, 13.5, 14, 24.5},
+            {21.5, 28.5, 33, 60.5},
         }};
-        constexpr std::array<std::array<std::array<std::array<double, 4>, 3>, 2>, 2> k_nominal   = {{
-            {{{{{1.2666, 1.1996, 1.1568, 2.0824},
-                  {1.7558, 1.7349, 1.5954, 2.4639},
-                  {15.7666, 25.6996, 29.6568, 37.5824}}},
-                {{{5, 7, 8, 19}, {5.4892, 7.5353, 8.4387, 19.3815}, {19.5, 31.5, 36.5, 54.5}}}}},
-            {{{{{2.5332, 2.3993, 2.3136, 4.1649},
-                  {3.5117, 3.4698, 3.1909, 4.9278},
-                  {31.5332, 51.3993, 59.3136, 75.1649}}},
-                {{{10, 14, 16, 38}, {10.9785, 15.0705, 16.8773, 38.7629}, {39, 63, 73, 109}}}}},
+        constexpr std::array<std::array<double, 4>, 12> k_nominal   = {{
+            {1.2666, 1.1996, 1.1568, 2.0824},
+            {1.7558, 1.7349, 1.5954, 2.4639},
+            {15.7666, 25.6996, 29.6568, 37.5824},
+            {5, 7, 8, 19},
+            {5.7461, 7.5353, 8.4387, 19.6370},
+            {23.5, 31.5, 36.5, 69.5},
+            {2.5332, 2.3993, 2.3136, 4.1649},
+            {3.5117, 3.4698, 3.1909, 4.9278},
+            {31.5332, 51.3993, 59.3136, 75.1649},
+            {10, 14, 16, 38},
+            {11.4921, 15.0705, 16.8773, 39.2740},
+            {47, 63, 73, 139},
         }};
-        constexpr std::array<std::array<std::array<std::array<double, 4>, 3>, 2>, 2> k_deviation = {{
-            {{{{{0.8406, 1.2803, 1.6133, 3.8764}, {2.6843, 5.7880, 7.0324, 10.6321}, {0.8406, 1.2803, 1.6133, 3.8764}}},
-              {{{0.0078, 0.0087, 0.0134, 0.0002},
-                {1.8515, 4.5165, 5.4325, 6.7560},
-                {0.0078, 0.0087, 0.0134, 0.0002}}}}},
-            {{{{{1.6813, 2.5605, 3.2266, 7.7528},
-                {5.3686, 11.5761, 14.0648, 21.2643},
-                {1.6813, 2.5605, 3.2266, 7.7528}}},
-              {{{0.0157, 0.0175, 0.0268, 0.0005},
-                {3.7030, 9.0330, 10.8650, 13.5120},
-                {0.0157, 0.0175, 0.0268, 0.0005}}}}},
+        constexpr std::array<std::array<double, 4>, 12> k_deviation = {{
+            {0.8406, 1.2803, 1.6133, 3.8764},
+            {2.6843, 5.7880, 7.0324, 10.6321},
+            {0.8406, 1.2803, 1.6133, 3.8764},
+            {0.0078, 0.0087, 0.0134, 0.0002},
+            {3.3794, 4.5165, 5.4325, 14.0711},
+            {0.0078, 0.0087, 0.0134, 0.0002},
+            {1.6813, 2.5605, 3.2266, 7.7528},
+            {5.3686, 11.5761, 14.0648, 21.2643},
+            {1.6813, 2.5605, 3.2266, 7.7528},
+            {0.0157, 0.0175, 0.0268, 0.0005},
+            {6.7588, 9.0330, 10.8650, 28.1421},
+            {0.0157, 0.0175, 0.0268, 0.0005},
         }};
         for (std::size_t d = 0; d < 2; ++d) {
             for (std::size_t v = 0; v < 2; ++v) {
                 for (std::size_t g = 0; g < 3; ++g) {
+                    const std::size_t row = 6 * d + 3 * v + g;
                     for (std::size_t i = 0; i < 4; ++i) {
                         const offering& o = m[d][v][g][i];
-                        EXPECT_EQ(o.macs, k_macs[d][v][g][i]) << dirs[d] << " " << variants[v] << " " << guards[g];
-                        EXPECT_NEAR(o.nominal, k_nominal[d][v][g][i], 0.0005) << dirs[d] << " " << variants[v];
-                        EXPECT_NEAR(o.deviation, k_deviation[d][v][g][i], 0.0005) << dirs[d] << " " << variants[v];
+                        EXPECT_EQ(o.macs, k_macs[row][i]) << dirs[d] << " " << variants[v] << " " << guards[g];
+                        EXPECT_NEAR(o.nominal, k_nominal[row][i], 0.0005) << dirs[d] << " " << variants[v];
+                        EXPECT_NEAR(o.deviation, k_deviation[row][i], 0.0005) << dirs[d] << " " << variants[v];
                     }
                 }
             }

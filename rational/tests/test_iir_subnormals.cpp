@@ -132,23 +132,30 @@ namespace {
 
     /// The guard band filter's Chebyshev II, in multiples of the smallest
     /// subnormal: each second-order section sticks where its rounded product
-    /// returns its state, a cascade of four at most their sum through the
-    /// sections after it. Stated as one number for the named settings: 32
-    /// (measured at most 10 in float and double, states and output alike, on
-    /// x86-64; the test prints it; DspTap's IIR-a measured 4 to 20 from its
-    /// own starts, which this bound covers).
+    /// returns its state, a cascade of up to six at most their sum through
+    /// the sections after it. Stated as one number for the named settings: 32
+    /// (measured at most 11 in the states and 10 at the output, float and
+    /// double alike, on x86-64; the test prints it; DspTap's IIR-a measured 4
+    /// to 20 from its own starts, which this bound covers).
     constexpr double k_guard_band_residue_bound = 32.0;
 
+    /// The six distinct named designs (guard_band.h): super_economy and
+    /// transparent behind the nonlinear half-band and behind the FIR and
+    /// near-linear ones, economy and balanced behind every kind.
     guard_band_settings named_guard(int i) {
         switch (i) {
         case 0:
-            return guard_band_settings::super_economy();
+            return guard_band_settings::super_economy(half_band_kind::nonlinear);
         case 1:
-            return guard_band_settings::economy();
+            return guard_band_settings::super_economy(half_band_kind::fir);
         case 2:
-            return guard_band_settings::balanced();
+            return guard_band_settings::economy(half_band_kind::fir);
+        case 3:
+            return guard_band_settings::balanced(half_band_kind::fir);
+        case 4:
+            return guard_band_settings::transparent(half_band_kind::nonlinear);
         default:
-            return guard_band_settings::transparent();
+            return guard_band_settings::transparent(half_band_kind::fir);
         }
     }
 
@@ -157,7 +164,7 @@ namespace {
         constexpr double dmin        = static_cast<double>(std::numeric_limits<sample>::denorm_min());
         double           worst_state = 0.0;
         double           worst_out   = 0.0;
-        for (int si = 0; si < 4; ++si) {
+        for (int si = 0; si < 6; ++si) {
             guard_band_filter<sample, 1, guard_phase::nonlinear> nl(named_guard(si));
             guard_band_filter<sample, 1, guard_phase::linear>    li(named_guard(si));
             const auto          x = noise<sample>(1200, 0x9999u + static_cast<std::uint32_t>(si));
