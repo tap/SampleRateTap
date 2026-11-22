@@ -12,12 +12,34 @@
 // chains in double through a tone battery, a host measurement):
 // target-independent design math and measurement already covered on every
 // host.
-// The 70 dB rows' pins, minimality and structure run on target.
+// The 70 dB rows' pins, minimality and structure run on target. The
+// recursive stages' spec sweep (iir_double.EveryStageMeetsItsSpecAtEvery-
+// ProfileAndDivisor: 32 impulse responses through a 2049-point DTFT per
+// band, in double, soft-float on the M33) is a host measurement too; every
+// other recursive test runs on target, the golden leg and the bit pins
+// included.
+//
+// Built with TAP_SR_RATIONAL_BARE_METAL_SUBNORMALS it is the runner of
+// tap_sr_rational_iir_subnormals instead (test_iir_subnormals.cpp, an image
+// of its own built with TAP_DSP_ALLOW_SUBNORMALS): every test, at least the
+// four it holds.
 #include <cstdio>
 
 #include <gtest/gtest.h>
 
 int main() {
+#if defined(TAP_SR_RATIONAL_BARE_METAL_SUBNORMALS)
+    ::testing::InitGoogleTest();
+    const int rc       = RUN_ALL_TESTS();
+    const int selected = ::testing::UnitTest::GetInstance()->test_to_run_count();
+    if (selected < 4) {
+        std::printf("only %d tests selected (expected >= 4)\n", selected);
+        std::printf("TAP_SR_TESTS_COMPLETE rc=1\n");
+        return 1;
+    }
+    std::printf("TAP_SR_TESTS_COMPLETE rc=%d\n", rc);
+    return rc;
+#else
     ::testing::GTEST_FLAG(filter) = "-Design.TransparentMeetsTheSpecWithTheMargin:"
                                     "Design.PinsAreMinimalAndMeasuredAtTransparent:"
                                     "Design.TheCoarseGridWouldUnderPinTwoRows:"
@@ -30,7 +52,8 @@ int main() {
                                     "FixedPoint.QuantizedTablesAttainTheirStatedStopbands:"
                                     "FixedPoint.RelaxedQ15TablesStopbandsAreStated:"
                                     "FixedPoint.FourthBandRelaxedQ15TablesStopbandsAreStated:"
-                                    "FixedPoint.TheTransparentTiersNewRelaxedQ15TablesStopbandsAreStated";
+                                    "FixedPoint.TheTransparentTiersNewRelaxedQ15TablesStopbandsAreStated:"
+                                    "iir_double.EveryStageMeetsItsSpecAtEveryProfileAndDivisor";
     ::testing::InitGoogleTest();
     const int rc = RUN_ALL_TESTS();
     // A filter typo must not pass green: an empty run returns 0 from
@@ -47,4 +70,5 @@ int main() {
     }
     std::printf("TAP_SR_TESTS_COMPLETE rc=%d\n", rc);
     return rc;
+#endif
 }

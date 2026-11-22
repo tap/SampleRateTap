@@ -14,8 +14,9 @@ set(_header_count_async 6)
 set(_header_count_bridge 5)
 # rational grows to six by its plan's layout (rational/PLAN.md section 4);
 # re-pinned by the milestone that adds a header (M1: rational.h, ratio.h,
-# design.h; M3: stage.h, converter.h; M4 adds chain.h).
-set(_header_count_rational 6)
+# design.h; M3: stage.h, converter.h; M4 adds chain.h; IIR-b adds iir_stage.h
+# and iir_chain.h, docs/IIR_PLAN.md I2).
+set(_header_count_rational 8)
 
 set(_engines async bridge rational)
 foreach(_engine IN LISTS _engines)
