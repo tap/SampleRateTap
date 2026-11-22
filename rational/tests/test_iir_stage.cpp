@@ -732,6 +732,43 @@ namespace {
         EXPECT_NEAR(dr.latency_deviation_output_frames(), 0.0088, 0.0001);
     }
 
+    template <iir_phase P, bool Down>
+    void expect_golden_group_delay(const rational_iir_ref::iir_case& c, double& worst) {
+        using direction = std::conditional_t<Down, down2, up2>;
+        const profile p = named(c.profile).relaxed({static_cast<std::uint64_t>(c.divisor), std::uint64_t{1}});
+        const basic_iir_stage<double, 1, direction, P> st(p);
+        for (std::size_t k = 0; k < 3; ++k) {
+            const double tau = st.group_delay_output_frames(c.gd_f[k]);
+            worst            = std::max(worst, std::fabs(tau - c.gd[k]));
+            EXPECT_NEAR(tau, c.gd[k], 1e-8) << k_names[static_cast<std::size_t>(c.profile)] << " d" << c.divisor;
+            EXPECT_LE(std::fabs(c.gd[k] - st.nominal_latency_output_frames()),
+                      st.latency_deviation_output_frames() + 1e-8)
+                << "the stated deviation bounds the golden leg's passband delay";
+        }
+        if constexpr (P == k_nonlinear) {
+            EXPECT_NEAR(st.nominal_latency_output_frames(), c.gd[0], 1e-8) << "the nominal is the delay at DC";
+        }
+    }
+
+    TEST_F(iir_double, GroupDelayMatchesTheGoldenLeg) {
+        // The direct form's group delay (scipy.signal.group_delay over the
+        // golden leg's b(z) / a(z)) at 0, half and all of each stage's
+        // passband edge, against group_delay_output_frames(f): every offered
+        // stage, measured 8.5e-11 frames apart at worst.
+        double worst = 0.0;
+        for (const auto& c : rational_iir_ref::k_cases) {
+            if (c.phase == 0) {
+                c.down != 0 ? expect_golden_group_delay<k_nonlinear, true>(c, worst)
+                            : expect_golden_group_delay<k_nonlinear, false>(c, worst);
+            }
+            else {
+                c.down != 0 ? expect_golden_group_delay<k_near_linear, true>(c, worst)
+                            : expect_golden_group_delay<k_near_linear, false>(c, worst);
+            }
+        }
+        std::printf("[ measured ] group delay against the golden leg's: %.3g output frames at worst\n", worst);
+    }
+
     // The round-trip scaffold's view (X10): the near-linear stages and their
     // cascades report an exact delay path, the nonlinear ones none, so
     // tap::dsp::subband_delta takes the first and refuses the second at
@@ -881,26 +918,33 @@ namespace {
             const std::size_t   expect = flushed.flush_output_frames();
             std::vector<sample> a(expect * C + C, sample{1});
             ASSERT_EQ(flushed.flush(a.data()), expect);
-            const std::size_t   zeros = 2 * flushed.flush_output_frames() * Conv::k_down / Conv::k_up + 64;
-            std::vector<sample> z(zeros * C, sample{});
-            std::vector<sample> b(padded.outputs_for(zeros) * C);
-            const std::size_t   made = padded.process(z.data(), zeros, b.data());
-            ASSERT_GT(made, expect);
-            for (std::size_t i = 0; i < expect * C; ++i) {
-                if (residue == 0.0) {
-                    ASSERT_EQ(a[i], b[i]) << "fed " << fed << " sample " << i;
+            // The padded run, streamed in blocks of zeros (the double windows
+            // run to tens of thousands of frames, past the M55 image's heap
+            // if padded whole), until 512 frames past the flush's.
+            constexpr std::size_t k_block = 256;
+            std::vector<sample>   z(k_block * C, sample{});
+            std::vector<sample>   b((padded.outputs_for(k_block) + 1) * C);
+            std::size_t           made = 0;
+            while (made < expect + 512) {
+                const std::size_t got = padded.process(z.data(), k_block, b.data());
+                for (std::size_t j = 0; j < got * C; ++j) {
+                    const std::size_t i = made * C + j;
+                    if (i < expect * C) {
+                        if (residue == 0.0) {
+                            ASSERT_EQ(a[i], b[j]) << "fed " << fed << " sample " << i;
+                        }
+                        else {
+                            ASSERT_LE(std::fabs(to_unit(a[i]) - to_unit(b[j])), 2.0 * residue) << "fed " << fed;
+                        }
+                    }
+                    else if (residue == 0.0) {
+                        ASSERT_EQ(b[j], sample{}) << "fed " << fed << " sample " << i << ": silence past the flush";
+                    }
+                    else {
+                        ASSERT_LE(std::fabs(to_unit(b[j])), residue) << "fed " << fed << ": the residue past the flush";
+                    }
                 }
-                else {
-                    ASSERT_LE(std::fabs(to_unit(a[i]) - to_unit(b[i])), 2.0 * residue) << "fed " << fed;
-                }
-            }
-            for (std::size_t i = expect * C; i < made * C; ++i) {
-                if (residue == 0.0) {
-                    ASSERT_EQ(b[i], sample{}) << "fed " << fed << " sample " << i << ": silence past the flush";
-                }
-                else {
-                    ASSERT_LE(std::fabs(to_unit(b[i])), residue) << "fed " << fed << ": the residue past the flush";
-                }
+                made += got;
             }
         }
     }
@@ -1087,9 +1131,10 @@ namespace {
         // scale) and every output within 2 LSB of the double stage clamped
         // to the format, so nothing wrapped; saturation happens at the output
         // only (the interpolators' overshoot past full scale clamps).
-        using sample   = TypeParam;
-        double largest = 0.0;
-        for_each_shape<sample, 1>([&largest]<typename Stage>() {
+        using sample        = TypeParam;
+        double      largest = 0.0;
+        std::size_t clipped = 0;
+        for_each_shape<sample, 1>([&largest, &clipped]<typename Stage>() {
             using oracle_t =
                 basic_iir_stage<double, 1, std::conditional_t<Stage::k_is_decimator, down2, up2>, Stage::k_phase>;
             for (int pi = 0; pi < 4; ++pi) {
@@ -1104,9 +1149,7 @@ namespace {
                     std::vector<double> yd(ref.outputs_for(x.size()));
                     double              state_peak = 0.0;
                     for (std::size_t i = 0; i < x.size(); i += 8) {
-                        const std::size_t n  = std::min<std::size_t>(8, x.size() - i);
-                        const std::size_t at = st.outputs_for(0);
-                        static_cast<void>(at);
+                        const std::size_t n = std::min<std::size_t>(8, x.size() - i);
                         st.process(x.data() + i, n, y.data() + (i * Stage::k_up / Stage::k_down));
                         for (const auto v : st.states()) {
                             state_peak = std::max(state_peak, std::fabs(static_cast<double>(v)));
@@ -1122,12 +1165,21 @@ namespace {
                         ASSERT_LE(std::fabs(to_unit(y[i]) - clamped),
                                   (std::is_same_v<sample, std::int16_t> ? 2.0 * lsb : 1e-8))
                             << k_names[static_cast<std::size_t>(pi)] << " output " << i;
+                        if (std::fabs(yd[i]) > 1.0) {
+                            // Past full scale the output is the rail, its sign
+                            // the reference's: saturated, never wrapped.
+                            ASSERT_EQ(y[i], yd[i] > 0.0 ? std::numeric_limits<sample>::max()
+                                                        : std::numeric_limits<sample>::min());
+                            ++clipped;
+                        }
                     }
                 }
             }
         });
-        std::printf("[ measured ] %s: the largest state under full-scale drive is %.3f of full scale (limit 4)\n",
-                    std::is_same_v<sample, std::int16_t> ? "Q15" : "Q31", largest);
+        std::printf("[ measured ] %s: the largest state under full-scale drive is %.3f of full scale (limit 4); %zu "
+                    "outputs past full scale, every one at the rail\n",
+                    std::is_same_v<sample, std::int16_t> ? "Q15" : "Q31", largest, clipped);
+        EXPECT_GT(clipped, 0u) << "the drives reach the output's saturation";
     }
 
     TEST_F(iir_double, Q15FloorIsTheOutputsOwnRounding) {

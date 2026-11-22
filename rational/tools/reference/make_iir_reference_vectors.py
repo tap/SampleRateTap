@@ -29,6 +29,9 @@ The input is deterministic xorshift noise drawn as integers in Q15 at 0.9 of
 full scale, so the same values are exact in every format the tests run:
 k / 32768 in float and double, k in Q15, k * 2^16 in Q31. The decimators
 read 192 frames (96 outputs), the interpolators the first 96 (192 outputs).
+Each case also carries the direct form's group delay
+(scipy.signal.group_delay) at 0, half and all of the passband edge, in the
+stage's output frames, for the latency members (I5).
 The expected outputs are stored as float64 (17 significant digits), so the
 double stage is compared at its own floor and the other formats at theirs
 (tests/test_iir_stage.cpp states each tolerance and its measured margin).
@@ -175,6 +178,19 @@ def run(ba, x, down):
     return 2.0 * signal.lfilter(b, a, u)
 
 
+def group_delays(ba, f_pass_hi, down):
+    """scipy.signal.group_delay of the direct form at 0, half and all of the
+    passband edge, as (f, tau) in the stage's output frames: down, f = 2 f_hi
+    and tau / 2; up, f = f_hi and tau."""
+    b = np.array([float(v) for v in ba[0]])
+    a = np.array([float(v) for v in ba[1]])
+    f_hi = np.array([0.0, 0.5 * f_pass_hi, f_pass_hi])
+    _, gd = signal.group_delay((b, a), w=2.0 * np.pi * f_hi)
+    if down:
+        return list(2.0 * f_hi), list(gd / 2.0)
+    return list(f_hi), list(gd)
+
+
 def fmt(arr, per_line=4):
     return "\n".join("    " + ", ".join(f"{v:.17g}" for v in arr[i:i + per_line]) + ","
                      for i in range(0, len(arr), per_line))
@@ -221,6 +237,8 @@ def main():
     out.append("    int order;")
     out.append("    const double* expected;")
     out.append("    int frames;")
+    out.append("    std::array<double, 3> gd_f;   // cycles per output frame")
+    out.append("    std::array<double, 3> gd;     // group delay, output frames")
     out.append("};")
     out.append("")
     cases = []
@@ -239,11 +257,14 @@ def main():
                     out.append(f"inline constexpr double {tag}[] = {{")
                     out.append(fmt(y))
                     out.append("};")
-                    cases.append((phase, down, pi, d, order, tag, len(y)))
+                    gf, gd = group_delays(ba, p / (2.0 * d), down)
+                    cases.append((phase, down, pi, d, order, tag, len(y), gf, gd))
     out.append("")
     out.append(f"inline constexpr std::array<iir_case, {len(cases)}> k_cases = {{{{")
-    for phase, down, pi, d, order, tag, n in cases:
-        out.append(f"    {{{phase}, {down}, {pi}, {d}, {order}, {tag}, {n}}},")
+    for phase, down, pi, d, order, tag, n, gf, gd in cases:
+        gfs = ", ".join(f"{v:.17g}" for v in gf)
+        gds = ", ".join(f"{v:.17g}" for v in gd)
+        out.append(f"    {{{phase}, {down}, {pi}, {d}, {order}, {tag}, {n}, {{{gfs}}}, {{{gds}}}}},")
     out.append("}};")
     out.append("")
     out.append("} // namespace rational_iir_ref")
