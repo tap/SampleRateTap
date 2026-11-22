@@ -63,7 +63,10 @@ namespace tap::sr::rational::test {
         constexpr std::size_t               ch = Stage::channels();
         std::vector<typename Stage::sample> out(st.outputs_for(in.size() / ch) * ch);
         const std::size_t                   made = st.process(in.data(), in.size() / ch, out.data());
-        out.resize(made * ch);
+        // Trimmed by erase, never grown: resize()'s growing branch, inlined
+        // here, trips GCC 15's -Warray-bounds on a vector it cannot see
+        // grows only when made exceeds outputs_for(), which it never does.
+        out.erase(out.begin() + static_cast<std::ptrdiff_t>(made * ch), out.end());
         return out;
     }
 
