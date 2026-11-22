@@ -87,9 +87,17 @@
 //     the floor-truncated decay from the full state headroom (I8), per path
 //     1 plus the sum of each section's longest decay, exactly as IIR-0
 //     bounds it for first-order sections, and for the near_linear second-
-//     order sections the measured worst decay from full-scale drive with a
-//     factor of two over it (rational.IirStage.FixedPointSilenceIsExactlyZero
-//     AfterTheWindow); plus the latches and, near_linear, the delay path;
+//     order sections twice the sum of each section's decay through its pole
+//     radius from the full headroom to one LSB (every fixed-point state is
+//     zero inside its window after full-scale drive:
+//     iir_fixed_test.FixedPointSilenceIsExactlyZeroAfterTheWindow); plus the
+//     latches and, near_linear, the delay path. One exception, an honest
+//     limit: the floating near_linear stage at transparent and divisor 1
+//     holds a zero-input limit cycle at about four times the smallest normal
+//     under flush-to-zero (a second-order section's product flushes and the
+//     section lifts the state again, the mechanism of DspTap's Chebyshev II
+//     cascades), so its flush ends in that residue, within eight times the
+//     smallest normal (docs/IIR_PLAN.md question 19, open);
 //   - flush-to-zero is the host's job (I9): no stage reads-and-writes the
 //     floating-point environment; process(), pull() and flush() check
 //     TAP_DSP_EXPECTS_SUBNORMALS_FLUSHED(S) as a debug-build precondition
@@ -101,8 +109,9 @@
 //     without it, or where no bit governs S (double on the M4F and M33, the
 //     soft-float M4, Hexagon), the state sticks at a few multiples of the
 //     smallest subnormal and the output after the flush window is that
-//     residue, not silence (the bound pinned by
-//     rational.IirSubnormals.WithoutFlushToZeroTheResidueIsBounded), and on
+//     residue, not silence (at most 7 times the smallest subnormal measured,
+//     the bound 16 pinned by
+//     iir_subnormals.WithoutFlushToZeroTheResidueIsBounded), and on
 //     x86 the silence after signal runs about ten times slower;
 //   - formats (tap/dsp/iir_kernels.h, I8, I14): float states and products
 //     in the float profile, double the golden model; Q15 in Q2.29 states and
@@ -110,9 +119,9 @@
 //     one-multiplier sections and magnitude truncation in the second-order
 //     ones, the difference nodes in the 64-bit accumulator, saturation at
 //     the output only. A full-scale square wave or clipped sine never takes
-//     a state past its headroom at any profile (rational.IirStage.
-//     FullScaleDriveNeverWrapsInside); the Q15 output is the double stage
-//     rounded to Q15 within one LSB;
+//     a state past its headroom at any profile (1.99 of full scale at most,
+//     iir_fixed_test.FullScaleDriveNeverWrapsInside); the Q15 output is
+//     within 2 LSB of the double stage, its floor -100.8 dB RMS;
 //   - the constructor designs (a custom nonlinear profile) and allocates;
 //     process(), pull(), flush() and reset() are noexcept and
 //     allocation-free; one stream per instance, of Ch channels, a
@@ -125,7 +134,7 @@
 //     against a cursor of the stream state;
 //   - honest limits: a non-finite input poisons the recursive state until
 //     reset() (an FIR stage clears a burst after one window; I9, pinned by
-//     rational.IirStage.NonFiniteInputPoisonsTheStateUntilReset); the
+//     iir_float_test.NonFiniteInputPoisonsTheStateUntilReset); the
 //     contracts hold without -ffast-math (or /fp:fast), whose reassociation
 //     moves float outputs past the stated tolerances; the float and double
 //     outputs are tolerances against the golden model, never bits (this
@@ -603,10 +612,9 @@ namespace tap::sr::rational {
         /// The near-linear path's magnitude-truncated decay: per section the
         /// zero-input decay of its pole radius from the full state headroom
         /// to one LSB, ceil((F + 2) ln 2 / ln(1 / r)), summed with one frame
-        /// per section and 1 (window_from doubles it: the measured worst
-        /// decay from full-scale drive is within this sum at every profile
-        /// and divisor, rational.IirStage.FixedPointSilenceIsExactlyZero-
-        /// AfterTheWindow).
+        /// per section and 1 (window_from doubles it: every state is zero
+        /// within the doubled sum after full-scale drive at every profile and
+        /// divisor, iir_fixed_test.FixedPointSilenceIsExactlyZeroAfterTheWindow).
         std::size_t fixed_near_linear_decay() const noexcept
             requires(!std::is_floating_point_v<S> && k_is_near_linear)
         {
