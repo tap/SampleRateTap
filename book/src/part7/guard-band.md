@@ -101,6 +101,18 @@ where the committed row has 64). Every valid Chebyshev II setting fits the
 fixed-point formats, so `validate()` has no format rejection: the battery
 scans the settings and finds no coefficient at 2.
 
+The linear form in Q15 is the exception to "one design per setting". Rounded
+to Q1.14, whose step is 84 dB down, the double rows lost the tier: their taps
+attained −64.6 to −68.9 dB at the 70 dB settings. Asked, the maintainer chose
+rows designed for the format, and DspTap 0.4.0 commits them: Parks–McClellan
+designs with the margin quantization needs, at the same stop edges, run
+through the same symmetric quantizer, two taps longer at `super_economy` and
+`balanced` (32, 40 and 60 for 30, 38 and 58). Once quantized they attain −70.4
+to −89.2 dB, so in Q15 the filter's taps, latency and window follow them, and
+the battery pins each format's. `transparent` has none: Q1.14 cannot carry
+120 dB, so there the linear form in Q15 stays format-limited, as the FIR
+stages are in Q15 at `transparent`.
+
 ## Two latencies
 
 The Chebyshev's phase is nonlinear, so it reports what a recursive stage
