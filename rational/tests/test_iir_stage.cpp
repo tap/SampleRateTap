@@ -228,9 +228,9 @@ namespace {
     /// The golden case's stage over S, run on the reference input.
     template <typename S, iir_phase P, bool Down>
     std::vector<S> golden_run(const rational_iir_ref::iir_case& c, int& order) {
-        using R         = std::conditional_t<Down, down2, up2>;
+        using direction = std::conditional_t<Down, down2, up2>;
         const profile p = named(c.profile).relaxed({static_cast<std::uint64_t>(c.divisor), std::uint64_t{1}});
-        basic_iir_stage<S, 1, R, P> st(p);
+        basic_iir_stage<S, 1, direction, P> st(p);
         if constexpr (P == k_nonlinear) {
             order = st.nonlinear_design().order;
         }
@@ -272,37 +272,37 @@ namespace {
                                                                             : 1e-8;
 
     TYPED_TEST(iir_stage_test, MatchesTheDirectFormGoldenLeg) {
-        using S      = TypeParam;
+        using sample = TypeParam;
         double worst = 0.0;
         for (const auto& c : rational_iir_ref::k_cases) {
-            int                  order = 0;
-            const std::vector<S> y     = golden_dispatch<S>(c, order);
+            int                       order = 0;
+            const std::vector<sample> y     = golden_dispatch<sample>(c, order);
             ASSERT_EQ(static_cast<int>(y.size()), c.frames);
             EXPECT_EQ(order, c.order) << "the design the stage runs is the golden leg's";
             // The fixed-point outputs saturate at full scale (the
             // interpolators' peaks on full-band noise exceed it); the golden
             // leg is clamped the same way, never the floating formats'.
-            const double lsb = 1.0 / k_full<S>;
-            const double top = std::is_floating_point_v<S> ? 1e300 : 1.0 - lsb;
+            const double lsb = 1.0 / k_full<sample>;
+            const double top = std::is_floating_point_v<sample> ? 1e300 : 1.0 - lsb;
             double       err = 0.0;
             for (std::size_t i = 0; i < y.size(); ++i) {
                 err = std::max(err, std::fabs(to_unit(y[i]) - std::clamp(c.expected[i], -top - lsb, top)));
             }
-            EXPECT_LE(err, k_golden_tolerance<S>)
+            EXPECT_LE(err, k_golden_tolerance<sample>)
                 << (c.phase == 0 ? "nonlinear" : "near-linear") << (c.down != 0 ? " down " : " up ")
                 << k_names[static_cast<std::size_t>(c.profile)] << " d" << c.divisor;
             worst = std::max(worst, err);
         }
         std::printf("[ measured ] %zu-byte samples against the direct-form golden leg: %.3g of full scale at worst "
                     "(tolerance %.3g)\n",
-                    sizeof(S), worst, k_golden_tolerance<S>);
+                    sizeof(sample), worst, k_golden_tolerance<sample>);
     }
 
     // The Q15 and Q31 outputs, bit for bit: FNV-1a-64 over every golden
     // case's output, per variant and direction (16 cases each). A change that
     // moves a pin is a numeric change to the fixed-point datapath.
     TYPED_TEST(iir_fixed_test, OutputsAreBitPinned) {
-        using S                                  = TypeParam;
+        using sample                             = TypeParam;
         std::array<std::uint64_t, 4>           h = {0xcbf29ce484222325ull, 0xcbf29ce484222325ull, 0xcbf29ce484222325ull,
                                                     0xcbf29ce484222325ull};
         constexpr std::array<std::uint64_t, 4> q15 = {0x061a00a0b2fffcc1ull, 0x7b02f4fc0b63e3fcull,
@@ -311,13 +311,13 @@ namespace {
                                                       0xfb461874b3512534ull, 0x4b257dc57874196eull};
         for (const auto& c : rational_iir_ref::k_cases) {
             int        order = 0;
-            const auto y     = golden_dispatch<S>(c, order);
+            const auto y     = golden_dispatch<sample>(c, order);
             auto&      slot  = h[static_cast<std::size_t>(2 * c.phase + (c.down != 0 ? 0 : 1))];
             slot             = fnv1a64(slot, y);
         }
-        const auto& pins = std::is_same_v<S, std::int16_t> ? q15 : q31;
+        const auto& pins = std::is_same_v<sample, std::int16_t> ? q15 : q31;
         for (std::size_t i = 0; i < 4; ++i) {
-            std::printf("[ measured ] %s %s %s: 0x%016llxull\n", std::is_same_v<S, std::int16_t> ? "Q15" : "Q31",
+            std::printf("[ measured ] %s %s %s: 0x%016llxull\n", std::is_same_v<sample, std::int16_t> ? "Q15" : "Q31",
                         i < 2 ? "nonlinear" : "near-linear", i % 2 == 0 ? "down" : "up",
                         static_cast<unsigned long long>(h[i]));
             EXPECT_EQ(h[i], pins[i]) << i;
@@ -338,19 +338,19 @@ namespace {
     }
 
     TYPED_TEST(iir_stage_test, ChunkingIsBitIdentical) {
-        using S = TypeParam;
-        for_each_shape<S, 2>([]<typename Stage>() {
+        using sample = TypeParam;
+        for_each_shape<sample, 2>([]<typename Stage>() {
             for (int pi = 0; pi < 4; ++pi) {
-                const auto x = noise<S>(2 * 601, 0x5151u + static_cast<std::uint32_t>(pi));
+                const auto x = noise<sample>(2 * 601, 0x5151u + static_cast<std::uint32_t>(pi));
                 Stage      whole(named(pi));
                 const auto ref = run(whole, x);
                 for (const std::size_t chunk : {std::size_t{1}, std::size_t{2}, std::size_t{3}, std::size_t{7},
                                                 std::size_t{64}, std::size_t{97}}) {
-                    Stage          st(named(pi));
-                    std::vector<S> y;
+                    Stage               st(named(pi));
+                    std::vector<sample> y;
                     for (std::size_t at = 0; at < x.size() / 2; at += chunk) {
-                        const std::size_t n = std::min(chunk, x.size() / 2 - at);
-                        std::vector<S>    part(st.outputs_for(n) * 2);
+                        const std::size_t   n = std::min(chunk, x.size() / 2 - at);
+                        std::vector<sample> part(st.outputs_for(n) * 2);
                         ASSERT_EQ(st.process(x.data() + 2 * at, n, part.data()), part.size() / 2);
                         y.insert(y.end(), part.begin(), part.end());
                     }
@@ -361,16 +361,16 @@ namespace {
     }
 
     TYPED_TEST(iir_stage_test, PullMatchesProcessBitExact) {
-        using S = TypeParam;
-        for_each_shape<S, 2>([]<typename Stage>() {
-            const auto x = noise<S>(2 * 500, 0x7171u);
+        using sample = TypeParam;
+        for_each_shape<sample, 2>([]<typename Stage>() {
+            const auto x = noise<sample>(2 * 500, 0x7171u);
             Stage      whole;
             const auto ref = run(whole, x);
             for (const std::size_t chunk : {std::size_t{1}, std::size_t{3}, std::size_t{5}, std::size_t{64}}) {
-                Stage          st;
-                std::size_t    fed = 0;
-                std::vector<S> y;
-                auto           pop = [&](S* dst, std::size_t max) noexcept {
+                Stage               st;
+                std::size_t         fed = 0;
+                std::vector<sample> y;
+                auto                pop = [&](sample* dst, std::size_t max) noexcept {
                     const std::size_t n = std::min(max, x.size() / 2 - fed);
                     for (std::size_t i = 0; i < 2 * n; ++i) {
                         dst[i] = x[2 * fed + i];
@@ -379,8 +379,8 @@ namespace {
                     return n;
                 };
                 while (y.size() < ref.size()) {
-                    const std::size_t want = std::min(chunk, (ref.size() - y.size()) / 2);
-                    std::vector<S>    part(2 * want);
+                    const std::size_t   want = std::min(chunk, (ref.size() - y.size()) / 2);
+                    std::vector<sample> part(2 * want);
                     ASSERT_EQ(st.pull(part.data(), want, pop), want);
                     y.insert(y.end(), part.begin(), part.end());
                 }
@@ -457,9 +457,9 @@ namespace {
     }
 
     TYPED_TEST(iir_stage_test, ResetReproducesBitExactly) {
-        using S = TypeParam;
-        for_each_shape<S, 1>([]<typename Stage>() {
-            const auto x = noise<S>(333, 0x4141u);
+        using sample = TypeParam;
+        for_each_shape<sample, 1>([]<typename Stage>() {
+            const auto x = noise<sample>(333, 0x4141u);
             Stage      st;
             const auto first = run(st, x);
             st.reset();
@@ -470,17 +470,19 @@ namespace {
     }
 
     TYPED_TEST(iir_stage_test, ChannelsAreIndependentAndInTheType) {
-        using S = TypeParam;
-        static_assert(basic_iir_stage<S, 3, down2, k_nonlinear>::channels() == 3, "the count is the type's (D18)");
-        static_assert(
-            std::is_base_of_v<iir_stage_base<S, down2, k_nonlinear>, basic_iir_stage<S, 1, down2, k_nonlinear>>
-                && std::is_base_of_v<iir_stage_base<S, down2, k_nonlinear>, basic_iir_stage<S, 2, down2, k_nonlinear>>,
-            "every count shares one count-independent base (K12)");
-        for_each_shape<S, 2>([]<typename Stage>() {
-            using mono_t = basic_iir_stage<S, 1, std::conditional_t<Stage::k_is_decimator, down2, up2>, Stage::k_phase>;
-            const auto     a = noise<S>(401, 0x1111u);
-            const auto     b = noise<S>(401, 0x2222u, 0.5);
-            std::vector<S> ab(2 * a.size());
+        using sample = TypeParam;
+        static_assert(basic_iir_stage<sample, 3, down2, k_nonlinear>::channels() == 3, "the count is the type's (D18)");
+        static_assert(std::is_base_of_v<iir_stage_base<sample, down2, k_nonlinear>,
+                                        basic_iir_stage<sample, 1, down2, k_nonlinear>>
+                          && std::is_base_of_v<iir_stage_base<sample, down2, k_nonlinear>,
+                                               basic_iir_stage<sample, 2, down2, k_nonlinear>>,
+                      "every count shares one count-independent base (K12)");
+        for_each_shape<sample, 2>([]<typename Stage>() {
+            using mono_t =
+                basic_iir_stage<sample, 1, std::conditional_t<Stage::k_is_decimator, down2, up2>, Stage::k_phase>;
+            const auto          a = noise<sample>(401, 0x1111u);
+            const auto          b = noise<sample>(401, 0x2222u, 0.5);
+            std::vector<sample> ab(2 * a.size());
             for (std::size_t i = 0; i < a.size(); ++i) {
                 ab[2 * i]     = a[i];
                 ab[2 * i + 1] = b[i];
@@ -868,21 +870,21 @@ namespace {
     /// where a stage holds the limit cycle above, both to within `residue`.
     template <typename Conv, typename Make>
     void expect_flush_is_zero_padding(Make make, std::size_t fed_max, double residue = 0.0) {
-        using S          = typename Conv::sample;
+        using sample     = typename Conv::sample;
         constexpr auto C = Conv::channels();
-        const auto     x = noise<S>(fed_max * C, 0x6161u);
+        const auto     x = noise<sample>(fed_max * C, 0x6161u);
         for (std::size_t fed = fed_max - 5; fed <= fed_max; ++fed) {
-            Conv           flushed = make();
-            std::vector<S> scratch(flushed.outputs_for(fed) * C + C);
+            Conv                flushed = make();
+            std::vector<sample> scratch(flushed.outputs_for(fed) * C + C);
             flushed.process(x.data(), fed, scratch.data());
-            Conv              padded = flushed;
-            const std::size_t expect = flushed.flush_output_frames();
-            std::vector<S>    a(expect * C + C, S{1});
+            Conv                padded = flushed;
+            const std::size_t   expect = flushed.flush_output_frames();
+            std::vector<sample> a(expect * C + C, sample{1});
             ASSERT_EQ(flushed.flush(a.data()), expect);
-            const std::size_t zeros = 2 * flushed.flush_output_frames() * Conv::k_down / Conv::k_up + 64;
-            std::vector<S>    z(zeros * C, S{});
-            std::vector<S>    b(padded.outputs_for(zeros) * C);
-            const std::size_t made = padded.process(z.data(), zeros, b.data());
+            const std::size_t   zeros = 2 * flushed.flush_output_frames() * Conv::k_down / Conv::k_up + 64;
+            std::vector<sample> z(zeros * C, sample{});
+            std::vector<sample> b(padded.outputs_for(zeros) * C);
+            const std::size_t   made = padded.process(z.data(), zeros, b.data());
             ASSERT_GT(made, expect);
             for (std::size_t i = 0; i < expect * C; ++i) {
                 if (residue == 0.0) {
@@ -894,7 +896,7 @@ namespace {
             }
             for (std::size_t i = expect * C; i < made * C; ++i) {
                 if (residue == 0.0) {
-                    ASSERT_EQ(b[i], S{}) << "fed " << fed << " sample " << i << ": silence past the flush";
+                    ASSERT_EQ(b[i], sample{}) << "fed " << fed << " sample " << i << ": silence past the flush";
                 }
                 else {
                     ASSERT_LE(std::fabs(to_unit(b[i])), residue) << "fed " << fed << ": the residue past the flush";
@@ -904,24 +906,24 @@ namespace {
     }
 
     TYPED_TEST(iir_stage_test, FlushEqualsZeroPaddingBitForBit) {
-        using S = TypeParam;
-        for_each_shape<S, 2>([]<typename Stage>() {
+        using sample = TypeParam;
+        for_each_shape<sample, 2>([]<typename Stage>() {
             for (int pi = 0; pi < 4; ++pi) {
-                const bool cycle = holds_normal_limit_cycle<S>(Stage::k_phase, named(pi));
+                const bool cycle = holds_normal_limit_cycle<sample>(Stage::k_phase, named(pi));
                 // The stage alone: its flush runs the same block as process(),
                 // so flush() is the padded prefix bit for bit even where the
                 // state holds the limit cycle; past it, silence or the residue.
                 expect_flush_is_zero_padding<Stage>([pi] { return Stage(named(pi)); }, 300,
-                                                    cycle ? k_normal_residue<S> : 0.0);
-                Stage          st(named(pi));
-                const auto     x = noise<S>(2 * 300, 0x6262u);
-                std::vector<S> out(st.outputs_for(300) * 2);
+                                                    cycle ? k_normal_residue<sample> : 0.0);
+                Stage               st(named(pi));
+                const auto          x = noise<sample>(2 * 300, 0x6262u);
+                std::vector<sample> out(st.outputs_for(300) * 2);
                 st.process(x.data(), 300, out.data());
-                std::vector<S> tail(st.flush_output_frames() * 2 + 2);
+                std::vector<sample> tail(st.flush_output_frames() * 2 + 2);
                 st.flush(tail.data());
                 for (const auto v : st.states()) {
                     if (cycle) {
-                        ASSERT_LE(std::fabs(static_cast<double>(v)), k_normal_residue<S>) << "the honest limit";
+                        ASSERT_LE(std::fabs(static_cast<double>(v)), k_normal_residue<sample>) << "the honest limit";
                     }
                     else {
                         ASSERT_EQ(v, typename Stage::state{}) << "an exactly zero state after the window (I6)";
@@ -934,53 +936,54 @@ namespace {
     TYPED_TEST(iir_stage_test, FlushEqualsZeroPaddingBitForBitInChainsWithFirStages) {
         // Chains holding each IIR variant beside FIR stages (I10's mixed
         // chain, a caller's tap::dsp::chain), and the cascades.
-        using S           = TypeParam;
+        using sample      = TypeParam;
         const profile eco = profile::economy();
-        using mixed_down  = tap::dsp::chain<basic_stage<S, 1, down3>, basic_iir_stage<S, 1, down2, k_nonlinear>>;
+        using mixed_down =
+            tap::dsp::chain<basic_stage<sample, 1, down3>, basic_iir_stage<sample, 1, down2, k_nonlinear>>;
         expect_flush_is_zero_padding<mixed_down>(
             [&] {
-                return mixed_down(basic_stage<S, 1, down3>(eco.relaxed({2, 1})),
-                                  basic_iir_stage<S, 1, down2, k_nonlinear>(eco));
+                return mixed_down(basic_stage<sample, 1, down3>(eco.relaxed({2, 1})),
+                                  basic_iir_stage<sample, 1, down2, k_nonlinear>(eco));
             },
             600);
-        using mixed_up = tap::dsp::chain<basic_iir_stage<S, 1, up2, k_near_linear>, basic_stage<S, 1, up3>>;
+        using mixed_up = tap::dsp::chain<basic_iir_stage<sample, 1, up2, k_near_linear>, basic_stage<sample, 1, up3>>;
         expect_flush_is_zero_padding<mixed_up>(
             [&] {
-                return mixed_up(basic_iir_stage<S, 1, up2, k_near_linear>(eco),
-                                basic_stage<S, 1, up3>(eco.relaxed({2, 1})));
+                return mixed_up(basic_iir_stage<sample, 1, up2, k_near_linear>(eco),
+                                basic_stage<sample, 1, up3>(eco.relaxed({2, 1})));
             },
             200);
-        using nl8 = iir_down_by<S, 2, k_nonlinear, 8>;
+        using nl8 = iir_down_by<sample, 2, k_nonlinear, 8>;
         expect_flush_is_zero_padding<nl8>([&] { return nl8(eco); }, 800);
-        using nr8 = iir_up_by<S, 1, k_near_linear, 8>;
+        using nr8 = iir_up_by<sample, 1, k_near_linear, 8>;
         expect_flush_is_zero_padding<nr8>([&] { return nr8(profile::balanced()); }, 100);
         // At transparent the cascade's first stage up is the near-linear
         // divisor-1 stage that holds the limit cycle: tap::dsp::chain's flush
         // feeds each later stage exact zeros where padding feeds it the
         // residue, so the two agree to within it, and past the flush the
         // output is the residue, not silence (the honest limit above).
-        expect_flush_is_zero_padding<nr8>([&] { return nr8(profile::transparent()); }, 100, k_normal_residue<S>);
+        expect_flush_is_zero_padding<nr8>([&] { return nr8(profile::transparent()); }, 100, k_normal_residue<sample>);
     }
 
     TYPED_TEST(iir_float_test, SilenceDecaysToExactZero) {
         // Under the host's flush-to-zero the floating states reach exactly
         // zero within window_frames() (I9), from a full-scale start.
-        using S = TypeParam;
-        for_each_shape<S, 1>([]<typename Stage>() {
+        using sample = TypeParam;
+        for_each_shape<sample, 1>([]<typename Stage>() {
             for (int pi = 0; pi < 4; ++pi) {
-                Stage          st(named(pi));
-                const auto     x = noise<S>(1000, 0x8181u, 1.0);
-                std::vector<S> out(st.outputs_for(1000));
+                Stage               st(named(pi));
+                const auto          x = noise<sample>(1000, 0x8181u, 1.0);
+                std::vector<sample> out(st.outputs_for(1000));
                 st.process(x.data(), 1000, out.data());
-                std::vector<S> z(st.window_frames(), S{});
-                std::vector<S> y(st.outputs_for(z.size()));
+                std::vector<sample> z(st.window_frames(), sample{});
+                std::vector<sample> y(st.outputs_for(z.size()));
                 st.process(z.data(), z.size(), y.data());
                 for (const auto v : st.states()) {
-                    if (holds_normal_limit_cycle<S>(Stage::k_phase, named(pi))) {
-                        ASSERT_LE(std::fabs(static_cast<double>(v)), k_normal_residue<S>);
+                    if (holds_normal_limit_cycle<sample>(Stage::k_phase, named(pi))) {
+                        ASSERT_LE(std::fabs(static_cast<double>(v)), k_normal_residue<sample>);
                     }
                     else {
-                        ASSERT_EQ(v, S{}) << k_names[static_cast<std::size_t>(pi)];
+                        ASSERT_EQ(v, sample{}) << k_names[static_cast<std::size_t>(pi)];
                     }
                 }
             }
@@ -988,16 +991,16 @@ namespace {
     }
 
     TYPED_TEST(iir_stage_test, NeverTouchesTheFloatingPointEnvironment) {
-        using S = TypeParam;
-        for_each_shape<S, 1>([]<typename Stage>() {
+        using sample = TypeParam;
+        for_each_shape<sample, 1>([]<typename Stage>() {
             const std::uint64_t before = tap::dsp::floating_point_control() & tap::sr::rational::test::k_control_mask;
             Stage               st;
-            const auto          x = noise<S>(200, 0x9999u);
-            std::vector<S>      out(st.outputs_for(200));
+            const auto          x = noise<sample>(200, 0x9999u);
+            std::vector<sample> out(st.outputs_for(200));
             st.process(x.data(), 200, out.data());
-            std::size_t    fed = 0;
-            std::vector<S> pulled(8);
-            st.pull(pulled.data(), 8, [&](S* dst, std::size_t max) noexcept {
+            std::size_t         fed = 0;
+            std::vector<sample> pulled(8);
+            st.pull(pulled.data(), 8, [&](sample* dst, std::size_t max) noexcept {
                 const std::size_t n = std::min(max, std::size_t{4});
                 for (std::size_t i = 0; i < n; ++i) {
                     dst[i] = x[fed + i];
@@ -1005,11 +1008,11 @@ namespace {
                 fed += n;
                 return n;
             });
-            std::vector<S> tail(st.flush_output_frames() + 1);
+            std::vector<sample> tail(st.flush_output_frames() + 1);
             st.flush(tail.data());
             st.reset();
             EXPECT_EQ(tap::dsp::floating_point_control() & tap::sr::rational::test::k_control_mask, before);
-            EXPECT_TRUE(tap::dsp::subnormals_flushed<S>() || !tap::dsp::k_subnormal_control<S>);
+            EXPECT_TRUE(tap::dsp::subnormals_flushed<sample>() || !tap::dsp::k_subnormal_control<sample>);
         });
     }
 
@@ -1039,13 +1042,14 @@ namespace {
         // Full-scale DC of either sign through every stage settles at full
         // scale within the format's truncation (the allpass sections pass DC
         // at gain 1; floor truncation leaves at most 1 LSB).
-        using S = TypeParam;
-        for_each_shape<S, 1>([]<typename Stage>() {
+        using sample = TypeParam;
+        for_each_shape<sample, 1>([]<typename Stage>() {
             for (int pi = 0; pi < 4; ++pi) {
-                for (const S level : {std::numeric_limits<S>::max(), std::numeric_limits<S>::min(), S{12345}}) {
-                    Stage          st(named(pi));
-                    std::vector<S> x(4000, level);
-                    const auto     y = run(st, x);
+                for (const sample level :
+                     {std::numeric_limits<sample>::max(), std::numeric_limits<sample>::min(), sample{12345}}) {
+                    Stage               st(named(pi));
+                    std::vector<sample> x(4000, level);
+                    const auto          y = run(st, x);
                     for (std::size_t i = y.size() / 2; i < y.size(); ++i) {
                         ASSERT_LE(std::llabs(static_cast<long long>(y[i]) - static_cast<long long>(level)), 1)
                             << k_names[static_cast<std::size_t>(pi)];
@@ -1083,20 +1087,20 @@ namespace {
         // scale) and every output within 2 LSB of the double stage clamped
         // to the format, so nothing wrapped; saturation happens at the output
         // only (the interpolators' overshoot past full scale clamps).
-        using S        = TypeParam;
+        using sample   = TypeParam;
         double largest = 0.0;
-        for_each_shape<S, 1>([&largest]<typename Stage>() {
+        for_each_shape<sample, 1>([&largest]<typename Stage>() {
             using oracle_t =
                 basic_iir_stage<double, 1, std::conditional_t<Stage::k_is_decimator, down2, up2>, Stage::k_phase>;
             for (int pi = 0; pi < 4; ++pi) {
-                for (const auto& x : full_scale_drives<S>(1200)) {
+                for (const auto& x : full_scale_drives<sample>(1200)) {
                     Stage               st(named(pi));
                     oracle_t            ref(named(pi));
                     std::vector<double> xd(x.size());
                     for (std::size_t i = 0; i < x.size(); ++i) {
                         xd[i] = to_unit(x[i]);
                     }
-                    std::vector<S>      y(st.outputs_for(x.size()));
+                    std::vector<sample> y(st.outputs_for(x.size()));
                     std::vector<double> yd(ref.outputs_for(x.size()));
                     double              state_peak = 0.0;
                     for (std::size_t i = 0; i < x.size(); i += 8) {
@@ -1109,21 +1113,21 @@ namespace {
                         }
                     }
                     ref.process(xd.data(), xd.size(), yd.data());
-                    const double unit = std::is_same_v<S, std::int16_t> ? 536870912.0 : 1152921504606846976.0;
+                    const double unit = std::is_same_v<sample, std::int16_t> ? 536870912.0 : 1152921504606846976.0;
                     largest           = std::max(largest, state_peak / unit);
                     ASSERT_LT(state_peak / unit, 4.0) << "two guard bits";
-                    const double lsb = 1.0 / k_full<S>;
+                    const double lsb = 1.0 / k_full<sample>;
                     for (std::size_t i = 0; i < y.size(); ++i) {
                         const double clamped = std::clamp(yd[i], -1.0, 1.0 - lsb);
                         ASSERT_LE(std::fabs(to_unit(y[i]) - clamped),
-                                  (std::is_same_v<S, std::int16_t> ? 2.0 * lsb : 1e-8))
+                                  (std::is_same_v<sample, std::int16_t> ? 2.0 * lsb : 1e-8))
                             << k_names[static_cast<std::size_t>(pi)] << " output " << i;
                     }
                 }
             }
         });
         std::printf("[ measured ] %s: the largest state under full-scale drive is %.3f of full scale (limit 4)\n",
-                    std::is_same_v<S, std::int16_t> ? "Q15" : "Q31", largest);
+                    std::is_same_v<sample, std::int16_t> ? "Q15" : "Q31", largest);
     }
 
     TEST_F(iir_double, Q15FloorIsTheOutputsOwnRounding) {
@@ -1164,18 +1168,18 @@ namespace {
         // state (no zero-input limit cycle: floor truncation in the
         // one-multiplier sections, magnitude truncation in the second-order
         // ones, I8), within the stated count (I6).
-        using S            = TypeParam;
+        using sample       = TypeParam;
         std::size_t margin = std::numeric_limits<std::size_t>::max();
-        for_each_shape<S, 1>([&margin]<typename Stage>() {
+        for_each_shape<sample, 1>([&margin]<typename Stage>() {
             for (int pi = 0; pi < 4; ++pi) {
                 for (const std::uint64_t d : {1u, 2u, 4u, 8u}) {
-                    for (const auto& x : full_scale_drives<S>(900)) {
-                        Stage          st(named(pi).relaxed({d, 1}));
-                        std::vector<S> y(st.outputs_for(x.size()));
+                    for (const auto& x : full_scale_drives<sample>(900)) {
+                        Stage               st(named(pi).relaxed({d, 1}));
+                        std::vector<sample> y(st.outputs_for(x.size()));
                         st.process(x.data(), x.size(), y.data());
                         std::size_t frames  = 0;
-                        S           zero[1] = {S{}};
-                        S           sink[4];
+                        sample      zero[1] = {sample{}};
+                        sample      sink[4];
                         while (std::any_of(st.states().begin(), st.states().end(), [](auto v) { return v != 0; })
                                && frames < 100000) {
                             st.process(zero, 1, sink);
@@ -1188,7 +1192,7 @@ namespace {
             }
         });
         std::printf("[ measured ] %s: every state reaches exactly zero inside its window (least slack %zu frames)\n",
-                    std::is_same_v<S, std::int16_t> ? "Q15" : "Q31", margin);
+                    std::is_same_v<sample, std::int16_t> ? "Q15" : "Q31", margin);
     }
 
     // ------------------------------------------------------------------
@@ -1199,20 +1203,20 @@ namespace {
         // I9, decided: a recursive state never clears a non-finite input on
         // its own (an FIR stage does after one window), and no per-sample
         // check is paid; reset() clears it.
-        using S = TypeParam;
-        for_each_shape<S, 1>([]<typename Stage>() {
-            Stage          st;
-            std::vector<S> x(64, S{});
-            x[3] = std::numeric_limits<S>::quiet_NaN();
-            std::vector<S> y(st.outputs_for(64));
+        using sample = TypeParam;
+        for_each_shape<sample, 1>([]<typename Stage>() {
+            Stage               st;
+            std::vector<sample> x(64, sample{});
+            x[3] = std::numeric_limits<sample>::quiet_NaN();
+            std::vector<sample> y(st.outputs_for(64));
             st.process(x.data(), 64, y.data());
-            std::vector<S> z(4096, S{});
-            std::vector<S> w(st.outputs_for(z.size()));
+            std::vector<sample> z(4096, sample{});
+            std::vector<sample> w(st.outputs_for(z.size()));
             st.process(z.data(), z.size(), w.data());
             EXPECT_TRUE(std::isnan(w.back())) << "still poisoned after 4096 zeros";
             st.reset();
             st.process(z.data(), z.size(), w.data());
-            EXPECT_EQ(w.back(), S{}) << "reset() clears it";
+            EXPECT_EQ(w.back(), sample{}) << "reset() clears it";
         });
     }
 
@@ -1251,20 +1255,20 @@ namespace {
     }
 
     TYPED_TEST(iir_stage_test, CascadeIsItsStagesAtTheirDivisorsBitForBit) {
-        using S           = TypeParam;
+        using sample      = TypeParam;
         const profile eco = profile::economy();
-        using st          = basic_iir_stage<S, 1, down2, k_near_linear>;
-        using up          = basic_iir_stage<S, 1, up2, k_nonlinear>;
-        iir_down_by<S, 1, k_near_linear, 8> cascade(eco);
-        tap::dsp::chain<st, st, st>         manual(st{eco.relaxed({4, 1})}, st{eco.relaxed({2, 1})}, st{eco});
-        const auto                          x = noise<S>(800, 0xabcdu);
+        using st          = basic_iir_stage<sample, 1, down2, k_near_linear>;
+        using up          = basic_iir_stage<sample, 1, up2, k_nonlinear>;
+        iir_down_by<sample, 1, k_near_linear, 8> cascade(eco);
+        tap::dsp::chain<st, st, st>              manual(st{eco.relaxed({4, 1})}, st{eco.relaxed({2, 1})}, st{eco});
+        const auto                               x = noise<sample>(800, 0xabcdu);
         EXPECT_TRUE(run(cascade, x) == run(manual, x));
         EXPECT_EQ(cascade.nominal_latency_output_frames(), manual.nominal_latency_output_frames());
-        iir_up_by<S, 1, k_nonlinear, 4> up4(eco);
-        tap::dsp::chain<up, up>         up_manual(up{eco}, up{eco.relaxed({2, 1})});
+        iir_up_by<sample, 1, k_nonlinear, 4> up4(eco);
+        tap::dsp::chain<up, up>              up_manual(up{eco}, up{eco.relaxed({2, 1})});
         EXPECT_TRUE(run(up4, x) == run(up_manual, x));
-        EXPECT_EQ((iir_down_by<S, 1, k_near_linear, 8>::k_divisors), (std::array<std::size_t, 3>{4, 2, 1}));
-        EXPECT_EQ((iir_up_by<S, 1, k_nonlinear, 16>::k_divisors), (std::array<std::size_t, 4>{1, 2, 4, 8}));
+        EXPECT_EQ((iir_down_by<sample, 1, k_near_linear, 8>::k_divisors), (std::array<std::size_t, 3>{4, 2, 1}));
+        EXPECT_EQ((iir_up_by<sample, 1, k_nonlinear, 16>::k_divisors), (std::array<std::size_t, 4>{1, 2, 4, 8}));
     }
 
 } // namespace
