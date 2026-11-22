@@ -1861,6 +1861,26 @@ and the same ceilings (`icount.py --compare-json`, `ceilings.py measure`).
 *The four-path stage* (I12): measured and not shipped, the IIR plan's 2.4
 and `tools/spikes/iir/iirb_fourpath/`.
 
+*Verification* (GCC 13.3, Clang 18.1, arm-none-eabi-gcc 13.2.1, QEMU 8.2.2,
+the CodeLinaro Hexagon clang 19.1.5). GCC 13 and Clang 18 (with
+`-Wshadow-all`) with `-Werror` for the three engines, the C ABIs and the
+examples on, and GCC without exceptions and RTTI: 427 of 427 tests in each
+(`rational` 62 recursive tests and the subnormal image's four new; one
+`async` threading test, `Threads.ProducerConsumerAndPollerShareOneConverter`,
+failed once in the no-exceptions build under the load of four emulators and
+passed three of three alone); a Debug build's `rational` 209 of 209, the
+precondition's death test among them. clang-tidy 18 clean on the new
+translation units, clang-format 18 on every changed source, the vocabulary
+gate clean, the book built by mdBook 0.4.40 without a warning. Under
+emulation, `rational`'s battery in both builds: 169 of 169 on the M33 and on
+the M55 (60 of them recursive; the one-shot filter adds the spec sweep, a
+host measurement; the recursive tests take 39 s of the M33's run in soft
+double) and the subnormal image's 4 of 4; on Hexagon 194 of 194 in each build (65 recursive tests, the four of the subnormal image among them, with the spec sweep added to the leg's exclusions in `ci.yml`: in soft double it ran past the job's 20 minutes). *The ratchet and the
+ceilings:* with the stages in the tree every count and checksum of every
+engine on every key (M33, M55, Hexagon, host), in both builds, equals the
+parent commit's (312 rows) and every ceiling file is identical; no baseline or
+ceiling is re-recorded. MSVC and AppleClang were not run here.
+
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2
 follow-up landed before M4, so nothing waits for it. Every milestone's PR
