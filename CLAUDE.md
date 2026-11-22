@@ -54,7 +54,7 @@ made this tree (sections 5–6). Do not re-derive what it settles.
   argument, D18, `docs/CHANNELS_PLAN.md`; 0.8.0 with `rational`'s ×4 / ×8 / ×16 plan: its vocabulary
   respelled, the designer's β re-tuned, the 4th-band stage, a chain per attenuation tier and the
   chains by 4, 8 and 16 named by intent, `docs/X4_X8_PLAN.md`, the old-to-new names in `CHANGELOG.md`).
-- **The DspTap floor (A9).** Each umbrella header also defines `TAP_SR_DSPTAP_MINIMUM` (0.2.0)
+- **The DspTap floor (A9).** Each umbrella header also defines `TAP_SR_DSPTAP_MINIMUM` (0.3.0)
   token-identically and `static_assert`s it against DspTap's `TAP_DSP_VERSION`
   (`tap/dsp/version.h`); `family.VersionMacrosAgree` checks the three agree. DspTap is tagged on its
   own cadence (Q4): a commit that moves `submodules/dsptap` names the tag it pins, and raising the
