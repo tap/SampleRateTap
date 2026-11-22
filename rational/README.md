@@ -260,7 +260,7 @@ multiplies per output going down by 2 / 4 / 8 / 16 (nonlinear) and 7 / 13 / 21 /
 - **Flush** (R24) feeds `window_frames()` zeros, the count to an exactly zero state, so
   it equals zero padding bit for bit and every output after it is silence.
 - **By 4 and by 3.** Every cascade is half-bands. A four-path stage by 4 was measured on
-  this machine and does not beat the two half-bands it would replace by 10 % on the M33,
+  this machine and does not beat the two half-bands it would replace by 10 % on all three of the M33,
   the M55 and Hexagon ([`tools/spikes/iir/iirb_fourpath/`](tools/spikes/iir/iirb_fourpath/README.md));
   by 3 is planned and not implemented. Both are `static_assert`s that say so.
 

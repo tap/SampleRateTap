@@ -41,9 +41,11 @@
 // Every cascade is half-bands. The nonlinear four-path stage by 4 was
 // measured in place of the two half-bands at the top of the cascade by 8 and
 // the middle of the one by 16 (I12), on this machine over DspTap's kernels:
-// it beat them by more than R3's 10 % only on Hexagon going down, and lost or
-// tied on the M33 and the M55 in float (+9 to +11 % going down), so it does
-// not ship (docs/IIR_PLAN.md I12, the IIR-b record).
+// it beat them by more than R3's 10 % on Hexagon going down, and here and
+// there in Q15, but cost more on the M33 and the M55 in float going down
+// (+10.7 and +9.2 %) and on the M33 in Q15 (+14.6 %); no format and direction
+// cleared the bar on all three targets, so it does not ship
+// (docs/IIR_PLAN.md I12, the IIR-b record).
 #pragma once
 
 #include <array>

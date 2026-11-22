@@ -9,7 +9,7 @@ nothing here is in a build CI runs.
 
 **Verdict: it does not ship.** On the shipping stage machine over DspTap 0.3.0's kernels
 (`iir_kernels.h`) the four-path stage beats the pair by more than 10 % on Hexagon going down and in
-Q15 going up, and on the M33 in Q15 going up, but loses on the M33 and the M55 in float going down
+Q15 going up, on the M33 in Q15 going up and on the M55 in Q15 going down (−10.1 %), but loses on the M33 and the M55 in float going down
 (+10.7 % and +9.2 %) and in Q15 going down on the M33 (+14.6 %). No format, direction and placement
 clears the bar on all three targets, so every cascade (`iir_chain.h`) is half-bands and
 `basic_iir_stage` runs by 2 only.
