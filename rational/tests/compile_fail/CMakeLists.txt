@@ -24,13 +24,15 @@ elseif(TAP_SR_RATIONAL_COMPILE_FAIL_SET STREQUAL "iir")
     # planned and refused with its name, by 4 was measured and does not
     # ship, the nonlinear variant has no exact delay path for the round-trip
     # scaffold (subband_delta's exact_delay_stage constraint) and no recursive
-    # stage an exact latency for a chain.
+    # stage an exact latency for a chain, nor the guard band filter's
+    # Chebyshev II form (I7: its phase is nonlinear).
     set(_cases
         "iir_ratio_up3.cpp|up3 / down3, the three-path structure, is planned"
         "iir_down4.cpp|four-path stage by 4 \\(up4, down4\\) was measured and does not ship"
         "iir_nonlinear_subband.cpp|exact_delay_stage|dsp"
-        "iir_exact_latency.cpp|a chain's latency needs every stage to report latency_output_frames|dsp")
-    set(_expected 4)
+        "iir_exact_latency.cpp|a chain's latency needs every stage to report latency_output_frames|dsp"
+        "guard_band_exact_latency.cpp|a chain's latency needs every stage to report latency_output_frames|dsp")
+    set(_expected 5)
 else()
     # One case per static_assert of the charter, each isolated: 5/1 fails the
     # form, 4/2 and 2/2 the lowest terms (2/2 reaches no further), 1/1 passes
