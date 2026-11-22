@@ -138,9 +138,11 @@ in the meantime.
 The plan expected a four-path stage by 4 to replace the two half-bands at
 the top of a cascade by 8, where the spike's own kernels had counted 13 to
 32 % fewer instructions. Measured on the shipping machine over DspTap's
-generic kernels, it was 9 to 15 % dearer on the M33 and the M55 in float
-going down, and it cleared the 10 % bar only on Hexagon. So it does not
-ship, every cascade is half-bands, and the record of why is in
+generic kernels, it was 10.7 % dearer on the M33 and 9.2 % on the M55 in
+float going down, and 14.6 % on the M33 in Q15; it cleared the 10 % bar on
+Hexagon going down and in a few Q15 cases, never in one format and direction
+on all three targets. So it does not ship, every cascade is half-bands, and
+the record of why is in
 `rational/tools/spikes/iir/iirb_fourpath/`:
 
 ```cpp
