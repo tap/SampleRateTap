@@ -1,8 +1,33 @@
 # Recursive polyphase stages for `rational` (the IIR options): plan
 
-Status: **v11, 2026-11-22: IIR-a and IIR-b landed, IIR-c in review.** v11 records the
-maintainer's decisions for IIR-c, taken with it, and IIR-c's own results (`rational`'s guard band
-filter and the composition tests, section 5 item 4):
+Status: **v12, 2026-11-22: IIR-a, IIR-b and IIR-c landed, IIR-c's follow-up in review.** v12
+records the maintainer's answers to the two questions IIR-c put to him, given after it landed
+(tap/SampleRateTap#114), and the follow-up that implements them (section 5 item 4):
+- **Question 20, the guard band settings behind the near-linear and the FIR half-band: decided,
+  per kind.** The maintainer: "The settings can be different for the fir and near linear chains
+  than the nonlinear chains." Question 14's rule is applied behind the half-band the filter
+  serves: 5 / 7 / 7 / 7 behind the nonlinear half-band, 7 / 7 / 7 / 11 behind the FIR and the
+  near-linear ones. The kind is `half_band_kind { fir, nonlinear, near_linear }` beside
+  `guard_phase`, and every named setting takes it with no default
+  (`guard_band_settings::economy(half_band_kind::nonlinear)`); `economy` and `balanced` are one
+  design behind every kind and take it all the same, and `guard_band_settings{}`, the
+  constructor's and `validate()`'s default, stays `economy`'s.
+- **Question 21, the linear form in Q15: decided, "DspTap Q15 rows".** DspTap commits Q15 linear
+  rows designed with the margin quantization needs, in a PR of its own; `rational` keeps the Q15
+  limit pinned as it is, and the pin bump that brings the rows lifts it.
+- **The follow-up** (`rational/include/tap/sr/rational/guard_band.h`, `rational/PLAN.md` R26 and
+  its v0.23 record): six designs per form, `super_economy` at orders 5 and 7 and `transparent` at
+  7 and 11, every one already a committed DspTap row, so DspTap does not change; any other
+  setting designs at run time as before. Behind its own half-band every named setting holds
+  −A/2 (−40.1 / −43.5 / −40.2 / −61.6 dB behind the nonlinear half-band, −39.6 / −39.2 / −37.8 /
+  −64.6 behind the near-linear, −40.9 / −37.0 / −37.0 / −62.1 behind the FIR). The floating
+  limit cycle at the two new orders stays inside its bound of 16: 4.4 and 3.0 times the smallest
+  normal in float and double at `super_economy`'s order 7, 8.4 and 7.7 at `transparent`'s order
+  11. `transparent` behind the FIR and near-linear half-bands costs 30 multiplies (20 behind the
+  nonlinear one) or a 102-tap FIR (72).
+
+v11 records the maintainer's decisions for IIR-c, taken with it, and IIR-c's own results
+(`rational`'s guard band filter and the composition tests, section 5 item 4):
 - **Question 14, the order rule: decided, 5 / 7 / 7 / 7** at `super_economy` / `economy` /
   `balanced` / `transparent`: the lowest odd Chebyshev II order whose worst alias in the guard band
   is at or below −A/2 (I7). The linear form matches the same stop edges, from DspTap's committed
@@ -120,8 +145,9 @@ non-finite input, and flush-to-zero as the host's job (I9, v9); the bar for a fo
 (I12), and IIR-b's measurement against it (v10); the relaxed designs and the cascade helper (I13,
 v10); float states in the float profile (I14, v10); the round trip's target (question 5, v9); the
 order (section 5); I7's order rule (question 14, v11), I10 (question 16's part, v11) and the
-limit cycle (question 19, v11). Recommended and not yet put to the maintainer: I11, listed in
-section 8; open: questions 20 and 21 (v11). Numbers marked *est.* are arithmetic; numbers marked
+limit cycle (question 19, v11); the guard band's settings per half-band kind (question 20, v12)
+and the linear form's Q15 rows (question 21, v12). Recommended and not yet put to the
+maintainer: I11, listed in section 8. Numbers marked *est.* are arithmetic; numbers marked
 **IIR-0** are the spike's measurements, **IIR-b** the shipping stages', **IIR-c** the guard band
 filter's.
 
@@ -568,7 +594,12 @@ reserves, with P = 4.
   cycle from some states (8 to 16 of 20 starts at the named settings), its state settling at most
   8.7 times the smallest normal in float and 10.4 in double, pinned below 16; orders 3 and 5 drain
   to exactly zero at every named spec point; the fixed-point cascade always drains, within 321
-  (Q15) and 691 (Q31) frames of full-scale drive against windows of 420 to 2,130.
+  (Q15) and 691 (Q31) frames of full-scale drive against windows of 420 to 2,130. **IIR-c's
+  follow-up (v12, question 20):** at the two new named orders the cycle holds from 4 to 17 of 20
+  starts and settles at most 4.4 (float) and 3.0 (double) times the smallest normal at
+  `super_economy`'s order 7 and 8.4 and 7.7 at `transparent`'s order 11, under the same bound of
+  16; the fixed-point cascade drains within 365 (Q15) and 802 (Q31) frames over the six designs,
+  against windows of 420 to 3,480.
   - **Floating point:** the count from the format's largest finite value (over the state
     headroom) down to its smallest normal value, through the stage's largest coefficient,
     computed at design time, plus a margin of one frame per section (IIR-0 found a whole
@@ -598,7 +629,13 @@ reserves, with P = 4.
   / −61.6 dB at those orders; `rational.guard_band.OrderIsTheLowestOddOrderWhoseGuardBandAliasIsAtHalfA`)
   and finds it is that half-band's rule: behind the near-linear and the FIR half-band the same
   orders leave −31.4 / −39.2 / −37.8 / −48.8 and −31.6 / −37.0 / −37.0 / −45.6 dB, and the rule
-  would pick 7 / 7 / 7 / 11 behind either (question 20). The Chebyshev II form takes odd orders only. DspTap's `chain`
+  would pick 7 / 7 / 7 / 11 behind either (question 20). *Decided (v12, the maintainer, question
+  20):* "The settings can be different for the fir and near linear chains than the nonlinear
+  chains." Each named setting takes the half-band it serves, `half_band_kind::fir`, `nonlinear`
+  or `near_linear`, and is the rule's order behind it: 5 / 7 / 7 / 7 behind the nonlinear
+  half-band, 7 / 7 / 7 / 11 behind the others (−39.6 / −39.2 / −37.8 / −64.6 dB behind the
+  near-linear and −40.9 / −37.0 / −37.0 / −62.1 behind the FIR at those orders; the test pins
+  every kind's pick). The Chebyshev II form takes odd orders only. DspTap's `chain`
   already takes a 1:1 stage (its ratio product and output bounds assume no L ≠ M); IIR-a
   adds the test that pins it. *Declined:* an option on each stage, since it would double
   every stage's surface and could not serve the FIR stages without touching them.
@@ -933,7 +970,7 @@ reserves, with P = 4.
    - updates the header-count pin.
 4. **IIR-c, the guard band filter**, both forms (I7), and the composition tests (I10), with
    the charter's note that a 1:1 guard band stage is admitted beside the ratios
-   (`ratio<L, M>`'s `static_assert` unchanged). *In review (v11):*
+   (`ratio<L, M>`'s `static_assert` unchanged). *Landed (v11, tap/SampleRateTap#114):*
    `guard_band_filter<S, Ch, guard_phase>` (`rational/include/tap/sr/rational/guard_band.h`) over
    `guard_band_filter_base<S, P>` (K12), `guard_phase::nonlinear` (the odd-order Chebyshev II over
    DspTap's `biquad_cascade`) and `guard_phase::linear` (the even-length symmetric FIR over
@@ -971,6 +1008,27 @@ reserves, with P = 4.
      `down_by8`) bit-identical for any chunking and flushing as zero padding, with the honest
      limit where it applies; the offering table (I10) measured and pinned
      (`iir_composition.TheOfferingTableIsMeasured`).
+
+   *Its follow-up (v12, questions 20 and 21 decided after IIR-c landed), in review:*
+   `half_band_kind` and the named settings per kind, `guard_band_settings::super_economy(kind)` …
+   `transparent(kind)` at 5 / 7 / 7 / 7 behind the nonlinear half-band and 7 / 7 / 7 / 11 behind
+   the FIR and near-linear ones: six designs per form, the two new ones DspTap's committed rows
+   (`k_guard_band_cheby2<70, 1, 3, 7>` and `<120, 5, 12, 11>`, `k_guard_band_fir` likewise), with
+   no DspTap change. Every test over the named settings runs the six (`rational/PLAN.md`'s v0.23
+   record has the numbers):
+   - the two new designs: stop edges 0.4350 and 0.4669 of the rate; the Chebyshev II at 20 and
+     30 multiplies, 0.75 and 0.64 frames at DC, deviation 3.37 and 14.07; the FIR rows of 38 and
+     102 taps, −70.9 and −120.1 dB, 0.0091 and 0.0093 dB peak to peak, and in Q15 −68.9 and
+     −69.2 dB, inside the honest limit question 21 keeps until DspTap's Q15 rows;
+   - the golden leg over the six: 8.2e-15 / 5.6e-16 of full scale in double, 1.1e-6 / 6.8e-8 in
+     float, 1.5e-5 / 2.5e-4 in Q15 and 5.1e-9 / 4.0e-9 in Q31 (Chebyshev II / FIR), the bit pins
+     re-recorded since the cases they hash grew;
+   - the aliases behind each half-band at its own settings at or below −A/2 in the guard band:
+     at most −40.2 / −43.8 / −40.6 / −61.6 dB behind the nonlinear half-band, −39.6 / −39.5 /
+     −38.2 / −63.5 behind the near-linear and −41.2 / −37.4 / −37.3 / −60.7 behind the FIR;
+   - the limit cycle as I6 states it (v12); the offering table's near-linear rows with a filter
+     at their kind's settings (↓2 at `super_economy` 25 and 43 multiplies, at `transparent` 49
+     and 121).
 5. **IIR-d, the C ABI, the binding, the notebooks, the ratchet workloads and ceilings**
    (I11, section 4), and the release: SampleRateTap 0.9.0 (D13: the three umbrella headers
    and the root `project()`), with its tested-pairs row; the maintainer tags `v0.9.0`.
@@ -1123,20 +1181,26 @@ Decided:
     alias is at or below −A/2, orders 5 / 7 / 7 / 7; the linear form at the same stop edges.
 19. Decided (v11, the maintainer): keep the honest limit, for the floating near-linear
     `transparent` stage at divisor 1 and the floating Chebyshev II at orders 7 and above (I6).
+20. Decided (v12, the maintainer), **the guard band order behind the near-linear and the FIR
+    half-band** (I7): "The settings can be different for the fir and near linear chains than the
+    nonlinear chains." As put (v11): question 14's rule is computed behind the nonlinear
+    half-band; behind the near-linear and the FIR half-band the named orders leave the guard
+    band's worst alias at −31.4 / −31.6 dB at `super_economy` and −48.8 / −45.6 dB at
+    `transparent`, above −A/2 (−35, −60), while `economy` and `balanced` stay below it. The
+    choices were: keep 5 / 7 / 7 / 7 and state it (IIR-c did, pinned); 7 / 7 / 7 / 11, which
+    holds −A/2 behind every half-band (`transparent` at 30 multiplies instead of 20, and a 102-tap
+    FIR); or a setting per stage kind. The third is taken: the named settings take a
+    `half_band_kind`, 5 / 7 / 7 / 7 behind the nonlinear half-band and 7 / 7 / 7 / 11 behind the
+    FIR and near-linear ones.
+21. Decided (v12, the maintainer), **the linear form in Q15** (I7, I8): "DspTap Q15 rows". As
+    put (v11): its Q1.14 taps attain −67.1 / −66.8 / −64.6 / −70.9 dB from the stop edge, below
+    the 70 dB tier the FIR stages all reach in Q15; IIR-c pins it as an honest limit. The choices
+    were: keep it; Q15 rows in DspTap designed with the margin quantization needs (a DspTap change
+    to `iir_tables.h`, longer rows); or the linear form not offered in Q15. The second is taken,
+    in a DspTap PR of its own; `rational` keeps the limit pinned as it is (over the six designs
+    since question 20: −67.1 / −68.9 / −66.8 / −64.6 / −70.9 / −69.2 dB), and the pin bump that
+    brings the rows lifts it.
 
 Recommended, not yet put to the maintainer (your word settles each):
 16. I11: new C ABI entry points, the notebooks (IIR-d). I10, composition through
     `tap::dsp::chain` with the offering table, was decided in v11 as recommended.
-
-Open (v11, IIR-c's findings):
-20. **The guard band order behind the near-linear and the FIR half-band** (I7). Question 14's
-    rule is computed behind the nonlinear half-band; behind the near-linear and the FIR half-band
-    the named orders leave the guard band's worst alias at −31.4 / −31.6 dB at `super_economy` and
-    −48.8 / −45.6 dB at `transparent`, above −A/2 (−35, −60), while `economy` and `balanced` stay
-    below it. The choices: keep 5 / 7 / 7 / 7 and state it (IIR-c does, pinned); 7 / 7 / 7 / 11,
-    which holds −A/2 behind every half-band (`transparent` at 30 multiplies instead of 20, and a
-    102-tap FIR); or a setting per stage kind.
-21. **The linear form in Q15** (I7, I8). Its Q1.14 taps attain −67.1 / −66.8 / −64.6 / −70.9 dB
-    from the stop edge, below the 70 dB tier the FIR stages all reach in Q15; IIR-c pins it as an
-    honest limit. The choices: keep it; Q15 rows in DspTap designed with the margin quantization
-    needs (a DspTap change to `iir_tables.h`, longer rows); or the linear form not offered in Q15.
