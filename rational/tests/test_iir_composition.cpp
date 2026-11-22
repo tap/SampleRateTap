@@ -191,7 +191,9 @@ namespace {
         using sample    = TypeParam;
         const auto both = [&]<guard_phase G>() {
             using m = mixed<sample, 2, G>;
-            for (const profile& p : {profile::economy(), profile::transparent()}) {
+            // balanced too: in Q15 its linear form runs a Q15 row two taps
+            // longer than the double row.
+            for (const profile& p : {profile::economy(), profile::balanced(), profile::transparent()}) {
                 expect_chunking_is_bit_identical<typename m::up_t>([&] { return m::make_up(p); }, 300);
                 expect_chunking_is_bit_identical<typename m::down_t>([&] { return m::make_down(p); }, 900);
                 expect_chunking_is_bit_identical<typename m::fir_up_t>([&] { return m::make_fir_up(p); }, 300);
@@ -349,6 +351,22 @@ namespace {
         EXPECT_EQ(by8.latency_output_frames(), (by8.stage<0>().latency_output_frames() + tap::dsp::exact_ratio{49, 2}));
         EXPECT_EQ(by8.nominal_latency_output_frames(), by8.latency_output_frames().value());
         EXPECT_EQ(by8.latency_deviation_output_frames(), 0.0);
+        // In Q15 the linear form runs DspTap's Q15 rows: economy's is as long
+        // as the double row (34 frames again), super_economy's and balanced's
+        // two taps longer, and the chain's exact latency follows (39/2 and
+        // 59/2 after the decimator).
+        using lq_t = guard_band_filter<std::int16_t, 1, k_fir_form>;
+        using dq_t = basic_stage<std::int16_t, 1, down2>;
+        const tap::dsp::chain<dq_t, lq_t> eco_q15(dq_t{}, lq_t{});
+        EXPECT_EQ(eco_q15.latency_output_frames(), (tap::dsp::exact_ratio{34, 1}));
+        const tap::dsp::chain<dq_t, lq_t> se_q15(dq_t{profile::super_economy()},
+                                                 lq_t{guard_band_settings::super_economy(half_band_kind::fir)});
+        EXPECT_EQ(se_q15.latency_output_frames(),
+                  (se_q15.stage<0>().latency_output_frames() + tap::dsp::exact_ratio{39, 2}));
+        const tap::dsp::chain<dq_t, lq_t> bal_q15(dq_t{profile::balanced()},
+                                                  lq_t{guard_band_settings::balanced(half_band_kind::fir)});
+        EXPECT_EQ(bal_q15.latency_output_frames(),
+                  (bal_q15.stage<0>().latency_output_frames() + tap::dsp::exact_ratio{59, 2}));
         tap::dsp::chain<li_t, basic_stage<double, 1, up2>> up(li_t{}, basic_stage<double, 1, up2>{});
         EXPECT_EQ(up.latency_output_frames(), (tap::dsp::exact_ratio{68, 1}));
         std::vector<double> x(256, 0.0);
@@ -402,16 +420,16 @@ namespace {
         double deviation;
     };
 
-    template <iir_phase V, bool Down, int Guard>
+    template <iir_phase V, bool Down, int Guard, typename S = double>
     offering offered(const profile& p, const guard_band_settings& s) {
-        using stage_t = basic_iir_stage<double, 1, std::conditional_t<Down, down2, up2>, V>;
+        using stage_t = basic_iir_stage<S, 1, std::conditional_t<Down, down2, up2>, V>;
         const stage_t st(p);
         if constexpr (Guard < 0) {
             return {st.macs_per_output(), st.nominal_latency_output_frames(), st.latency_deviation_output_frames()};
         }
         else {
             constexpr guard_phase G = Guard == 0 ? k_chebyshev : k_fir_form;
-            using guard_t           = guard_band_filter<double, 1, G>;
+            using guard_t           = guard_band_filter<S, 1, G>;
             const guard_t g(s);
             if constexpr (Down) {
                 const tap::dsp::chain<stage_t, guard_t> c(stage_t{p}, guard_t{s});
@@ -543,6 +561,48 @@ namespace {
         // nominal is the delay path plus (N - 1) / 2, exactly.
         EXPECT_EQ(m[0][1][2][1].nominal, 7.0 + 24.5);
         EXPECT_EQ(m[1][1][2][1].nominal, 14.0 + 49.0);
+
+        // In Q15 the linear form runs DspTap's Q15 rows at the 70 dB
+        // profiles, two taps longer at super_economy and balanced (32 and 40,
+        // 60, for 30 and 38, 58; economy's 50 and transparent's double rows
+        // as above): its rows where they differ, (down, up) x (nonlinear,
+        // near-linear), every profile, and its deviation the double table's.
+        std::array<std::array<std::array<offering, 4>, 2>, 2> q{};
+        for (std::size_t i = 0; i < 4; ++i) {
+            const profile&            p  = profiles[i];
+            const guard_band_settings sn = setting(i, half_band_kind::nonlinear);
+            const guard_band_settings sl = setting(i, half_band_kind::near_linear);
+            q[0][0][i]                   = offered<k_nonlinear, true, 1, std::int16_t>(p, sn);
+            q[0][1][i]                   = offered<k_near_linear, true, 1, std::int16_t>(p, sl);
+            q[1][0][i]                   = offered<k_nonlinear, false, 1, std::int16_t>(p, sn);
+            q[1][1][i]                   = offered<k_near_linear, false, 1, std::int16_t>(p, sl);
+        }
+        constexpr std::array<std::array<double, 4>, 4> k_macs_q15    = {{
+            {36, 54, 64, 80},
+            {45, 57, 68, 121},
+            {18, 27, 32, 40},
+            {22.5, 28.5, 34, 60.5},
+        }};
+        constexpr std::array<std::array<double, 4>, 4> k_nominal_q15 = {{
+            {16.7666, 25.6996, 30.6568, 37.5824},
+            {24.5, 31.5, 37.5, 69.5},
+            {33.5332, 51.3993, 61.3136, 75.1649},
+            {49, 63, 75, 139},
+        }};
+        for (std::size_t d = 0; d < 2; ++d) {
+            for (std::size_t v = 0; v < 2; ++v) {
+                std::printf("[ measured ] Q15 %s %s + linear form:", dirs[d], variants[v]);
+                for (std::size_t i = 0; i < 4; ++i) {
+                    const offering& o = q[d][v][i];
+                    std::printf(" %s %.1f MACs, %.4f (+%.4f) frames;", names[i], o.macs, o.nominal, o.deviation);
+                    EXPECT_EQ(o.macs, k_macs_q15[2 * d + v][i]) << "Q15 " << dirs[d] << " " << variants[v];
+                    EXPECT_NEAR(o.nominal, k_nominal_q15[2 * d + v][i], 0.0005)
+                        << "Q15 " << dirs[d] << " " << variants[v];
+                    EXPECT_NEAR(o.deviation, m[d][v][2][i].deviation, 1e-12) << "Q15 " << dirs[d] << " " << variants[v];
+                }
+                std::printf("\n");
+            }
+        }
     }
 
 } // namespace

@@ -62,6 +62,7 @@
 #include "support/iir_signals.h"
 #include "tap/dsp/analysis/sine_analysis.h"
 #include "tap/dsp/chain.h"
+#include "tap/dsp/quantize.h"
 #include "tap/sr/rational/rational.h"
 #include "tap_sr_test/expect_rejected.h"
 
@@ -217,6 +218,23 @@ namespace {
         return run(g, in);
     }
 
+    /// The case format S runs for c: in Q15 the linear form runs DspTap's
+    /// Q15 row where its setting has one (the 70 dB ones), so its golden case
+    /// is that row's (k_q15_linear_cases); everywhere else c itself.
+    template <typename S>
+    const rational_guard_ref::guard_case& golden_case(const rational_guard_ref::guard_case& c) {
+        if constexpr (std::is_same_v<S, std::int16_t>) {
+            if (c.form == 1) {
+                for (const auto& q : rational_guard_ref::k_q15_linear_cases) {
+                    if (q.setting == c.setting) {
+                        return q;
+                    }
+                }
+            }
+        }
+        return c;
+    }
+
     template <typename S>
     std::vector<S> golden_dispatch(const rational_guard_ref::guard_case& c) {
         return c.form == 0 ? golden_run<S, k_nonlinear>(c) : golden_run<S, k_linear>(c);
@@ -251,7 +269,8 @@ namespace {
     TYPED_TEST(guard_band_test, MatchesTheGoldenLeg) {
         using sample = TypeParam;
         std::array<double, 2> worst{};
-        for (const auto& c : rational_guard_ref::k_cases) {
+        for (const auto& k : rational_guard_ref::k_cases) {
+            const auto&               c = golden_case<sample>(k);
             const std::vector<sample> y = golden_dispatch<sample>(c);
             ASSERT_EQ(static_cast<int>(y.size()), c.frames);
             // The fixed-point outputs saturate at full scale; the golden leg
@@ -272,16 +291,18 @@ namespace {
     }
 
     // The Q15 and Q31 outputs, bit for bit: FNV-1a-64 over every golden
-    // case's output, per form (six designs each). A change that moves a pin
-    // is a numeric change to the fixed-point datapath.
+    // case's output, per form (six designs each; in Q15 the linear form's
+    // Q15 rows at 70 dB). A change that moves a pin is a numeric change to the
+    // fixed-point datapath.
     TYPED_TEST(guard_band_fixed_test, OutputsAreBitPinned) {
         using sample                               = TypeParam;
         std::array<std::uint64_t, 2>           h   = {k_fnv_basis, k_fnv_basis};
-        constexpr std::array<std::uint64_t, 2> q15 = {0x301dd766a0e0b594ull, 0x5dae9a6656e5a72eull};
+        constexpr std::array<std::uint64_t, 2> q15 = {0x301dd766a0e0b594ull, 0x4dcf86873a95c8f2ull};
         constexpr std::array<std::uint64_t, 2> q31 = {0x1c2769d7466eb346ull, 0x0db8537ebb0bb20cull};
-        for (const auto& c : rational_guard_ref::k_cases) {
-            auto& slot = h[static_cast<std::size_t>(c.form)];
-            slot       = fnv1a64(slot, golden_dispatch<sample>(c));
+        for (const auto& k : rational_guard_ref::k_cases) {
+            const auto& c    = golden_case<sample>(k);
+            auto&       slot = h[static_cast<std::size_t>(c.form)];
+            slot             = fnv1a64(slot, golden_dispatch<sample>(c));
         }
         const auto& pins = std::is_same_v<sample, std::int16_t> ? q15 : q31;
         for (std::size_t i = 0; i < 2; ++i) {
@@ -851,6 +872,59 @@ namespace {
         EXPECT_EQ((guard_band_filter<float, 1, k_linear>{}.latency_output_frames()), (tap::dsp::exact_ratio{49, 2}));
     }
 
+    TYPED_TEST(guard_band_test, TheLinearFormsLengthLatencyAndWindowArePerFormat) {
+        // The linear form's N at the named settings, in their order: DspTap's
+        // double rows in float, double and Q31; in Q15 its Q15 rows at the 70
+        // dB settings (longer where Q1.14 needs the margin) and the double
+        // rows at transparent. The latency (N - 1) / 2, the window N - 1 and
+        // the multiplies N follow it, exactly.
+        using sample                                            = TypeParam;
+        constexpr std::array<std::size_t, k_designs> k_taps     = {30, 38, 50, 58, 72, 102};
+        constexpr std::array<std::size_t, k_designs> k_taps_q15 = {32, 40, 50, 60, 72, 102};
+        const auto& expect = std::is_same_v<sample, std::int16_t> ? k_taps_q15 : k_taps;
+        for (int si = 0; si < static_cast<int>(k_designs); ++si) {
+            const auto                                   i = static_cast<std::size_t>(si);
+            const guard_band_filter<sample, 1, k_linear> g(named(si));
+            EXPECT_TRUE(g.tabulated()) << design_name(si);
+            EXPECT_EQ(g.taps(), expect[i]) << design_name(si);
+            EXPECT_EQ(g.latency_output_frames(), (tap::dsp::exact_ratio{expect[i] - 1, 2})) << design_name(si);
+            EXPECT_EQ(g.window_frames(), expect[i] - 1) << design_name(si);
+            EXPECT_EQ(g.macs_per_output(), static_cast<double>(expect[i])) << design_name(si);
+        }
+    }
+
+    TEST_F(guard_band, TheQ15LinearFormRunsDspTapsQ15Rows) {
+        // In Q15 the 70 dB named settings run DspTap's k_guard_band_fir_q15
+        // designs, quantized by quantize_symmetric_row_preserving_sum; float,
+        // double and Q31, and Q15 at transparent, run k_guard_band_fir's. The
+        // stop edge is the double row's in every format.
+        using q15_coeff                                           = tap::dsp::sample_traits<std::int16_t>::coeff;
+        const std::array<std::span<const double>, k_designs> rows = {
+            tap::dsp::k_guard_band_fir<70, 1, 3, 5>.taps,   tap::dsp::k_guard_band_fir<70, 1, 3, 7>.taps,
+            tap::dsp::k_guard_band_fir<70, 3, 8, 7>.taps,   tap::dsp::k_guard_band_fir<70, 19, 48, 7>.taps,
+            tap::dsp::k_guard_band_fir<120, 5, 12, 7>.taps, tap::dsp::k_guard_band_fir<120, 5, 12, 11>.taps};
+        const std::array<std::span<const double>, k_designs> q15_rows = {
+            tap::dsp::k_guard_band_fir_q15<70, 1, 3, 5>.taps, tap::dsp::k_guard_band_fir_q15<70, 1, 3, 7>.taps,
+            tap::dsp::k_guard_band_fir_q15<70, 3, 8, 7>.taps, tap::dsp::k_guard_band_fir_q15<70, 19, 48, 7>.taps,
+            tap::dsp::k_guard_band_fir<120, 5, 12, 7>.taps,   tap::dsp::k_guard_band_fir<120, 5, 12, 11>.taps};
+        for (int si = 0; si < static_cast<int>(k_designs); ++si) {
+            const auto                                         i = static_cast<std::size_t>(si);
+            const guard_band_filter<double, 1, k_linear>       d(named(si));
+            const guard_band_filter<float, 1, k_linear>        f(named(si));
+            const guard_band_filter<std::int32_t, 1, k_linear> w(named(si));
+            const guard_band_filter<std::int16_t, 1, k_linear> q(named(si));
+            EXPECT_TRUE(std::ranges::equal(d.design_taps(), rows[i])) << design_name(si);
+            EXPECT_TRUE(std::ranges::equal(f.design_taps(), rows[i])) << design_name(si);
+            EXPECT_TRUE(std::ranges::equal(w.design_taps(), rows[i])) << design_name(si);
+            EXPECT_TRUE(std::ranges::equal(q.design_taps(), q15_rows[i])) << design_name(si);
+            std::vector<q15_coeff> expect(q15_rows[i].size());
+            tap::dsp::quantize_symmetric_row_preserving_sum<std::int16_t>(q15_rows[i], expect);
+            EXPECT_TRUE(std::ranges::equal(q.coefficients(), expect)) << design_name(si);
+            EXPECT_EQ(q.stop_edge(), d.stop_edge()) << design_name(si);
+            EXPECT_EQ(f.stop_edge(), d.stop_edge()) << design_name(si);
+        }
+    }
+
     // ------------------------------------------------------------------
     // Flush (I6) and the honest limit (question 19)
     // ------------------------------------------------------------------
@@ -1246,12 +1320,16 @@ namespace {
     }
 
     TEST_F(guard_band, Q15FloorsAgainstDouble) {
-        // A -1 dBFS sine through each Q15 form against the double filter: the
-        // Chebyshev II's error is its output's own rounding (-101 dB RMS for
-        // uniform rounding), the recursion adding little; the FIR's adds its
-        // Q1.14 taps' quantization, stated as measured.
-        double worst_nl = -400.0;
-        double worst_li = -400.0;
+        // A -1 dBFS sine through each Q15 form against the same design in
+        // double (for the linear form, the taps its Q15 table quantizes: the
+        // Q15 rows at 70 dB): the Chebyshev II's error is its output's own
+        // rounding (-101 dB RMS for uniform rounding), the recursion adding
+        // little; the FIR's adds its Q1.14 taps' quantization, stated as
+        // measured, at the 70 dB settings (the Q15 rows) and at transparent
+        // (the double rows) apart.
+        double worst_nl    = -400.0;
+        double worst_li    = -400.0;
+        double worst_li_70 = -400.0;
         for (int si = 0; si < static_cast<int>(k_designs); ++si) {
             const double        amp = std::pow(10.0, -1.0 / 20.0);
             const auto          xq  = sine<std::int16_t>(6000, 0.0123, amp);
@@ -1261,38 +1339,58 @@ namespace {
             }
             const auto rms = [&]<guard_phase P>() {
                 guard_band_filter<std::int16_t, 1, P> q(named(si));
-                guard_band_filter<double, 1, P>       d(named(si));
-                const auto                            y  = run(q, xq);
-                const auto                            yd = run(d, xd);
-                double                                e2 = 0.0;
+                const auto                            y = run(q, xq);
+                std::vector<double>                   yd;
+                if constexpr (P == k_linear) {
+                    const auto h = q.design_taps();
+                    yd.assign(xd.size(), 0.0);
+                    for (std::size_t i = 0; i < xd.size(); ++i) {
+                        for (std::size_t k = 0; k < h.size() && k <= i; ++k) {
+                            yd[i] += h[k] * xd[i - k];
+                        }
+                    }
+                }
+                else {
+                    guard_band_filter<double, 1, P> d(named(si));
+                    yd = run(d, xd);
+                }
+                double e2 = 0.0;
                 for (std::size_t i = 0; i < y.size(); ++i) {
                     const double e = to_unit(y[i]) - yd[i];
                     e2 += e * e;
                 }
                 return 10.0 * std::log10(e2 / static_cast<double>(y.size()));
             };
-            worst_nl = std::max(worst_nl, rms.template operator()<k_nonlinear>());
-            worst_li = std::max(worst_li, rms.template operator()<k_linear>());
+            worst_nl        = std::max(worst_nl, rms.template operator()<k_nonlinear>());
+            const double li = rms.template operator()<k_linear>();
+            worst_li        = std::max(worst_li, li);
+            if (named(si).stopband_atten_db < 100.0) {
+                worst_li_70 = std::max(worst_li_70, li);
+            }
         }
         std::printf("[ measured ] Q15 against the double filter, -1 dBFS sine: Chebyshev II %.1f dB RMS, type II FIR "
-                    "%.1f dB RMS at worst\n",
-                    worst_nl, worst_li);
+                    "%.1f dB RMS at worst (%.1f at the 70 dB settings)\n",
+                    worst_nl, worst_li, worst_li_70);
         EXPECT_LE(worst_nl, -96.0);
         EXPECT_LE(worst_li, -76.0) << "the Q1.14 taps' quantization";
+        EXPECT_LE(worst_li_70, -81.0) << "the Q15 rows' Q1.14 taps";
     }
 
     TYPED_TEST(guard_band_fixed_test, QuantizedLinearTablesAttainTheirStatedStopbands) {
         // The linear form's quantized taps, from the stop edge and over the
         // passband on 16385 points each: in Q31 (Q1.30 taps) the design's
-        // stopband and ripple; in Q15 (Q1.14 taps) a format limit, stated as
-        // measured and pinned: the 70 dB settings attain 64.6 to 67.1 dB and
-        // transparent 70.9, flat to 0.0131 dB peak to peak (an honest limit: at
-        // Q15 the Chebyshev II form, whose Q2.30 coefficients keep its design,
-        // holds the 70 dB tier).
+        // stopband and ripple. In Q15 (Q1.14 taps) the 70 dB settings run
+        // DspTap's Q15 rows and attain the tier, pinned as measured (-89.2 /
+        // -70.4 / -72.3 / -70.7 dB, flat to 0.0098 dB peak to peak at worst;
+        // question 21); transparent, with no Q15 row, runs the double rows in
+        // Q1.14, a format limit pinned as measured (-70.9 / -69.2 dB, 0.0125 /
+        // 0.0148 dB: an honest limit, as for rational's FIR stages; at Q15 the
+        // Chebyshev II form, whose Q2.30 coefficients keep its design, holds
+        // the 120 dB).
         using sample                                         = TypeParam;
         using tr                                             = tap::dsp::sample_traits<sample>;
-        constexpr std::array<double, k_designs> q15_stopband = {-67.1, -68.9, -66.75, -64.55, -70.85, -69.15};
-        constexpr std::array<double, k_designs> q15_ripple   = {0.0101, 0.0112, 0.0101, 0.0132, 0.0126, 0.0149};
+        constexpr std::array<double, k_designs> q15_stopband = {-89.2, -70.35, -72.3, -70.6, -70.85, -69.15};
+        constexpr std::array<double, k_designs> q15_ripple   = {0.0090, 0.0099, 0.0097, 0.0097, 0.0126, 0.0149};
         for (int si = 0; si < static_cast<int>(k_designs); ++si) {
             const guard_band_filter<sample, 1, k_linear> li(named(si));
             std::vector<double>                          h;
@@ -1318,6 +1416,10 @@ namespace {
             if constexpr (std::is_same_v<sample, std::int16_t>) {
                 EXPECT_LE(attained, q15_stopband[static_cast<std::size_t>(si)]) << design_name(si);
                 EXPECT_LE(ripple, q15_ripple[static_cast<std::size_t>(si)]) << design_name(si);
+                if (named(si).stopband_atten_db < 100.0) {
+                    EXPECT_LE(attained, -named(si).stopband_atten_db) << design_name(si) << ": the tier, in Q15";
+                    EXPECT_LE(ripple, 0.01) << design_name(si);
+                }
             }
             else {
                 EXPECT_LE(attained, -named(si).stopband_atten_db) << design_name(si);

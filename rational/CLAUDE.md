@@ -126,8 +126,10 @@ mixed chain is the caller's `tap::dsp::chain`, with no named IIR chain or matrix
   (no default): 5 / 7 / 7 / 7 behind the nonlinear half-band, 7 / 7 / 7 / 11 behind the FIR and
   near-linear ones (the IIR plan's questions 14 and 20; `guard_band_settings{}` is `economy`'s,
   one design behind every kind), plus a custom form designed at run time. The designs are
-  DspTap's (`k_guard_band_cheby2`, `k_guard_band_fir`, `design_cheby2_lowpass`,
-  `design_guard_band_linear`), never forked here. A mixed chain is the caller's
+  DspTap's (`k_guard_band_cheby2`, `k_guard_band_fir`, in Q15 at 70 dB `k_guard_band_fir_q15`,
+  `design_cheby2_lowpass`, `design_guard_band_linear`, quantized by
+  `quantize_symmetric_row_preserving_sum`), never forked here; in Q15 the linear form's length,
+  latency and window therefore differ at `super_economy` and `balanced`. A mixed chain is the caller's
   `tap::dsp::chain` (R27): no named IIR chains, no coverage-matrix rows. The floating Chebyshev
   II at orders 7 and above, like the near-linear `transparent` stage at divisor 1, may settle in
   a zero-input limit cycle under flush-to-zero, an honest limit pinned below 16 (and 8) times

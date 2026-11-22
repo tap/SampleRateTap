@@ -341,19 +341,22 @@ plan's question 14). That half-band is the `kind` every named setting takes,
 the nonlinear half-band and 7 / 7 / 7 / 11 behind the other two (question 20: "The settings can
 be different for the fir and near linear chains than the nonlinear chains"); `economy` and
 `balanced` are the same design behind every kind, and `guard_band_settings{}` is `economy`'s.
-A custom form is designed at construction (the Chebyshev II at run time; the
-linear form by DspTap's Kaiser designer, refused by `validate()` where no length up to 512 taps
-meets it). Pinned by `rational.guard_band.EachFormMeetsItsSpec`,
+In Q15 the linear form at the four 70 dB settings runs DspTap's Q15 rows
+(`k_guard_band_fir_q15`, since DspTap 0.4.0: designs with the margin Q1.14 needs, at the same
+stop edge), so its taps, multiplies, latency and window differ there from float, double and Q31's
+(the table's last column; the IIR plan's question 21). A custom form is designed at construction
+(the Chebyshev II at run time; the linear form by DspTap's Kaiser designer, refused by
+`validate()` where no length up to 512 taps meets it, its Q15 stopband not stated). Pinned by `rational.guard_band.EachFormMeetsItsSpec`,
 `rational.guard_band_test.MatchesTheGoldenLeg` (scipy's own Chebyshev II design through `sosfilt`,
 the FIR's taps through `lfilter`; `tools/reference/make_guard_band_reference_vectors.py`) and
 `rational.guard_band.OrderIsTheLowestOddOrderWhoseGuardBandAliasIsAtHalfA`:
 
-| settings | behind the half-band | order | 70 dB (120) from, of the rate (at 48 kHz) | Chebyshev II: multiplies, delay at DC … edge (frames) | linear form: taps = MACs, latency (frames) |
+| settings | behind the half-band | order | 70 dB (120) from, of the rate (at 48 kHz) | Chebyshev II: multiplies, delay at DC … edge (frames) | linear form: taps = MACs, latency (frames); in Q15 where it differs |
 |---|---|---:|---:|---:|---:|
-| `super_economy` | nonlinear | 5 | 0.4657 (22.4 kHz) | 15, 0.49 … 2.33 | 30, 29/2 |
-| `super_economy` | FIR, near-linear | 7 | 0.4350 (20.9 kHz) | 20, 0.75 … 4.12 | 38, 37/2 |
+| `super_economy` | nonlinear | 5 | 0.4657 (22.4 kHz) | 15, 0.49 … 2.33 | 30, 29/2; Q15 32, 31/2 |
+| `super_economy` | FIR, near-linear | 7 | 0.4350 (20.9 kHz) | 20, 0.75 … 4.12 | 38, 37/2; Q15 40, 39/2 |
 | `economy` | every kind | 7 | 0.4530 (21.7 kHz) | 20, 0.54 … 5.04 | 50, 49/2 |
-| `balanced` | every kind | 7 | 0.4614 (22.1 kHz) | 20, 0.44 … 5.86 | 58, 57/2 |
+| `balanced` | every kind | 7 | 0.4614 (22.1 kHz) | 20, 0.44 … 5.86 | 58, 57/2; Q15 60, 59/2 |
 | `transparent` | nonlinear | 7 | 0.4862 (23.3 kHz) | 20, 0.38 … 7.14 | 72, 71/2 |
 | `transparent` | FIR, near-linear | 11 | 0.4669 (22.4 kHz) | 30, 0.64 … 14.71 | 102, 101/2 |
 
@@ -362,7 +365,9 @@ in each recursive variant, with no guard band filter or either form, as multipli
 frame per channel and the chain's nominal latency in output frames (its passband deviation in
 parentheses). Going down the filter runs at the output rate; going up at the input rate, half its
 multiplies per output. Each variant's rows run the settings behind its own half-band, so the
-near-linear rows with a filter run order 7 at `super_economy` and 11 at `transparent`:
+near-linear rows with a filter run order 7 at `super_economy` and 11 at `transparent`. In Q15
+the linear form's rows differ at `super_economy` and `balanced`, where its Q15 rows are two taps
+longer; they are the rows marked Q15:
 
 | ↓2 | `super_economy` | `economy` | `balanced` | `transparent` |
 |---|---:|---:|---:|---:|
@@ -372,6 +377,8 @@ near-linear rows with a filter run order 7 at `super_economy` and 11 at `transpa
 | near-linear | 5, 5 (0.0078) | 7, 7 (0.0087) | 8, 8 (0.0134) | 19, 19 (0.0002) |
 | near-linear + Chebyshev II | 25, 5.75 (3.38) | 27, 7.54 (4.52) | 28, 8.44 (5.43) | 49, 19.64 (14.07) |
 | near-linear + linear form | 43, 23.5 (0.0078) | 57, 31.5 (0.0087) | 66, 36.5 (0.0134) | 121, 69.5 (0.0002) |
+| nonlinear + linear form, Q15 | 36, 16.77 (0.84) | 54, 25.70 (1.28) | 64, 30.66 (1.61) | 80, 37.58 (3.88) |
+| near-linear + linear form, Q15 | 45, 24.5 (0.0078) | 57, 31.5 (0.0087) | 68, 37.5 (0.0134) | 121, 69.5 (0.0002) |
 
 | ↑2 | `super_economy` | `economy` | `balanced` | `transparent` |
 |---|---:|---:|---:|---:|
@@ -381,6 +388,8 @@ near-linear rows with a filter run order 7 at `super_economy` and 11 at `transpa
 | near-linear | 2.5, 10 (0.0157) | 3.5, 14 (0.0175) | 4, 16 (0.0268) | 9.5, 38 (0.0005) |
 | Chebyshev II + near-linear | 12.5, 11.49 (6.76) | 13.5, 15.07 (9.03) | 14, 16.88 (10.87) | 24.5, 39.27 (28.14) |
 | linear form + near-linear | 21.5, 47 (0.0157) | 28.5, 63 (0.0175) | 33, 73 (0.0268) | 60.5, 139 (0.0005) |
+| linear form + nonlinear, Q15 | 18, 33.53 (1.68) | 27, 51.40 (2.56) | 32, 61.31 (3.23) | 40, 75.16 (7.75) |
+| linear form + near-linear, Q15 | 22.5, 49 (0.0157) | 28.5, 63 (0.0175) | 34, 75 (0.0268) | 60.5, 139 (0.0005) |
 
 The near-linear variant with the linear form keeps an exact delay (its delay path plus the FIR's),
 so that chain enters DspTap's round-trip scaffold; the Chebyshev II makes any chain's phase
@@ -401,8 +410,10 @@ flat.
 - **Formats**: the Chebyshev II as DspTap's `biquad_cascade` runs it (float states, Q15 and Q31 in
   Q2.29 / Q2.60 with Q2.30 coefficients, which hold every valid setting); against the golden leg
   8.2e-15 / 1.1e-6 / 1.5e-5 / 5.1e-9 of full scale in double / float / Q15 / Q31, the Q15 floor
-  −101.1 dB RMS. The FIR in `sample_traits`' formats, its taps symmetric bit for bit in every one;
-  5.6e-16 / 6.8e-8 / 2.5e-4 / 4.0e-9. Q15 and Q31 outputs bit-pinned.
+  −101.1 dB RMS. The FIR in `sample_traits`' formats, its taps symmetric bit for bit in every one
+  (DspTap's `quantize_symmetric_row_preserving_sum`), in Q15 at 70 dB from DspTap's Q15 rows;
+  5.6e-16 / 6.8e-8 / 2.5e-4 / 4.0e-9, the Q15 leg through the Q15 rows' own design. Q15 and Q31
+  outputs bit-pinned.
 - **Flush** writes `window_frames()` frames, bit for bit the zero-padded stream's: the FIR's
   history (N − 1), or the Chebyshev's count to an exactly zero state under flush-to-zero (1,032 to
   3,564 frames in float, 8,286 to 28,660 in double, 420 to 1,750 in Q15, 828 to 3,480 in Q31).
@@ -419,12 +430,13 @@ Honest limits, each pinned:
 - without flush-to-zero the Chebyshev's state sticks at most 11 times the smallest subnormal
   (bound 32: `rational.iir_subnormals.WithoutFlushToZeroTheGuardBandResidueIsBounded`); the
   linear form, an FIR, needs no flush-to-zero and no precondition;
-- the linear form in Q15 is format-limited: its Q1.14 taps attain −67.1 / −68.9 / −66.8 / −64.6
-  / −70.9 / −69.2 dB from the stop edge (the settings table's rows in order), below each
-  setting's A, and its output is −77.8 dB RMS from double
-  (`rational.guard_band_fixed_test.QuantizedLinearTablesAttainTheirStatedStopbands`); at Q15 the
-  Chebyshev II holds its A. The IIR plan's question 21 is decided: DspTap commits Q15 rows
-  designed with margin, and a later pin bump lifts this limit;
+- the linear form in Q15 at `transparent` is format-limited, as the FIR stages are in Q15 there:
+  DspTap has no Q15 row at 120 dB, and the double rows' Q1.14 taps attain −70.9 / −69.2 dB from
+  the stop edge, the output −77.8 dB RMS from its design in double; at Q15 the Chebyshev II holds
+  its A. At the 70 dB settings the Q15 rows hold the tier: −89.2 / −70.4 / −72.3 / −70.7 dB from
+  the stop edge, flat to 0.0090 / 0.0098 / 0.0097 / 0.0096 dB, −82.4 dB RMS from their design at
+  worst (`rational.guard_band_fixed_test.QuantizedLinearTablesAttainTheirStatedStopbands`; the IIR
+  plan's question 21, lifted at DspTap 0.4.0);
 - a non-finite input poisons the Chebyshev until `reset()` and clears from the linear form after
   its window.
 

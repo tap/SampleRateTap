@@ -63,10 +63,30 @@
 // economy, the zero at 24; the Chebyshev II's multiplies per output frame per
 // channel, five per section as the kernel runs them; the FIR's N taps, its
 // multiplies, since its dot does not fold its symmetric pairs, and its exact
-// latency; the rows in this order are the "named settings" every list of six
-// numbers below runs over). Behind the kinds it names, a named setting leaves
-// every alias in the guard band at or below -A/2, and behind every half-band
-// the passband and the band past the stop edge keep their contracts
+// latency, in float, double and Q31; the rows in this order are the "named
+// settings" every list of six numbers below runs over). In Q15 the linear form
+// runs DspTap's Q15 rows (since DspTap 0.4.0) at the four 70 dB settings,
+// whose Q1.14 taps keep the tier the double rows lose there (docs/IIR_PLAN.md
+// question 21), two taps longer at super_economy and balanced; transparent,
+// with no Q15 row, runs the double rows in every format:
+//
+//   | linear form in Q15 | half-band        | taps (other formats) | latency, frames | Q1.14 stopband | ripple    |
+//   |--------------------|------------------|----------------------|-----------------|----------------|-----------|
+//   | super_economy      | nonlinear        | 32 (30)              | 31/2 (29/2)     | -89.2 dB       | 0.0090 dB |
+//   | super_economy      | FIR, near-linear | 40 (38)              | 39/2 (37/2)     | -70.4 dB       | 0.0098 dB |
+//   | economy            | every kind       | 50 (50)              | 49/2            | -72.3 dB       | 0.0097 dB |
+//   | balanced           | every kind       | 60 (58)              | 59/2 (57/2)     | -70.7 dB       | 0.0096 dB |
+//   | transparent        | nonlinear        | 72 (72)              | 71/2            | -70.9 dB       | 0.0125 dB |
+//   | transparent        | FIR, near-linear | 102 (102)            | 101/2           | -69.2 dB       | 0.0148 dB |
+//
+// so in Q15 taps(), macs_per_output(), latency_output_frames() and
+// window_frames() (N - 1) follow these N (the stopband and ripple from the
+// stop edge and over the passband on 16385 points each;
+// guard_band_fixed_test.QuantizedLinearTablesAttainTheirStatedStopbands,
+// guard_band_test.TheLinearFormsLengthLatencyAndWindowArePerFormat). Behind
+// the kinds it names, a named setting leaves every alias in the guard band at
+// or below -A/2, and behind every half-band the passband and the band past
+// the stop edge keep their contracts
 // (rational.guard_band.AliasesLandOnlyAboveThePassbandEdge); the nonlinear
 // half-band's orders 5 and 7 at super_economy and transparent would leave
 // -31.4 and -48.8 dB behind the near-linear half-band and -31.6 and -45.6
@@ -82,12 +102,16 @@
 //   - linear: the named settings run DspTap's committed Parks-McClellan rows
 //     (tap::dsp::k_guard_band_fir: attained stopbands -71.4 / -70.9 / -73.3
 //     / -71.2 / -123.0 / -120.1 dB, ripple 0.0086 / 0.0091 / 0.0068 / 0.0088
-//     / 0.0062 / 0.0093 dB peak to peak); any other setting designs at
+//     / 0.0062 / 0.0093 dB peak to peak), and in Q15 at 70 dB its Q15 rows
+//     (tap::dsp::k_guard_band_fir_q15: remez designs with the margin Q1.14
+//     needs, at the double row's stop edge); any other setting designs at
 //     construction through DspTap's Kaiser designer (design_guard_band_linear
 //     at the shortest even length search_guard_band_linear_length finds: A +
 //     1 dB on 4097 points, up to 512 taps), which is not equiripple and so
 //     runs longer than a committed row at the same spec (82 taps against 64
-//     at economy's numbers and order 9), held to its spec by tolerance;
+//     at economy's numbers and order 9), held to its spec by tolerance in
+//     double; in Q15 it runs that same design, whose Q1.14 stopband is not
+//     stated (Q1.14 rounding costs the double rows the tier, iir_tables.h);
 //     validate() states a setting no length up to 512 taps meets.
 //
 // Contract, as numbers:
@@ -103,7 +127,8 @@
 //     4.51; 0.38 to 0.75 at DC and 1.84 to 14.07 of deviation across the
 //     named settings, the most at transparent's order 11). The linear form
 //     reports latency_output_frames() = (N - 1) / 2 frames, an exact_ratio
-//     (49/2 at economy), which tap::dsp::chain sums exactly;
+//     (49/2 at economy in every format; per format at super_economy and
+//     balanced, the Q15 table above), which tap::dsp::chain sums exactly;
 //   - flush() feeds window_frames() zeros and writes as many outputs, bit
 //     for bit the zero-padded stream's. The linear form's window is its
 //     history, N - 1 frames, after which every output is exactly zero. The
@@ -161,8 +186,9 @@
 //     The linear form as tap/dsp/sample_traits.h states it (float taps
 //     accumulated in double; Q15 in Q1.14 taps and Q31 in Q1.30, one
 //     rounding, saturating), its table symmetric bit for bit in every format
-//     (the first half quantized with tap::dsp::quantize_row_preserving_sum
-//     and mirrored), so its zero at Nyquist holds in the quantized taps too.
+//     (tap::dsp::quantize_symmetric_row_preserving_sum: the first half
+//     quantized with its sum preserved, mirrored), so its zero at Nyquist
+//     holds in the quantized taps too.
 //     Against the golden leg (scipy): 8.2e-15 / 5.6e-16 of full scale in
 //     double, 1.1e-6 / 6.8e-8 in float, 1.5e-5 / 2.5e-4 in Q15 and 5.1e-9 /
 //     4.0e-9 in Q31 (Chebyshev II / FIR); the Q15 and Q31 outputs of both
@@ -175,15 +201,19 @@
 //     built once per format and form (K12), and process(), pull() and
 //     flush() are compiled per count, out of line (A12), each against a
 //     cursor;
-//   - honest limits: the linear form in Q15 is format-limited: its Q1.14
-//     taps attain -67.1 / -68.9 / -66.8 / -64.6 / -70.9 / -69.2 dB from the
-//     stop edge at the named settings, below each one's A, and its output
-//     stays -77.8 dB RMS from double's (Q31 keeps the designs: -71.4 / -70.9
-//     / -73.3 / -71.2 / -123.0 / -120.1 dB; at Q15 the Chebyshev II, whose
-//     Q2.30 coefficients keep its design, holds each one's A:
-//     guard_band_fixed_test.QuantizedLinearTablesAttainTheirStatedStopbands);
-//     a non-finite input poisons the nonlinear form's state until reset(), and
-//     clears from the linear form after its window, as from an FIR stage (I9);
+//   - honest limits: the linear form in Q15 at transparent is format-limited,
+//     as rational's FIR stages are in Q15 there: DspTap has no Q15 row at 120
+//     dB (Q1.14 cannot carry it), and the double rows' Q1.14 taps attain
+//     -70.9 / -69.2 dB from the stop edge (the 70 dB settings' Q15 rows hold
+//     the tier, above; Q31 keeps every design: -71.4 / -70.9 / -73.3 / -71.2 /
+//     -123.0 / -120.1 dB; at Q15 the Chebyshev II, whose Q2.30 coefficients
+//     keep its design, holds each setting's A:
+//     guard_band_fixed_test.QuantizedLinearTablesAttainTheirStatedStopbands).
+//     Against its design in double, the Q15 linear form's output is -77.8 dB
+//     RMS at transparent and -82.4 dB at worst at 70 dB
+//     (guard_band.Q15FloorsAgainstDouble); a non-finite input poisons the
+//     nonlinear form's state until reset(), and clears from the linear form
+//     after its window, as from an FIR stage (I9);
 //     a custom setting's fixed-point headroom is not checked (the named
 //     settings' is measured: guard_band_fixed_test.
 //     FullScaleDriveNeverWrapsInside); the contracts hold without -ffast-math
@@ -390,6 +420,36 @@ namespace tap::sr::rational {
             guard_band_row<70, 1, 3, 5>(),   guard_band_row<70, 1, 3, 7>(),   guard_band_row<70, 3, 8, 7>(),
             guard_band_row<70, 19, 48, 7>(), guard_band_row<120, 5, 12, 7>(), guard_band_row<120, 5, 12, 11>()};
 
+        /// The taps of a committed Q15 row (DspTap's k_guard_band_fir_q15),
+        /// copied at compile time like the double rows'.
+        template <int StopDb, int PassNum, int PassDen, int Order>
+        inline constexpr auto k_guard_band_fir_q15_taps =
+            guard_band_taps<tap::dsp::k_guard_band_fir_q15<StopDb, PassNum, PassDen, Order>.taps.size()>(
+                tap::dsp::k_guard_band_fir_q15<StopDb, PassNum, PassDen, Order>.taps);
+
+        /// The named settings' Q15 rows, in k_guard_band_named's order: the
+        /// four at 70 dB; none at 120 dB (empty), where Q15 runs the double
+        /// row, format-limited (the file header).
+        inline constexpr std::array<std::span<const double>, 6> k_guard_band_linear_q15_taps = {
+            k_guard_band_fir_q15_taps<70, 1, 3, 5>,
+            k_guard_band_fir_q15_taps<70, 1, 3, 7>,
+            k_guard_band_fir_q15_taps<70, 3, 8, 7>,
+            k_guard_band_fir_q15_taps<70, 19, 48, 7>,
+            std::span<const double>{},
+            std::span<const double>{}};
+
+        /// The design a named linear setting (by number) runs in format S:
+        /// its Q15 row in Q15 where there is one, else the double row.
+        template <tap::dsp::sample_type S>
+        constexpr std::span<const double> guard_band_named_taps(std::size_t key) noexcept {
+            if constexpr (std::is_same_v<S, std::int16_t>) {
+                if (!k_guard_band_linear_q15_taps[key].empty()) {
+                    return k_guard_band_linear_q15_taps[key];
+                }
+            }
+            return k_guard_band_linear_rows[key].taps;
+        }
+
         /// A custom setting's Chebyshev II: the run-time design at unity DC
         /// gain per section, then the L-inf section gains (Jackson 1970).
         inline tap::dsp::cheby2_design guard_band_cheby2(const guard_band_settings& s) noexcept {
@@ -569,8 +629,9 @@ namespace tap::sr::rational {
         {
             return m_taps;
         }
-        /// The linear form's design, in double (a committed row or the
-        /// run-time Kaiser design), symmetric bit for bit.
+        /// The linear form's design, in double, symmetric bit for bit: a
+        /// committed row (in Q15, DspTap's Q15 row at a 70 dB named setting)
+        /// or the run-time Kaiser design.
         std::span<const double> design_taps() const noexcept
             requires(P == guard_phase::linear)
         {
@@ -598,10 +659,10 @@ namespace tap::sr::rational {
             m_tabulated   = key >= 0;
             if constexpr (k_is_linear) {
                 if (m_tabulated) {
-                    const detail::guard_band_linear_row& row =
-                        detail::k_guard_band_linear_rows[static_cast<std::size_t>(key)];
-                    m_design_taps.assign(row.taps.begin(), row.taps.end());
-                    m_stop_edge = row.stop_edge;
+                    const auto                    k    = static_cast<std::size_t>(key);
+                    const std::span<const double> taps = detail::guard_band_named_taps<S>(k);
+                    m_design_taps.assign(taps.begin(), taps.end());
+                    m_stop_edge = detail::k_guard_band_linear_rows[k].stop_edge;
                 }
                 else {
                     m_stop_edge = s.stop_edge();
@@ -662,22 +723,16 @@ namespace tap::sr::rational {
         }
         // ANCHOR_END: rational_guard_band_window
 
-        /// The linear form's table: the first half of the design quantized
-        /// with its sum preserved (tap::dsp::quantize_row_preserving_sum) and
-        /// mirrored, so the format's taps are symmetric bit for bit, the
-        /// zero at Nyquist exact in the quantized taps, and their sum within
-        /// one coefficient LSB of the design's. Stored oldest-first for
-        /// dot_row, which for a symmetric row is the row itself.
+        /// The linear form's table: the design quantized by
+        /// tap::dsp::quantize_symmetric_row_preserving_sum (its first half
+        /// with the sum preserved, mirrored), so the format's taps are
+        /// symmetric bit for bit, the zero at Nyquist exact in the quantized
+        /// taps, and their sum within one coefficient LSB of the design's.
+        /// Stored oldest-first for dot_row, which for a symmetric row is the
+        /// row itself.
         void build_rows() {
-            const std::size_t  n    = m_design_taps.size();
-            const std::size_t  half = n / 2;
-            std::vector<coeff> q(half);
-            tap::dsp::quantize_row_preserving_sum<S>(std::span<const double>(m_design_taps.data(), half), q);
-            m_rows.assign(n, coeff{});
-            for (std::size_t i = 0; i < half; ++i) {
-                m_rows[i]         = q[i];
-                m_rows[n - 1 - i] = q[i];
-            }
+            m_rows.assign(m_design_taps.size(), coeff{});
+            tap::dsp::quantize_symmetric_row_preserving_sum<S>(m_design_taps, m_rows);
         }
 
         tap::dsp::cheby2_design m_design{};          ///< nonlinear: the design, double
