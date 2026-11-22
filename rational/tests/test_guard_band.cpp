@@ -30,8 +30,9 @@
 //     reset() and clears from the linear form after its window; the
 //     floating-point environment never touched, and the debug-build
 //     precondition (the nonlinear form's only).
-// The decimating chains' aliases (guard_band.AliasesLandOnlyAboveThePassband-
-// Edge) are here too; the chains themselves are test_iir_composition.cpp's.
+// The decimating chains' aliases
+// (guard_band.AliasesLandOnlyAboveThePassbandEdge) are here too; the chains
+// themselves are test_iir_composition.cpp's.
 // Every test runs under the host's flush-to-zero (the fixture), as I9 asks of
 // a recursive test; the QEMU legs run the battery but for the host
 // measurements bare_metal_main.cpp and ci.yml name.
