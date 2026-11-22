@@ -28,6 +28,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.16 | 2026-11-18 | A13b: the channel count is the type's (R17, the family's D18): `basic_stage<S, Ch, R>` over `stage_base<S, R>`, `basic_chain<S, Ch, R...>`, the aliases `converter<Ch, R>` and the named chains count-first, zero channels a compile error; the C ABI one and two channels native and any other count a fan-out of one-channel converters; DspTap pinned at `v0.2.0` (the chain takes its count from its stages). The ratchet re-recorded on every target and the ceilings on the three, with the M55's `ratio23_q15_eco` gated at the midpoint of its two builds (section 6, the A13 record) |
 | v0.20 | 2026-11-21 | X-b (`docs/X4_X8_PLAN.md` X1, X2, X5, X7, section 5, 6.6, and the release): the chains by 4, 8 and 16 named by intent (R19: `down_by4` … `up_by16_transparent` in `chain.h`, plain aliases of the matrix's chains, a `_transparent` twin by 16 alone; their C constants, each its chain's value), the single stages the low-latency spelling (R20), the spelling recorded (R18), `matrix.py by` and the tests that pin the aliases to their rows and to the cheapest chains, `examples/low_band_fft.cpp` and `rational.LowBand.*`, the charter's rates named by ratio (the family's D19, section 1 and 7), and family version 0.8.0; no count or ceiling moved (section 6, the X-b record) |
 | v0.21 | 2026-11-22 | IIR-b (`docs/IIR_PLAN.md` section 5 item 3): the recursive stages, a stage type of their own beside the FIR stage (R21, the family's D20): `basic_iir_stage<S, Ch, R, P>` by 2 in the nonlinear and the near-linear phase variant at every profile (R22), the cascades `iir_down_by` / `iir_up_by` by 2 to 16 relaxed per divisor (R22), the nominal latency and the delay path (R23), flush to an exactly zero state with flush-to-zero the host's job (R24), the formats (R25); the charter amended (section 1, R2); the four-path stage measured and not shipped; DspTap pinned at `v0.3.0`, the family's floor 0.3.0. No FIR pin, ratchet count or ceiling moved (section 6, the IIR-b record) |
+| v0.22 | 2026-11-22 | IIR-c (`docs/IIR_PLAN.md` section 5 item 4, v11): the guard band filter `guard_band_filter<S, Ch, guard_phase>` in both forms, a 1:1 stage beside the ratios (R26, the charter's note in section 1), the order rule 5 / 7 / 7 / 7 (question 14); composition through the caller's `tap::dsp::chain` and the offering table (R27, question 16's part); the floating limit cycle an honest limit (R28, question 19 closed). No FIR pin, ratchet count or ceiling moved (section 6, the IIR-c record) |
 | v0.19 | 2026-11-21 | X-a4 (`docs/X4_X8_PLAN.md` X4): a chain per attenuation tier — the 70 dB tier's selected at `economy`, the 120 dB tier's at `transparent` (R3, 3.1); 25 rows split (17 within the families, 8 across), seven chains serve only the 120 dB tier, three of them new (`up2_ratio3over2`, `up2_up6_up4`, `down4_down6_down2`, C values 40 to 42, `CHAIN_END` 43, 33 live values); the generated row format holds both chains, the matrix test, the binding, `matrix.ipynb` and the coverage figure read it; the relaxation tables unchanged; the 6th- and 8th-band designs at divisor 2 at `transparent` bit-pinned; the ratchet's `down8_down2_float_tr` workload (the 1/16 chain at `transparent`), every existing count and ceiling unchanged (section 6, the X-a4 record) |
 | v0.18 | 2026-11-21 | X-a3 (`docs/X4_X8_PLAN.md` X3): decision 6 amended, the 4th-band stage admitted (`up4` / `down4` in `ratio.h`, the C ABI's `create_stage` at 4/1 and 1/4); X-a2's frozen selection removed and R3's restored, 46 rows moved at `economy` (30 within, 16 across; S1), the named chains twelve added and fourteen gone (ten retired under D7, four kept for X-a4), the C ABI's values stable (`CHAIN_END` 40 for the retired `CHAIN_COUNT`, retired values refused), band 4's tables bit-pinned at every matrix divisor, the scipy vectors with a 4th-band stage, the ratchet's `down4_down2_q15_eco`, `callmax_down4_*` and host `down4_*` workloads and the 4th-band probes' ceilings (section 6, the X-a3 record) |
 | v0.17 | 2026-11-20 | X17 (`docs/X4_X8_PLAN.md`, X-a2): the designer's Kaiser β for A + 4 dB, accepted at A + 1 dB as before (`k_design_beta_offset_db`, no DspTap change); x = 4 chosen over 3 on the measured Q15 / Q31 floors and ripple; every pin, relaxation table, Q15 / Q31 table and scipy vector re-pinned, the matrix re-costed with its chains frozen for one PR (R3 suspended until X-a3, 3.1), every ratchet row and the probes' ceilings re-recorded with the reason (section 6, "The designer's β, X17") |
@@ -64,7 +65,10 @@ open.
 possible.** Ratios L/M with L, M ∈ {2^a · 3^b}, gcd(L, M) = 1, realised as
 chains of Nyquist (L-th-band) stages, and, since IIR-b, by recursive (IIR)
 half-band stages by 2 and their cascades beside them, a stage type of their
-own (R21, the family's D20). It converts the number, never the
+own (R21, the family's D20). Since IIR-c a 1:1 guard band filter is admitted
+beside the ratios (R26): a stage that changes no rate, placed by the caller
+after a decimator or before an interpolator, so `ratio<L, M>`'s charter
+(L ≠ M) is unchanged. It converts the number, never the
 clock (D5, `../PLAN.md:40`).
 
 The boundaries are identity, not policy, as `bridge`'s are
@@ -137,8 +141,11 @@ The boundaries are identity, not policy, as `bridge`'s are
 | R21 | **Recursive stages are a stage type of their own** (`docs/IIR_PLAN.md` I2, the family's D20; IIR-b): `basic_iir_stage<S, Ch, R, P>` over `iir_stage_base<S, R, P>` (K12, R17), R `up2` / `down2`, `P` an `iir_phase`: `nonlinear`, the elliptic two-path allpass half-band H(z) = ½ [A0(z²) + z⁻¹ A1(z²)] (Valenzuela and Constantinides), or `near_linear`, its path A0 a pure delay; the aliases `iir_converter<Ch, R>` and `iir_converter_near_linear<Ch, R>` with their `_q15` / `_q31` siblings (`iir_stage.h`). The machine (the commutator and its latch, the near-linear delay path's ring, `pull()`'s banked output, the accounting, flush, A12's out-of-line blocks against a cursor, D17's `validate()`) is the engine's, the designs and the step kernels DspTap's (`iir_design.h`, `iir_kernels.h`). By 3 is a `static_assert` that names it as planned; the four-path stage by 4 was measured and does not ship (I12) | Not a profile of `basic_stage`: the machine, the state and the contracts differ, and A4's one meaning per profile name would carry two machines under one word. Not an engine: the same charter, ratios and profiles. The four-path stage, measured on this machine over DspTap's kernels, costs +10.7 % (float) and +14.6 % (Q15) against the two half-bands it replaces on the M33 going down, +9.2 % and −10.1 % on the M55, −19.5 % and −24.1 % on Hexagon, so no format and direction clears R3's 10 % on all three targets (`docs/IIR_PLAN.md` 2.4; `tools/spikes/iir/iirb_fourpath/`) |
 | R22 | **The same four profiles, each reachable by both variants, relaxed per divisor** (I3, I4, I13): the named profiles at the design divisors 1, 2, 4 and 8 run compile-time designs (nonlinear: `tap::dsp::k_nonlinear_halfband`, no design and no libm at construction) or DspTap's committed tables (near-linear); a custom nonlinear profile designs at construction through the same function, a custom near-linear one is refused (`validate()` says so). The cascades `iir_down_by` / `iir_up_by<S, Ch, P, D>` (`iir_chain.h`, D = 2, 4, 8, 16) build each half-band at `profile::relaxed` of its divisor, as `basic_chain` does for the FIR stages | A profile means one (A, passband edge) in every stage kind (A4). The relaxed cascades cost the IIR plan's 2.4 relaxed rows exactly: at `economy` 4 / 8 / 16 / 24 multiplies per output going down by 2 / 4 / 8 / 16 (nonlinear; 4 / 12 / 28 / 60 unrelaxed) and 7 / 13 / 21 / 29 (near-linear), against 43 / 71 / 143 MACs for the FIR chains by 4 / 8 / 16 (R19) |
 | R23 | **A recursive stage's latency is nominal** (I5): no `latency_output_frames()`, so a chain holding one has no exact latency; `nominal_latency_output_frames()` (the DC group delay, or the near-linear delay path), `latency_deviation_output_frames()` and `group_delay_output_frames(f)`, which `tap::dsp::chain` composes. The near-linear variant's `delay_path_output_frames()` is exact, and `tap::dsp::subband_delta` takes it as T; the nonlinear variant has none and the scaffold refuses it at compile time (X10) | The FIR stages keep R7's exact rational. At `economy` the nonlinear ↓2 delays 1.20 output frames at DC and 2.48 at the passband edge; the near-linear one delays exactly 7 within 0.0088, and its round trip by 2 to 16 cancels a removed tone to −64.5 … −70.0 dB at the 70 dB profiles and −114.8 dB at `transparent` (thresholds −60 and −100, the IIR plan's question 5) |
-| R24 | **Flush ends in an exactly zero state, and flushing subnormals is the host's job** (I6, I9): `window_frames()` is the input count to an exactly zero state under the host's flush-to-zero (DspTap's `floating_flush_frames`; in fixed point the truncated decay from the full headroom), so `FlushEqualsZeroPaddingBitForBit` holds; no stage reads-and-writes the floating-point environment, and each checks `TAP_DSP_EXPECTS_SUBNORMALS_FLUSHED` as a debug-build precondition; a non-finite input poisons the state until `reset()` | The control bits belong to the thread and so to the host, which most audio hosts already set; a stage that set them would restore them on every call. Honest limits: without flush-to-zero the state sticks at a few multiples of the smallest subnormal (at most 7 measured, bound 16), and the floating near-linear stage at `transparent` and divisor 1 holds a zero-input limit cycle at about four times the smallest normal even with it (the IIR plan's question 19, open) |
+| R24 | **Flush ends in an exactly zero state, and flushing subnormals is the host's job** (I6, I9): `window_frames()` is the input count to an exactly zero state under the host's flush-to-zero (DspTap's `floating_flush_frames`; in fixed point the truncated decay from the full headroom), so `FlushEqualsZeroPaddingBitForBit` holds; no stage reads-and-writes the floating-point environment, and each checks `TAP_DSP_EXPECTS_SUBNORMALS_FLUSHED` as a debug-build precondition; a non-finite input poisons the state until `reset()` | The control bits belong to the thread and so to the host, which most audio hosts already set; a stage that set them would restore them on every call. Honest limits: without flush-to-zero the state sticks at a few multiples of the smallest subnormal (at most 7 measured, bound 16), and the floating near-linear stage at `transparent` and divisor 1 holds a zero-input limit cycle at about four times the smallest normal even with it (the IIR plan's question 19, decided as an honest limit in v11: R28) |
 | R25 | **The recursive formats** (I8, I14): float states and products in the float profile, double the golden model; Q15 in Q2.29 states and Q31 in Q2.60 (two integer guard bits), floor truncation in the one-multiplier sections and magnitude truncation in the second-order ones, the difference nodes in the 64-bit accumulator, saturation at the output only; the Q15 and Q31 outputs bit-pinned, float and double held to the direct-form golden leg by tolerance | Float states hold 120 dB (−137 dB, IIR-0) at 28 times fewer instructions than double states on the soft-double cores; floor and magnitude truncation leave no zero-input limit cycle in fixed point (IIR-0's search); under full-scale drive the largest state is 1.99 of full scale (limit 4) and the Q15 floor −100.8 dB RMS |
+| R26 | **The guard band filter is a 1:1 stage of its own beside the ratios** (`docs/IIR_PLAN.md` I7, question 14; IIR-c): `guard_band_filter<S, Ch, P>` over `guard_band_filter_base<S, P>` (K12), `P` a `guard_phase`: `nonlinear`, the odd-order Chebyshev II over DspTap's `biquad_cascade`, or `linear`, the even-length symmetric (type II) FIR over `dot_row`, each with its zero exactly at Nyquist; `guard_band_settings` the profiles' (A, p) at the orders 5 / 7 / 7 / 7, the lowest odd order whose worst guard-band alias behind the nonlinear half-band is at or below −A/2, the linear form at the same stop edges, plus a custom form designed at run time (the Chebyshev II through `design_cheby2_lowpass` and `cheby2_linf_gains`, the linear form through DspTap's Kaiser designer, refused where no length up to 512 taps meets it). The Chebyshev's latency is nominal (R23's members), the linear form's exact, (N − 1) / 2 frames; `ratio<L, M>` unchanged | The guard band is the region every half-band leaves (−3 dB recursive, −6 dB FIR at the crossover); a filter there serves FIR and IIR stages alike without touching either (an option on each stage was declined in I7). At `economy` the Chebyshev II costs 20 multiplies per output and 0.54 frames at DC (5.04 at the passband edge); the FIR 50 MACs and 49/2 frames, exact. Behind the near-linear and FIR half-bands the rule's orders leave −31.4 / −31.6 dB at `super_economy` and −48.8 / −45.6 dB at `transparent` (the IIR plan's question 20) |
+| R27 | **Mixed chains are the caller's `tap::dsp::chain`** (I10, question 16's part; IIR-c): the recursive stages and both guard band forms satisfy `sync_stage`, so a caller composes them with FIR stages (an IIR ↑2 and an FIR ↑3, a guard band filter before an interpolator or after a decimator), each stage built at its divisor (`profile::relaxed`, or `iir_down_by` / `iir_up_by`). No named IIR chains, no coverage-matrix rows, no C ABI here (IIR-d); a small offering table states the choices: ↑2 / ↓2 × four profiles × two variants × no filter, the Chebyshev II or the linear form (`rational.iir_composition.TheOfferingTableIsMeasured`, README) | `basic_chain` takes ratios only and relaxes its FIR stages; a mixed chain's design is the caller's, and its latency is DspTap's composition (exact where every stage is, nominal otherwise). A chain holding a `tap::dsp::chain` (`down_by8`) composes and processes but cannot flush, since a chain reports no `window_frames()`; the caller flattens it (DspTap follow-up) |
+| R28 | **The floating zero-input limit cycle is an honest limit** (I6, question 19, the maintainer's decision; IIR-c): the floating Chebyshev II at orders 7 and above, and R24's near-linear `transparent` stage at divisor 1, may settle under flush-to-zero in a limit cycle a few times the smallest normal; the hot loops and DspTap stay as they are (no deadband, no dropped design). The stage's `flush()` still equals its zero padding bit for bit, and a chain whose later stages follow a cycling stage flushes within the residue of zero padding; everywhere else, and always in fixed point, flush is exact | Measured at the named settings: the Chebyshev's state settles at most 8.7 times the smallest normal in float and 10.4 in double (pinned below 16; `rational.guard_band_float_test.TheChebyshevLimitCycleIsBounded`), the near-linear stage's below 8 (R24); orders 3 and 5 drain. A deadband or a dropped design would cost every caller to remove a residue of 1e-37 (float) that only an exact-zero test can see |
 
 ### 2.1 Stage factoring: the arithmetic behind R3
 
@@ -795,7 +802,7 @@ rational/
 │                           TAP_SR_RATIONAL_WERROR, the tap::dsp guard (../bridge/CMakeLists.txt:20-23)
 ├── README.md  PLAN.md  CLAUDE.md (charter only, as bridge/CLAUDE.md)
 ├── include/tap/sr/rational/
-│   ├── rational.h          umbrella: TAP_SR_VERSION_* (R11), includes the seven below
+│   ├── rational.h          umbrella: TAP_SR_VERSION_* (R11), includes the eight below
 │   ├── ratio.h             ratio<L, M>, ratio_traits, the 2^a·3^b / gcd static_asserts (R1)
 │   ├── design.h            profile (R5), design_stage<R>(profile) over tap::dsp::nyquist.h
 │   ├── stage.h             basic_stage<S, Ch, R> over stage_base<S, R> (A13): table (per phase or per decimating branch, trimmed to the nonzero span;
@@ -807,7 +814,9 @@ rational/
 │   │                       float / Q15 / Q31 aliases (converter<Ch, R>, converter_q15<Ch, R>, converter_q31<Ch, R>)
 │   ├── iir_stage.h         basic_iir_stage<S, Ch, R, P> over iir_stage_base<S, R, P> (R21): the recursive half-band by 2,
 │   │                       iir_phase nonlinear or near_linear, over tap::dsp::iir_kernels.h; iir_converter<Ch, R> and siblings
-│   └── iir_chain.h         iir_down_by / iir_up_by<S, Ch, P, D>: a cascade by 2 to 16, each half-band relaxed (R22)
+│   ├── iir_chain.h         iir_down_by / iir_up_by<S, Ch, P, D>: a cascade by 2 to 16, each half-band relaxed (R22)
+│   └── guard_band.h        guard_band_filter<S, Ch, P> over guard_band_filter_base<S, P> (R26): the 1:1 guard band filter,
+│                           guard_phase nonlinear (Chebyshev II) or linear (type II FIR); guard_band_settings
 ├── tests/                  test_ratio, test_design, test_stage, test_chain, test_matrix, test_fixed_point,
 │   │                       test_output_hash, test_capi, bare_metal_main.cpp (no cross-validation test: section 5
 │   │                       says why the bridge-vs-async leg is not repeated here; struck by the 2026-10 audit, F18)
@@ -1880,6 +1889,80 @@ ceilings:* with the stages in the tree every count and checksum of every
 engine on every key (M33, M55, Hexagon, host), in both builds, equals the
 parent commit's (312 rows) and every ceiling file is identical; no baseline or
 ceiling is re-recorded. MSVC and AppleClang were not run here.
+
+**The guard band filter and composition: IIR-c (2026-11-22, v0.22).**
+`docs/IIR_PLAN.md` section 5, item 4 (v11): I7 and I10 as R26–R28 above,
+with the maintainer's decisions on questions 14 (the orders 5 / 7 / 7 / 7),
+16 (I10's part) and 19 (the limit cycle an honest limit). DspTap stays at
+`v0.3.0`: every design, table and kernel the filter runs was already there
+(`k_guard_band_cheby2`, `k_guard_band_fir`, `design_cheby2_lowpass`,
+`cheby2_linf_gains`, `design_guard_band_linear`, `biquad_cascade`,
+`dot_row`, `quantize_row_preserving_sum`).
+
+*The filter, measured* (`tests/test_guard_band.cpp`, `tests/test_iir_subnormals.cpp`;
+the first, with `tests/test_iir_composition.cpp`, in `tap_sr_rational_guard_band_tests`, an
+executable of its own: in the main battery they took its Hexagon image past the ±8 MiB reach of
+a direct call, lld's `R_HEX_B22_PCREL` out of range, and its M55 image past the 2 MiB CODE
+region):
+- the golden leg (`tools/reference/make_guard_band_reference_vectors.py`:
+  the Chebyshev II as scipy's own `signal.cheby2` design at the stop edge the
+  closed form gives, through `sosfilt`, which the script checks is DspTap's
+  transfer function within 1e-14 on 4097 frequencies; the FIR's committed taps
+  through `lfilter`; four settings × two forms, 256 frames): within 8.2e-15 /
+  4.4e-16 of full scale in double, 9.0e-7 / 6.8e-8 in float, 1.5e-5 / 2.4e-4
+  in Q15 and 5.1e-9 / 3.9e-9 in Q31 (Chebyshev II / FIR), the Q15 and Q31
+  outputs bit-pinned (FNV-1a-64, two pins each); the group delay within
+  1.2e-13 frames of scipy's;
+- the spec from the double filter's impulse response: the Chebyshev II at −A
+  from its stop edge (0.4657 / 0.4530 / 0.4614 / 0.4862 of the rate), from 0
+  to −0.01 dB over the passband, −302 dB or below at Nyquist; the FIR −71.35 /
+  −73.26 / −71.16 / −122.98 dB from the same edges, 0.0086 / 0.0068 / 0.0088 /
+  0.0062 dB peak to peak; the zero at Nyquist exact in every format's table,
+  and a Nyquist tone removed exactly in Q15 and Q31;
+- the order rule recomputed from the designs: −40.1 / −43.5 / −40.2 / −61.6 dB
+  at the named orders behind the nonlinear half-band, so 5 / 7 / 7 / 7; behind
+  the near-linear half-band −31.4 / −39.2 / −37.8 / −48.8 and behind the FIR
+  one −31.6 / −37.0 / −37.0 / −45.6 dB (the IIR plan's question 20);
+- latency: the Chebyshev II 0.49 / 0.54 / 0.44 / 0.38 frames at DC, deviation
+  1.84 / 4.51 / 5.42 / 6.76 over the passband, against its impulse response
+  within 1e-9; the FIR (N − 1) / 2 for N = 30 / 50 / 58 / 72, exact;
+- flush: bit for bit zero padding for the filter alone in every format and
+  setting; windows 1,032 to 2,402 frames in float, 8,286 to 19,315 in double,
+  420 to 1,072 in Q15 and 828 to 2,130 in Q31, every fixed-point state zero
+  within 321 (Q15) and 691 (Q31) frames of full-scale drive; the honest
+  limit (R28) at most 8.7 (float) and 10.4 (double) times the smallest normal
+  over 20 starts per design at order 7 (bound 16), orders 3 and 5 draining at
+  every named spec point; without flush-to-zero at most 10 times the smallest
+  subnormal (bound 32), the FIR exact;
+- fixed point: the Chebyshev's DC within 1 LSB, its largest state 1.67 of
+  full scale under full-scale drive (limit 4), Q15 outputs within 0.5 LSB and
+  Q31 within 1.3e-8 of the double filter, the Q15 floor −101.1 dB RMS; the
+  FIR's DC its taps' sum (saturating at `balanced`, 1.00049), every output its
+  quantized taps' exact sum rounded once; in Q15 its Q1.14 taps attain −67.13 /
+  −66.79 / −64.60 / −70.87 dB and 0.0100 / 0.0100 / 0.0131 / 0.0125 dB peak to
+  peak, −77.8 dB RMS from double (the IIR plan's question 21), in Q31 the
+  design's; the largest Chebyshev coefficient over a grid of 294 run-time
+  designs 1.99996, inside Q2.30;
+- the aliases behind each half-band (`guard_band.AliasesLandOnlyAboveThePassbandEdge`):
+  in the passband −71.4 dB or below (−123.9 at `transparent`) with or without
+  the filter; past the stop edge −75.1 dB or below (−126.9) with either form,
+  −3.4 to −6.6 dB without one.
+
+*Composition* (`tests/test_iir_composition.cpp`): both forms satisfy
+`sync_stage` in every format; chains of an IIR ↑2 and an FIR ↑3 behind the
+filter, FIR ↓3 · IIR ↓2 before it, the filter before the FIR and the
+near-linear interpolators and after the FIR decimator, `iir_down_by<…, 8>`
+and `down_by8` before it: bit-identical for any chunking, in every format;
+flush equal to zero padding bit for bit in fixed point and wherever no
+floating stage cycles, within 64 times the smallest normal where a cycling
+stage is followed by others, and bit for bit with that residue after the
+flush where it is last; the linear form keeps an all-FIR chain's exact
+latency (34 frames after the FIR half-band decimator at `economy`, 68 before
+the interpolator, against the impulse response); the nominal composes over
+a chain holding the Chebyshev; the offering table pinned cell by cell
+(`iir_composition.TheOfferingTableIsMeasured`). A `tap::dsp::chain` holding a
+`tap::dsp::chain` cannot flush (DspTap's chain reports no `window_frames()`),
+so the flush test writes `down_by8`'s stages out flat.
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2

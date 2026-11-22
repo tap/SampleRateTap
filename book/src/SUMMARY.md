@@ -54,6 +54,7 @@
 - [Two machines, one filter: stage.h](part7/stage.md)
 - [Chains and the coverage matrix: chain.h](part7/chain.md)
 - [A filter that remembers: iir_stage.h](part7/iir.md)
+- [The band the half-band leaves: guard_band.h](part7/guard-band.md)
 - [Sixteen bits, per stage](part7/fixed-point.md)
 - [The proof, the ABI, and the levers that lost](part7/proof.md)
 

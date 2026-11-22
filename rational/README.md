@@ -10,7 +10,8 @@ rate family, as fast as possible.**
 Ratios L/M with L, M ∈ {2^a · 3^b} and gcd(L, M) = 1 — ↑2, ↓3, 2/3, ↑8,
 3/8 … — realised as chains of Nyquist (L-th-band) stages whose structural
 zeros cost nothing, and, beside them, recursive (IIR) half-band stages by 2
-for the conversions by powers of 2 (below). Header-only C++20, built on the Tap family's shared
+for the conversions by powers of 2 and a 1:1 guard band filter for the band
+every half-band leaves (below). Header-only C++20, built on the Tap family's shared
 substrate ([DspTap](https://github.com/tap/DspTap): the L-th-band designer
 and the stage composition landed there first, with the float/Q15/Q31
 sample-format traits, the dot kernels and the row-sum quantization).
@@ -289,11 +290,131 @@ Honest limits, each pinned:
   cycle at about four times the smallest normal even under flush-to-zero (a second-order
   section's product flushes and the section lifts the state again), so its flush ends in
   that residue (within eight times the smallest normal), and a chain whose later stages
-  follow it flushes within the residue of zero padding: the IIR plan's open question 19;
+  follow it flushes within the residue of zero padding: the maintainer kept it as an honest
+  limit (the IIR plan's question 19, PLAN.md R28), as for the guard band filter's
+  Chebyshev II below;
 - a non-finite input poisons the recursive state until `reset()` (an FIR stage clears it
   after one window): `rational.iir_float_test.NonFiniteInputPoisonsTheStateUntilReset`;
 - the contracts hold without `-ffast-math` (or `/fp:fast`): reassociation moves the float
   outputs past their tolerances, and `-ffinite-math-only` deletes non-finite checks.
+
+## The guard band filter
+
+Every half-band crosses over at a quarter of its higher rate, the low rate's Nyquist, where the
+recursive half-band is −3 dB and the FIR one −6 dB: decimating, its transition band folds onto
+the *guard band* between the passband edge and Nyquist; interpolating, low-rate content there
+images into it. The passband stays alias-free to the profile either way. `guard_band.h` adds a
+filter that removes the guard band as a whole (the IIR plan's I7; [PLAN.md](PLAN.md) R26–R28): a
+1:1 stage of its own at the low rate, which a caller puts in a `tap::dsp::chain` after a
+decimator or before an interpolator, FIR or recursive. It changes no rate, so `ratio<L, M>`'s
+charter is unchanged. Its form is in the type:
+
+- `guard_phase::nonlinear`: the odd-order Chebyshev II, flat within 0.01 dB to the passband edge,
+  A dB down from the stop edge its order sets, with a zero exactly at Nyquist (its first-order
+  section). The cheaper form; its phase is nonlinear, so its latency is nominal, as a recursive
+  stage's.
+- `guard_phase::linear`: the even-length symmetric (type II) FIR at the same stop edge, flat
+  within 0.01 dB peak to peak, its zero at Nyquist from its symmetry. Linear phase: its latency is
+  exact, (N − 1) / 2 frames, so an all-FIR chain that holds it keeps its exact latency.
+
+```cpp
+#include <tap/sr/rational/rational.h>
+namespace rat = tap::sr::rational;
+
+// 48 -> 24 kHz, stereo: the recursive half-band, then the Chebyshev II at 24 kHz.
+using filter_t = rat::guard_band_filter<float, 2, rat::guard_phase::nonlinear>;
+using down_t   = rat::basic_iir_stage<float, 2, rat::down2, rat::iir_phase::nonlinear>;
+tap::dsp::chain<down_t, filter_t> down(down_t{rat::profile::economy()},
+                                       filter_t{rat::guard_band_settings::economy()});
+// 16 -> 48 kHz: the linear form, then an FIR stage; the latency stays exact: 49/2 x 3 + 29 = 205/2.
+using linear_t = rat::guard_band_filter<float, 1, rat::guard_phase::linear>;
+using up3_t    = rat::basic_stage<float, 1, rat::up3>;
+tap::dsp::chain<linear_t, up3_t> up(linear_t{}, up3_t{});
+```
+
+The settings are the profiles' numbers (`guard_band_settings::super_economy()` …
+`transparent()`, A and the passband edge as a fraction of the filter's own rate, the chain's
+lowest) at a Chebyshev II order each: the lowest odd order whose worst alias in the guard band,
+behind the nonlinear half-band, is at or below −A/2 (the maintainer's rule, the IIR plan's
+question 14), with a custom form designed at construction (the Chebyshev II at run time; the
+linear form by DspTap's Kaiser designer, refused by `validate()` where no length up to 512 taps
+meets it). Pinned by `rational.guard_band.EachFormMeetsItsSpec`,
+`rational.guard_band_test.MatchesTheGoldenLeg` (scipy's own Chebyshev II design through `sosfilt`,
+the FIR's taps through `lfilter`; `tools/reference/make_guard_band_reference_vectors.py`) and
+`rational.guard_band.OrderIsTheLowestOddOrderWhoseGuardBandAliasIsAtHalfA`:
+
+| settings | order | 70 dB (120) from, of the rate (at 48 kHz) | Chebyshev II: multiplies, delay at DC … edge (frames) | linear form: taps = MACs, latency (frames) |
+|---|---:|---:|---:|---:|
+| `super_economy` | 5 | 0.4657 (22.4 kHz) | 15, 0.49 … 2.33 | 30, 29/2 |
+| `economy` | 7 | 0.4530 (21.7 kHz) | 20, 0.54 … 5.04 | 50, 49/2 |
+| `balanced` | 7 | 0.4614 (22.1 kHz) | 20, 0.44 … 5.86 | 58, 57/2 |
+| `transparent` | 7 | 0.4862 (23.3 kHz) | 20, 0.38 … 7.14 | 72, 71/2 |
+
+**The offering** (the IIR plan's I10; `rational.iir_composition.TheOfferingTableIsMeasured`): by 2
+in each recursive variant, with no guard band filter or either form, as multiplies per output
+frame per channel and the chain's nominal latency in output frames (its passband deviation in
+parentheses). Going down the filter runs at the output rate; going up at the input rate, half its
+multiplies per output:
+
+| ↓2 | `super_economy` | `economy` | `balanced` | `transparent` |
+|---|---:|---:|---:|---:|
+| nonlinear | 4, 1.27 (0.84) | 4, 1.20 (1.28) | 4, 1.16 (1.61) | 8, 2.08 (3.88) |
+| nonlinear + Chebyshev II | 19, 1.76 (2.68) | 24, 1.73 (5.79) | 24, 1.60 (7.03) | 28, 2.46 (10.63) |
+| nonlinear + linear form | 34, 15.77 (0.84) | 54, 25.70 (1.28) | 62, 29.66 (1.61) | 80, 37.58 (3.88) |
+| near-linear | 5, 5 (0.0078) | 7, 7 (0.0087) | 8, 8 (0.0134) | 19, 19 (0.0002) |
+| near-linear + Chebyshev II | 20, 5.49 (1.85) | 27, 7.54 (4.52) | 28, 8.44 (5.43) | 39, 19.38 (6.76) |
+| near-linear + linear form | 35, 19.5 (0.0078) | 57, 31.5 (0.0087) | 66, 36.5 (0.0134) | 91, 54.5 (0.0002) |
+
+| ↑2 | `super_economy` | `economy` | `balanced` | `transparent` |
+|---|---:|---:|---:|---:|
+| nonlinear | 2, 2.53 (1.68) | 2, 2.40 (2.56) | 2, 2.31 (3.23) | 4, 4.16 (7.75) |
+| Chebyshev II + nonlinear | 9.5, 3.51 (5.37) | 12, 3.47 (11.58) | 12, 3.19 (14.06) | 14, 4.93 (21.26) |
+| linear form + nonlinear | 17, 31.53 (1.68) | 27, 51.40 (2.56) | 31, 59.31 (3.23) | 40, 75.16 (7.75) |
+| near-linear | 2.5, 10 (0.0157) | 3.5, 14 (0.0175) | 4, 16 (0.0268) | 9.5, 38 (0.0005) |
+| Chebyshev II + near-linear | 10, 10.98 (3.70) | 13.5, 15.07 (9.03) | 14, 16.88 (10.87) | 19.5, 38.76 (13.51) |
+| linear form + near-linear | 17.5, 39 (0.0157) | 28.5, 63 (0.0175) | 33, 73 (0.0268) | 45.5, 109 (0.0005) |
+
+The near-linear variant with the linear form keeps an exact delay (its delay path plus the FIR's),
+so that chain enters DspTap's round-trip scaffold; the Chebyshev II makes any chain's phase
+nonlinear. A mixed chain is the caller's `tap::dsp::chain` (R27): no named IIR chain and no row of
+the coverage matrix. A chain that holds a `tap::dsp::chain` (`down_by8`, say) composes and
+processes, but cannot `flush()`, since a chain reports no `window_frames()`: write its stages out
+flat.
+
+- **The aliases** (`rational.guard_band.AliasesLandOnlyAboveThePassbandEdge`, decimating by 2):
+  in the passband −71.4 dB or below at the 70 dB settings and −123.9 dB at `transparent`, with
+  or without the filter; past its stop edge −75.1 and −126.9 dB or below with either form,
+  against −3 dB (recursive) and −6 dB (FIR) without one. In the guard band
+  between the passband and the stop edge the worst alias is at most −40.2 / −43.8 / −40.6 /
+  −61.6 dB behind the nonlinear half-band (the rule's −A/2); behind the near-linear and the FIR
+  half-bands the same orders leave −31.4 / −31.6 dB at `super_economy` and −48.8 / −45.6 dB at
+  `transparent`, above −A/2 (the IIR plan's question 20).
+- **Formats**: the Chebyshev II as DspTap's `biquad_cascade` runs it (float states, Q15 and Q31 in
+  Q2.29 / Q2.60 with Q2.30 coefficients, which hold every valid setting); against the golden leg
+  8.2e-15 / 9.0e-7 / 1.5e-5 / 5.1e-9 of full scale in double / float / Q15 / Q31, the Q15 floor
+  −101.1 dB RMS. The FIR in `sample_traits`' formats, its taps symmetric bit for bit in every one;
+  4.4e-16 / 6.8e-8 / 2.4e-4 / 3.9e-9. Q15 and Q31 outputs bit-pinned.
+- **Flush** writes `window_frames()` frames, bit for bit the zero-padded stream's: the FIR's
+  history (N − 1), or the Chebyshev's count to an exactly zero state under flush-to-zero (1,032 to
+  2,402 frames in float, 8,286 to 19,315 in double, 420 to 1,072 in Q15, 828 to 2,130 in Q31).
+
+Honest limits, each pinned:
+- the floating Chebyshev II of order 7 or more (`economy`, `balanced`, `transparent`) holds a
+  zero-input limit cycle under flush-to-zero from some states, settling at most 8.7 (float) and
+  10.4 (double) times the smallest normal, bound 16
+  (`rational.guard_band_float_test.TheChebyshevLimitCycleIsBounded`): its own flush is still bit
+  for bit, the output after it is that residue, and a chain whose later stages follow it
+  flushes within the residue of zero padding (the IIR plan's question 19, kept as an honest limit:
+  R28). Orders 3 and 5 drain to exactly zero, and fixed point always does;
+- without flush-to-zero the Chebyshev's state sticks at most 10 times the smallest subnormal
+  (bound 32: `rational.iir_subnormals.WithoutFlushToZeroTheGuardBandResidueIsBounded`); the
+  linear form, an FIR, needs no flush-to-zero and no precondition;
+- the linear form in Q15 is format-limited: its Q1.14 taps attain −67.1 / −66.8 / −64.6 /
+  −70.9 dB from the stop edge, below the 70 dB tier, and its output is −77.8 dB RMS from double
+  (`rational.guard_band_fixed_test.QuantizedLinearTablesAttainTheirStatedStopbands`); at Q15 the
+  Chebyshev II holds the tier (the IIR plan's question 21);
+- a non-finite input poisons the Chebyshev until `reset()` and clears from the linear form after
+  its window.
 
 ## The boundaries are identity, not policy
 
