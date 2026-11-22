@@ -81,21 +81,21 @@ namespace {
 
     template <typename Stage>
     void expect_bounded_residue(double& worst_state, double& worst_out) {
-        using S               = typename Stage::sample;
-        constexpr double dmin = static_cast<double>(std::numeric_limits<S>::denorm_min());
+        using sample          = typename Stage::sample;
+        constexpr double dmin = static_cast<double>(std::numeric_limits<sample>::denorm_min());
         for (int pi = 0; pi < 4; ++pi) {
-            Stage          st(named(pi));
-            const auto     x = noise<S>(1200, 0x7777u + static_cast<std::uint32_t>(pi));
-            std::vector<S> y(st.outputs_for(x.size()));
+            Stage               st(named(pi));
+            const auto          x = noise<sample>(1200, 0x7777u + static_cast<std::uint32_t>(pi));
+            std::vector<sample> y(st.outputs_for(x.size()));
             st.process(x.data(), x.size(), y.data());
-            std::vector<S> tail(st.flush_output_frames() + 1);
+            std::vector<sample> tail(st.flush_output_frames() + 1);
             st.flush(tail.data());
             // Past the flush: more zeros, and the output there is the residue.
-            std::vector<S> z(2048, S{});
-            std::vector<S> w(st.outputs_for(z.size()));
+            std::vector<sample> z(2048, sample{});
+            std::vector<sample> w(st.outputs_for(z.size()));
             st.process(z.data(), z.size(), w.data());
             double out = 0.0;
-            for (const S v : w) {
+            for (const sample v : w) {
                 out = std::max(out, std::fabs(static_cast<double>(v)));
             }
             double state = 0.0;
@@ -106,34 +106,35 @@ namespace {
             worst_out   = std::max(worst_out, out / dmin);
             EXPECT_LE(state, k_residue_bound * dmin) << "profile " << pi;
             EXPECT_LE(out, k_residue_bound * dmin) << "a residue, not a signal; profile " << pi;
-            EXPECT_LT(state, static_cast<double>(std::numeric_limits<S>::min())) << "only subnormals are left";
+            EXPECT_LT(state, static_cast<double>(std::numeric_limits<sample>::min())) << "only subnormals are left";
         }
     }
 
     TYPED_TEST(iir_subnormals, WithoutFlushToZeroTheResidueIsBounded) {
-        using S = TypeParam;
-        EXPECT_FALSE(tap::dsp::subnormals_flushed<S>()) << "the fixture cleared the bits, or none governs S here";
+        using sample = TypeParam;
+        EXPECT_FALSE(tap::dsp::subnormals_flushed<sample>())
+            << "the fixture cleared the bits, or none governs sample here";
         double state = 0.0;
         double out   = 0.0;
-        expect_bounded_residue<basic_iir_stage<S, 1, down2, iir_phase::nonlinear>>(state, out);
-        expect_bounded_residue<basic_iir_stage<S, 1, up2, iir_phase::nonlinear>>(state, out);
-        expect_bounded_residue<basic_iir_stage<S, 1, down2, iir_phase::near_linear>>(state, out);
-        expect_bounded_residue<basic_iir_stage<S, 1, up2, iir_phase::near_linear>>(state, out);
+        expect_bounded_residue<basic_iir_stage<sample, 1, down2, iir_phase::nonlinear>>(state, out);
+        expect_bounded_residue<basic_iir_stage<sample, 1, up2, iir_phase::nonlinear>>(state, out);
+        expect_bounded_residue<basic_iir_stage<sample, 1, down2, iir_phase::near_linear>>(state, out);
+        expect_bounded_residue<basic_iir_stage<sample, 1, up2, iir_phase::near_linear>>(state, out);
         std::printf("[ measured ] %s without flush-to-zero: past the window the states hold %.0f x and the output "
                     "%.0f x the smallest subnormal at worst (bound %.0f)\n",
-                    std::is_same_v<S, float> ? "float" : "double", state, out, k_residue_bound);
+                    std::is_same_v<sample, float> ? "float" : "double", state, out, k_residue_bound);
     }
 
     TYPED_TEST(iir_subnormals, NeverTouchesTheFloatingPointEnvironment) {
-        using S = TypeParam;
-        basic_iir_stage<S, 2, down2, iir_phase::nonlinear> a;
-        basic_iir_stage<S, 2, up2, iir_phase::near_linear> b;
-        const auto                                         x = noise<S>(256, 0x8888u);
-        std::vector<S>                                     y(4 * x.size());
+        using sample = TypeParam;
+        basic_iir_stage<sample, 2, down2, iir_phase::nonlinear> a;
+        basic_iir_stage<sample, 2, up2, iir_phase::near_linear> b;
+        const auto                                              x = noise<sample>(256, 0x8888u);
+        std::vector<sample>                                     y(4 * x.size());
         const std::uint64_t before = tap::dsp::floating_point_control() & tap::sr::rational::test::k_control_mask;
         a.process(x.data(), x.size() / 2, y.data());
         b.process(x.data(), x.size() / 2, y.data());
-        std::vector<S> tail(std::max(a.flush_output_frames(), b.flush_output_frames()) * 2 + 2);
+        std::vector<sample> tail(std::max(a.flush_output_frames(), b.flush_output_frames()) * 2 + 2);
         a.flush(tail.data());
         b.flush(tail.data());
         EXPECT_EQ(tap::dsp::floating_point_control() & tap::sr::rational::test::k_control_mask, before);
