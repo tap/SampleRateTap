@@ -229,7 +229,9 @@ jobs:
           # relaxed Q15 tables' stopbands through a 16384-point DFT, and the
           # recursive stages' spec sweep, 32 impulse responses through a
           # 2049-point DTFT per band in soft double, past 20 minutes under
-          # qemu-hexagon); on the Arm legs
+          # qemu-hexagon; and the guard band filter's host measurements, its
+          # spec sweep, its custom linear designs' Kaiser length searches and
+          # its grid of 294 run-time Chebyshev II designs); on the Arm legs
           # bare_metal_main.cpp bakes in its own
           # filter (the fine-grid sweeps of the long designs and the
           # matrix suite).
@@ -241,7 +243,7 @@ jobs:
             jobs: 4
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: UnmeetableSpec|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands|RelaxedQ15TablesStopbandsAreStated|EveryStageMeetsItsSpecAtEveryProfileAndDivisor
+            exclude: UnmeetableSpec|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands|RelaxedQ15TablesStopbandsAreStated|EveryStageMeetsItsSpecAtEveryProfileAndDivisor|guard_band\.EachFormMeetsItsSpec|AnUnmeetableLinearSettingIsRefused|guard_band\.CustomSettingsMeetTheirSpec|EveryValidDesignFitsTheFixedPointFormats
           - target: m55
             title: Cortex-M55 cross
             engine: rational
@@ -330,7 +332,9 @@ jobs:
           # relaxed Q15 tables' stopbands through a 16384-point DFT, and the
           # recursive stages' spec sweep, 32 impulse responses through a
           # 2049-point DTFT per band in soft double, past 20 minutes under
-          # qemu-hexagon); on the Arm legs
+          # qemu-hexagon; and the guard band filter's host measurements, its
+          # spec sweep, its custom linear designs' Kaiser length searches and
+          # its grid of 294 run-time Chebyshev II designs); on the Arm legs
           # bare_metal_main.cpp bakes in its own
           # filter (the fine-grid sweeps of the long designs and the
           # matrix suite).
@@ -344,7 +348,7 @@ jobs:
             jobs: 4
             build_type: Release
             toolchain: cmake/hexagon-linux-musl.cmake
-            exclude: UnmeetableSpec|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands|RelaxedQ15TablesStopbandsAreStated|EveryStageMeetsItsSpecAtEveryProfileAndDivisor
+            exclude: UnmeetableSpec|Matrix\.EveryRowMeets|RelaxationTablesAreTheSearch|QuantizedTablesAttainTheirStatedStopbands|RelaxedQ15TablesStopbandsAreStated|EveryStageMeetsItsSpecAtEveryProfileAndDivisor|guard_band\.EachFormMeetsItsSpec|AnUnmeetableLinearSettingIsRefused|guard_band\.CustomSettingsMeetTheirSpec|EveryValidDesignFitsTheFixedPointFormats
             cmake_extra: -DTAP_SR_NO_EXCEPTIONS_RTTI=ON
             suffix: -no-exceptions-rtti
           - target: m55
