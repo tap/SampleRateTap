@@ -1848,7 +1848,7 @@ and the same ceilings (`icount.py --compare-json`, `ceilings.py measure`).
   state exactly zero after the window, but for question 19's stage, whose
   residue is pinned within eight times the smallest normal;
 - fixed point: DC at full scale within 1 LSB; under full-scale square and
-  clipped drive the largest state 1.99 (Q15) and 1.92 (Q31) of full scale,
+  clipped drive the largest state 1.99 of full scale in Q15 and Q31,
   every output within 2 LSB (Q15) and 1e-8 (Q31) of the double stage
   clamped; the Q15 floor −100.8 dB RMS against double; every state zero
   inside its window after full-scale drive;

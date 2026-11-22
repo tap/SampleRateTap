@@ -587,7 +587,7 @@ reserves, with P = 4.
   `iir_kernels.h`:* floor truncation in the one-multiplier sections, magnitude truncation in the
   second-order ones, two integer guard bits (Q15 in Q2.29 states, Q31 in Q2.60), the difference
   nodes in the accumulator, saturation at the output only. **IIR-b** measured on the stages: the
-  largest state under full-scale square and clipped drive 1.99 of full scale in Q15 and 1.92 in
+  largest state under full-scale square and clipped drive 1.99 of full scale in Q15 and in
   Q31 (limit 4), every output within 2 LSB of the double stage clamped (Q15; 1e-8 in Q31), the
   Q15 floor −100.8 dB RMS against double, DC at full scale within 1 LSB. *Recommended* (v9: rounding
   and headroom from IIR-0):
