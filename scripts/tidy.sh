@@ -46,22 +46,33 @@ if [ "${TIDY_RECONFIGURE:-0}" = "1" ] || [ ! -f "$build/compile_commands.json" ]
     cmake -B "$build" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
 fi
 
-# File list: the given TUs, or — matching CI exactly — every project TU in the
-# database with third_party/ and fetched deps (_deps) excluded.
+# File list: the given TUs, or — matching CI — every project TU in the
+# database with third_party/ and fetched deps (_deps) excluded, each FILE once.
+# `clang-tidy -p` checks every compile command the database holds for a file,
+# so a source compiled several times under different -D (benchmark workloads,
+# size probes) must be listed once: one entry per command checked a file
+# compiled n times n^2 times (SampleRateTap's CI sweep, 40 entries for one
+# workload source, ran past its 30-minute timeout; listed once, under five
+# minutes). Built with a read loop, not mapfile, so macOS /bin/bash 3.2 runs
+# the sweep too.
+files=()
 if [ "$#" -gt 0 ]; then
     files=("$@")
 else
-    mapfile -t files < <(python3 -c "
+    while IFS= read -r f; do
+        files+=("$f")
+    done < <(python3 -c "
 import json
-for e in json.load(open('$build/compile_commands.json')):
-    f = e['file']
+files = [e['file'] for e in json.load(open('$build/compile_commands.json'))]
+for f in dict.fromkeys(files):
     if 'third_party' not in f and '_deps' not in f:
         print(f)")
 fi
 
 echo "== clang-tidy ($tidy) over ${#files[@]} file(s) =="
 fail=0
-for f in "${files[@]}"; do
+# ${files[@]+...}: an empty list under set -u is an error before bash 4.4.
+for f in ${files[@]+"${files[@]}"}; do
     out="$("$tidy" -p "$build" "$f" 2>/dev/null || true)"
     # Test the captured output in-process, never through a pipe. Under pipefail,
     # `printf '%s\n' "$out" | grep -q …` fails whenever grep quits at its first
