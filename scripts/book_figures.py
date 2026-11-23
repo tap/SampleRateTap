@@ -20,11 +20,15 @@ Every figure is produced from the same sources the text cites:
   scale: the numbers are ratio_traits' and profile::economy()'s;
 - the coverage-matrix figure (Part VII) is read from the rational engine's
   own generator, rational/tools/coverage/matrix.py — the same chains and
-  MACs per output that tests/coverage/matrix_rows.h pins.
+  MACs per output that tests/coverage/matrix_rows.h pins;
+- the guard-band figure (Part VII) is MEASURED: the shipping rational C++
+  through its C ABI, by the same code that draws guard_band_demo.ipynb's
+  spectrograms (rational/notebooks/iir_measure.py, over the ctypes binding,
+  which builds rational/build_capi on import).
 
 Usage:  python3 scripts/book_figures.py                  (every figure; from the repo root)
         python3 scripts/book_figures.py alias-zone coverage-matrix   (only the named ones)
-Needs:  numpy, matplotlib, g++, git.
+Needs:  numpy, matplotlib, g++, git; scipy and cmake for guard-band.
 
 The SVGs are committed. CI does not regenerate them — matplotlib's SVG
 output is not byte-stable across matplotlib versions, so a regenerate-and-
@@ -564,6 +568,42 @@ def fig_coverage_matrix():
     return macs, flags
 
 
+def fig_guard_band():
+    """The guard band filter at work (Part VII): a logarithmic sweep at -6
+    dBFS through the recursive half-band decimator by 2 at economy, 96 to 48
+    kHz, alone and with each form of the guard band filter after it, on one
+    fixed 0 to -140 dB scale; the shipping C++ through the C ABI, drawn by
+    the demonstration notebook's own code (rational/notebooks/iir_measure.py)."""
+    sys.path.insert(0, os.path.join(ROOT, "rational", "notebooks"))
+    import iir_measure as im
+
+    a, p = im.PROFILES["economy"]
+    pass_khz, stop_khz = p * im.RATE_LOW / 1000, im.stop_edge("economy", "nonlinear") * im.RATE_LOW / 1000
+    x, _ = im.sweep(im.RATE_HIGH)
+    configs = im.configurations("down", "economy")
+    names = ["IIR nonlinear alone", "IIR nonlinear + Chebyshev II", "IIR nonlinear + linear form"]
+    titles = ["the recursive half-band alone", "+ the Chebyshev II after it", "+ the linear form after it"]
+    fig, axes = plt.subplots(1, 3, figsize=(9.6, 3.3), sharey=True, layout="constrained")
+    for ax, name, title in zip(axes, names, titles):
+        f, t, s = im.spectrogram(im.run(configs[name], x))
+        im_ = ax.imshow(s, origin="lower", aspect="auto", extent=(t[0], t[-1], f[0] / 1000, f[-1] / 1000),
+                        vmin=-140, vmax=0, cmap="magma", interpolation="nearest", rasterized=True)
+        ax.grid(False)
+        ax.axhline(pass_khz, color=SURFACE, lw=0.8)
+        ax.axhline(stop_khz, color="#7fd6e8", lw=0.8, ls="--")
+        ax.set_xlim(2.2, t[-1])  # the sweep's last 0.8 s: 6.5 kHz up to 48 kHz in, and its fold
+        ax.set_title(title, fontsize=9, loc="left")
+        ax.set_xlabel("time (s); the input rises to 48 kHz")
+    axes[0].set_ylabel("kHz at the 48 kHz output")
+    axes[0].text(2.23, pass_khz - 1.6, "passband edge", color=SURFACE, fontsize=7)
+    axes[0].text(2.23, stop_khz + 0.5, "stop edge", color="#7fd6e8", fontsize=7)
+    cb = fig.colorbar(im_, ax=axes, shrink=0.85, pad=0.01)
+    cb.set_label("dB (0 = a full-scale sine)", color=SECONDARY)
+    cb.outline.set_edgecolor(BASELINE)
+    save(fig, "guard-band")
+    plt.close(fig)
+
+
 FIGURES = {
     "kaiser-window": lambda: fig_kaiser_window(),
     "kaiser-response": lambda: fig_kaiser_response(),
@@ -571,6 +611,7 @@ FIGURES = {
     "architecture": lambda: fig_architecture(),
     "alias-zone": lambda: fig_alias_zone(),
     "coverage-matrix": lambda: fig_coverage_matrix(),
+    "guard-band": lambda: fig_guard_band(),
 }
 
 
@@ -590,6 +631,7 @@ def main():
     fig_architecture()
     fig_alias_zone()
     macs, flags = fig_coverage_matrix()
+    fig_guard_band()
 
     with tempfile.TemporaryDirectory() as tmp:
         head_exe = os.path.join(tmp, "trace_head")

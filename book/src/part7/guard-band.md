@@ -150,6 +150,35 @@ At `economy` the Chebyshev II costs five times the nonlinear half-band it
 follows and the linear form twelve and a half: the price of a guard band at
 70 dB, still below the FIR half-band's 21 MACs for the Chebyshev.
 
+## Seeing it
+
+The plan asked for a demonstration made to show the filter to others, and
+`rational/notebooks/guard_band_demo.ipynb` is it: a logarithmic sweep from
+20 Hz to just below 48 kHz at −6 dBFS, through the C ABI, so through the
+shipping C++, down by 2 to 48 kHz at `economy`, every configuration on one
+fixed scale from 0 to −140 dB. The figure is drawn by the same code
+(`rational/notebooks/iir_measure.py`, called by `scripts/book_figures.py`):
+the sweep's last 0.8 seconds, where it climbs past the low Nyquist and folds
+back down as an alias.
+
+![A sweep through the recursive half-band decimator at economy, 96 to 48 kHz: alone, its alias folds back bright through the guard band; with either form after it, the alias is dark from the stop edge up and faint in the guard band](../img/guard-band.svg)
+
+Alone, the half-band lets the fold through the guard band nearly whole. With
+either form after it the band above the stop edge goes dark, and the guard
+band keeps a faint trace, at about −A/2: the rule the orders were chosen by.
+The passband is dark in all three, as it always was. The notebook measures
+it too, frame by frame on the sweep: the worst alias in the guard band rises
+from −44 dB with the Chebyshev II to −23 dB without it, behind the nonlinear
+half-band, and above the stop edge from −80 dB to −7. It runs the
+interpolating mirror as well, where the same filter before an interpolator
+removes the images, and one configuration it cannot run through the C ABI:
+the filter before the decimator, at the high rate, is no named setting, so a
+scipy design stands in for it there, labelled as a reference. That one
+answers the plan's argument for placing the filter after the decimator: the
+same order before it leaves the band above the stop edge at −13 dB, and the
+order that removes the same band before it, 17, costs 90 multiplies per
+output against the 20 after.
+
 ## The residue the maintainer kept
 
 The flush window is the recursive stage's rule: in floating point, the
