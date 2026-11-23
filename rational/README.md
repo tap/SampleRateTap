@@ -395,9 +395,10 @@ longer; they are the rows marked Q15:
 The near-linear variant with the linear form keeps an exact delay (its delay path plus the FIR's),
 so that chain enters DspTap's round-trip scaffold; the Chebyshev II makes any chain's phase
 nonlinear. A mixed chain is the caller's `tap::dsp::chain` (R27): no named IIR chain and no row of
-the coverage matrix. A chain that holds a `tap::dsp::chain` (`down_by8`, say) composes and
-processes, but cannot `flush()`, since a chain reports no `window_frames()`: write its stages out
-flat.
+the coverage matrix. A chain that holds a `tap::dsp::chain` (`down_by8`, say) composes, processes
+and, since DspTap 0.5.0, flushes, as zero padding bit for bit: a chain reports `window_frames()`, a
+bound valid from any state, so the flush writes the frames the stages written out flat would and
+possibly a few more, all silence.
 
 - **The aliases** (`rational.guard_band.AliasesLandOnlyAboveThePassbandEdge`, decimating by 2):
   in the passband −71.4 dB or below at the 70 dB settings and −123.9 dB at `transparent`, with

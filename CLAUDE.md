@@ -58,7 +58,7 @@ made this tree (sections 5–6). Do not re-derive what it settles.
   chains by 4, 8 and 16 named by intent, `docs/X4_X8_PLAN.md`, the old-to-new names in `CHANGELOG.md`;
   0.9.0 with `rational`'s recursive stages and guard band filter, `docs/IIR_PLAN.md`, their C ABI,
   notebooks and ratchet workloads).
-- **The DspTap floor (A9).** Each umbrella header also defines `TAP_SR_DSPTAP_MINIMUM` (0.4.0)
+- **The DspTap floor (A9).** Each umbrella header also defines `TAP_SR_DSPTAP_MINIMUM` (0.5.0)
   token-identically and `static_assert`s it against DspTap's `TAP_DSP_VERSION`
   (`tap/dsp/version.h`); `family.VersionMacrosAgree` checks the three agree. DspTap is tagged on its
   own cadence (Q4): a commit that moves `submodules/dsptap` names the tag it pins, and raising the
