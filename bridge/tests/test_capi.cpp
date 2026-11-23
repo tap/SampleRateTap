@@ -30,9 +30,9 @@ namespace {
             static_cast<unsigned>((TAP_SR_VERSION_MAJOR << 16) | (TAP_SR_VERSION_MINOR << 8) | TAP_SR_VERSION_PATCH);
         const unsigned v = tap_sr_bridge_version();
         EXPECT_EQ(v, k_packed);
-        EXPECT_EQ(v, 0x000800u); // 0.8.0
+        EXPECT_EQ(v, 0x000900u); // 0.9.0
         EXPECT_EQ(v >> 16, 0u);
-        EXPECT_EQ((v >> 8) & 0xFFu, 8u);
+        EXPECT_EQ((v >> 8) & 0xFFu, 9u);
         EXPECT_EQ(v & 0xFFu, 0u);
     }
 

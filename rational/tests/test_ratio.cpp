@@ -22,7 +22,7 @@ namespace {
 
     TEST(Ratio, VersionIsTheFamilys) {
         EXPECT_EQ(TAP_SR_VERSION_MAJOR, 0);
-        EXPECT_EQ(TAP_SR_VERSION_MINOR, 8); // 0.8.0 since X-b (0.7.0 from A13, 0.6.0 from the audit, R11)
+        EXPECT_EQ(TAP_SR_VERSION_MINOR, 9); // 0.9.0 since IIR-d (0.8.0 X-b, 0.7.0 A13, 0.6.0 the audit, R11)
         EXPECT_EQ(TAP_SR_VERSION_PATCH, 0);
     }
 
