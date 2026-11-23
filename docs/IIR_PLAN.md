@@ -1,7 +1,28 @@
 # Recursive polyphase stages for `rational` (the IIR options): plan
 
-Status: **v14, 2026-11-23: IIR-a, IIR-b and IIR-c landed with IIR-c's follow-up (#115) and
-the DspTap 0.4.0 pin move (#116); IIR-d, the plan's last step, in review.** v14 records the
+Status: **v15, 2026-11-23: every step landed: IIR-a, IIR-b, IIR-c with its follow-up (#115)
+and the DspTap 0.4.0 pin move (#116), and IIR-d (#117, SampleRateTap 0.9.0).** v15 corrects
+the FIR figures sections 2.2 and 2.4 still quoted from before X17 (`docs/X4_X8_PLAN.md`, X-a2,
+`rational/PLAN.md` v0.17), the designer's Kaiser β taken for A + 4 dB since:
+- **Section 2.4's account of the ×8 chain.** It described the audit's finding as the present
+  state: the designer taking β for A dB, so the relaxed half-band missed the pin search's
+  A + 1 dB margin until m = 7. That floor was the designer's, not the Kaiser fit's
+  (`rational/PLAN.md` 2.1): since X17 the relaxed `economy` half-band is m = 5 at divisor 2
+  and m = 4 at divisors 3 to 12, and with the 4th-band stage admitted (X-a3) ↓4 · ↓2 is still
+  the cheapest ×8 at 71 MACs per output, against 79 for three half-bands.
+- **The FIR rows of section 2.4's cost table**, now the coverage matrix's chains (R3: the
+  cheapest, or the fewest stages within 10 % of it): 21 / 43 / 71 / 143 MACs per output at
+  `economy` and 51 / 89 / 149 / 277 at `transparent`, for ×2 to ×16, where they read
+  23 / 53 / 85 / 157 and 63 / 105 / 181 / 301. The recursive cascades' lead narrows (×8 at
+  `economy`: 16 against 71, where it read 16 against 85); no decision of this plan changes,
+  and section 2.4's four-path question concerned the recursive stages alone.
+- **Section 2.2's FIR half-band**, now the shipping pins: m = 8 / 10 / 12 / 25 per profile
+  (it read 9 / 11 / 13 / 31), ↑2 / ↓2 at 8.5 / 17, 10.5 / 21, 12.5 / 25 and 25.5 / 51 MACs
+  per output, and a flat passband delay of 19 and 49 high-rate samples at `economy` and
+  `transparent` (it read 21 and 61). IIR-0's instruction counts stay as measured, against
+  the FIR stage of their time; the shipping stages' are the ratchet's (IIR-d).
+
+v14, 2026-11-23, recorded the
 maintainer's decisions for IIR-d, asked on 2026-11-23, each the recommended option, and IIR-d's
 results (section 5 item 5):
 - **I11, decided as recommended, all of it in IIR-d** (question 16's remaining part): the C ABI's
@@ -282,23 +303,23 @@ multiply in the one-multiplier form. The nonlinear variant is the elliptic
 the passband ripple is tied to the stopband (δp ≈ δs² / 2: at 70 dB, flat to about
 4·10⁻⁷ dB).
 
-### 2.2 Sizes against today's FIR half-band (*est.*, then **IIR-0**)
+### 2.2 Sizes against the FIR half-band (*est.*, then **IIR-0**; the FIR's since X17, v15)
 
 Elliptic orders from `scipy.signal.ellipord` at each profile's (A, passband edge), the
 stopband edge mirrored about a quarter of the high rate; the FIR column is `rational`'s
-pinned half-band (m taps per branch, `design.h`). MACs per output frame per channel. The
+pinned half-band (m taps per branch, `design.h`; X17's pins, v15). MACs per output frame per channel. The
 FIR interpolator counts its centre phase (one tap) as a MAC, so its ↑2 costs (2m + 1) / 2:
 
 | profile | A | elliptic N | allpass coefficients | IIR ↑2 / ↓2 | FIR m | FIR ↑2 / ↓2 |
 |---|---:|---:|---:|---:|---:|---:|
-| `super_economy` | 70 dB | 9 | 4 | 2 / 4 | 9 | 9.5 / 19 |
-| `economy` | 70 dB | 9 | 4 | 2 / 4 | 11 | 11.5 / 23 |
-| `balanced` | 70 dB | 9 | 4 | 2 / 4 | 13 | 13.5 / 27 |
-| `transparent` | 120 dB | 17 | 8 | 4 / 8 | 31 | 31.5 / 63 |
+| `super_economy` | 70 dB | 9 | 4 | 2 / 4 | 8 | 8.5 / 17 |
+| `economy` | 70 dB | 9 | 4 | 2 / 4 | 10 | 10.5 / 21 |
+| `balanced` | 70 dB | 9 | 4 | 2 / 4 | 12 | 12.5 / 25 |
+| `transparent` | 120 dB | 17 | 8 | 4 / 8 | 25 | 25.5 / 51 |
 
 Passband group delay, nonlinear variant, in high-rate samples, from the two-path design
 itself (the closed-form coefficients of I4): `economy` 2.4 … 5.0 (DC to the 3/8 edge)
-against the FIR's flat 21; `transparent` 4.2 … 11.9 against 61. (v7's 2.5 … 5.9 and
+against the FIR's flat 19 (21 before X17); `transparent` 4.2 … 11.9 against 49 (61). (v7's 2.5 … 5.9 and
 4.2 … 13.4 came from an ordinary elliptic low-pass, which the two-path structure cannot
 realize; **IIR-0** confirms 2.40 … 4.96 and 4.16 … 11.92.)
 
@@ -312,11 +333,11 @@ realize; **IIR-0** confirms 2.40 … 4.96 and 4.16 … 11.92.)
 | `balanced` | 8 | 4 + 0 | −74.6 dB | 16 |
 | `transparent` | 19 | 9 + 1 | −121.2 dB | 38 |
 
-Its passband delay strays at most 0.027 samples from those numbers, below the FIR's flat 21
-and 61. That is 1.25 to 2.4 times the nonlinear variant's multiplies (v8 guessed two to
+Its passband delay strays at most 0.027 samples from those numbers, below the FIR's flat 19
+and 49 (21 and 61 before X17). That is 1.25 to 2.4 times the nonlinear variant's multiplies (v8 guessed two to
 three), and the only active constraint is the stopband.
 
-**Instructions (IIR-0).** Against today's FIR stage, the IIR stage counts 3 to 7 times fewer
+**Instructions (IIR-0).** Against the FIR stage of the time (v0.7's pins, before X17), the IIR stage counts 3 to 7 times fewer
 instructions in Q15, and in float 113 times fewer on the M33, where the FIR's float path
 accumulates in soft double. In the IIR stages themselves, fixed point counts more
 instructions than float on the M33, M55 and Hexagon.
@@ -405,13 +426,15 @@ from about 22.8 kHz, with the zero at 24 kHz.
 ### 2.4 Factor 4 inside a chain: one four-path stage or two half-bands (v2; **IIR-0**)
 
 **Why ask.** For the FIR stages, the ×4 / ×8 / ×16 plan measured that the cheapest ×8 chain
-at the 70 dB tiers is ↓4 · ↓2 with a single 4th-band stage: 85 MACs per output against 113
-for three half-bands at `economy`, with today's designer. The audit found the cause: the
-designer takes its Kaiser β for A dB (`design.h:301`, `nyquist.h:214`) while the pin search
-accepts a design only at A + 1 dB, so the relaxed half-band misses the margin until m = 7
-at design divisors 2 to 4. (It relaxes further past them: m = 4 at divisors 6 to 9 and
-m = 3 at 12 and 16.) With β taken for A + 2 dB, three half-bands tie ↓4 · ↓2 at ×8. That
-plan's X-0 measures both designers (its X3); the FIR rows below are today's designer's.
+at the 70 dB tiers is ↓4 · ↓2 with a single 4th-band stage. With the designer of v2's time
+it cost 85 MACs per output against 113 for three half-bands at `economy`, and the audit found
+why: the designer took its Kaiser β for A dB while the pin search accepts a design only at
+A + 1 dB, so the relaxed half-band missed the margin until m = 7 at design divisors 2 to 4.
+That floor was the designer's, not the Kaiser fit's (v15): since X17 (that plan's X-a2) the
+designer takes β for A + 4 dB, the relaxed `economy` half-band is m = 5 at divisor 2 and
+m = 4 at divisors 3 to 12, and with the 4th-band stage admitted (X-a3) ↓4 · ↓2 is still the
+cheapest ×8, at 71 MACs per output against 79 for three half-bands. The FIR rows below are
+the coverage matrix's chains on X17's pins.
 
 **Why the IIR answer may differ.** A relaxed IIR half-band keeps getting cheaper as its
 transition widens, down to a single coefficient (N3). Each stage of a half-band cascade is
@@ -426,7 +449,7 @@ power complementarity, are:
 
 Stages run from high rate to low. An order-N half-band has (N − 1) / 2 allpass
 coefficients, and a decimator spends one multiply per coefficient per output. So in MACs
-per output frame per channel (decimating), against the cheapest FIR chain measured.
+per output frame per channel (decimating), against the FIR chain the coverage matrix selects.
 The relaxed rows need I13's designs per divisor; without them every stage runs the
 profile's full design. **IIR-0** confirms the orders above and these counts, and adds the
 near-linear rows:
@@ -437,10 +460,10 @@ near-linear rows:
 | IIR half-band cascade, `economy`, unrelaxed | 4 | 12 | 28 | 60 |
 | near-linear cascade, `economy`, relaxed (I13) | 7 | 13 | 21 | 29 |
 | near-linear cascade, `economy`, unrelaxed | 7 | 21 | 49 | 105 |
-| cheapest FIR chain, `economy` (**measured**, today's designer) | 23 | 53 | 85 | 157 |
+| the matrix's FIR chain, `economy` (**measured**, X17's pins) | 21 | 43 | 71 | 143 |
 | IIR half-band cascade, `transparent`, relaxed (I13) | 8 | 16 | 28 | 44 |
 | IIR half-band cascade, `transparent`, unrelaxed | 8 | 24 | 56 | 120 |
-| cheapest FIR chain, `transparent` (**measured**, today's designer) | 63 | 105 | 181 | 301 |
+| the matrix's FIR chain, `transparent` (**measured**, X17's pins) | 51 | 89 | 149 | 277 |
 
 **What a four-path stage has to beat.** Inside ×8 at `economy`, the top two half-bands
 (N5 and N5) cost 8 + 4 = 12 MACs per chain output. A four-path stage
@@ -1101,7 +1124,7 @@ reserves, with P = 4.
 5. **IIR-d, the C ABI, the binding, the notebooks, the ratchet workloads and ceilings**
    (I11, section 4), and the release: SampleRateTap 0.9.0 (D13: the three umbrella headers
    and the root `project()`), with its tested-pairs row; the maintainer tags `v0.9.0`.
-   *In review (v14):* as v14's status states it, `rational/PLAN.md` R29 and the v0.25 record
+   *Landed (#117, SampleRateTap 0.9.0; v14):* as v14's status states it, `rational/PLAN.md` R29 and the v0.25 record
    with every number.
 
 **The order (decided, v7; DspTap's part decided v8).**
