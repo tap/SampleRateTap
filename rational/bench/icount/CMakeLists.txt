@@ -13,7 +13,12 @@
 # workload to run the 4th-band stage (docs/X4_X8_PLAN.md X3); the matrix's
 # 1/16 chain at its 120 dB tier (down 8 . down 2) in float at transparent
 # joined with X-a4, the first workload to run a chain only that tier selects
-# and the first to run the 8th-band stage (X4).
+# and the first to run the 8th-band stage (X4); and with IIR-d the recursive
+# workloads (docs/IIR_PLAN.md section 4): the recursive half-band by 2 up and
+# down, in float and Q15, nonlinear (iir_) and near-linear (iir_near_), at
+# economy, alone and with the guard band filter in each form (_cheby, the
+# Chebyshev II; _linear, the type II FIR) before the interpolator or after the
+# decimator. The four-path stage does not ship and has none.
 set(_rational_icount_scenarios
     up2_float_eco:0
     down2_float_eco:1
@@ -30,7 +35,31 @@ set(_rational_icount_scenarios
     ratio23_float_eco:12
     ratio23_q15_eco:13
     down4_down2_q15_eco:14
-    down8_down2_float_tr:15)
+    down8_down2_float_tr:15
+    iir_up2_float_eco:16
+    iir_up2_float_eco_cheby:17
+    iir_up2_float_eco_linear:18
+    iir_down2_float_eco:19
+    iir_down2_float_eco_cheby:20
+    iir_down2_float_eco_linear:21
+    iir_up2_q15_eco:22
+    iir_up2_q15_eco_cheby:23
+    iir_up2_q15_eco_linear:24
+    iir_down2_q15_eco:25
+    iir_down2_q15_eco_cheby:26
+    iir_down2_q15_eco_linear:27
+    iir_near_up2_float_eco:28
+    iir_near_up2_float_eco_cheby:29
+    iir_near_up2_float_eco_linear:30
+    iir_near_down2_float_eco:31
+    iir_near_down2_float_eco_cheby:32
+    iir_near_down2_float_eco_linear:33
+    iir_near_up2_q15_eco:34
+    iir_near_up2_q15_eco_cheby:35
+    iir_near_up2_q15_eco_linear:36
+    iir_near_down2_q15_eco:37
+    iir_near_down2_q15_eco_cheby:38
+    iir_near_down2_q15_eco_linear:39)
 
 foreach(_sc IN LISTS _rational_icount_scenarios)
     string(REPLACE ":" ";" _parts "${_sc}")
@@ -59,11 +88,12 @@ foreach(_sc IN ITEMS callmax_up2_float:0 callmax_down2_float:1 callmax_up2_q15:2
 endforeach()
 
 # The host ratchet's workloads (host_main.cpp, the roadmap's A8): the float stage in 128-frame blocks, up and down by 2,
-# and down by 4 since X-a3, stereo and 12 channels, counted under callgrind by scripts/icount.py
+# down by 4 since X-a3, and the recursive half-band up and down by 2 since IIR-d (iir_up2, iir_down2: iir_converter,
+# the nonlinear variant), stereo and 12 channels, counted under callgrind by scripts/icount.py
 # --target host. Named tap_sr_rational_hostcount_*, apart from the QEMU glob;
 # host builds only.
 if(NOT CMAKE_CROSSCOMPILING)
-    foreach(_sc IN ITEMS up2:0 down2:1 down4:2)
+    foreach(_sc IN ITEMS up2:0 down2:1 down4:2 iir_up2:3 iir_down2:4)
         string(REPLACE ":" ";" _parts "${_sc}")
         list(GET _parts 0 _name)
         list(GET _parts 1 _dir)
@@ -78,11 +108,20 @@ endif()
 
 # The size and stack probes (probe_main.cpp; scripts/ceilings.py measures
 # them against bench/ceilings.json): the by-2 pair, and since X-a3 a second
-# set, the 4th-band pair (up 4, down 4; tap_sr_rational_probe4_<fmt>).
+# set, the 4th-band pair (up 4, down 4; tap_sr_rational_probe4_<fmt>); and
+# since IIR-d three more, the recursive half-band pair in the nonlinear
+# variant (iir), the near-linear one (iirnear), and the nonlinear pair with
+# the guard band filter's Chebyshev II in a tap::dsp::chain (iirgb).
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/probe/probes.cmake)
 tap_sr_add_probes(rational probe_main.cpp tap::sr::rational tap_sr_rational_warnings)
 tap_sr_add_probes(rational probe_main.cpp tap::sr::rational tap_sr_rational_warnings
                   SUFFIX 4 DEFINITIONS TAP_SR_PROBE_BAND=4)
+tap_sr_add_probes(rational probe_main.cpp tap::sr::rational tap_sr_rational_warnings
+                  SUFFIX iir DEFINITIONS TAP_SR_PROBE_IIR=1)
+tap_sr_add_probes(rational probe_main.cpp tap::sr::rational tap_sr_rational_warnings
+                  SUFFIX iirnear DEFINITIONS TAP_SR_PROBE_IIR=2)
+tap_sr_add_probes(rational probe_main.cpp tap::sr::rational tap_sr_rational_warnings
+                  SUFFIX iirgb DEFINITIONS TAP_SR_PROBE_IIR=3)
 
 # Cross-resampler comparison workloads (docs/COMPARISON.md): the same fixed
 # task through rational and through libsamplerate, r8brain and SpeexDSP,

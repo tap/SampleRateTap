@@ -3,7 +3,9 @@
 // The host ratchet's workloads (the roadmap's A8; scripts/icount.py --target
 // host): the float stage as a host runs it, process() in 128-frame blocks at
 // the default profile (economy), up and down by 2 and down by 4 (the
-// 4th-band stage, since X-a3), counted under callgrind at 2 and 12 channels.
+// 4th-band stage, since X-a3), and since IIR-d the recursive half-band by 2
+// up and down (iir_converter, the nonlinear variant), counted under
+// callgrind at 2 and 12 channels.
 //
 // Only tap_sr_host_counted() is counted (callgrind --toggle-collect): the
 // construction, the input fixture and its libm sin() calls run before it,
@@ -11,7 +13,8 @@
 // loop alone and the dynamic loader, libc start-up and the environment
 // never reach it.
 //
-// TAP_SR_RATIONAL_HC_DIR: 0 = up 2, 1 = down 2, 2 = down 4
+// TAP_SR_RATIONAL_HC_DIR: 0 = up 2, 1 = down 2, 2 = down 4, 3 = the recursive
+//                         up 2, 4 = the recursive down 2
 // TAP_SR_RATIONAL_HC_CH:  channel count (2 or 12)
 #include <cmath>
 #include <cstddef>
@@ -34,8 +37,12 @@ namespace {
     using converter = tap::sr::rational::converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::up2>;
 #elif TAP_SR_RATIONAL_HC_DIR == 1
     using converter = tap::sr::rational::converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::down2>;
-#else
+#elif TAP_SR_RATIONAL_HC_DIR == 2
     using converter = tap::sr::rational::converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::down4>;
+#elif TAP_SR_RATIONAL_HC_DIR == 3
+    using converter = tap::sr::rational::iir_converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::up2>;
+#else
+    using converter = tap::sr::rational::iir_converter<TAP_SR_RATIONAL_HC_CH, tap::sr::rational::down2>;
 #endif
 
     constexpr std::size_t k_ch     = TAP_SR_RATIONAL_HC_CH;
