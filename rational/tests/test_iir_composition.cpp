@@ -137,12 +137,11 @@ namespace {
             return fir_down_t(basic_stage<S, Ch, down2>{p}, guard_t{settings(p, half_band_kind::fir)});
         }
         // Before a near-linear interpolator, and after a near-linear cascade by 8.
-        using nl_up_t     = tap::dsp::chain<guard_t, basic_iir_stage<S, Ch, up2, k_near_linear>>;
-        using cascade_t   = tap::dsp::chain<iir_down_by<S, Ch, k_near_linear, 8>, guard_t>;
+        using nl_up_t   = tap::dsp::chain<guard_t, basic_iir_stage<S, Ch, up2, k_near_linear>>;
+        using cascade_t = tap::dsp::chain<iir_down_by<S, Ch, k_near_linear, 8>, guard_t>;
+        // down_by8, itself a tap::dsp::chain, inside the caller's chain: it
+        // flushes since DspTap 0.5.0 (a chain reports window_frames()).
         using named_fir_t = tap::dsp::chain<down_by8<S, Ch>, guard_t>;
-        // down_by8's stages flattened (a tap::dsp::chain reports no
-        // window_frames(), so a chain holding a chain cannot flush).
-        using flat_fir_t = tap::dsp::chain<basic_stage<S, Ch, down4>, basic_stage<S, Ch, down2>, guard_t>;
         static nl_up_t make_nl_up(const profile& p) {
             return nl_up_t(guard_t{settings(p, half_band_kind::near_linear)},
                            basic_iir_stage<S, Ch, up2, k_near_linear>{p});
@@ -153,10 +152,6 @@ namespace {
         }
         static named_fir_t make_named_fir(const profile& p) {
             return named_fir_t(down_by8<S, Ch>{p}, guard_t{settings(p, half_band_kind::fir)});
-        }
-        static flat_fir_t make_flat_fir(const profile& p) {
-            return flat_fir_t(basic_stage<S, Ch, down4>{p.relaxed({2, 1})}, basic_stage<S, Ch, down2>{p},
-                              guard_t{settings(p, half_band_kind::fir)});
         }
     };
 
@@ -326,8 +321,8 @@ namespace {
                 // After down_by8's FIR stages: the linear form keeps the chain
                 // an FIR chain, exact without flush-to-zero too.
                 l = G == k_fir_form ? std::array<double, 2>{0.0, 0.0} : limit(false, fir_guard_cycles);
-                expect_flush_is_zero_padding<typename m::flat_fir_t>([&] { return m::make_flat_fir(p); }, 800, l[0],
-                                                                     l[1]);
+                expect_flush_is_zero_padding<typename m::named_fir_t>([&] { return m::make_named_fir(p); }, 800, l[0],
+                                                                      l[1]);
             }
         };
         both.template operator()<k_chebyshev>();

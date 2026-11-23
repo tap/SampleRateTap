@@ -227,6 +227,7 @@ equal). A commit that moves `submodules/dsptap` names the DspTap tag it pins.
 | 0.7.0 | 0.2.0 | v0.2.0 |
 | 0.8.0 | 0.2.0 | v0.2.0 |
 | 0.9.0 | 0.4.0 | v0.4.0 |
+| unreleased (`main` since a chain that holds a chain flushes) | 0.5.0 | v0.5.0 |
 
 ## Provenance and license
 

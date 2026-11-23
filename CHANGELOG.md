@@ -7,6 +7,21 @@ the old spelling is removed, never aliased (D7), so it fails to compile, and
 `scripts/retired_words.txt` lists it. This file starts at 0.8.0; the releases before it
 are back-filled with the 1.0 release engineering (`docs/ROADMAP.md`, C3).
 
+## Unreleased
+
+### What breaks, and what to do
+
+1. **DspTap 0.5.0 is the floor** (`TAP_SR_DSPTAP_MINIMUM`, A9): every umbrella header
+   `static_assert`s it. A consumer that pins DspTap itself moves its pin to `v0.5.0`.
+
+### New in `rational`
+
+- **A chain that holds a chain flushes.** Since DspTap 0.5.0 a `tap::dsp::chain` reports
+  `window_frames()`, so a caller's chain that holds one of `rational`'s named chains
+  (`down_by8` beside a guard band filter, say) flushes, as zero padding bit for bit: the
+  flush writes the frames the same stages written out flat would, and possibly a few more,
+  all silence. The stages no longer need writing out flat.
+
 ## 0.9.0
 
 `rational`'s recursive stages and guard band filter (`docs/IIR_PLAN.md`: IIR-b, IIR-c #114,
