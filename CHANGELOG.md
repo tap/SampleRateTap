@@ -7,6 +7,63 @@ the old spelling is removed, never aliased (D7), so it fails to compile, and
 `scripts/retired_words.txt` lists it. This file starts at 0.8.0; the releases before it
 are back-filled with the 1.0 release engineering (`docs/ROADMAP.md`, C3).
 
+## 0.9.0
+
+`rational`'s recursive stages and guard band filter (`docs/IIR_PLAN.md`: IIR-b, IIR-c #114,
+its follow-up #115, the DspTap 0.4.0 pin #116, and IIR-d, the PR that tags this release).
+Additions to `rational` beside its FIR stages; nothing in `async`, `bridge` or `rational`'s
+existing API changes, and no FIR stage's output moves. `async` and `bridge` change only their
+version and their DspTap floor.
+
+### What breaks, and what to do
+
+1. **DspTap 0.4.0 is the floor** (`TAP_SR_DSPTAP_MINIMUM`, A9): every umbrella header
+   `static_assert`s it. A consumer that pins DspTap itself moves its pin to `v0.4.0` (the
+   guard band filter's Q15 rows and `quantize_symmetric_row_preserving_sum`; 0.3.0 brought
+   the recursive substrate). Nothing else to change.
+
+### New in `rational`
+
+- **The recursive half-band stages (IIR-b; R21 to R25, the family's D20).**
+  `basic_iir_stage<S, Ch, R, P>` (`iir_stage.h`) by 2, up or down, in the nonlinear
+  (elliptic two-path allpass) and the near-linear (one path a pure delay) phase variant at
+  every profile, in float, Q15 and Q31 (`iir_converter<Ch, R>`,
+  `iir_converter_near_linear<Ch, R>` and their `_q15` / `_q31` siblings), and their cascades
+  by 4, 8 and 16 with each stage relaxed to its divisor (`iir_down_by` / `iir_up_by`,
+  `iir_chain.h`). A recursive stage's latency is nominal (`nominal_latency_output_frames()`,
+  `group_delay_output_frames(f)`), never `latency_output_frames()`; the near-linear variant's
+  delay path is exact. Flushing subnormals in float is the host's job (I9).
+- **The guard band filter (IIR-c, #114, #115, #116; R26 to R28).**
+  `guard_band_filter<S, Ch, guard_phase>` (`guard_band.h`), a 1:1 stage that removes the
+  band every half-band leaves between the passband edge and the low Nyquist, placed by the
+  caller in a `tap::dsp::chain` after a decimator or before an interpolator: the odd-order
+  Chebyshev II (`guard_phase::nonlinear`) or the linear-phase type II FIR
+  (`guard_phase::linear`, an exact latency). Its named settings take the half-band they
+  serve, `guard_band_settings::economy(half_band_kind::nonlinear)` and its siblings, at the
+  orders 5 / 7 / 7 / 7 behind the nonlinear half-band and 7 / 7 / 7 / 11 behind the FIR and
+  near-linear ones; in Q15 the linear form runs DspTap's Q15 rows at the 70 dB settings.
+  The floating Chebyshev II of order 7 or more may hold a zero-input limit cycle under
+  flush-to-zero below 16 times the smallest normal, an honest limit (R28).
+- **The C ABI (IIR-d, I11).** Additions only: `tap_sr_rational_create_iir_format(direction,
+  factor, phase, profile, format, channels)` (factor 2 the stage, 4, 8 and 16 the cascades),
+  `tap_sr_rational_create_guard_band_format(form, half_band_kind, profile, format,
+  channels)` (named settings only), `tap_sr_rational_nominal_latency_output_frames` and
+  `tap_sr_rational_group_delay_output_frames`, with the constants
+  `TAP_SR_RATIONAL_DIRECTION_*`, `TAP_SR_RATIONAL_IIR_*`, `TAP_SR_RATIONAL_GUARD_*` and
+  `TAP_SR_RATIONAL_HALF_BAND_*`. Every generic entry point works on the new handles, except
+  that `tap_sr_rational_latency_output_frames` refuses a handle with no exact latency (a
+  recursive stage or cascade, the Chebyshev II) by writing 0 / 0, and
+  `tap_sr_rational_latency_seconds` returns NaN for it. The exported symbol set grows from
+  23 to 27; no existing symbol changes.
+- **The notebooks.** `rational/notebooks/iir_comparison.ipynb` measures the FIR half-band
+  against both recursive variants, alone and with each guard band form, at every profile;
+  `rational/notebooks/guard_band_demo.ipynb` demonstrates the guard band filter on a
+  logarithmic sweep. Both run the shipping C++ through the C ABI and are committed executed.
+- **The ratchet.** Twenty-four recursive workloads (↑2 and ↓2, float and Q15, both variants,
+  `economy`, alone and with each guard band form), the recursive ↑2 and ↓2 on the host at 2
+  and 12 channels, and three probe sets for the size and stack ceilings; every existing count
+  and ceiling is unchanged.
+
 ## 0.8.0
 
 `rational`'s ×4, ×8 and ×16 plan (`docs/X4_X8_PLAN.md`, PRs #107, #109, #110, #111 and
