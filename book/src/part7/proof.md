@@ -109,8 +109,8 @@ Bluetooth-adjacent M33 / M55 deployments that are the Q15 profile's whole
 purpose are FFI consumers too. A call in another format than the
 converter's returns 0 and touches nothing; every format is pinned bit for
 bit against the C++ `basic_chain` of that sample type. Twenty-three
-exported symbols, the library built with hidden visibility so that no C++
-leaks into the table, and the symbol set is a test
+exported symbols, twenty-seven since 0.9.0, the library built with hidden
+visibility so that no C++ leaks into the table, and the symbol set is a test
 (`rational.Family.ExportedSymbolsArePinned`, `nm` against a committed
 list, on every ELF and Mach-O host). The departure did
 not last: faced with one engine in this shape and two in the other, the
@@ -118,6 +118,25 @@ family chose the one, and the siblings adopted it — `create_format`,
 `format`, the `_q15` / `_q31` entry points, hidden visibility, the same
 three format values — so the three ABIs now differ only in what each
 engine names.
+
+The recursive stages and the guard band filter joined in 0.9.0 the same
+way, beside the entry points that were there, so no existing symbol
+changed. `tap_sr_rational_create_iir_format(direction, factor, phase,
+profile, format, channels)` names a recursive half-band by 2 or its cascade
+by 4, 8 or 16, and `tap_sr_rational_create_guard_band_format(form,
+half_band_kind, profile, format, channels)` the filter at a named setting:
+named settings only, as the chains are named. Every generic call works on
+them, and the one that cannot says so. A recursive stage has no exact
+latency in C++, so `tap_sr_rational_latency_output_frames` writes 0 / 0
+for it rather than a number it does not have; two double getters, the
+nominal latency and the group delay at a frequency, answer for every
+handle. The near-linear variant is refused too, although its delay path is
+exact: its passband's delay strays from that path by a hundredth of a
+frame, so the path is its nominal, not its latency. The linear guard band
+form, whose latency is exact, reports it. Two notebooks measure them through
+this ABI: `iir_comparison.ipynb`, the FIR half-band against both recursive
+variants with and without each form at every profile, and
+`guard_band_demo.ipynb`, the previous chapter's demonstration.
 
 The notebook, `rational/notebooks/matrix.ipynb`, is committed executed:
 all 182 rows at four profiles through the C ABIs, reproducing every one
@@ -178,7 +197,7 @@ ctest --test-dir build -R 'rational\.Family\.' --output-on-failure
 cmake -S rational/capi -B build_capi && cmake --build build_capi -j
 ctest --test-dir build -R 'rational\.CApi\.' --output-on-failure
 ctest --test-dir build -R 'rational\.Family\.ExportedSymbolsArePinned' --output-on-failure
-nm -D --defined-only build_capi/libtap_sr_rational_capi.so | grep -c ' T tap_sr_rational_'   # 23, by hand
+nm -D --defined-only build_capi/libtap_sr_rational_capi.so | grep -c ' T tap_sr_rational_'   # 27, by hand
 
 # The ratchet on one target (the plugin and toolchain as in bench/README):
 cmake -S . -B build-m55 -DCMAKE_BUILD_TYPE=Release \
@@ -187,6 +206,8 @@ cmake -S . -B build-m55 -DCMAKE_BUILD_TYPE=Release \
 cmake --build build-m55 -j
 python3 scripts/icount.py --engine rational --target m55 --build-dir build-m55 --plugin libinsncount.so
 
-# The matrix through the C ABIs, re-executed:
+# The matrix through the C ABIs, re-executed, and the recursive stages' notebooks:
 jupyter nbconvert --to notebook --execute --inplace rational/notebooks/matrix.ipynb
+jupyter nbconvert --to notebook --execute --inplace rational/notebooks/iir_comparison.ipynb
+jupyter nbconvert --to notebook --execute --inplace rational/notebooks/guard_band_demo.ipynb
 ```
