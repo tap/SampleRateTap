@@ -17,6 +17,15 @@
 // stage, then a half-band), 15 down8_down2_float_tr (the matrix's 1/16 chain
 // at its 120 dB tier since X-a4, X4: the 8th-band stage, then a half-band,
 // in float at transparent as the by-2 pair's transparent workloads are).
+// 16 to 39, the recursive workloads since IIR-d (docs/IIR_PLAN.md section 4):
+// a recursive half-band by 2 up and down, in float and Q15, in either
+// variant, at economy, alone and with the guard band filter in each form
+// at the setting behind its half-band (before the interpolator, after the
+// decimator, in a tap::dsp::chain): 16 + i with i = 12 v + 6 q + 3 d + g,
+// v = 0 nonlinear / 1 near-linear, q = 0 float / 1 Q15, d = 0 up / 1 down,
+// g = 0 alone / 1 Chebyshev II / 2 linear form; their names in
+// CMakeLists.txt (iir_ and iir_near_, then up2 or down2, the format, eco,
+// and _cheby or _linear).
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -94,6 +103,42 @@ namespace {
         return stream(conv);
     }
 
+    /// A recursive half-band by 2 in variant P, alone (Guard 0) or with the
+    /// guard band filter in the Chebyshev II (1) or the linear form (2) at
+    /// the setting behind its half-band: before the interpolator, after the
+    /// decimator.
+    template <typename S, rat::iir_phase P, bool Up, int Guard>
+    double iir_workload(const rat::profile& p) {
+        using stage_t = rat::basic_iir_stage<S, k_channels, std::conditional_t<Up, rat::up2, rat::down2>, P>;
+        if constexpr (Guard == 0) {
+            stage_t conv(p);
+            return stream(conv);
+        }
+        else {
+            constexpr rat::guard_phase    form = Guard == 1 ? rat::guard_phase::nonlinear : rat::guard_phase::linear;
+            constexpr rat::half_band_kind kind =
+                P == rat::iir_phase::nonlinear ? rat::half_band_kind::nonlinear : rat::half_band_kind::near_linear;
+            using guard_t                    = rat::guard_band_filter<S, k_channels, form>;
+            const rat::guard_band_settings s = rat::guard_band_settings::economy(kind);
+            if constexpr (Up) {
+                tap::dsp::chain<guard_t, stage_t> conv(guard_t{s}, stage_t{p});
+                return stream(conv);
+            }
+            else {
+                tap::dsp::chain<stage_t, guard_t> conv(stage_t{p}, guard_t{s});
+                return stream(conv);
+            }
+        }
+    }
+
+    /// Recursive workload i (scenario 16 + i; the file header's encoding).
+    template <int I>
+    double iir_scenario(const rat::profile& p) {
+        using sample           = std::conditional_t<(I / 6) % 2 == 1, std::int16_t, float>;
+        constexpr auto variant = I / 12 == 1 ? rat::iir_phase::near_linear : rat::iir_phase::nonlinear;
+        return iir_workload<sample, variant, (I / 3) % 2 == 0, I % 3>(p);
+    }
+
     double run() {
         [[maybe_unused]] const rat::profile eco = rat::profile::economy();
         [[maybe_unused]] const rat::profile tr  = rat::profile::transparent();
@@ -130,6 +175,8 @@ namespace {
 #elif TAP_SR_RATIONAL_SC == 15
         rat::down8_down2<float, k_channels> conv(tr);
         return stream(conv);
+#elif TAP_SR_RATIONAL_SC >= 16 && TAP_SR_RATIONAL_SC <= 39
+        return iir_scenario<TAP_SR_RATIONAL_SC - 16>(eco);
 #else
         // The Q15 by-4 chain's workload (scenario 8) with its stream removed:
         // the chain's construction (two designs at pinned lengths, no search,

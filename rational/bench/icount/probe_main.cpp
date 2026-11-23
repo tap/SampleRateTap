@@ -4,12 +4,20 @@
 // by-2 pair in one format at the default profile (economy), stereo, an up2
 // stage and a down2 stage each streaming 32-frame blocks through process();
 // and, as a second set since X-a3, the 4th-band pair, an up4 stage and a
-// down4 stage the same way. Bare-metal targets have no argv, so the format
-// and the band are chosen at compile time.
+// down4 stage the same way; and since IIR-d three recursive sets: the
+// recursive half-band pair (up2, down2) in the nonlinear variant, in the
+// near-linear one, and the nonlinear pair with the guard band filter's
+// Chebyshev II at economy's setting behind it (before the interpolator,
+// after the decimator, each a tap::dsp::chain). Bare-metal targets have no
+// argv, so the format, the band and the set are chosen at compile time.
 //
 // TAP_SR_PROBE_TYPE:  0 = float, 1 = Q15, 2 = Q31
 // TAP_SR_PROBE_BAND:  2 = the by-2 pair (tap_sr_rational_probe_<fmt>), 4 =
 //                     the 4th-band pair (tap_sr_rational_probe4_<fmt>)
+// TAP_SR_PROBE_IIR:   0 = the FIR stages above; 1 = the recursive pair,
+//                     nonlinear (tap_sr_rational_probeiir_<fmt>); 2 = the
+//                     recursive pair, near-linear (probeiirnear); 3 = the
+//                     nonlinear pair with the Chebyshev II (probeiirgb)
 // TAP_SR_PROBE_STACK: 0 = the size probe (no stdio: the image is the
 //                     startup, both stages and what they pull in,
 //                     measured for its .text and .rodata ceilings), 1 = the
@@ -23,6 +31,15 @@
 #include <type_traits>
 
 #include "tap/sr/rational/stage.h"
+
+#ifndef TAP_SR_PROBE_IIR
+#define TAP_SR_PROBE_IIR 0
+#endif
+#if TAP_SR_PROBE_IIR
+#include "tap/dsp/chain.h"
+#include "tap/sr/rational/guard_band.h"
+#include "tap/sr/rational/iir_stage.h"
+#endif
 
 #if TAP_SR_PROBE_STACK
 #include <algorithm>
@@ -49,7 +66,33 @@ namespace {
 #endif
 
     constexpr std::size_t k_ch = 2;
-#if TAP_SR_PROBE_BAND == 4
+#if TAP_SR_PROBE_IIR
+    namespace rat = tap::sr::rational;
+    constexpr rat::iir_phase k_variant =
+        TAP_SR_PROBE_IIR == 2 ? rat::iir_phase::near_linear : rat::iir_phase::nonlinear;
+    using iir_up   = rat::basic_iir_stage<sample, k_ch, rat::up2, k_variant>;
+    using iir_down = rat::basic_iir_stage<sample, k_ch, rat::down2, k_variant>;
+#if TAP_SR_PROBE_IIR == 3
+    using guard      = rat::guard_band_filter<sample, k_ch, rat::guard_phase::nonlinear>;
+    using up_stage   = tap::dsp::chain<guard, iir_up>;
+    using down_stage = tap::dsp::chain<iir_down, guard>;
+    up_stage make_up() {
+        return up_stage(guard{rat::guard_band_settings::economy(rat::half_band_kind::nonlinear)}, iir_up{});
+    }
+    down_stage make_down() {
+        return down_stage(iir_down{}, guard{rat::guard_band_settings::economy(rat::half_band_kind::nonlinear)});
+    }
+#else
+    using up_stage   = iir_up;
+    using down_stage = iir_down;
+    up_stage make_up() {
+        return up_stage{};
+    }
+    down_stage make_down() {
+        return down_stage{};
+    }
+#endif
+#elif TAP_SR_PROBE_BAND == 4
     using up_stage   = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::up4>;
     using down_stage = tap::sr::rational::basic_stage<sample, k_ch, tap::sr::rational::down4>;
 #else
@@ -86,8 +129,13 @@ namespace {
 } // namespace
 
 int main() {
+#if TAP_SR_PROBE_IIR
+    up_stage   up   = make_up();
+    down_stage down = make_down();
+#else
     up_stage   up;
     down_stage down;
+#endif
     for (std::size_t i = 0; i < k_block * k_ch; ++i) {
         g_in[i] = triangle<sample>(i);
     }

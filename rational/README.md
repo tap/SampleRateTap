@@ -44,8 +44,9 @@ sample-format traits, the dot kernels and the row-sum quantization).
 > and ↓8 attain −71.8 / −72.9 dB, as ↑6 and ↑8 do; a mixed ratio going down
 > holds its rows at a power-of-two gain, shifted out the same way; the relaxed designs a chain runs are
 > measured too, and since the designer's β was re-tuned (X17) every one of them attains 70 dB as well, PLAN.md section 6). The C ABI, the executed coverage-matrix notebook and
-> the instruction-count ratchet landed at M6 (below). The
-> plan is authoritative: charter, the decisions R1–R25, the generated
+> the instruction-count ratchet landed at M6 (below); since 0.9.0 they cover the
+> recursive stages and the guard band filter too (IIR-d). The
+> plan is authoritative: charter, the decisions R1–R29, the generated
 > matrix, layout, test strategy, non-goals and risks.
 
 ## Quick start
@@ -514,8 +515,19 @@ compile-fail charter test. `cmake -S SampleRateTap/rational` configures it on
 its own. The notebooks are committed executed; re-run them with
 `jupyter nbconvert --to notebook --execute --inplace notebooks/<name>.ipynb`
 in the root `requirements.lock` environment when what they measure changes:
-`design_spike.ipynb` (the M2 pins, an independent numpy leg) and
-`matrix.ipynb` (the coverage matrix through the C ABIs, below).
+`design_spike.ipynb` (the M2 pins, an independent numpy leg),
+`matrix.ipynb` (the coverage matrix through the C ABIs, below), and since
+0.9.0 `iir_comparison.ipynb` (the FIR half-band against both recursive
+variants, alone and with each guard band form, at every profile: MACs,
+latency, the response, the aliases and the images) and
+`guard_band_demo.ipynb` (the guard band filter on a logarithmic sweep:
+spectrograms on one fixed 0 to −140 dB scale, a waterfall, the worst
+aliases and images, the group delays, listening clips written outside the
+tree). Both run the shipping C++ through the C ABI, with the measurements
+they share in `notebooks/iir_measure.py`, which also draws the book's
+Part VII figure (`scripts/book_figures.py guard-band`). One configuration
+of the demonstration is a scipy design, labelled as a reference: the
+filter before the decimator, at the high rate, is no named setting.
 
 ### C ABI
 
@@ -547,21 +559,58 @@ converters behind the handle, the frames split to them and interleaved back,
 bit for bit the native type of that count
 (`CApi.FanOutIsTheNativeConverterBitForBit`, 3, 6 and 12 channels in every
 format; A13's K8, option (b)). `notebooks/tap_sr_rational_py.py` is the
-ctypes binding the notebook measures the shipping C++ through
+ctypes binding the notebooks measure the shipping C++ through
 (`Chain(name, fmt="q15")` for the fixed-point formats).
+
+Since 0.9.0 the recursive stages and the guard band filter are in the C ABI
+too, beside the entry points that were there, so no existing symbol changed
+(the set grows from 23 to 27, `rational.Family.ExportedSymbolsArePinned`):
+
+- `tap_sr_rational_create_iir_format(direction, factor, phase, profile,
+  format, channels)`: a recursive half-band by 2 (`basic_iir_stage`) or its
+  cascade by 4, 8 or 16 (`iir_up_by` / `iir_down_by`), with
+  `TAP_SR_RATIONAL_DIRECTION_UP` / `_DOWN` and `TAP_SR_RATIONAL_IIR_NONLINEAR`
+  / `_NEAR_LINEAR`;
+- `tap_sr_rational_create_guard_band_format(form, half_band_kind, profile,
+  format, channels)`: the filter at a named setting, with
+  `TAP_SR_RATIONAL_GUARD_NONLINEAR` / `_LINEAR` and
+  `TAP_SR_RATIONAL_HALF_BAND_FIR` / `_NONLINEAR` / `_NEAR_LINEAR`. Named
+  settings only, as the chains are named: no custom design in C;
+- `tap_sr_rational_nominal_latency_output_frames(c)` and
+  `tap_sr_rational_group_delay_output_frames(c, f)`, doubles that answer for
+  every handle: a recursive stage's nominal and group delay (I5), and an
+  exact latency's value for the rest.
+
+Every other entry point works on the new handles, in every format and at any
+channel count (one and two native, any other a fan-out). The exact
+`tap_sr_rational_latency_output_frames` refuses a handle whose C++ type has
+no `latency_output_frames()`: a recursive stage or cascade, the near-linear
+one included (its delay path is exact, but its passband's delay strays from
+it, so the path is its nominal), and the Chebyshev II write 0 / 0, and
+`tap_sr_rational_latency_seconds` returns NaN; the linear form reports its
+(N − 1) / 2. `tap_sr_rational_stage_taps` reports 0 for a recursive stage
+and the Chebyshev II and N for the linear form. The float handles take the
+host's flush-to-zero as their C++ types do (I9). `CApi.*` and
+`capi_recursive.*` pin every handle bit for bit against its C++ type in
+every format. The binding names them `IirStage(direction, factor, phase)`
+and `GuardBand(form, half_band)`.
 
 ### Embedded targets and the instruction-count ratchet
 
 Every push runs this engine's emulation-sized battery on **Cortex-M33**
 (QEMU mps2-an505), **Cortex-M55** (mps3-an547) and **Hexagon**
-(qemu-hexagon, static musl), and gates sixteen fixed workloads — the by-2
+(qemu-hexagon, static musl), and gates forty fixed workloads — the by-2
 and by-3 stages both ways in float and Q15 at `economy`, the Q15 by-4
 chain and the Q15 by-8 chain (↓4 · ↓2, the 4th-band stage's, since 0.8.0),
 the by-2 pair in float at `transparent` and the 1/16 chain the matrix runs
 there (↓8 · ↓2, the 120 dB tier's, since 0.8.0), the 2/3 stage in float and
-Q15, and the Q15 by-4 chain's construction with its input fixture (its
-stream removed, so the chain's row minus it is the streaming loop alone) —
-and the worst single call of the ↑2, ↓2 and ↓4 stages in float and Q15,
+Q15, the Q15 by-4 chain's construction with its input fixture (its
+stream removed, so the chain's row minus it is the streaming loop alone),
+and since 0.9.0 twenty-four recursive ones (the `iir_` rows: the recursive
+half-band by 2 up and down, in float and Q15, nonlinear and near-linear
+(`iir_near_`), at `economy`, alone and with the guard band filter in each
+form, `_cheby` and `_linear`, before the interpolator or after the
+decimator) — and the worst single call of the ↑2, ↓2 and ↓4 stages in float and Q15,
 against committed per-target instruction counts (`bench/baselines.json`,
 two-sided ±3 %), measured by the family's shared harness from the
 repository root:
@@ -588,6 +637,11 @@ builds sat within ±2.55 % of it. Re-record that row at the midpoint of the two 
 never with `--update` from one of them. Since X17's re-tune of the designer's β (every row
 re-recorded, `PLAN.md` section 6, "The designer's β, X17") it counts 15,140,167 and 14,312,206,
 the baseline is their midpoint, 14,726,186, and both builds sit within ±2.81 % of it.
+The recursive rows joined at 0.9.0 recorded at the midpoint of the two builds too; theirs
+split by 0.07 % at most (Hexagon's float decimators), so both builds sit within that of
+them. On the host the recursive ↑2 and ↓2 (`iir_converter`, the nonlinear variant) join the
+float converter's rows at 2 and 12 channels (`iir_up2_*`, `iir_down2_*`), the two builds
+counting them identically.
 
 <!-- ICOUNT:BEGIN -->
 Executed instructions per fixed workload (`rational/bench/icount/`), measured under QEMU with a counting plugin — deterministic, and gated in CI at ±3% against `rational/bench/baselines.json`. A `callmax_` row is the worst single call instead of a total: the most instructions one call executes over that stream (`bench/icount/callmax_main.cpp`):
@@ -609,6 +663,30 @@ Executed instructions per fixed workload (`rational/bench/icount/`), measured un
 | `down3_q15_eco` | 48,745,572 | 17,640,706 | 18,300,152 |
 | `down4_down2_q15_eco` | 47,659,519 | 18,466,975 | 16,790,347 |
 | `down8_down2_float_tr` | 538,963,615 | 31,889,072 | 104,910,201 |
+| `iir_down2_float_eco` | 31,241,063 | 9,094,037 | 12,755,722 |
+| `iir_down2_float_eco_cheby` | 40,657,772 | 18,139,896 | 16,194,183 |
+| `iir_down2_float_eco_linear` | 782,589,285 | 40,658,318 | 141,036,333 |
+| `iir_down2_q15_eco` | 39,868,097 | 15,915,202 | 15,569,550 |
+| `iir_down2_q15_eco_cheby` | 59,754,398 | 36,217,373 | 19,719,711 |
+| `iir_down2_q15_eco_linear` | 66,963,102 | 25,703,811 | 24,167,321 |
+| `iir_near_down2_float_eco` | 35,299,770 | 13,096,186 | 12,721,596 |
+| `iir_near_down2_float_eco_cheby` | 44,998,706 | 22,432,988 | 16,159,355 |
+| `iir_near_down2_float_eco_linear` | 786,949,395 | 44,951,801 | 141,002,283 |
+| `iir_near_down2_q15_eco` | 47,687,367 | 23,277,977 | 15,802,978 |
+| `iir_near_down2_q15_eco_cheby` | 67,536,094 | 43,589,076 | 19,953,140 |
+| `iir_near_down2_q15_eco_linear` | 74,771,246 | 33,075,626 | 24,398,543 |
+| `iir_near_up2_float_eco` | 44,333,322 | 21,513,985 | 15,707,022 |
+| `iir_near_up2_float_eco_cheby` | 62,638,973 | 39,779,763 | 22,501,399 |
+| `iir_near_up2_float_eco_linear` | 1,547,377,281 | 84,804,474 | 272,135,604 |
+| `iir_near_up2_q15_eco` | 79,876,059 | 51,687,956 | 21,142,347 |
+| `iir_near_up2_q15_eco_cheby` | 119,162,210 | 92,180,180 | 29,321,383 |
+| `iir_near_up2_q15_eco_linear` | 133,595,184 | 71,164,627 | 38,209,769 |
+| `iir_up2_float_eco` | 36,764,246 | 15,478,214 | 15,307,906 |
+| `iir_up2_float_eco_cheby` | 56,315,074 | 33,842,205 | 22,104,339 |
+| `iir_up2_float_eco_linear` | 1,541,051,944 | 78,866,871 | 271,737,330 |
+| `iir_up2_q15_eco` | 57,543,822 | 35,895,295 | 21,055,640 |
+| `iir_up2_q15_eco_cheby` | 96,931,072 | 75,985,542 | 29,237,953 |
+| `iir_up2_q15_eco_linear` | 111,354,568 | 54,969,921 | 38,126,314 |
 | `ratio23_float_eco` | 538,739,305 | 30,545,005 | 115,766,432 |
 | `ratio23_q15_eco` | 48,128,267 | 14,726,186 | 19,232,880 |
 | `up2_float_eco` | 650,842,262 | 38,707,334 | 123,990,515 |
@@ -625,6 +703,10 @@ On the host, the float converter in 128-frame blocks at 2 and 12 channels (`rati
 | `down2_float_2ch` | 26,912,629 |
 | `down4_float_12ch` | 194,807,923 |
 | `down4_float_2ch` | 34,142,581 |
+| `iir_down2_float_12ch` | 36,771,773 |
+| `iir_down2_float_2ch` | 6,718,523 |
+| `iir_up2_float_12ch` | 81,460,526 |
+| `iir_up2_float_2ch` | 14,160,025 |
 | `up2_float_12ch` | 256,387,855 |
 | `up2_float_2ch` | 48,551,143 |
 <!-- ICOUNT:END -->
@@ -694,7 +776,11 @@ probe per format (`bench/icount/probe_main.cpp`): the by-2 pair at the default
 profile, stereo, an `up2` stage and a `down2` stage each streaming 32-frame blocks
 through `process()` (the `up` and `down` calls), built Release in the ratchet's tree;
 and, since 0.8.0, a second probe per format the same way for the 4th-band pair, an
-`up4` and a `down4` stage (the rows marked "by 4").
+`up4` and a `down4` stage (the rows marked "by 4"); and since 0.9.0 three more, the
+recursive half-band pair `up2` / `down2` in the nonlinear variant ("IIR"), in the
+near-linear one ("near-linear IIR"), and the nonlinear pair with the guard band
+filter's Chebyshev II before the interpolator and after the decimator ("IIR + guard
+band"), each a `tap::dsp::chain`.
 
 - **Engine `.text` and `.rodata`** are the probe's own translation unit, from its
   link map: the two stages as instantiated.
@@ -721,18 +807,45 @@ same PR, with the reason.
 | m33 | f32 (by 4) | 9,308 | 9,600 | 978 | 1,024 | 43,785 | 45,120 |
 | m33 | q15 (by 4) | 10,836 | 11,200 | 978 | 1,024 | 45,529 | 46,912 |
 | m33 | q31 (by 4) | 10,512 | 10,880 | 978 | 1,024 | 45,209 | 46,592 |
+| m33 | f32 (IIR) | 40,196 | 41,408 | 3,296 | 3,456 | 67,037 | 69,056 |
+| m33 | q15 (IIR) | 41,164 | 42,432 | 3,312 | 3,456 | 66,509 | 68,544 |
+| m33 | q31 (IIR) | 41,656 | 42,944 | 3,312 | 3,456 | 66,997 | 69,056 |
+| m33 | f32 (near-linear IIR) | 5,260 | 5,440 | 2,384 | 2,496 | 30,673 | 31,616 |
+| m33 | q15 (near-linear IIR) | 6,864 | 7,104 | 2,384 | 2,496 | 32,793 | 33,792 |
+| m33 | q31 (near-linear IIR) | 7,392 | 7,616 | 2,384 | 2,496 | 33,321 | 34,368 |
+| m33 | f32 (IIR + guard band) | 75,448 | 77,760 | 6,171 | 6,400 | 114,537 | 118,016 |
+| m33 | q15 (IIR + guard band) | 76,784 | 79,104 | 6,187 | 6,400 | 115,721 | 119,232 |
+| m33 | q31 (IIR + guard band) | 77,732 | 80,064 | 6,187 | 6,400 | 116,673 | 120,192 |
 | m55 | f32 | 8,084 | 8,384 | 1,050 | 1,088 | 43,857 | 45,184 |
 | m55 | q15 | 9,480 | 9,792 | 1,050 | 1,088 | 45,561 | 46,976 |
 | m55 | q31 | 9,260 | 9,600 | 1,050 | 1,088 | 45,345 | 46,720 |
 | m55 | f32 (by 4) | 8,036 | 8,320 | 978 | 1,024 | 43,737 | 45,056 |
 | m55 | q15 (by 4) | 9,524 | 9,856 | 978 | 1,024 | 45,537 | 46,912 |
 | m55 | q31 (by 4) | 9,276 | 9,600 | 978 | 1,024 | 45,289 | 46,656 |
+| m55 | f32 (IIR) | 28,656 | 29,568 | 3,296 | 3,456 | 55,409 | 57,088 |
+| m55 | q15 (IIR) | 29,372 | 30,272 | 3,312 | 3,456 | 53,189 | 54,848 |
+| m55 | q31 (IIR) | 29,964 | 30,912 | 3,312 | 3,456 | 53,781 | 55,424 |
+| m55 | f32 (near-linear IIR) | 5,148 | 5,312 | 2,384 | 2,496 | 29,673 | 30,592 |
+| m55 | q15 (near-linear IIR) | 6,468 | 6,720 | 2,384 | 2,496 | 31,073 | 32,064 |
+| m55 | q31 (near-linear IIR) | 7,220 | 7,488 | 2,384 | 2,496 | 31,825 | 32,832 |
+| m55 | f32 (IIR + guard band) | 52,484 | 54,080 | 6,171 | 6,400 | 87,489 | 90,176 |
+| m55 | q15 (IIR + guard band) | 53,288 | 54,912 | 6,187 | 6,400 | 88,313 | 91,008 |
+| m55 | q31 (IIR + guard band) | 54,384 | 56,064 | 6,187 | 6,400 | 89,409 | 92,096 |
 | hexagon | f32 | 19,700 | 20,352 | 428 | 448 | 297,048 | 305,984 |
 | hexagon | q15 | 22,008 | 22,720 | 428 | 448 | 299,992 | 308,992 |
 | hexagon | q31 | 20,888 | 21,568 | 428 | 448 | 298,904 | 307,904 |
 | hexagon | f32 (by 4) | 22,356 | 23,040 | 356 | 384 | 299,664 | 308,672 |
 | hexagon | q15 (by 4) | 26,068 | 26,880 | 356 | 384 | 303,984 | 313,152 |
 | hexagon | q31 (by 4) | 23,952 | 24,704 | 356 | 384 | 301,904 | 310,976 |
+| hexagon | f32 (IIR) | 23,192 | 23,936 | 2,772 | 2,880 | 284,752 | 293,312 |
+| hexagon | q15 (IIR) | 24,728 | 25,472 | 2,772 | 2,880 | 279,488 | 287,936 |
+| hexagon | q31 (IIR) | 22,640 | 23,360 | 2,772 | 2,880 | 277,376 | 285,760 |
+| hexagon | f32 (near-linear IIR) | 12,564 | 12,992 | 916 | 960 | 272,176 | 280,384 |
+| hexagon | q15 (near-linear IIR) | 12,956 | 13,376 | 916 | 960 | 274,168 | 282,432 |
+| hexagon | q31 (near-linear IIR) | 15,724 | 16,256 | 916 | 960 | 276,984 | 285,312 |
+| hexagon | f32 (IIR + guard band) | 34,080 | 35,136 | 5,172 | 5,376 | 313,904 | 323,328 |
+| hexagon | q15 (IIR + guard band) | 37,316 | 38,464 | 5,172 | 5,376 | 317,168 | 326,720 |
+| hexagon | q31 (IIR + guard band) | 34,944 | 36,032 | 5,172 | 5,376 | 314,736 | 324,224 |
 
 | M33 call | format | static worst path (bytes) | ceiling | measured high-water (bytes) | ceiling |
 |---|---|--:|--:|--:|--:|
@@ -742,12 +855,30 @@ same PR, with the reason.
 | `up` | f32 (by 4) | 160 | 168 | 160 | 168 |
 | `up` | q15 (by 4) | 144 | 152 | 128 | 136 |
 | `up` | q31 (by 4) | 144 | 152 | 144 | 152 |
+| `up` | f32 (IIR) | 72 | 80 | 72 | 80 |
+| `up` | q15 (IIR) | 96 | 104 | 96 | 104 |
+| `up` | q31 (IIR) | 120 | 128 | 116 | 120 |
+| `up` | f32 (near-linear IIR) | 112 | 120 | 108 | 112 |
+| `up` | q15 (near-linear IIR) | 144 | 152 | 140 | 152 |
+| `up` | q31 (near-linear IIR) | 200 | 208 | 196 | 208 |
+| `up` | f32 (IIR + guard band) | 96 | 104 | 96 | 104 |
+| `up` | q15 (IIR + guard band) | 128 | 136 | 124 | 128 |
+| `up` | q31 (IIR + guard band) | 208 | 216 | 208 | 216 |
 | `down` | f32 | 184 | 192 | 184 | 192 |
 | `down` | q15 | 184 | 192 | 164 | 176 |
 | `down` | q31 | 160 | 168 | 160 | 168 |
 | `down` | f32 (by 4) | 200 | 208 | 200 | 208 |
 | `down` | q15 (by 4) | 208 | 216 | 188 | 200 |
 | `down` | q31 (by 4) | 184 | 192 | 184 | 192 |
+| `down` | f32 (IIR) | 72 | 80 | 72 | 80 |
+| `down` | q15 (IIR) | 96 | 104 | 92 | 96 |
+| `down` | q31 (IIR) | 120 | 128 | 116 | 120 |
+| `down` | f32 (near-linear IIR) | 112 | 120 | 112 | 120 |
+| `down` | q15 (near-linear IIR) | 152 | 160 | 152 | 160 |
+| `down` | q31 (near-linear IIR) | 208 | 216 | 204 | 216 |
+| `down` | f32 (IIR + guard band) | 96 | 104 | 96 | 104 |
+| `down` | q15 (IIR + guard band) | 120 | 128 | 116 | 120 |
+| `down` | q31 (IIR + guard band) | 208 | 216 | 208 | 216 |
 <!-- ceilings:end -->
 
 ## Non-finite input and denormals

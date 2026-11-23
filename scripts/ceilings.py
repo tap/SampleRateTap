@@ -63,9 +63,13 @@ CALLS = {"async": ["push", "pull"], "bridge": ["up", "down"], "rational": ["up",
 # Each engine's probe sets (tools/probe/probes.cmake): the binaries' name
 # suffix, the tag on the format's key in ceilings.json, and the README label.
 # rational's second set (X-a3) is the 4th-band pair, up 4 and down 4, beside
-# the by-2 pair its first set holds.
+# the by-2 pair its first set holds; its third to fifth (IIR-d) the recursive
+# half-band pair by 2, nonlinear and near-linear, and the nonlinear pair with
+# the guard band filter's Chebyshev II.
 PROBE_SETS = {"async": [("", "", "")], "bridge": [("", "", "")],
-              "rational": [("", "", ""), ("4", "_by4", " (by 4)")]}
+              "rational": [("", "", ""), ("4", "_by4", " (by 4)"), ("iir", "_iir", " (IIR)"),
+                           ("iirnear", "_iir_near", " (near-linear IIR)"),
+                           ("iirgb", "_iir_gb", " (IIR + guard band)")]}
 SIZE_GRAIN = 64
 STACK_GRAIN = 8
 MARGIN = 0.03

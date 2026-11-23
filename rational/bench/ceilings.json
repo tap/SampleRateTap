@@ -29,6 +29,48 @@
           "recorded": 299664
         }
       },
+      "f32_iir": {
+        "engine_rodata": {
+          "ceiling": 2880,
+          "recorded": 2772
+        },
+        "engine_text": {
+          "ceiling": 23936,
+          "recorded": 23192
+        },
+        "image": {
+          "ceiling": 293312,
+          "recorded": 284752
+        }
+      },
+      "f32_iir_gb": {
+        "engine_rodata": {
+          "ceiling": 5376,
+          "recorded": 5172
+        },
+        "engine_text": {
+          "ceiling": 35136,
+          "recorded": 34080
+        },
+        "image": {
+          "ceiling": 323328,
+          "recorded": 313904
+        }
+      },
+      "f32_iir_near": {
+        "engine_rodata": {
+          "ceiling": 960,
+          "recorded": 916
+        },
+        "engine_text": {
+          "ceiling": 12992,
+          "recorded": 12564
+        },
+        "image": {
+          "ceiling": 280384,
+          "recorded": 272176
+        }
+      },
       "q15": {
         "engine_rodata": {
           "ceiling": 448,
@@ -57,6 +99,48 @@
           "recorded": 303984
         }
       },
+      "q15_iir": {
+        "engine_rodata": {
+          "ceiling": 2880,
+          "recorded": 2772
+        },
+        "engine_text": {
+          "ceiling": 25472,
+          "recorded": 24728
+        },
+        "image": {
+          "ceiling": 287936,
+          "recorded": 279488
+        }
+      },
+      "q15_iir_gb": {
+        "engine_rodata": {
+          "ceiling": 5376,
+          "recorded": 5172
+        },
+        "engine_text": {
+          "ceiling": 38464,
+          "recorded": 37316
+        },
+        "image": {
+          "ceiling": 326720,
+          "recorded": 317168
+        }
+      },
+      "q15_iir_near": {
+        "engine_rodata": {
+          "ceiling": 960,
+          "recorded": 916
+        },
+        "engine_text": {
+          "ceiling": 13376,
+          "recorded": 12956
+        },
+        "image": {
+          "ceiling": 282432,
+          "recorded": 274168
+        }
+      },
       "q31": {
         "engine_rodata": {
           "ceiling": 448,
@@ -83,6 +167,48 @@
         "image": {
           "ceiling": 310976,
           "recorded": 301904
+        }
+      },
+      "q31_iir": {
+        "engine_rodata": {
+          "ceiling": 2880,
+          "recorded": 2772
+        },
+        "engine_text": {
+          "ceiling": 23360,
+          "recorded": 22640
+        },
+        "image": {
+          "ceiling": 285760,
+          "recorded": 277376
+        }
+      },
+      "q31_iir_gb": {
+        "engine_rodata": {
+          "ceiling": 5376,
+          "recorded": 5172
+        },
+        "engine_text": {
+          "ceiling": 36032,
+          "recorded": 34944
+        },
+        "image": {
+          "ceiling": 324224,
+          "recorded": 314736
+        }
+      },
+      "q31_iir_near": {
+        "engine_rodata": {
+          "ceiling": 960,
+          "recorded": 916
+        },
+        "engine_text": {
+          "ceiling": 16256,
+          "recorded": 15724
+        },
+        "image": {
+          "ceiling": 285312,
+          "recorded": 276984
         }
       }
     }
@@ -117,6 +243,48 @@
           "recorded": 43785
         }
       },
+      "f32_iir": {
+        "engine_rodata": {
+          "ceiling": 3456,
+          "recorded": 3296
+        },
+        "engine_text": {
+          "ceiling": 41408,
+          "recorded": 40196
+        },
+        "image": {
+          "ceiling": 69056,
+          "recorded": 67037
+        }
+      },
+      "f32_iir_gb": {
+        "engine_rodata": {
+          "ceiling": 6400,
+          "recorded": 6171
+        },
+        "engine_text": {
+          "ceiling": 77760,
+          "recorded": 75448
+        },
+        "image": {
+          "ceiling": 118016,
+          "recorded": 114537
+        }
+      },
+      "f32_iir_near": {
+        "engine_rodata": {
+          "ceiling": 2496,
+          "recorded": 2384
+        },
+        "engine_text": {
+          "ceiling": 5440,
+          "recorded": 5260
+        },
+        "image": {
+          "ceiling": 31616,
+          "recorded": 30673
+        }
+      },
       "q15": {
         "engine_rodata": {
           "ceiling": 1088,
@@ -145,6 +313,48 @@
           "recorded": 45529
         }
       },
+      "q15_iir": {
+        "engine_rodata": {
+          "ceiling": 3456,
+          "recorded": 3312
+        },
+        "engine_text": {
+          "ceiling": 42432,
+          "recorded": 41164
+        },
+        "image": {
+          "ceiling": 68544,
+          "recorded": 66509
+        }
+      },
+      "q15_iir_gb": {
+        "engine_rodata": {
+          "ceiling": 6400,
+          "recorded": 6187
+        },
+        "engine_text": {
+          "ceiling": 79104,
+          "recorded": 76784
+        },
+        "image": {
+          "ceiling": 119232,
+          "recorded": 115721
+        }
+      },
+      "q15_iir_near": {
+        "engine_rodata": {
+          "ceiling": 2496,
+          "recorded": 2384
+        },
+        "engine_text": {
+          "ceiling": 7104,
+          "recorded": 6864
+        },
+        "image": {
+          "ceiling": 33792,
+          "recorded": 32793
+        }
+      },
       "q31": {
         "engine_rodata": {
           "ceiling": 1088,
@@ -171,6 +381,48 @@
         "image": {
           "ceiling": 46592,
           "recorded": 45209
+        }
+      },
+      "q31_iir": {
+        "engine_rodata": {
+          "ceiling": 3456,
+          "recorded": 3312
+        },
+        "engine_text": {
+          "ceiling": 42944,
+          "recorded": 41656
+        },
+        "image": {
+          "ceiling": 69056,
+          "recorded": 66997
+        }
+      },
+      "q31_iir_gb": {
+        "engine_rodata": {
+          "ceiling": 6400,
+          "recorded": 6187
+        },
+        "engine_text": {
+          "ceiling": 80064,
+          "recorded": 77732
+        },
+        "image": {
+          "ceiling": 120192,
+          "recorded": 116673
+        }
+      },
+      "q31_iir_near": {
+        "engine_rodata": {
+          "ceiling": 2496,
+          "recorded": 2384
+        },
+        "engine_text": {
+          "ceiling": 7616,
+          "recorded": 7392
+        },
+        "image": {
+          "ceiling": 34368,
+          "recorded": 33321
         }
       }
     },
@@ -219,6 +471,72 @@
           }
         }
       },
+      "f32_iir": {
+        "down": {
+          "measured": {
+            "ceiling": 80,
+            "recorded": 72
+          },
+          "static": {
+            "ceiling": 80,
+            "recorded": 72
+          }
+        },
+        "up": {
+          "measured": {
+            "ceiling": 80,
+            "recorded": 72
+          },
+          "static": {
+            "ceiling": 80,
+            "recorded": 72
+          }
+        }
+      },
+      "f32_iir_gb": {
+        "down": {
+          "measured": {
+            "ceiling": 104,
+            "recorded": 96
+          },
+          "static": {
+            "ceiling": 104,
+            "recorded": 96
+          }
+        },
+        "up": {
+          "measured": {
+            "ceiling": 104,
+            "recorded": 96
+          },
+          "static": {
+            "ceiling": 104,
+            "recorded": 96
+          }
+        }
+      },
+      "f32_iir_near": {
+        "down": {
+          "measured": {
+            "ceiling": 120,
+            "recorded": 112
+          },
+          "static": {
+            "ceiling": 120,
+            "recorded": 112
+          }
+        },
+        "up": {
+          "measured": {
+            "ceiling": 112,
+            "recorded": 108
+          },
+          "static": {
+            "ceiling": 120,
+            "recorded": 112
+          }
+        }
+      },
       "q15": {
         "down": {
           "measured": {
@@ -263,6 +581,72 @@
           }
         }
       },
+      "q15_iir": {
+        "down": {
+          "measured": {
+            "ceiling": 96,
+            "recorded": 92
+          },
+          "static": {
+            "ceiling": 104,
+            "recorded": 96
+          }
+        },
+        "up": {
+          "measured": {
+            "ceiling": 104,
+            "recorded": 96
+          },
+          "static": {
+            "ceiling": 104,
+            "recorded": 96
+          }
+        }
+      },
+      "q15_iir_gb": {
+        "down": {
+          "measured": {
+            "ceiling": 120,
+            "recorded": 116
+          },
+          "static": {
+            "ceiling": 128,
+            "recorded": 120
+          }
+        },
+        "up": {
+          "measured": {
+            "ceiling": 128,
+            "recorded": 124
+          },
+          "static": {
+            "ceiling": 136,
+            "recorded": 128
+          }
+        }
+      },
+      "q15_iir_near": {
+        "down": {
+          "measured": {
+            "ceiling": 160,
+            "recorded": 152
+          },
+          "static": {
+            "ceiling": 160,
+            "recorded": 152
+          }
+        },
+        "up": {
+          "measured": {
+            "ceiling": 152,
+            "recorded": 140
+          },
+          "static": {
+            "ceiling": 152,
+            "recorded": 144
+          }
+        }
+      },
       "q31": {
         "down": {
           "measured": {
@@ -304,6 +688,72 @@
           "static": {
             "ceiling": 152,
             "recorded": 144
+          }
+        }
+      },
+      "q31_iir": {
+        "down": {
+          "measured": {
+            "ceiling": 120,
+            "recorded": 116
+          },
+          "static": {
+            "ceiling": 128,
+            "recorded": 120
+          }
+        },
+        "up": {
+          "measured": {
+            "ceiling": 120,
+            "recorded": 116
+          },
+          "static": {
+            "ceiling": 128,
+            "recorded": 120
+          }
+        }
+      },
+      "q31_iir_gb": {
+        "down": {
+          "measured": {
+            "ceiling": 216,
+            "recorded": 208
+          },
+          "static": {
+            "ceiling": 216,
+            "recorded": 208
+          }
+        },
+        "up": {
+          "measured": {
+            "ceiling": 216,
+            "recorded": 208
+          },
+          "static": {
+            "ceiling": 216,
+            "recorded": 208
+          }
+        }
+      },
+      "q31_iir_near": {
+        "down": {
+          "measured": {
+            "ceiling": 216,
+            "recorded": 204
+          },
+          "static": {
+            "ceiling": 216,
+            "recorded": 208
+          }
+        },
+        "up": {
+          "measured": {
+            "ceiling": 208,
+            "recorded": 196
+          },
+          "static": {
+            "ceiling": 208,
+            "recorded": 200
           }
         }
       }
@@ -339,6 +789,48 @@
           "recorded": 43737
         }
       },
+      "f32_iir": {
+        "engine_rodata": {
+          "ceiling": 3456,
+          "recorded": 3296
+        },
+        "engine_text": {
+          "ceiling": 29568,
+          "recorded": 28656
+        },
+        "image": {
+          "ceiling": 57088,
+          "recorded": 55409
+        }
+      },
+      "f32_iir_gb": {
+        "engine_rodata": {
+          "ceiling": 6400,
+          "recorded": 6171
+        },
+        "engine_text": {
+          "ceiling": 54080,
+          "recorded": 52484
+        },
+        "image": {
+          "ceiling": 90176,
+          "recorded": 87489
+        }
+      },
+      "f32_iir_near": {
+        "engine_rodata": {
+          "ceiling": 2496,
+          "recorded": 2384
+        },
+        "engine_text": {
+          "ceiling": 5312,
+          "recorded": 5148
+        },
+        "image": {
+          "ceiling": 30592,
+          "recorded": 29673
+        }
+      },
       "q15": {
         "engine_rodata": {
           "ceiling": 1088,
@@ -367,6 +859,48 @@
           "recorded": 45537
         }
       },
+      "q15_iir": {
+        "engine_rodata": {
+          "ceiling": 3456,
+          "recorded": 3312
+        },
+        "engine_text": {
+          "ceiling": 30272,
+          "recorded": 29372
+        },
+        "image": {
+          "ceiling": 54848,
+          "recorded": 53189
+        }
+      },
+      "q15_iir_gb": {
+        "engine_rodata": {
+          "ceiling": 6400,
+          "recorded": 6187
+        },
+        "engine_text": {
+          "ceiling": 54912,
+          "recorded": 53288
+        },
+        "image": {
+          "ceiling": 91008,
+          "recorded": 88313
+        }
+      },
+      "q15_iir_near": {
+        "engine_rodata": {
+          "ceiling": 2496,
+          "recorded": 2384
+        },
+        "engine_text": {
+          "ceiling": 6720,
+          "recorded": 6468
+        },
+        "image": {
+          "ceiling": 32064,
+          "recorded": 31073
+        }
+      },
       "q31": {
         "engine_rodata": {
           "ceiling": 1088,
@@ -393,6 +927,48 @@
         "image": {
           "ceiling": 46656,
           "recorded": 45289
+        }
+      },
+      "q31_iir": {
+        "engine_rodata": {
+          "ceiling": 3456,
+          "recorded": 3312
+        },
+        "engine_text": {
+          "ceiling": 30912,
+          "recorded": 29964
+        },
+        "image": {
+          "ceiling": 55424,
+          "recorded": 53781
+        }
+      },
+      "q31_iir_gb": {
+        "engine_rodata": {
+          "ceiling": 6400,
+          "recorded": 6187
+        },
+        "engine_text": {
+          "ceiling": 56064,
+          "recorded": 54384
+        },
+        "image": {
+          "ceiling": 92096,
+          "recorded": 89409
+        }
+      },
+      "q31_iir_near": {
+        "engine_rodata": {
+          "ceiling": 2496,
+          "recorded": 2384
+        },
+        "engine_text": {
+          "ceiling": 7488,
+          "recorded": 7220
+        },
+        "image": {
+          "ceiling": 32832,
+          "recorded": 31825
         }
       }
     }
