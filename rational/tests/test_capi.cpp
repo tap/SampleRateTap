@@ -499,13 +499,24 @@ namespace {
     /// fixture sets it on the calling thread, which the library runs on.
     class capi_recursive : public tap::sr::rational::test::flush_to_zero_fixture {};
 
+    /// The group delay at f > 0 is a double the shared library and this test
+    /// each compute from libm's sin / cos and libgcc's complex arithmetic, in
+    /// two binaries: its last bits are not a contract, the outputs are. On
+    /// CI's Linux GCC runner (Ubuntu 26.04, GCC 15.2) the two differed by up
+    /// to 7.6e-14 relative at f = 0.05 to 0.15 (#117), while CI's Clang,
+    /// AppleClang and MSVC builds and a local Ubuntu 26.04 GCC 15.2 build
+    /// agree exactly, and at f = 0 (trig exact) every build agrees; hence a
+    /// tolerance two orders above that, and exact equality at 0.
+    constexpr double k_group_delay_rel = 1e-12;
+
     /// The ABI's converter against its C++ type on the reference noise in N
     /// channels (channel c scaled by (c + 1) / (N + 1), odd channels
     /// negated): one call longer than the fan-out's staging and a short one,
-    /// outputs bit for bit, the accounting, the latency members (nominal and
-    /// group delay equal to the C++ ones; the exact one where the type has
-    /// it, else refused as 0 / 0 and NaN seconds), the MACs, flush and reset;
-    /// a call in another format is refused.
+    /// outputs bit for bit, the accounting, the latency members (the nominal
+    /// equal to the C++ one, the group delay within k_group_delay_rel of it;
+    /// the exact one where the type has it, else refused as 0 / 0 and NaN
+    /// seconds), the MACs, flush and reset; a call in another format is
+    /// refused.
     template <typename S, std::size_t N, typename T>
     void expect_abi_is_recursive(tap_sr_rational_converter* c, T& ref, const char* name, double macs,
                                  std::size_t stages, std::size_t taps) {
@@ -533,8 +544,10 @@ namespace {
             EXPECT_EQ(den, 0u) << name << ": no exact latency, refused";
             EXPECT_TRUE(std::isnan(tap_sr_rational_latency_seconds(c, 48000.0))) << name;
             EXPECT_EQ(tap_sr_rational_nominal_latency_output_frames(c), ref.nominal_latency_output_frames()) << name;
-            for (const double f : {0.0, 0.05, 0.1, 0.15}) {
-                EXPECT_EQ(tap_sr_rational_group_delay_output_frames(c, f), ref.group_delay_output_frames(f))
+            EXPECT_EQ(tap_sr_rational_group_delay_output_frames(c, 0.0), ref.group_delay_output_frames(0.0)) << name;
+            for (const double f : {0.05, 0.1, 0.15}) {
+                const double want = ref.group_delay_output_frames(f);
+                EXPECT_NEAR(tap_sr_rational_group_delay_output_frames(c, f), want, k_group_delay_rel * want)
                     << name << " at " << f;
             }
         }
