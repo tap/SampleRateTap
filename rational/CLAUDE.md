@@ -14,7 +14,7 @@ stages by 2 and their cascades (R21–R25, the family's D20) and a 1:1 guard ban
 (R26–R28). Header-only C++20 under `include/tap/sr/rational/`, built on the shared substrate from DspTap (`tap::dsp`: the L-th-band
 designer `nyquist.h` and the stage composition `chain.h` landed there first, with the
 sample-format traits, dot kernels and row-sum quantization). **`PLAN.md` is the authoritative
-roadmap** — charter, the settled decisions R1–R28, the generated 14 × 14 coverage matrix,
+roadmap** — charter, the settled decisions R1–R29, the generated 14 × 14 coverage matrix,
 layout, test strategy, milestones M0–M6 and acceptance criteria. Read it before implementing
 anything; do not re-derive what it settles (the compile-time ratio, one Nyquist filter per stage,
 stage factoring by MACs then by stage count, `bridge` at the lowest k, the profile vocabulary,
@@ -41,7 +41,7 @@ unity, saturation, the Q15 floors and attained stopbands stated in PLAN.md secti
 change that moves a table pin is a numeric change to the fixed-point datapath), and, since M6,
 the C ABI (`capi/`: the named chains as stable `TAP_SR_RATIONAL_*` constants, one stage at a
 stated design divisor, in float and, since the levers, Q15 / Q31 through `create_format`;
-exactly 23 exported symbols, the set pinned by `rational.Family.ExportedSymbolsArePinned`;
+exactly 27 exported symbols since 0.9.0 (23 before IIR-d), the set pinned by `rational.Family.ExportedSymbolsArePinned`;
 `CApi.*` pins the ABI bit for bit against `basic_chain` in every format), the ctypes binding and `notebooks/matrix.ipynb` executed through the C ABIs, and
 the icount ratchet (`bench/icount/`, `bench/baselines.json`, marker `RATIONAL_ICOUNT_DONE`; a
 change that moves a count beyond ±3 % re-records the baselines in the same PR). The codegen
@@ -75,7 +75,14 @@ the odd-order Chebyshev II; `guard_phase::linear`, the type II FIR) at the order
 behind the nonlinear half-band and 7 / 7 / 7 / 11 behind the FIR and near-linear ones, its golden
 leg (`tools/reference/make_guard_band_reference_vectors.py`) and battery
 (`tests/test_guard_band.cpp`), and the composition tests (`tests/test_iir_composition.cpp`): a
-mixed chain is the caller's `tap::dsp::chain`, with no named IIR chain or matrix row.
+mixed chain is the caller's `tap::dsp::chain`, with no named IIR chain or matrix row. IIR-d (R29,
+0.9.0) put them in the C ABI (`tap_sr_rational_create_iir_format` with a factor argument,
+`tap_sr_rational_create_guard_band_format`, named settings only, and the double latency
+getters; the exact one refuses a handle with no exact latency, 0 / 0), the binding
+(`IirStage`, `GuardBand`), two notebooks executed through it (`iir_comparison.ipynb`,
+`guard_band_demo.ipynb`, their measurements in `notebooks/iir_measure.py`, which also draws
+the book's Part VII figure) and the ratchet (the `iir_` workloads, the recursive host rows,
+and the `iir`, `iirnear` and `iirgb` probe sets).
 
 ## The charter constraints (load-bearing)
 

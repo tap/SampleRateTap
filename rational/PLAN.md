@@ -31,6 +31,7 @@ matrix, layout, test strategy, milestones, non-goals and risks.
 | v0.22 | 2026-11-22 | IIR-c (`docs/IIR_PLAN.md` section 5 item 4, v11): the guard band filter `guard_band_filter<S, Ch, guard_phase>` in both forms, a 1:1 stage beside the ratios (R26, the charter's note in section 1), the order rule 5 / 7 / 7 / 7 (question 14); composition through the caller's `tap::dsp::chain` and the offering table (R27, question 16's part); the floating limit cycle an honest limit (R28, question 19 closed). No FIR pin, ratchet count or ceiling moved (section 6, the IIR-c record) |
 | v0.23 | 2026-11-22 | IIR-c's follow-up (`docs/IIR_PLAN.md` v12, questions 20 and 21, decided after IIR-c landed): the guard band's named settings per half-band kind (R26): `half_band_kind` (`fir`, `nonlinear`, `near_linear`) beside `guard_phase`, taken by every named setting with no default, 5 / 7 / 7 / 7 behind the nonlinear half-band and 7 / 7 / 7 / 11 behind the FIR and near-linear ones, six designs per form from DspTap's committed rows (no DspTap change); the floating limit cycle at the new orders inside R28's bound; the Q15 linear form's limit pinned until DspTap's Q15 rows (question 21). No FIR pin, ratchet count or ceiling moved (section 6, the record of IIR-c's follow-up) |
 | v0.24 | 2026-11-22 | The DspTap 0.4.0 pin move (`docs/IIR_PLAN.md` v13, question 21's limit lifted): `submodules/dsptap` at `v0.4.0` (tap/DspTap#69) and the family's floor 0.4.0; the guard band filter's linear table built by DspTap's `quantize_symmetric_row_preserving_sum`, and its linear form in Q15 at the four 70 dB named settings on DspTap's Q15 rows, which hold the tier (R26); `transparent`'s Q15 limit kept. Every ratchet binary of the three engines byte-identical across the move; no count or ceiling re-recorded (section 6, the record of the pin move) |
+| v0.25 | 2026-11-23 | IIR-d (`docs/IIR_PLAN.md` v14, section 5 item 5, I11 as recommended): the C ABI's recursive and guard band entry points and latency getters (R29), the binding, `notebooks/iir_comparison.ipynb` and `notebooks/guard_band_demo.ipynb` executed through the C ABI with the book's Part VII figure from the same code; the ratchet's twenty-four recursive workloads, the recursive host workloads and three probe sets (baselines at the midpoint of the two builds, the new ceilings recorded, every existing count, checksum and ceiling unchanged: every ratchet binary of the three engines byte-identical to bcef447's); family version 0.9.0 (R11). Section 6, the IIR-d record |
 | v0.19 | 2026-11-21 | X-a4 (`docs/X4_X8_PLAN.md` X4): a chain per attenuation tier — the 70 dB tier's selected at `economy`, the 120 dB tier's at `transparent` (R3, 3.1); 25 rows split (17 within the families, 8 across), seven chains serve only the 120 dB tier, three of them new (`up2_ratio3over2`, `up2_up6_up4`, `down4_down6_down2`, C values 40 to 42, `CHAIN_END` 43, 33 live values); the generated row format holds both chains, the matrix test, the binding, `matrix.ipynb` and the coverage figure read it; the relaxation tables unchanged; the 6th- and 8th-band designs at divisor 2 at `transparent` bit-pinned; the ratchet's `down8_down2_float_tr` workload (the 1/16 chain at `transparent`), every existing count and ceiling unchanged (section 6, the X-a4 record) |
 | v0.18 | 2026-11-21 | X-a3 (`docs/X4_X8_PLAN.md` X3): decision 6 amended, the 4th-band stage admitted (`up4` / `down4` in `ratio.h`, the C ABI's `create_stage` at 4/1 and 1/4); X-a2's frozen selection removed and R3's restored, 46 rows moved at `economy` (30 within, 16 across; S1), the named chains twelve added and fourteen gone (ten retired under D7, four kept for X-a4), the C ABI's values stable (`CHAIN_END` 40 for the retired `CHAIN_COUNT`, retired values refused), band 4's tables bit-pinned at every matrix divisor, the scipy vectors with a 4th-band stage, the ratchet's `down4_down2_q15_eco`, `callmax_down4_*` and host `down4_*` workloads and the 4th-band probes' ceilings (section 6, the X-a3 record) |
 | v0.17 | 2026-11-20 | X17 (`docs/X4_X8_PLAN.md`, X-a2): the designer's Kaiser β for A + 4 dB, accepted at A + 1 dB as before (`k_design_beta_offset_db`, no DspTap change); x = 4 chosen over 3 on the measured Q15 / Q31 floors and ripple; every pin, relaxation table, Q15 / Q31 table and scipy vector re-pinned, the matrix re-costed with its chains frozen for one PR (R3 suspended until X-a3, 3.1), every ratchet row and the probes' ceilings re-recorded with the reason (section 6, "The designer's β, X17") |
@@ -130,7 +131,7 @@ The boundaries are identity, not policy, as `bridge`'s are
 | R8 | **Sample formats** double / float / Q15 / Q31 through `tap::dsp::sample_traits` (`sample_traits.h:107-266`), coefficient rows quantized with `quantize_row_preserving_sum` (`quantize.h:56-99`) after per-branch DC normalization, so every branch's DC gain is exactly 1 in every format; the zero taps are zero in every format and are never multiplied. Aliases `converter<ratio>` (float), `converter_q15`, `converter_q31`, and `double` as the golden model | DspTap's four-profile ladder (`submodules/dsptap/CLAUDE.md`, "Double is the golden model"); `bridge`'s per-branch normalization (`design.h:180-199`) and its reasons |
 | R9 | **Real-time rules**: geometry fixed at construction, every buffer allocated and every filter designed there (may throw); `process`, `pull`, `flush`, `reset` are `noexcept`, lock-free and allocation-free; one stream per instance, channels share the coefficient row per frame | The family contract (`converter.h:58-61`, `decimate.h:51-52`) |
 | R10 | **Bit-exact repeatability** per format and platform, as `bridge` (`../bridge/PLAN.md` §3): integer paths exactly, float through the fixed accumulation order of the `tap::dsp` kernels (`fir_kernels.h:77-79`); a chain's output is the same for any chunking of its input | Lets the output-hash leg (`test_output_hash.cpp`) and the ratchet's `checksum=` line (`scripts/icount.py:100`) stand |
-| R11 | **One family version** (D13): `TAP_SR_VERSION_*` token-identically in `rational.h` — 0.4.0 until M6, **0.5.0 at M6**, 0.6.0 since the 2026-10 audit response (the async vocabulary pass), 0.7.0 since A13 (every channel count the type's), 0.8.0 since X-b (the ×4 / ×8 / ×16 plan's release), bumped in all three umbrella headers and the root `project()` together (decision 10); `tap_sr_rational_version()` bit-packed; `tests/family/version_macros.cpp` gains a third include and `static_assert` | `../PLAN.md:48`; a new engine is a minor bump |
+| R11 | **One family version** (D13): `TAP_SR_VERSION_*` token-identically in `rational.h` — 0.4.0 until M6, **0.5.0 at M6**, 0.6.0 since the 2026-10 audit response (the async vocabulary pass), 0.7.0 since A13 (every channel count the type's), 0.8.0 since X-b (the ×4 / ×8 / ×16 plan's release), 0.9.0 since IIR-d (the recursive stages and the guard band filter, `docs/IIR_PLAN.md`), bumped in all three umbrella headers and the root `project()` together (decision 10); `tap_sr_rational_version()` bit-packed; `tests/family/version_macros.cpp` gains a third include and `static_assert` | `../PLAN.md:48`; a new engine is a minor bump |
 | R12 | **Tests carry the engine prefix and label** `rational.` / `rational` (D16, `../PLAN.md:51`), including the `*_tests_emulated` entries; guest icount marker `RATIONAL_ICOUNT_DONE`, byte-stable from its first baseline | `../CLAUDE.md`, "Guest markers … never change" |
 | R13 | **`bridge` at the lowest k** (decision 1): a cross-family chain contains exactly one `bridge` stage, at the lowest k ∈ {0, 1, 2} whose lower rate satisfies 2.1(a) for the chain's f_pass (3.1). `transparent` needs no exception: its 20 kHz passband clears both stopband edges at k = 0 (44.1 − 20 = 24.1 ≥ 24 up, ≥ 22.05 down) | `bridge` costs 58 (down) or 38 (up) MACs per output at `economy` whatever k is, so its cost scales with the rate it runs at, while the ↑2 / ↓2 stages that move a chain between k levels cost 9–19; 48 → 88.2 at k = 0 is 62 % of the MACs of k = 1 at the same (f_pass, A). The family plan's illustrative row (`../PLAN.md:120`) was corrected to match |
 | R14 | **Dipping rows are flagged** (decision 3): every row of 3.5/3.6 whose `bridge` stage runs — its output rate — at ≥ 2× the chain's output rate carries ⚑ in a trailing column, "covered, not recommended". Documentation only: the flag dispatches nothing and D12 is untouched | In such a row `bridge` alone costs ≥ 116 MACs per output at `economy` (≥ 368 at `transparent`), 2–4× a within-family chain's total; a consumer who reads the matrix sees the price before choosing. 38 rows carry it |
@@ -148,6 +149,7 @@ The boundaries are identity, not policy, as `bridge`'s are
 | R26 | **The guard band filter is a 1:1 stage of its own beside the ratios** (`docs/IIR_PLAN.md` I7, questions 14, 20 and 21; IIR-c, its follow-up and the DspTap 0.4.0 pin move): `guard_band_filter<S, Ch, P>` over `guard_band_filter_base<S, P>` (K12), `P` a `guard_phase`: `nonlinear`, the odd-order Chebyshev II over DspTap's `biquad_cascade`, or `linear`, the even-length symmetric (type II) FIR over `dot_row`, each with its zero exactly at Nyquist; `guard_band_settings` the profiles' (A, p) at the lowest odd order whose worst guard-band alias behind the half-band the filter serves is at or below −A/2, which each named setting takes as a `half_band_kind` (`fir`, `nonlinear`, `near_linear`; no default): 5 / 7 / 7 / 7 behind the nonlinear half-band, 7 / 7 / 7 / 11 behind the FIR and near-linear ones, six designs in all (`guard_band_settings{}` is `economy`'s, one design behind every kind), the linear form at the same stop edges (DspTap's `k_guard_band_fir` rows, and in Q15 at the four 70 dB settings its `k_guard_band_fir_q15` rows, 32 / 40 / 50 / 60 taps for 30 / 38 / 50 / 58, so in Q15 its length, latency and window are its own there; quantized by `quantize_symmetric_row_preserving_sum`), plus a custom form designed at run time (the Chebyshev II through `design_cheby2_lowpass` and `cheby2_linf_gains`, the linear form through DspTap's Kaiser designer, refused where no length up to 512 taps meets it). The Chebyshev's latency is nominal (R23's members), the linear form's exact, (N − 1) / 2 frames; `ratio<L, M>` unchanged | The guard band is the region every half-band leaves (−3 dB recursive, −6 dB FIR at the crossover); a filter there serves FIR and IIR stages alike without touching either (an option on each stage was declined in I7). At `economy` the Chebyshev II costs 20 multiplies per output and 0.54 frames at DC (5.04 at the passband edge); the FIR 50 MACs and 49/2 frames, exact; over the six designs 15 to 30 multiplies and 30 to 102 taps, the most at `transparent` behind the FIR and near-linear half-bands (order 11: 30 multiplies, 0.64 frames at DC and 14.71 at the passband edge; 102 taps, 101/2 frames). The nonlinear half-band's orders behind the near-linear and FIR half-bands would leave −31.4 / −31.6 dB at `super_economy` and −48.8 / −45.6 dB at `transparent`, above −A/2; the maintainer: "The settings can be different for the fir and near linear chains than the nonlinear chains" (the IIR plan's question 20). In Q15 the double rows' Q1.14 taps missed the 70 dB tier (−64.6 to −68.9 dB); the Q15 rows hold it (−89.2 / −70.4 / −72.3 / −70.7 dB), and at `transparent`, where Q1.14 cannot carry 120 dB, the double rows stay, format-limited as the FIR stages are (question 21) |
 | R27 | **Mixed chains are the caller's `tap::dsp::chain`** (I10, question 16's part; IIR-c): the recursive stages and both guard band forms satisfy `sync_stage`, so a caller composes them with FIR stages (an IIR ↑2 and an FIR ↑3, a guard band filter before an interpolator or after a decimator), each stage built at its divisor (`profile::relaxed`, or `iir_down_by` / `iir_up_by`). No named IIR chains, no coverage-matrix rows, no C ABI here (IIR-d); a small offering table states the choices: ↑2 / ↓2 × four profiles × two variants × no filter, the Chebyshev II or the linear form (`rational.iir_composition.TheOfferingTableIsMeasured`, README) | `basic_chain` takes ratios only and relaxes its FIR stages; a mixed chain's design is the caller's, and its latency is DspTap's composition (exact where every stage is, nominal otherwise). A chain holding a `tap::dsp::chain` (`down_by8`) composes and processes but cannot flush, since a chain reports no `window_frames()`; the caller flattens it (DspTap follow-up) |
 | R28 | **The floating zero-input limit cycle is an honest limit** (I6, question 19, the maintainer's decision; IIR-c): the floating Chebyshev II at orders 7 and above, and R24's near-linear `transparent` stage at divisor 1, may settle under flush-to-zero in a limit cycle a few times the smallest normal; the hot loops and DspTap stay as they are (no deadband, no dropped design). The stage's `flush()` still equals its zero padding bit for bit, and a chain whose later stages follow a cycling stage flushes within the residue of zero padding; everywhere else, and always in fixed point, flush is exact | Measured at the named settings: the Chebyshev's state settles at most 8.7 times the smallest normal in float and 10.4 in double at order 7, 8.4 and 7.7 at `transparent`'s order 11 (pinned below 16; `rational.guard_band_float_test.TheChebyshevLimitCycleIsBounded`), the near-linear stage's below 8 (R24); orders 3 and 5 drain. A deadband or a dropped design would cost every caller to remove a residue of 1e-37 (float) that only an exact-zero test can see |
+| R29 | **The C ABI exposes the recursive stages and the guard band filter, named only** (`docs/IIR_PLAN.md` I11, decided v14 with its factor argument; IIR-d): `tap_sr_rational_create_iir_format(direction, factor, phase, profile, format, channels)` (factor 2 a `basic_iir_stage`, 4, 8 and 16 an `iir_up_by` / `iir_down_by` cascade) and `tap_sr_rational_create_guard_band_format(form, half_band_kind, profile, format, channels)` (the named settings, `guard_band_settings::economy(kind)` and its siblings), with the stable constants `TAP_SR_RATIONAL_DIRECTION_*`, `TAP_SR_RATIONAL_IIR_*`, `TAP_SR_RATIONAL_GUARD_*` and `TAP_SR_RATIONAL_HALF_BAND_*`, beside the existing entry points (the symbol set re-pinned with additions only, 23 to 27); two double getters for every handle, `tap_sr_rational_nominal_latency_output_frames` and `tap_sr_rational_group_delay_output_frames`; every generic entry point serves the new handles in every format and at any channel count (one and two native, any other a fan-out), and `tap_sr_rational_latency_output_frames` refuses a handle whose C++ type has no `latency_output_frames()` (a recursive stage or cascade, the near-linear one included, and the Chebyshev II: 0 / 0, NaN seconds) while the linear form reports its (N − 1) / 2 | D12 at the C boundary, as R16: a direction, a factor and a variant name what the caller composes; the near-linear variant's delay path is exact but its passband's delay strays from it, so the exact getter would claim more than the C++ type does, and the path is its nominal; a guard band design at the high rate is no named setting, so the demonstration's "filter before the decimator" runs a labelled scipy reference rather than a custom C entry |
 
 ### 2.1 Stage factoring: the arithmetic behind R3
 
@@ -2149,6 +2151,128 @@ and the Q15 rows' attained stopbands are the same on x86-64, the M33, the M55
 and Hexagon. The guard band executable's M55 image is 996,264 bytes (965,964
 at v0.23), the main battery's unchanged at 2,042,664. MSVC and AppleClang were
 not run here.
+
+**IIR-d: the C ABI, the notebooks and the ratchet; 0.9.0 (2026-11-23, v0.25).**
+`docs/IIR_PLAN.md` v14: the maintainer's decisions of 2026-11-23, each the recommended option
+(I11 as recommended, all of it here; the C ABI with a factor argument and named settings only;
+0.9.0 in this PR; the Hexagon `rational` legs' timeout 30 minutes), and the plan's last step.
+DspTap stays at `v0.4.0`.
+
+*The C ABI* (R29; `capi/tap_sr_rational_capi.h`). Added beside the existing entry points, none
+of which changed: `tap_sr_rational_create_iir_format(direction, factor, phase, profile,
+format, channels)`, `tap_sr_rational_create_guard_band_format(form, half_band_kind, profile,
+format, channels)`, `tap_sr_rational_nominal_latency_output_frames(c)` and
+`tap_sr_rational_group_delay_output_frames(c, f)`; the constants
+`TAP_SR_RATIONAL_DIRECTION_UP` / `_DOWN` (0, 1: bridge's direction tags),
+`TAP_SR_RATIONAL_IIR_NONLINEAR` / `_NEAR_LINEAR` (0, 1: `iir_phase`'s order),
+`TAP_SR_RATIONAL_GUARD_NONLINEAR` / `_LINEAR` (0, 1: `guard_phase`'s) and
+`TAP_SR_RATIONAL_HALF_BAND_FIR` / `_NONLINEAR` / `_NEAR_LINEAR` (0, 1, 2: `half_band_kind`'s).
+Only the `_format` spellings ship: the float-only `create` / `create_stage` predate the format
+argument, and a new entry takes the format from the start. The exported set is 27 symbols (23
+before), pinned with additions only. One engine class (`recursive_engine<T>`) serves a
+`basic_iir_stage`, an `iir_up_by` / `iir_down_by` cascade and a `guard_band_filter`, each
+through its own members; the fan-out serves any channel count but one and two. Every generic
+entry point answers for the new handles: the accounting, flush (its window), reset, the
+format refusal; `tap_sr_rational_ratio` (2/1, 1/2 … 16/1, 1/16, and 1/1 for the filter);
+`tap_sr_rational_macs_per_output` as an exact rational (a recursive stage's multiplies per
+decimated output, over its factor going up; a cascade's folded at its output rate as an FIR
+chain's are; the filter's five per section or N); `tap_sr_rational_stages` (1, or the cascade's
+2 to 4) and `tap_sr_rational_stage_taps` (0 for a recursive stage and the Chebyshev II, N for
+the linear form). The exact `tap_sr_rational_latency_output_frames` refuses a handle whose C++
+type has no `latency_output_frames()`, the recursive stages and cascades (the near-linear
+variant included: its delay path is exact, 7 frames at `economy` going down, but its passband's
+delay strays from it by up to 0.0087 frames there, so the path is its nominal) and the
+Chebyshev II, by writing 0 / 0, and `tap_sr_rational_latency_seconds` returns NaN for them; the
+linear form reports its (N − 1) / 2 (in Q15 its Q15 row's: 59/2 at `balanced`). Pinned by
+`CApi.InvalidRecursiveArgumentsReturnNull` and three tests under the flush-to-zero fixture
+(`capi_recursive.*`): every direction, factor (2, 4, 8, 16) and variant at `economy` in stereo,
+by 2 at the other three profiles in mono, by 2 and by 8 at three channels (the fan-out), and
+every form, kind and profile of the guard band filter in stereo, mono and three channels, each
+in float, Q15 and Q31 against its C++ type: outputs bit for bit over a long call and a short
+one, flush, reset, the accounting, the MACs, the nominal latency and the group delay at four
+frequencies equal to the C++ type's, and the stated refusals. The guard band filter's committed
+rows became plain inline arrays (`guard_band.h`): as variable templates GCC gave them
+`STB_GNU_UNIQUE` binding, which the shared library exported despite its hidden visibility, ten
+symbols the pinned set caught. The binding names the handles `IirStage(direction, factor,
+phase)` and `GuardBand(form, half_band)`; `latency_output_frames` is `None` where the C ABI
+refuses it.
+
+*The notebooks* (I11), both committed executed through the C ABI in the root
+`requirements.lock` environment (numpy 2.4.6, scipy 1.17.1, matplotlib 3.11.2, nbconvert
+7.17.1, nbformat 5.11.1, ipykernel 7.3.0: the lock's own versions), with the measurements they
+share in `notebooks/iir_measure.py`:
+- `iir_comparison.ipynb`: the FIR half-band against both recursive variants, alone and with
+  each guard band form at the setting behind them, at every profile, ↓2 and ↑2. The cost and
+  latency table reproduces the offering table's cells (`iir_composition.TheOfferingTableIsMeasured`)
+  and the FIR stages' own; from coherent tones, every configuration holds the profile's A where
+  an alias lands in the passband (or an image comes from it): −71 to −90 dB at the 70 dB
+  profiles, −120 to −126 dB at `transparent`. Alone, every half-band leaves −3.3 to −4.1 dB
+  (recursive) and −6.3 to −6.6 dB (FIR) above the guard band filter's stop edge; with either
+  form the guard band's worst alias is at or below −A/2 behind the half-band its setting is
+  named for (−37 to −46 dB, −60.6 to −64.8 dB at `transparent`) and above the stop edge past A
+  (−75 to −81 dB, −125 to −130 dB).
+- `guard_band_demo.ipynb`, as I11's bullet describes it: a logarithmic sweep from 20 Hz to
+  0.995 of 48 kHz at −6 dBFS in float, 96 to 48 kHz at `economy`; the spectrogram of every
+  configuration on one fixed 0 to −140 dB scale with the passband edge (18 kHz), the filter's
+  stop edge (21.7 kHz) and the low Nyquist drawn; a waterfall; the worst-alias table (the
+  sweep's alias in the guard band −18.3 / −22.7 / −19.4 dB behind the FIR, nonlinear and
+  near-linear half-bands alone, −37.3 / −43.8 / −39.5 dB with the Chebyshev II after them; above
+  the stop edge −8.7 / −7.4 / −6.5 dB alone, −79.0 / −79.6 / −78.9 dB with it); the interpolating
+  mirror (an image of a source above the stop edge −9.2 dB behind the FIR ↑2 alone, −82.8 dB
+  with the Chebyshev II before it); each configuration's group delay; listening clips written to
+  the temporary directory, never committed. The filter before the decimator is a scipy design,
+  labelled as a reference, since no named setting sits at the high rate: the same order before
+  it leaves −13.1 dB above the stop edge, and the order that removes the same band there, 17,
+  costs 90 multiplies per output against the 20 after it.
+- The book's Part VII figure (`book/src/img/guard-band.svg`, `scripts/book_figures.py
+  guard-band`) is drawn by the same module, through the C ABI.
+
+*The ratchet* (section 4). Twenty-four workloads on the M33, M55 and Hexagon, the `iir_` rows
+(the recursive half-band by 2 up and down, float and Q15, nonlinear and near-linear
+(`iir_near_`), at `economy`, alone and with the guard band filter's Chebyshev II (`_cheby`) or
+linear form (`_linear`) before the interpolator or after the decimator, each a
+`tap::dsp::chain`), and on the host the recursive ↑2 and ↓2 at 2 and 12 channels (`iir_up2_*`,
+`iir_down2_*`, the float converter's pattern). The two builds count the new rows within 0.07 %
+of each other (Hexagon's float decimators, start-up), so every baseline is their midpoint, never
+`--update` from one build; on the host the two builds count identically. At `economy` in stereo
+the recursive decimator by 2 counts 31.2 M instructions on the M33 in float against the FIR
+stage's 343.6 M (soft double: the FIR's float taps accumulate in double), 9.1 M on the M55
+against 23.4 M, 12.8 M on Hexagon against 66.5 M; in Q15 39.9 / 15.9 / 15.6 M against 45.6 /
+16.9 / 16.9 M, and the M55's Q15 interpolator by 2, 35.9 M, is the one row above the FIR stage's
+(28.7 M, the Helium Q15 dot). The guard band filter's linear form in float costs what an FIR
+does there (782.6 M with the decimator on the M33). Three probe sets for the size and stack
+ceilings, `iir` (the nonlinear pair), `iirnear` (the near-linear pair) and `iirgb` (the
+nonlinear pair with the Chebyshev II), in every format, their ceilings recorded from the
+exceptions build as CI gates them (the M33's float pair: 40,196 bytes of engine `.text`, a
+worst path of 72 bytes per call). Every existing row, count, checksum and ceiling is
+unchanged; the existing ceiling entries were kept as committed, though the by-2 probes measure
+80 bytes below their recorded `.rodata` and image (since before bcef447: its binaries are the
+same), since the gate is one-sided and nothing here moved them.
+
+*The A/B against bcef447.* Every `async`, `bridge` and `rational` ratchet workload, probe and
+stack binary that both trees build, built with the same toolchains, is byte-identical
+(stripped): 72 on each of the M33, M55 and Hexagon in both builds (16 `async`, 22 `bridge`, 34
+`rational`) and 84 on the host in both builds (18, 26, 40), so every existing count and
+checksum is identical; every existing row passes the ±3 % gate, every ceiling of the three
+engines measures within its file in the exceptions build (the no-exceptions build's engine
+`.text` exceeds the by-2 and by-4 probes' as it does at bcef447, where the same binaries
+measure the same: the ceilings are the exceptions build's).
+
+*Verification.* GCC 13 and Clang 18 with `-Werror` and `-DTAP_SR_BUILD_CAPI=ON` for the three
+engines, the C ABIs and the examples, and GCC without exceptions and RTTI with the C ABIs: 517 of
+517 tests in each (the C ABI's `capi_recursive.*` and `CApi.InvalidRecursiveArgumentsReturnNull`
+new); GCC 15.3 with `-Werror` and the C ABIs, 516 of 516; a Debug build's C ABI and precondition
+tests, 14 of 14 (the library's precondition checks the calling thread's flush-to-zero, which the
+recursive tests' fixture sets). clang-tidy 18 clean on every changed translation unit, the
+ratchet's and the C ABI's included, and on each new probe, workload and host branch;
+clang-format 18 on every changed source; the vocabulary gate clean, the notebooks' source cells
+included; the book built by mdBook 0.4.40 without a warning. Under emulation, in both builds: on
+the M33 the main battery 169 of 169, the guard band executable 79 of 80 with the double
+limit-cycle test skipped as before, the subnormal image 6 of 6 and the label's other 10 entries;
+on the M55 169, 80 and 6 of 6 and the 10 others (the guard band executable's image unchanged at
+996,264 bytes, the main battery's at 2,042,664); on Hexagon 276 of 276 in each build with
+`ci.yml`'s exclusions. The ratchet and the ceilings in both builds on the M33, M55, Hexagon and
+host as above. MSVC and AppleClang were not run here.
 
 **Order and gating.** M0 lands in DspTap and the family bumps its pin
 (`../CLAUDE.md`, "Substrate discipline"); M1–M6 are done; the 2.2

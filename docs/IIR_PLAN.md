@@ -1,8 +1,48 @@
 # Recursive polyphase stages for `rational` (the IIR options): plan
 
-Status: **v13, 2026-11-22: IIR-a, IIR-b and IIR-c landed; IIR-c's follow-up
-(tap/SampleRateTap#115) and the DspTap 0.4.0 pin move in review.** v13 records question 21's
-answer as it lands:
+Status: **v14, 2026-11-23: IIR-a, IIR-b and IIR-c landed with IIR-c's follow-up (#115) and
+the DspTap 0.4.0 pin move (#116); IIR-d, the plan's last step, in review.** v14 records the
+maintainer's decisions for IIR-d, asked on 2026-11-23, each the recommended option, and IIR-d's
+results (section 5 item 5):
+- **I11, decided as recommended, all of it in IIR-d** (question 16's remaining part): the C ABI's
+  additions beside the existing entry points, the symbol set re-pinned with additions only; the
+  double getters for the nominal latency and the group delay, the exact
+  `tap_sr_rational_latency_output_frames` refusing a handle whose C++ type has no exact latency;
+  the ctypes binding; the comparison notebook; `guard_band_demo.ipynb` as I11's bullet
+  describes it; both committed executed, the book's Part VII figure from the same code.
+- **The C ABI's shape: a factor argument.** One recursive entry,
+  `tap_sr_rational_create_iir_format(direction, factor, phase, profile, format, channels)`
+  (factor 2 `basic_iir_stage`, 4, 8 and 16 `iir_down_by` / `iir_up_by`), and one guard band
+  entry, `tap_sr_rational_create_guard_band_format(form, half_band_kind, profile, format,
+  channels)`; named settings only, no custom design in C. The one configuration that needs one,
+  the demonstration's filter before the decimator, runs a scipy design labelled as a reference.
+- **0.9.0 in IIR-d's PR** (D13): the three umbrella headers and the root `project()`, the
+  version pins, the tested-pairs row (DspTap 0.4.0, `v0.4.0`), `CHANGELOG.md`; the maintainer
+  tags `v0.9.0` after the merge.
+- **ci.yml:** the two Hexagon `rational` legs' timeout raised from 20 to 30 minutes, after
+  #115's leg ran past 20 on a slow runner.
+- **IIR-d** (`rational/PLAN.md` R29 and its v0.25 record): the C ABI as decided, with the stable
+  constants `TAP_SR_RATIONAL_DIRECTION_*`, `_IIR_*`, `_GUARD_*` and `_HALF_BAND_*` and the
+  getters `tap_sr_rational_nominal_latency_output_frames` and
+  `tap_sr_rational_group_delay_output_frames`: 27 exported symbols (23 before). Every generic
+  entry point serves the new handles at any channel count; the exact getter refuses a recursive
+  stage or cascade, the near-linear one too (its delay path exact but its passband delay
+  straying from it, the path its nominal), and the Chebyshev II with 0 / 0 and NaN seconds,
+  and reports the linear form's (N − 1) / 2. `CApi.*` and `capi_recursive.*` pin every handle
+  bit for bit against its C++ type in every format. The notebooks run the shipping C++
+  through it (`notebooks/iir_measure.py` shared with the book's figure): at `economy` the
+  sweep's worst alias in the guard band is −22.7 dB behind the nonlinear half-band alone and
+  −43.8 dB with the Chebyshev II after it, above its stop edge −7.4 and −79.6 dB; the same order
+  before the decimator (the scipy reference) leaves −13.1 dB above the stop edge, and the order
+  that removes the same band before it, 17, costs 90 multiplies per output against 20 after it:
+  4.5 times on the kernel's count (five per section, twice per output at the high rate), where
+  I11's bullet quoted IIR-0's "six times". The ratchet gates twenty-four recursive workloads on the
+  M33, M55 and Hexagon and the recursive ↑2 / ↓2 on the host, recorded at the midpoint of the
+  two builds (0.07 % apart at most), and three probe sets of size and stack ceilings; every
+  existing count, checksum and ceiling is unchanged, every ratchet binary of the three engines
+  byte-identical to bcef447's.
+
+v13 records question 21's answer as it lands:
 - **DspTap 0.4.0** (tap/DspTap#69, tagged `v0.4.0`) commits the Q15 rows question 21 asked for,
   `k_guard_band_fir_q15<A, num, den, Order>` at the three 70 dB spec points and orders 3 to 11
   (none at 120 dB, which Q1.14 cannot carry), and the quantizer they are measured through,
@@ -164,8 +204,8 @@ non-finite input, and flush-to-zero as the host's job (I9, v9); the bar for a fo
 v10); float states in the float profile (I14, v10); the round trip's target (question 5, v9); the
 order (section 5); I7's order rule (question 14, v11), I10 (question 16's part, v11) and the
 limit cycle (question 19, v11); the guard band's settings per half-band kind (question 20, v12)
-and the linear form's Q15 rows (question 21, v12). Recommended and not yet put to the
-maintainer: I11, listed in section 8. Numbers marked *est.* are arithmetic; numbers marked
+and the linear form's Q15 rows (question 21, v12); I11, the C ABI's shape and the release
+(v14). Numbers marked *est.* are arithmetic; numbers marked
 **IIR-0** are the spike's measurements, **IIR-b** the shipping stages', **IIR-c** the guard band
 filter's.
 
@@ -815,7 +855,9 @@ reserves, with P = 4.
   pinned by `rational.iir_composition.TheOfferingTableIsMeasured`; at `economy` going down the
   nonlinear stage costs 4 / 24 / 54 multiplies per output with no filter / the Chebyshev II /
   the linear form, the near-linear one 7 / 27 / 57.
-- **I11. The C ABI and the notebooks.** *Recommended:*
+- **I11. The C ABI and the notebooks.** *Decided (v14, the maintainer), as recommended, with a
+  factor argument for the recursive entry (`tap_sr_rational_create_iir_format`) and named
+  settings only; landed in IIR-d (R29), its numbers in v14's status above.* *Recommended:*
   - **New entry points** for the IIR stages and the guard band filter (placeholders
     `tap_sr_rational_create_iir_stage_format` and `tap_sr_rational_create_guard_band_format`),
     so no existing symbol changes; the symbol set is re-pinned with additions only.
@@ -1059,6 +1101,8 @@ reserves, with P = 4.
 5. **IIR-d, the C ABI, the binding, the notebooks, the ratchet workloads and ceilings**
    (I11, section 4), and the release: SampleRateTap 0.9.0 (D13: the three umbrella headers
    and the root `project()`), with its tested-pairs row; the maintainer tags `v0.9.0`.
+   *In review (v14):* as v14's status states it, `rational/PLAN.md` R29 and the v0.25 record
+   with every number.
 
 **The order (decided, v7; DspTap's part decided v8).**
 - **In SampleRateTap,** after A13d, so every new type carries its channel count from the
@@ -1230,6 +1274,8 @@ Decided:
     (−89.2 / −70.4 / −72.3 / −70.7 dB in Q15); at 120 dB, where DspTap commits no Q15 row, the
     limit stays pinned (−70.9 / −69.2 dB).
 
-Recommended, not yet put to the maintainer (your word settles each):
-16. I11: new C ABI entry points, the notebooks (IIR-d). I10, composition through
+16. Decided (v14, the maintainer): I11 as recommended, all of it in IIR-d, the C ABI with a
+    factor argument and named settings only; 0.9.0 in IIR-d's PR. I10, composition through
     `tap::dsp::chain` with the offering table, was decided in v11 as recommended.
+
+Nothing is open.
