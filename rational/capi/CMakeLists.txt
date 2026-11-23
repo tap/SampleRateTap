@@ -11,9 +11,9 @@ endif()
 
 # Hidden by default, the C entry points exported by TAP_SR_RATIONAL_API on the
 # header's declarations (dllexport on Windows while building): the dynamic
-# symbol table is exactly the 23 tap_sr_rational_* functions, no template or
-# inline C++ leaking into it, pinned by rational.Family.ExportedSymbolsArePinned
-# (tests/family/symbols_rational.txt).
+# symbol table is exactly the 27 tap_sr_rational_* functions (23 before
+# IIR-d), no template or inline C++ leaking into it, pinned by
+# rational.Family.ExportedSymbolsArePinned (tests/family/symbols_rational.txt).
 add_library(tap_sr_rational_capi SHARED tap_sr_rational_capi.cpp)
 target_link_libraries(tap_sr_rational_capi PRIVATE tap::sr::rational tap_sr_rational_warnings)
 target_compile_definitions(tap_sr_rational_capi PRIVATE TAP_SR_RATIONAL_CAPI_BUILDING)
