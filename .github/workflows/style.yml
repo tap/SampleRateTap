@@ -57,12 +57,18 @@ jobs:
         run: >
           cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DTAP_SR_BUILD_ICOUNT_BENCH=ON
+      # Each file once: `clang-tidy -p build <file>` checks every compile
+      # command the database holds for that file, and the icount workloads
+      # and probes compile one source many times under different -D, so a
+      # file listed once per entry was checked n^2 times (rational's
+      # icount_main.cpp, 40 entries since IIR-d, ran 1600 times and took the
+      # job past its timeout). Every compile command is still checked once.
       - name: clang-tidy (project TUs; the submodule, third_party and fetched deps excluded)
         run: |
-          python3 -c "import json; print('\n'.join(e['file'] for e in json.load(open('build/compile_commands.json')) if 'submodules' not in e['file'] and 'third_party' not in e['file'] and '_deps' not in e['file']))" > /tmp/tidy-files.txt
+          python3 -c "import json; e = [x['file'] for x in json.load(open('build/compile_commands.json')) if 'submodules' not in x['file'] and 'third_party' not in x['file'] and '_deps' not in x['file']]; open('/tmp/tidy-entries.txt', 'w').write(str(len(e))); print('\n'.join(dict.fromkeys(e)))" > /tmp/tidy-files.txt
           # An empty list would pass silently.
           test -s /tmp/tidy-files.txt || { echo "::error::no translation units to check"; exit 1; }
-          echo "checking $(wc -l < /tmp/tidy-files.txt) translation units"
+          echo "checking $(cat /tmp/tidy-entries.txt) translation units in $(wc -l < /tmp/tidy-files.txt) files"
           fail=0
           # Line-wise read, not word splitting: robust to paths with spaces.
           while IFS= read -r f; do
