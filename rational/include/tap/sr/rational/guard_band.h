@@ -400,10 +400,34 @@ namespace tap::sr::rational {
             }
             return out;
         }
+        /// A committed row's taps, the double row's or (Q15) the Q15 row's.
         template <int StopDb, int PassNum, int PassDen, int Order>
-        inline constexpr auto k_guard_band_fir_taps =
-            guard_band_taps<tap::dsp::k_guard_band_fir<StopDb, PassNum, PassDen, Order>.taps.size()>(
+        constexpr auto guard_band_fir_copy() noexcept {
+            return guard_band_taps<tap::dsp::k_guard_band_fir<StopDb, PassNum, PassDen, Order>.taps.size()>(
                 tap::dsp::k_guard_band_fir<StopDb, PassNum, PassDen, Order>.taps);
+        }
+        template <int StopDb, int PassNum, int PassDen, int Order>
+        constexpr auto guard_band_fir_q15_copy() noexcept {
+            return guard_band_taps<tap::dsp::k_guard_band_fir_q15<StopDb, PassNum, PassDen, Order>.taps.size()>(
+                tap::dsp::k_guard_band_fir_q15<StopDb, PassNum, PassDen, Order>.taps);
+        }
+
+        // The copies, one plain inline variable per row rather than a
+        // variable template: GCC gives a variable template's instantiations
+        // STB_GNU_UNIQUE binding, which a shared library built with hidden
+        // visibility still exports (the C ABI's pinned symbol set,
+        // rational.Family.ExportedSymbolsArePinned), and a plain inline
+        // variable keeps its hidden visibility.
+        inline constexpr auto k_row_70_1_3_5       = guard_band_fir_copy<70, 1, 3, 5>();
+        inline constexpr auto k_row_70_1_3_7       = guard_band_fir_copy<70, 1, 3, 7>();
+        inline constexpr auto k_row_70_3_8_7       = guard_band_fir_copy<70, 3, 8, 7>();
+        inline constexpr auto k_row_70_19_48_7     = guard_band_fir_copy<70, 19, 48, 7>();
+        inline constexpr auto k_row_120_5_12_7     = guard_band_fir_copy<120, 5, 12, 7>();
+        inline constexpr auto k_row_120_5_12_11    = guard_band_fir_copy<120, 5, 12, 11>();
+        inline constexpr auto k_row_q15_70_1_3_5   = guard_band_fir_q15_copy<70, 1, 3, 5>();
+        inline constexpr auto k_row_q15_70_1_3_7   = guard_band_fir_q15_copy<70, 1, 3, 7>();
+        inline constexpr auto k_row_q15_70_3_8_7   = guard_band_fir_q15_copy<70, 3, 8, 7>();
+        inline constexpr auto k_row_q15_70_19_48_7 = guard_band_fir_q15_copy<70, 19, 48, 7>();
 
         /// A named setting's linear row: the committed taps and the stop edge
         /// they match.
@@ -411,30 +435,24 @@ namespace tap::sr::rational {
             std::span<const double> taps;
             double                  stop_edge = 0.0;
         };
-        template <int StopDb, int PassNum, int PassDen, int Order>
-        constexpr guard_band_linear_row guard_band_row() noexcept {
-            return {k_guard_band_fir_taps<StopDb, PassNum, PassDen, Order>,
-                    tap::dsp::k_guard_band_fir<StopDb, PassNum, PassDen, Order>.stop_edge};
-        }
-        inline constexpr std::array<guard_band_linear_row, 6> k_guard_band_linear_rows = {
-            guard_band_row<70, 1, 3, 5>(),   guard_band_row<70, 1, 3, 7>(),   guard_band_row<70, 3, 8, 7>(),
-            guard_band_row<70, 19, 48, 7>(), guard_band_row<120, 5, 12, 7>(), guard_band_row<120, 5, 12, 11>()};
+        inline constexpr std::array<guard_band_linear_row, 6> k_guard_band_linear_rows = {{
+            {k_row_70_1_3_5, tap::dsp::k_guard_band_fir<70, 1, 3, 5>.stop_edge},
+            {k_row_70_1_3_7, tap::dsp::k_guard_band_fir<70, 1, 3, 7>.stop_edge},
+            {k_row_70_3_8_7, tap::dsp::k_guard_band_fir<70, 3, 8, 7>.stop_edge},
+            {k_row_70_19_48_7, tap::dsp::k_guard_band_fir<70, 19, 48, 7>.stop_edge},
+            {k_row_120_5_12_7, tap::dsp::k_guard_band_fir<120, 5, 12, 7>.stop_edge},
+            {k_row_120_5_12_11, tap::dsp::k_guard_band_fir<120, 5, 12, 11>.stop_edge},
+        }};
 
-        /// The taps of a committed Q15 row (DspTap's k_guard_band_fir_q15),
-        /// copied at compile time like the double rows'.
-        template <int StopDb, int PassNum, int PassDen, int Order>
-        inline constexpr auto k_guard_band_fir_q15_taps =
-            guard_band_taps<tap::dsp::k_guard_band_fir_q15<StopDb, PassNum, PassDen, Order>.taps.size()>(
-                tap::dsp::k_guard_band_fir_q15<StopDb, PassNum, PassDen, Order>.taps);
-
-        /// The named settings' Q15 rows, in k_guard_band_named's order: the
-        /// four at 70 dB; none at 120 dB (empty), where Q15 runs the double
-        /// row, format-limited (the file header).
+        /// The named settings' Q15 rows (DspTap's k_guard_band_fir_q15), in
+        /// k_guard_band_named's order: the four at 70 dB; none at 120 dB
+        /// (empty), where Q15 runs the double row, format-limited (the file
+        /// header).
         inline constexpr std::array<std::span<const double>, 6> k_guard_band_linear_q15_taps = {
-            k_guard_band_fir_q15_taps<70, 1, 3, 5>,
-            k_guard_band_fir_q15_taps<70, 1, 3, 7>,
-            k_guard_band_fir_q15_taps<70, 3, 8, 7>,
-            k_guard_band_fir_q15_taps<70, 19, 48, 7>,
+            std::span<const double>{k_row_q15_70_1_3_5},
+            std::span<const double>{k_row_q15_70_1_3_7},
+            std::span<const double>{k_row_q15_70_3_8_7},
+            std::span<const double>{k_row_q15_70_19_48_7},
             std::span<const double>{},
             std::span<const double>{}};
 

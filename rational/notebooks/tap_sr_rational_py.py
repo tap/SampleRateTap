@@ -6,17 +6,24 @@ real library, never a Python re-implementation. (Re)builds build_capi/ on
 import: the build is incremental, and loading a library left over from an
 older checkout would silently measure old code.
 
-    from tap_sr_rational_py import Chain, Stage
+    from tap_sr_rational_py import Chain, Stage, IirStage, GuardBand
     c = Chain("down4_down4_down3", profile="economy")
     y = c.process(x)                    # float32 in, float32 out
     q = Chain("down2", fmt="q15")       # int16 (Q0.15) in and out; "q31": int32
     s = Stage(2, 1, divisor=(147, 160))  # the up 2 after bridge in 48 -> 88.2
     c.latency_output_frames             # Fraction
     c.macs_per_output                   # Fraction
+    r = IirStage("down", 8, "near_linear")       # iir_down_by<..., 8>; factor 2 is the stage
+    g = GuardBand("linear", "nonlinear", profile="economy")  # the form, the half-band it serves
+    r.latency_output_frames             # None: no exact latency (I5)
+    r.nominal_latency_output_frames     # float, output frames
+    r.group_delay_output_frames(0.1)    # float, at 0.1 cycles per output frame
 
 What is constructed is named, never looked up from a rate (D12): a chain is
 a chain constant of the C ABI, a stage a ratio of the vocabulary at a design
-divisor (PLAN.md 3.1).
+divisor (PLAN.md 3.1), a recursive stage a direction, a factor and a phase
+variant, and a guard band filter a form and the half-band it serves, at a
+named profile (docs/IIR_PLAN.md I11).
 """
 import ctypes
 import pathlib
@@ -53,6 +60,12 @@ CHAINS.update({
 })
 PROFILES = {"economy": 0, "transparent": 1, "balanced": 2, "super_economy": 3}
 FORMATS = {"float": 0, "q15": 1, "q31": 2}  # the TAP_SR_RATIONAL_FORMAT_* constants
+# The recursive entry points' constants (TAP_SR_RATIONAL_DIRECTION_*,
+# TAP_SR_RATIONAL_IIR_*, TAP_SR_RATIONAL_GUARD_*, TAP_SR_RATIONAL_HALF_BAND_*).
+DIRECTIONS = {"up": 0, "down": 1}
+PHASES = {"nonlinear": 0, "near_linear": 1}
+FORMS = {"nonlinear": 0, "linear": 1}
+HALF_BANDS = {"fir": 0, "nonlinear": 1, "near_linear": 2}
 
 
 def _lib_path():
@@ -98,6 +111,11 @@ def _load():
         "create_format": (vp, [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint]),
         "create_stage_format": (vp, [ctypes.c_uint, ctypes.c_uint, ctypes.c_int, ctypes.c_uint32, ctypes.c_uint32,
                                      ctypes.c_int, ctypes.c_uint]),
+        "create_iir_format": (vp, [ctypes.c_int, ctypes.c_uint, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                                   ctypes.c_uint]),
+        "create_guard_band_format": (vp, [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint]),
+        "nominal_latency_output_frames": (ctypes.c_double, [vp]),
+        "group_delay_output_frames": (ctypes.c_double, [vp, ctypes.c_double]),
         "format": (ctypes.c_int, [vp]),
         "process_q15": (sz, [vp, p16, sz, p16]),
         "process_q31": (sz, [vp, p32, sz, p32]),
@@ -169,11 +187,22 @@ class _Converter:
     def _fraction(self, fn):
         n, d = ctypes.c_uint64(), ctypes.c_uint64()
         fn(self._h, ctypes.byref(n), ctypes.byref(d))
-        return Fraction(n.value, d.value)
+        return None if d.value == 0 else Fraction(n.value, d.value)
 
     @property
     def latency_output_frames(self):
+        """The exact latency (a Fraction), or None for a converter with none
+        (a recursive stage or cascade, the Chebyshev II guard band filter)."""
         return self._fraction(_LIB.tap_sr_rational_latency_output_frames)
+
+    @property
+    def nominal_latency_output_frames(self):
+        """The nominal latency in output frames: every converter has one."""
+        return _LIB.tap_sr_rational_nominal_latency_output_frames(self._h)
+
+    def group_delay_output_frames(self, f):
+        """The group delay at f (cycles per output frame), in output frames."""
+        return _LIB.tap_sr_rational_group_delay_output_frames(self._h, f)
 
     @property
     def macs_per_output(self):
@@ -232,6 +261,34 @@ class Stage(_Converter):
             channels,
             fmt,
         )
+
+
+class IirStage(_Converter):
+    """A recursive half-band stage (factor 2) or cascade (4, 8, 16) going up
+    or down, in a phase variant, at a named profile."""
+
+    def __init__(self, direction, factor, phase="nonlinear", profile="economy", channels=1, fmt="float"):
+        super().__init__(
+            _LIB.tap_sr_rational_create_iir_format(DIRECTIONS[direction], factor, PHASES[phase], PROFILES[profile],
+                                                   FORMATS[fmt], channels),
+            channels,
+            fmt,
+        )
+        self.direction, self.factor, self.phase = direction, factor, phase
+
+
+class GuardBand(_Converter):
+    """The 1:1 guard band filter in a form, at the named setting for a profile
+    behind the half-band it serves."""
+
+    def __init__(self, form, half_band, profile="economy", channels=1, fmt="float"):
+        super().__init__(
+            _LIB.tap_sr_rational_create_guard_band_format(FORMS[form], HALF_BANDS[half_band], PROFILES[profile],
+                                                          FORMATS[fmt], channels),
+            channels,
+            fmt,
+        )
+        self.form, self.half_band = form, half_band
 
 
 def version():

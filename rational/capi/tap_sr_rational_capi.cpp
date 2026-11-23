@@ -1,5 +1,6 @@
 /// @file tap_sr_rational_capi.cpp
-/// @brief C ABI implementation: one interface over the named chains and the single stages, in float, Q15 and Q31.
+/// @brief C ABI implementation: one interface over the named chains, the single stages, the recursive stages and
+/// the guard band filter, in float, Q15 and Q31.
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 
@@ -7,8 +8,10 @@
 
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -42,6 +45,9 @@ namespace {
         virtual std::size_t flush_output_frames() const                                       = 0;
         virtual void        reset()                                                           = 0;
         virtual exact_ratio latency_output_frames() const                                     = 0;
+        virtual bool        exact_latency() const                                             = 0;
+        virtual double      nominal_latency_output_frames() const                             = 0;
+        virtual double      group_delay_output_frames(double f) const                         = 0;
         virtual exact_ratio macs_per_output() const                                           = 0;
         virtual exact_ratio ratio() const                                                     = 0;
         virtual std::size_t stages() const                                                    = 0;
@@ -81,6 +87,9 @@ namespace {
         std::size_t flush_output_frames() const override { return m_c.flush_output_frames(); }
         void        reset() override { m_c.reset(); }
         exact_ratio latency_output_frames() const override { return m_c.latency_output_frames(); }
+        bool        exact_latency() const override { return true; }
+        double      nominal_latency_output_frames() const override { return m_c.nominal_latency_output_frames(); }
+        double      group_delay_output_frames(double f) const override { return m_c.group_delay_output_frames(f); }
         exact_ratio ratio() const override { return exact_ratio{Chain::k_up, Chain::k_down}; }
         std::size_t stages() const override { return Chain::k_stages; }
 
@@ -136,6 +145,154 @@ namespace {
         Chain m_c;
     };
 
+    /// A stage that reports an exact latency (the guard band filter's linear
+    /// form); a recursive stage, a cascade and the Chebyshev II do not.
+    template <typename T>
+    concept reports_exact_latency = requires(const T& t) {
+        { t.latency_output_frames() } -> std::same_as<exact_ratio>;
+    };
+    /// A stage that reports a nominal latency and a group delay (I5).
+    template <typename T>
+    concept reports_nominal = requires(const T& t, double f) {
+        { t.nominal_latency_output_frames() } -> std::convertible_to<double>;
+        { t.group_delay_output_frames(f) } -> std::convertible_to<double>;
+    };
+
+    /// A recursive half-band stage's multiplies per output, exact: its
+    /// design's per decimated output, over its factor going up.
+    template <typename Stage>
+    exact_ratio iir_stage_macs(const Stage& s) {
+        return exact_ratio{s.multiplies(), Stage::k_is_decimator ? 1 : Stage::k_factor};
+    }
+
+    /// Over the recursive stages and the guard band filter (R21 to R28): a
+    /// basic_iir_stage, a cascade (iir_up_by / iir_down_by, a
+    /// tap::dsp::chain of them) or a guard_band_filter, each a sync stage of
+    /// its own, its latency members those of its C++ type.
+    template <typename T>
+    class recursive_engine final : public engine {
+      public:
+        using sample = typename T::sample;
+
+        explicit recursive_engine(T t)
+            : m_t(std::move(t)) {}
+
+        int         format() const override { return format_of<sample>(); }
+        std::size_t process(const float* in, std::size_t n, float* out) override { return run(in, n, out); }
+        std::size_t process(const std::int16_t* in, std::size_t n, std::int16_t* out) override {
+            return run(in, n, out);
+        }
+        std::size_t process(const std::int32_t* in, std::size_t n, std::int32_t* out) override {
+            return run(in, n, out);
+        }
+        std::size_t flush(float* out) override { return drain(out); }
+        std::size_t flush(std::int16_t* out) override { return drain(out); }
+        std::size_t flush(std::int32_t* out) override { return drain(out); }
+        std::size_t outputs_for(std::size_t n) const override { return m_t.outputs_for(n); }
+        std::size_t frames_needed(std::size_t k) const override { return m_t.frames_needed(k); }
+        std::size_t flush_output_frames() const override { return m_t.flush_output_frames(); }
+        void        reset() override { m_t.reset(); }
+        exact_ratio ratio() const override { return exact_ratio{T::k_up, T::k_down}; }
+
+        /// Exact only where the C++ type reports it (the linear form); the
+        /// C entry point refuses the others (0 / 0).
+        exact_ratio latency_output_frames() const override {
+            if constexpr (reports_exact_latency<T>) {
+                return m_t.latency_output_frames();
+            }
+            else {
+                return exact_ratio{0, 1};
+            }
+        }
+        bool   exact_latency() const override { return reports_exact_latency<T>; }
+        double nominal_latency_output_frames() const override {
+            if constexpr (reports_nominal<T>) {
+                return m_t.nominal_latency_output_frames();
+            }
+            else {
+                return latency_output_frames().value();
+            }
+        }
+        double group_delay_output_frames(double f) const override {
+            if constexpr (reports_nominal<T>) {
+                return m_t.group_delay_output_frames(f);
+            }
+            else {
+                return latency_output_frames().value(); // linear phase
+            }
+        }
+
+        exact_ratio macs_per_output() const override {
+            if constexpr (requires { T::k_stages; }) {
+                // A cascade: each stage's at its output rate over the
+                // cascade's, as chain_engine folds an FIR chain's.
+                exact_ratio total{0, 1};
+                exact_ratio after{1, 1};
+                stage_fold<T::k_stages - 1>(total, after);
+                return total;
+            }
+            else if constexpr (requires { m_t.multiplies(); }) {
+                return iir_stage_macs(m_t); // one recursive stage
+            }
+            else {
+                // The guard band filter: five per section or its N taps.
+                return exact_ratio{static_cast<std::uint64_t>(m_t.macs_per_output()), 1};
+            }
+        }
+
+        std::size_t stages() const override {
+            if constexpr (requires { T::k_stages; }) {
+                return T::k_stages;
+            }
+            else {
+                return 1;
+            }
+        }
+        /// A recursive stage has no taps (0); the linear form has its N.
+        std::size_t stage_taps(std::size_t i) const override {
+            if constexpr (requires { m_t.taps(); }) {
+                return i == 0 ? m_t.taps() : 0;
+            }
+            else {
+                return 0;
+            }
+        }
+
+      private:
+        template <typename U>
+        std::size_t run(const U* in, std::size_t n, U* out) {
+            if constexpr (std::is_same_v<U, sample>) {
+                return m_t.process(in, n, out);
+            }
+            else {
+                return 0; // another format's converter
+            }
+        }
+
+        template <typename U>
+        std::size_t drain(U* out) {
+            if constexpr (std::is_same_v<U, sample>) {
+                return m_t.flush(out);
+            }
+            else {
+                return 0;
+            }
+        }
+
+        template <std::size_t I>
+        void stage_fold(exact_ratio& total, exact_ratio& after) const {
+            const auto& s = m_t.template stage<I>();
+            using st      = std::remove_cvref_t<decltype(s)>;
+            total         = total + iir_stage_macs(s) * after;
+            after         = after * exact_ratio{st::k_down, st::k_up};
+            if constexpr (I > 0) {
+                stage_fold<I - 1>(total, after);
+            }
+        }
+
+        T m_t;
+    };
+
     /// Any channel count but the native ones (one and two, CHANNELS_PLAN.md
     /// K8, option (b)): that many mono engines behind one handle, the
     /// interleaved frames split to them and their outputs interleaved back
@@ -172,6 +329,13 @@ namespace {
             }
         }
         exact_ratio latency_output_frames() const override { return m_monos.front()->latency_output_frames(); }
+        bool        exact_latency() const override { return m_monos.front()->exact_latency(); }
+        double      nominal_latency_output_frames() const override {
+            return m_monos.front()->nominal_latency_output_frames();
+        }
+        double group_delay_output_frames(double f) const override {
+            return m_monos.front()->group_delay_output_frames(f);
+        }
         exact_ratio macs_per_output() const override { return m_monos.front()->macs_per_output(); }
         exact_ratio ratio() const override { return m_monos.front()->ratio(); }
         std::size_t stages() const override { return m_monos.front()->stages(); }
@@ -426,6 +590,80 @@ namespace {
         }
     }
 
+    /// A recursive stage (factor 2) or cascade (4, 8, 16) in variant P going
+    /// up or down, at the profile; NULL where the type's validate() refuses
+    /// it (D17: never for a named profile, which every variant reaches at
+    /// every divisor a cascade uses).
+    template <typename S, rat::iir_phase P, bool Up, std::size_t D>
+    std::unique_ptr<engine> make_iir_typed(const rat::profile& p, unsigned channels) {
+        return by_channels<S>(channels, [&](auto ch) -> std::unique_ptr<engine> {
+            constexpr std::size_t C = decltype(ch)::value;
+            using stage =
+                std::conditional_t<D == 2, rat::basic_iir_stage<S, C, std::conditional_t<Up, rat::up2, rat::down2>, P>,
+                                   rat::basic_iir_cascade<S, C, P, D, Up>>;
+            if (stage::validate(p) != nullptr) {
+                return nullptr;
+            }
+            return std::make_unique<recursive_engine<stage>>(stage(p));
+        });
+    }
+
+    template <typename S, rat::iir_phase P, bool Up>
+    std::unique_ptr<engine> make_iir_factor(unsigned factor, const rat::profile& p, unsigned channels) {
+        switch (factor) {
+        case 2:
+            return make_iir_typed<S, P, Up, 2>(p, channels);
+        case 4:
+            return make_iir_typed<S, P, Up, 4>(p, channels);
+        case 8:
+            return make_iir_typed<S, P, Up, 8>(p, channels);
+        case 16:
+            return make_iir_typed<S, P, Up, 16>(p, channels);
+        default:
+            return nullptr;
+        }
+    }
+
+    template <typename S>
+    std::unique_ptr<engine> make_iir(int direction, unsigned factor, int phase, const rat::profile& p,
+                                     unsigned channels) {
+        constexpr auto nonlinear   = rat::iir_phase::nonlinear;
+        constexpr auto near_linear = rat::iir_phase::near_linear;
+        const bool     up          = direction == TAP_SR_RATIONAL_DIRECTION_UP;
+        if (phase == TAP_SR_RATIONAL_IIR_NONLINEAR) {
+            return up ? make_iir_factor<S, nonlinear, true>(factor, p, channels)
+                      : make_iir_factor<S, nonlinear, false>(factor, p, channels);
+        }
+        return up ? make_iir_factor<S, near_linear, true>(factor, p, channels)
+                  : make_iir_factor<S, near_linear, false>(factor, p, channels);
+    }
+
+    /// The guard band filter's named setting for a profile tag behind a kind.
+    rat::guard_band_settings guard_band_settings_for(int profile, rat::half_band_kind kind) {
+        return profile == 0   ? rat::guard_band_settings::economy(kind)
+               : profile == 1 ? rat::guard_band_settings::transparent(kind)
+               : profile == 2 ? rat::guard_band_settings::balanced(kind)
+                              : rat::guard_band_settings::super_economy(kind);
+    }
+
+    template <typename S, rat::guard_phase G>
+    std::unique_ptr<engine> make_guard_band_typed(const rat::guard_band_settings& s, unsigned channels) {
+        return by_channels<S>(channels, [&](auto ch) -> std::unique_ptr<engine> {
+            using filter = rat::guard_band_filter<S, decltype(ch)::value, G>;
+            if (filter::validate(s) != nullptr) {
+                return nullptr;
+            }
+            return std::make_unique<recursive_engine<filter>>(filter(s));
+        });
+    }
+
+    template <typename S>
+    std::unique_ptr<engine> make_guard_band(int form, const rat::guard_band_settings& s, unsigned channels) {
+        return form == TAP_SR_RATIONAL_GUARD_NONLINEAR
+                   ? make_guard_band_typed<S, rat::guard_phase::nonlinear>(s, channels)
+                   : make_guard_band_typed<S, rat::guard_phase::linear>(s, channels);
+    }
+
     /// The format tag's sample type, as a factory call.
     template <typename Make>
     std::unique_ptr<engine> by_format(int format, Make&& make) {
@@ -520,6 +758,62 @@ tap_sr_rational_converter* tap_sr_rational_create_stage(unsigned L, unsigned M, 
                                                channels);
 }
 
+tap_sr_rational_converter* tap_sr_rational_create_iir_format(int direction, unsigned factor, int phase, int profile,
+                                                             int format, unsigned channels) {
+    if ((direction != TAP_SR_RATIONAL_DIRECTION_UP && direction != TAP_SR_RATIONAL_DIRECTION_DOWN)
+        || (factor != 2 && factor != 4 && factor != 8 && factor != 16)
+        || (phase != TAP_SR_RATIONAL_IIR_NONLINEAR && phase != TAP_SR_RATIONAL_IIR_NEAR_LINEAR) || profile < 0
+        || profile > 3 || channels == 0) {
+        return nullptr;
+    }
+    const auto construct = [&]() -> tap_sr_rational_converter* {
+        auto c = std::make_unique<tap_sr_rational_converter>();
+        c->e   = by_format(format, [&](auto tag) {
+            return make_iir<decltype(tag)>(direction, factor, phase, profile_for(profile), channels);
+        });
+        return c->e ? c.release() : nullptr;
+    };
+#if TAP_DSP_HAS_EXCEPTIONS
+    try {
+        return construct();
+    }
+    catch (...) {
+        return nullptr; // a refused allocation; the arguments were validated by the factory
+    }
+#else
+    return construct();
+#endif
+}
+
+tap_sr_rational_converter* tap_sr_rational_create_guard_band_format(int form, int half_band_kind, int profile,
+                                                                    int format, unsigned channels) {
+    if ((form != TAP_SR_RATIONAL_GUARD_NONLINEAR && form != TAP_SR_RATIONAL_GUARD_LINEAR)
+        || half_band_kind < TAP_SR_RATIONAL_HALF_BAND_FIR || half_band_kind > TAP_SR_RATIONAL_HALF_BAND_NEAR_LINEAR
+        || profile < 0 || profile > 3 || channels == 0) {
+        return nullptr;
+    }
+    const rat::half_band_kind      kind = half_band_kind == TAP_SR_RATIONAL_HALF_BAND_FIR ? rat::half_band_kind::fir
+                                          : half_band_kind == TAP_SR_RATIONAL_HALF_BAND_NONLINEAR
+                                              ? rat::half_band_kind::nonlinear
+                                              : rat::half_band_kind::near_linear;
+    const rat::guard_band_settings s    = guard_band_settings_for(profile, kind);
+    const auto                     construct = [&]() -> tap_sr_rational_converter* {
+        auto c = std::make_unique<tap_sr_rational_converter>();
+        c->e = by_format(format, [&](auto tag) { return make_guard_band<decltype(tag)>(form, s, channels); });
+        return c->e ? c.release() : nullptr;
+    };
+#if TAP_DSP_HAS_EXCEPTIONS
+    try {
+        return construct();
+    }
+    catch (...) {
+        return nullptr; // a refused allocation; the arguments were validated by the factory
+    }
+#else
+    return construct();
+#endif
+}
+
 void tap_sr_rational_destroy(tap_sr_rational_converter* c) {
     delete c;
 }
@@ -579,11 +873,33 @@ void tap_sr_rational_reset(tap_sr_rational_converter* c) {
 }
 
 void tap_sr_rational_latency_output_frames(const tap_sr_rational_converter* c, uint64_t* num, uint64_t* den) {
+    if (!c->e->exact_latency()) {
+        // No exact latency (a recursive stage or cascade, the Chebyshev II):
+        // refused as 0 / 0, a zero denominator.
+        if (num != nullptr) {
+            *num = 0;
+        }
+        if (den != nullptr) {
+            *den = 0;
+        }
+        return;
+    }
     put(c->e->latency_output_frames(), num, den);
 }
 
 double tap_sr_rational_latency_seconds(const tap_sr_rational_converter* c, double out_rate_hz) {
+    if (!c->e->exact_latency()) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
     return c->e->latency_output_frames().value() / out_rate_hz;
+}
+
+double tap_sr_rational_nominal_latency_output_frames(const tap_sr_rational_converter* c) {
+    return c->e->nominal_latency_output_frames();
+}
+
+double tap_sr_rational_group_delay_output_frames(const tap_sr_rational_converter* c, double f) {
+    return c->e->group_delay_output_frames(f);
 }
 
 void tap_sr_rational_macs_per_output(const tap_sr_rational_converter* c, uint64_t* num, uint64_t* den) {

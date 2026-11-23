@@ -1,5 +1,6 @@
 /// @file tap_sr_rational_capi.h
-/// @brief Minimal C ABI over the chains and stages in float, Q15 and Q31, for FFI consumers.
+/// @brief Minimal C ABI over the chains, the stages, the recursive stages and the guard band filter in float, Q15
+/// and Q31, for FFI consumers.
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Timothy Place and the SampleRateTap contributors
 //
@@ -16,7 +17,10 @@
 // the coverage matrix's within-family chains (PLAN.md 3.3 / 3.4, R16), a
 // chain constant below; a single stage for composing a chain through bridge is a
 // ratio of the vocabulary with the design divisor the matrix row states
-// (PLAN.md 3.1). There is no (in_hz, out_hz) entry point.
+// (PLAN.md 3.1); a recursive stage or cascade is a direction, a power-of-2
+// factor and a phase variant (R21, R22), and a guard band filter a form and
+// the half-band it serves (R26), each at a named profile, never a custom
+// design (docs/IIR_PLAN.md I11). There is no (in_hz, out_hz) entry point.
 #pragma once
 
 #include <stddef.h>
@@ -167,7 +171,57 @@ TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create_stage_form
                                                                                    uint32_t divisor_num,
                                                                                    uint32_t divisor_den, int format,
                                                                                    unsigned channels);
-TAP_SR_RATIONAL_API void                       tap_sr_rational_destroy(tap_sr_rational_converter* c);
+
+/// The recursive stages and the guard band filter (docs/IIR_PLAN.md I11,
+/// rational/PLAN.md R21 to R28). Values are stable.
+///
+/// direction: up (an interpolator) or down (a decimator), bridge's tags.
+#define TAP_SR_RATIONAL_DIRECTION_UP 0
+#define TAP_SR_RATIONAL_DIRECTION_DOWN 1
+/// phase: the half-band's variant (iir_phase): the elliptic two-path allpass
+/// half-band, or the near-linear one whose one path is a pure delay.
+#define TAP_SR_RATIONAL_IIR_NONLINEAR 0
+#define TAP_SR_RATIONAL_IIR_NEAR_LINEAR 1
+/// form: the guard band filter's (guard_phase): the odd-order Chebyshev II,
+/// or the linear-phase type II FIR.
+#define TAP_SR_RATIONAL_GUARD_NONLINEAR 0
+#define TAP_SR_RATIONAL_GUARD_LINEAR 1
+/// half_band_kind: the half-band a guard band filter serves, the one beside
+/// it in the caller's chain, which sets its named setting's order (the FIR
+/// Nyquist half-band, or a recursive one in either variant).
+#define TAP_SR_RATIONAL_HALF_BAND_FIR 0
+#define TAP_SR_RATIONAL_HALF_BAND_NONLINEAR 1
+#define TAP_SR_RATIONAL_HALF_BAND_NEAR_LINEAR 2
+
+/// A recursive half-band stage (factor 2: basic_iir_stage, up2 or down2) or
+/// a cascade of them (factor 4, 8 or 16: iir_up_by / iir_down_by, each stage
+/// relaxed to its divisor), in a phase variant at a profile (as
+/// tap_sr_rational_create's), in a stated format, of channels channels (as
+/// tap_sr_rational_create's: one and two native, any other a fan-out of
+/// one-channel converters, bit for bit). Returns NULL on invalid arguments
+/// (a direction, factor, phase, profile or format outside the values above).
+///
+/// A recursive stage's latency is nominal (I5):
+/// tap_sr_rational_latency_output_frames refuses it (below), and
+/// tap_sr_rational_nominal_latency_output_frames and
+/// tap_sr_rational_group_delay_output_frames report it. Flushing subnormals
+/// in the floating formats is the host's job, as for the C++ stage (I9): a
+/// library built without NDEBUG checks the calling thread's flush-to-zero as
+/// a precondition; without it the state settles at a few multiples of the
+/// smallest subnormal and stays there.
+TAP_SR_RATIONAL_API tap_sr_rational_converter* tap_sr_rational_create_iir_format(int direction, unsigned factor,
+                                                                                 int phase, int profile, int format,
+                                                                                 unsigned channels);
+/// The 1:1 guard band filter in a form, at the named setting for a profile
+/// behind the half-band it serves (guard_band_settings::economy(kind) and its
+/// siblings; profile as tap_sr_rational_create's), in a stated format, of
+/// channels channels (as above). Named settings only: no custom design.
+/// Returns NULL on invalid arguments. Its ratio is 1/1. The linear form has
+/// an exact latency, (N - 1) / 2 frames; the Chebyshev II a nominal one, and
+/// the host's flush-to-zero as a recursive stage has.
+TAP_SR_RATIONAL_API tap_sr_rational_converter*
+tap_sr_rational_create_guard_band_format(int form, int half_band_kind, int profile, int format, unsigned channels);
+TAP_SR_RATIONAL_API void tap_sr_rational_destroy(tap_sr_rational_converter* c);
 
 /// The converter's ratio, reduced: output frames per input frame = L / M.
 TAP_SR_RATIONAL_API void tap_sr_rational_ratio(const tap_sr_rational_converter* c, unsigned* L, unsigned* M);
@@ -201,19 +255,41 @@ TAP_SR_RATIONAL_API uint64_t tap_sr_rational_flush_output_frames(const tap_sr_ra
 TAP_SR_RATIONAL_API void tap_sr_rational_reset(tap_sr_rational_converter* c);
 
 /// Group delay in output frames as an exact reduced rational (R7), and in
-/// seconds at a given output rate.
+/// seconds at a given output rate: every chain and stage, and the guard band
+/// filter's linear form ((N - 1) / 2). A converter whose C++ counterpart has
+/// no latency_output_frames() refuses: a recursive stage or cascade (the
+/// near-linear one too: its delay path is exact, but its passband delay
+/// strays from it, so its exact path is its nominal, below) and the
+/// Chebyshev II form write 0 / 0, a zero denominator, and
+/// tap_sr_rational_latency_seconds returns NaN.
 TAP_SR_RATIONAL_API void   tap_sr_rational_latency_output_frames(const tap_sr_rational_converter* c, uint64_t* num,
                                                                  uint64_t* den);
 TAP_SR_RATIONAL_API double tap_sr_rational_latency_seconds(const tap_sr_rational_converter* c, double out_rate_hz);
 
+/// The nominal latency in output frames, for every converter (I5): a
+/// recursive stage's group delay at DC (the near-linear variant's exact delay
+/// path, an integer), a cascade's or a chain's every stage's nominal at the
+/// output rate summed (tap::dsp::chain), and for a converter with an exact
+/// latency that latency's value.
+TAP_SR_RATIONAL_API double tap_sr_rational_nominal_latency_output_frames(const tap_sr_rational_converter* c);
+/// The group delay at f (cycles per output frame) in output frames, for
+/// every converter: from the recursive designs' coefficients, and for a
+/// converter with an exact latency that latency at every f (linear phase).
+TAP_SR_RATIONAL_API double tap_sr_rational_group_delay_output_frames(const tap_sr_rational_converter* c, double f);
+
 /// Multiply-accumulates per output frame per channel, an exact reduced
 /// rational (the trimmed rows the kernels execute, PLAN.md 3.3; in Q15 the
-/// quantized spans, which may trim outer taps that round to zero).
+/// quantized spans, which may trim outer taps that round to zero; a
+/// recursive stage's multiplies per decimated output, over its factor going
+/// up, and a cascade's summed at its output rate; the guard band filter's
+/// five per section or its N taps).
 TAP_SR_RATIONAL_API void tap_sr_rational_macs_per_output(const tap_sr_rational_converter* c, uint64_t* num,
                                                          uint64_t* den);
 
 /// The number of stages, and stage i's Nyquist design length N (0 when i is
-/// out of range).
+/// out of range). A recursive stage has no taps: each of a recursive
+/// handle's stages reports 0; the guard band filter is one stage, its N for
+/// the linear form and 0 for the Chebyshev II.
 TAP_SR_RATIONAL_API size_t tap_sr_rational_stages(const tap_sr_rational_converter* c);
 TAP_SR_RATIONAL_API size_t tap_sr_rational_stage_taps(const tap_sr_rational_converter* c, size_t i);
 
