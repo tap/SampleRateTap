@@ -91,12 +91,15 @@ greenfield `*Tap` code follows the naming rules above.
 - **Extension:** `.h` for headers (family-wide).
 - **Header guard:** `#pragma once` (first line after the banner). Universally
   supported by GCC/Clang/MSVC; replaces the `#ifndef`/`#define`/`#endif` triple.
-- **Per-file banner:** three lines —
+- **Per-file banner:** the `@file` / `@brief` pair, then the SPDX line and
+  the family's copyright line, which names the author and the library's
+  contributors (`<Library>` is the repo's name: DspTap, SampleRateTap, …;
+  the year is the file's) —
   ```cpp
   /// @file spsc_ring.h
   /// @brief Lock-free single-producer single-consumer ring buffer.
   // SPDX-License-Identifier: MIT
-  // Copyright 2025-2026 Timothy Place.
+  // Copyright 2026 Timothy Place and the <Library> contributors
   ```
 - **Doc comments:** `///` triple-slash with `@`-style commands
   (`@param`, `@return`, `@throws`, `@pre`). Not the `\`-command dialect.
