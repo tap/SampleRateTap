@@ -1,34 +1,34 @@
 {
   "provenance": {
-    "sha": "667934a2d10d73b5017e5eb85c1c2325073115d8",
-    "dsptap": "d7ebe4bc5dc9db5d9aef306795c709f034de6cf7",
-    "run_id": "38013347369",
-    "run_url": "https://github.com/tap/SampleRateTap/actions/runs/38013347369",
-    "date": "2026-10-10",
-    "toolchains": "arm-none-eabi-gcc 15:13.2.rel1-2, qemu-system-arm 1:8.2.2+ds-0ubuntu1.18 (ubuntu24 20261004.327.1), hexagon-clang 19.1.5 and qemu-hexagon 8.2.2 at the pinned digests"
+    "sha": "f1816cc957e7c2763144a6975c02d5909c76a278",
+    "dsptap": "4b30a02a15c25568b9931ab6385012fa147dc835",
+    "run_id": "45540985569",
+    "run_url": "https://github.com/tap/SampleRateTap/actions/runs/45540985569",
+    "date": "2026-11-25",
+    "toolchains": "arm-none-eabi-gcc 15:13.2.rel1-2, qemu-system-arm 1:8.2.2+ds-0ubuntu1.18 (ubuntu24 20261116.133.1), hexagon-clang 19.1.5 and qemu-hexagon 8.2.2 at the pinned digests"
   },
   "counts": {
     "hexagon": {
-      "cmp_icount_lsr_best": 2588013392,
-      "cmp_icount_lsr_best_4s": 5171981607,
-      "cmp_icount_lsr_medium": 873790422,
-      "cmp_icount_lsr_medium_4s": 1740191532,
-      "cmp_icount_r8b_120": 593058685,
-      "cmp_icount_r8b_120_4s": 1174818893,
-      "cmp_icount_r8b_120_tb8": 532925916,
-      "cmp_icount_r8b_120_tb8_4s": 1053228490,
-      "cmp_icount_speex_fixed_q10": 206348956,
-      "cmp_icount_speex_fixed_q10_4s": 386139052,
-      "cmp_icount_speex_fixed_q4": 67031791,
-      "cmp_icount_speex_fixed_q4_4s": 124308454,
-      "cmp_icount_speex_float_q10": 2979838469,
-      "cmp_icount_speex_float_q10_4s": 5933851540,
-      "cmp_icount_speex_float_q4": 72267855,
-      "cmp_icount_speex_float_q4_4s": 135577688,
-      "cmp_icount_srt_float": 397694085,
-      "cmp_icount_srt_float_4s": 662088538,
-      "cmp_icount_srt_q15": 179697127,
-      "cmp_icount_srt_q15_4s": 223575034
+      "cmp_icount_lsr_best": 2588013417,
+      "cmp_icount_lsr_best_4s": 5171981632,
+      "cmp_icount_lsr_medium": 873790447,
+      "cmp_icount_lsr_medium_4s": 1740191557,
+      "cmp_icount_r8b_120": 593058710,
+      "cmp_icount_r8b_120_4s": 1174818918,
+      "cmp_icount_r8b_120_tb8": 532925941,
+      "cmp_icount_r8b_120_tb8_4s": 1053228515,
+      "cmp_icount_speex_fixed_q10": 206348981,
+      "cmp_icount_speex_fixed_q10_4s": 386139077,
+      "cmp_icount_speex_fixed_q4": 67031816,
+      "cmp_icount_speex_fixed_q4_4s": 124308479,
+      "cmp_icount_speex_float_q10": 2979838494,
+      "cmp_icount_speex_float_q10_4s": 5933851565,
+      "cmp_icount_speex_float_q4": 72267880,
+      "cmp_icount_speex_float_q4_4s": 135577713,
+      "cmp_icount_srt_float": 396922412,
+      "cmp_icount_srt_float_4s": 660547594,
+      "cmp_icount_srt_q15": 178629893,
+      "cmp_icount_srt_q15_4s": 221443052
     },
     "m33": {
       "cmp_icount_lsr_best": 14344956886,
@@ -47,10 +47,10 @@
       "cmp_icount_speex_float_q10_4s": 34662634874,
       "cmp_icount_speex_float_q4": 240159001,
       "cmp_icount_speex_float_q4_4s": 452503354,
-      "cmp_icount_srt_float": 2339059866,
-      "cmp_icount_srt_float_4s": 3808080433,
-      "cmp_icount_srt_q15": 967845318,
-      "cmp_icount_srt_q15_4s": 1052206578
+      "cmp_icount_srt_float": 2337375075,
+      "cmp_icount_srt_float_4s": 3804711631,
+      "cmp_icount_srt_q15": 965010010,
+      "cmp_icount_srt_q15_4s": 1046536866
     },
     "m55": {
       "cmp_icount_lsr_best": 614379291,
@@ -69,10 +69,10 @@
       "cmp_icount_speex_float_q10_4s": 1906047107,
       "cmp_icount_speex_float_q4": 152220021,
       "cmp_icount_speex_float_q4_4s": 302783168,
-      "cmp_icount_srt_float": 96150559,
-      "cmp_icount_srt_float_4s": 174960038,
-      "cmp_icount_srt_q15": 101050856,
-      "cmp_icount_srt_q15_4s": 183677221
+      "cmp_icount_srt_float": 94455147,
+      "cmp_icount_srt_float_4s": 171570287,
+      "cmp_icount_srt_q15": 97931890,
+      "cmp_icount_srt_q15_4s": 177440339
     }
   }
 }

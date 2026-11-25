@@ -215,9 +215,9 @@ old metric reproduce the previous table exactly (2,218 / 6,400 on M55, 49,424
 
 <!-- COMPARE:BEGIN -->
 Measured in `compare.yml` run
-[38013347369](https://github.com/tap/SampleRateTap/actions/runs/38013347369)
-on `667934a` (DspTap `d7ebe4b`), 2026-10-10; arm-none-eabi-gcc 15:13.2.rel1-2,
-qemu-system-arm 1:8.2.2+ds-0ubuntu1.18 (ubuntu24 20261004.327.1),
+[45540985569](https://github.com/tap/SampleRateTap/actions/runs/45540985569)
+on `f1816cc` (DspTap `4b30a02`), 2026-11-25; arm-none-eabi-gcc 15:13.2.rel1-2,
+qemu-system-arm 1:8.2.2+ds-0ubuntu1.18 (ubuntu24 20261116.133.1),
 hexagon-clang 19.1.5 and qemu-hexagon 8.2.2 at the pinned digests.
 
 Steady state, instructions per stereo output frame (× = vs. SampleRateTap
@@ -226,16 +226,16 @@ SampleRateTap row per target in bold):
 
 | Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
 |---|---:|---:|---:|
-| **SampleRateTap** balanced, float | **821** | 15,302 | 2,754 |
-| **SampleRateTap** balanced, Q15 | 861 | **879** | **457** |
+| **SampleRateTap** balanced, float | **803** | 15,285 | 2,746 |
+| **SampleRateTap** balanced, Q15 | 828 | **849** | **446** |
 | r8brain 120 dB, default 2 % band³ | 1,002 (1.2×) | 30,004 (2.0×) | 6,060 (2.2×) |
-| r8brain 120 dB, 8 % band (flat to 20 kHz)³ | 934 (1.1×) | 26,619 (1.7×) | 5,420 (2.0×) |
+| r8brain 120 dB, 8 % band (flat to 20 kHz)³ | 934 (1.2×) | 26,619 (1.7×) | 5,420 (2.0×) |
 | libsamplerate `MEDIUM` | 2,203 (2.7×) | 49,206 (3.2×) | 9,025 (3.3×) |
-| libsamplerate `BEST` | 6,392 (7.8×) | 149,420 (9.8×) | 26,916 (9.8×) |
-| SpeexDSP float, quality 10 (~100 dB) | 9,903 (12.1×) | 180,098 (11.8×) | 30,771 (11.2×) |
-| SpeexDSP float, quality 4 (its passband knee) | 1,568 (1.9×) | 2,212 (0.1×) | 659 (0.2×) |
-| SpeexDSP fixed-point, quality 10 (× vs. Q15) | 5,902 (6.9×) | 6,430 (7.3×) | 1,873 (4.1×) |
-| SpeexDSP fixed-point, quality 4 (× vs. Q15) | 1,673 (1.9×) | 1,797 (2.0×) | 597 (1.3×) |
+| libsamplerate `BEST` | 6,392 (8.0×) | 149,420 (9.8×) | 26,916 (9.8×) |
+| SpeexDSP float, quality 10 (~100 dB) | 9,903 (12.3×) | 180,098 (11.8×) | 30,771 (11.2×) |
+| SpeexDSP float, quality 4 (its passband knee) | 1,568 (2.0×) | 2,212 (0.1×) | 659 (0.2×) |
+| SpeexDSP fixed-point, quality 10 (× vs. Q15) | 5,902 (7.1×) | 6,430 (7.6×) | 1,873 (4.2×) |
+| SpeexDSP fixed-point, quality 4 (× vs. Q15) | 1,673 (2.0×) | 1,797 (2.1×) | 597 (1.3×) |
 
 One-time construction, millions of instructions:
 
@@ -252,10 +252,10 @@ One-time construction, millions of instructions:
 | SpeexDSP fixed-point, quality 10 | 5.2 | 98.8 | 26.6 |
 | SpeexDSP fixed-point, quality 4 | 2.0 | 33.6 | 9.8 |
 
-Key figures: on the M33 the Q15 datapath costs **879 instructions/frame** in
-steady state, libsamplerate `MEDIUM` **~56×** that and r8brain at 8 %
-**~30×**, SpeexDSP's fixed-point build at quality 4 **2.0×**; on the M55 the
-float datapath (821) is cheaper than Q15 (861) by 5%.
+Key figures: on the M33 the Q15 datapath costs **849 instructions/frame** in
+steady state, libsamplerate `MEDIUM` **~58×** that and r8brain at 8 %
+**~31×**, SpeexDSP's fixed-point build at quality 4 **2.1×**; on the M55 the
+float datapath (803) is cheaper than Q15 (828) by 3%.
 <!-- COMPARE:END -->
 
 ² The float datapath is soft-double-bound on the FP64-less M33 and
@@ -272,16 +272,16 @@ much); before it, Q15 cost 42 % more than float there.
 **SpeexDSP's rows read per target.** On the M55, the one target where
 SampleRateTap's float datapath is its cheaper row, SpeexDSP's cheapest
 setting (quality 4, the row that matches `balanced`'s latency class at
-−0.42 dB by 20 kHz) costs ~1.9× `balanced` in either build, and its quality
+−0.42 dB by 20 kHz) costs ~2.0× `balanced` in either build, and its quality
 10 ~7× (fixed-point) to ~12× (float). On the M33 and Hexagon the Q15 row is
 the one that runs (footnote ²: the float datapath accumulates in double,
 soft-float on both FP64-less cores), and Speex's float build is
 single-precision throughout, so its float rows undercut that float row by
 an order of magnitude; against the Q15 datapath its quality 4 costs 1.3×
-(Hexagon) to 2.0× (M33) fixed-point and 1.4× to 2.5× float, its quality 10
-4× to 7× fixed-point and 70× to 200× float. The one row a Q15 caller
-would weigh is its fixed-point build at quality 4: within 2× of the Q15
-datapath on every target, at a third more latency (32 frames against 24)
+(Hexagon) to 2.1× (M33) fixed-point and 1.5× to 2.6× float, its quality 10
+4× to 8× fixed-point and 70× to 210× float. The one row a Q15 caller
+would weigh is its fixed-point build at quality 4: 1.3–2.1× the Q15
+datapath across the targets, at a third more latency (32 frames against 24)
 and a −0.42 dB shelf at 20 kHz. Its construction is cheap, as the other
 libraries' is (under 100 M instructions on the M33, under 27 M elsewhere).
 
@@ -307,12 +307,12 @@ cost for devices that construct at boot.
 
 | | Type | Clock recovery | Ratio range | Quality | Latency | Footprint / targets | License & form |
 |---|---|---|---|---|---|---|---|
-| **SampleRateTap** | software ASRC | built-in (PI servo on FIFO occupancy) | near-unity (±~1000 ppm) | −134 dB THD+N / 149 dB DR measured above; Q15/Q31 paths for FPU-less DSPs | **1.5 ms default** (0.5 ms filter); sub-ms with `fast()` | 308× RT/core x86; Q15 datapath 457 insn/frame stereo steady-state on Hexagon, 879 on M33 (above), CI-gated | MIT, header-only C++20 |
+| **SampleRateTap** | software ASRC | built-in (PI servo on FIFO occupancy) | near-unity (±~1000 ppm) | −134 dB THD+N / 149 dB DR measured above; Q15/Q31 paths for FPU-less DSPs | **1.5 ms default** (0.5 ms filter); sub-ms with `fast()` | 308× RT/core x86; Q15 datapath 446 insn/frame stereo steady-state on Hexagon, 849 on M33 (above), CI-gated | MIT, header-only C++20 |
 | [AD1896][ad1896] (ADI) | hardware ASRC | built-in | 1:8 up / 7.75:1 down | THD+N −117 dB min / −133 dB best; 142 dB DNR (datasheet) | sub-ms–ms, mode dependent | dedicated chip, one stereo pair | proprietary |
 | [SRC4392][src4392] (TI) | hardware ASRC | built-in (automatic) | 1:16–16:1 | THD+N −140 dB typ; 144 dB DR (datasheet) | selectable filter delay | dedicated chip + DIR/DIT | proprietary |
 | [libsamplerate][lsr] | resampler library | **no** — caller supplies ratio | 1/256–256 | measured above (near-unity); 97 dB worst-case across ratios (own docs) | filter-dependent, offline-friendly | portable C, float | BSD-2 |
 | [soxr][soxr] | resampler library | no (fixed ratio + bounded VR mode) | wide | measured above (near-unity) | quality-dependent | portable C, SIMD | LGPL |
-| [r8brain-free-src][r8b] | resampler library | no — caller supplies ratio | arbitrary | measured above (near-unity, 24-bit preset at the format ceilings); stopband user-set 49–218 dB | transition-band dependent: 16 ms default at 120 dB here, 4.2 ms flat to 20 kHz, ~1 ms only with a 13 kHz-class roll-off | double precision, no fixed-point path; SSE2/AVX/NEON; ~1.1–2.2× SampleRateTap's float steady state on the embedded targets above | MIT, header-only C++ |
+| [r8brain-free-src][r8b] | resampler library | no — caller supplies ratio | arbitrary | measured above (near-unity, 24-bit preset at the format ceilings); stopband user-set 49–218 dB | transition-band dependent: 16 ms default at 120 dB here, 4.2 ms flat to 20 kHz, ~1 ms only with a 13 kHz-class roll-off | double precision, no fixed-point path; SSE2/AVX/NEON; ~1.2–2.2× SampleRateTap's float steady state on the embedded targets above | MIT, header-only C++ |
 | [SpeexDSP resampler][speex] | resampler library | no — caller supplies ratio (`set_rate_frac`) | arbitrary | measured above: float build at `balanced`'s level, fixed-point build at the 16-bit floor beside the Q15 row; "~100 dB" at best by its own table, and never flat to 20 kHz (−0.42 dB from quality 4 up) | quality-set: 32 frames (0.67 ms) at quality 4, 128 (2.7 ms) at 10 | portable C; **the one competitor with a fixed-point build** (Q15 I/O); its cost against the Q15 datapath on the embedded targets is in the tables above | BSD-3, C |
 | zita-resampler + zita-ajbridge | resampler + DLL servo | ajbridge adds a delay-locked loop | near-unity (bridge) | designed for 24-bit transparency; no published CI-verified figures | several ms (period-driven) | Linux/JACK, float | GPL |
 | OS engines (CoreAudio, WASAPI shared, PipeWire) | system ASRC | built-in, opaque | device-dependent | unpublished; generally well below the above | typically 5–20 ms | bundled | n/a |
