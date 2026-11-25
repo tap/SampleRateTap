@@ -17,7 +17,13 @@ on:
 jobs:
   compare-icount:
     name: Comparison instruction counts (${{ matrix.engine }})
-    runs-on: ubuntu-latest
+    # Pinned image, as ci.yml's ratchet is: the counts are a function of the
+    # apt toolchain, the plugin build and QEMU. The plugin is built against
+    # QEMU 8.2.2's header (plugin API 1), which ubuntu-24.04's qemu-system-arm
+    # loads; ubuntu-latest moved to 26.04, whose QEMU 10.2 needs API 2 or
+    # later and refused the plugin (run 45528691636). The recorded counts
+    # (bench/compare_counts.json) were measured on 24.04 as well.
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -100,9 +106,12 @@ jobs:
             # remainder construction (async/bench/icount/cmp_main.cpp,
             # bridge/bench/icount/cmp_main.cpp).
             for bin in $(scripts/compare_binaries.sh ${{ matrix.engine }}); do
+              # || true: a QEMU that exits non-zero (a refused plugin, a
+              # crashed guest) reaches the check below, which prints why,
+              # instead of ending the step silently under bash -e.
               out=$(qemu-system-arm -M $machine -nographic -semihosting \
                 -d plugin -plugin /tmp/libinsncount.so \
-                -kernel build-$tgt/$bin 2>&1)
+                -kernel build-$tgt/$bin 2>&1) || true
               echo "$out" | grep -q 'ICOUNT_DONE ok=1' || {
                 echo "$out"; echo "::error::$tgt $bin did not complete"; exit 1; }
               n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
@@ -159,7 +168,7 @@ jobs:
           cmake --build build-hex -j 4
           for bin in $(scripts/compare_binaries.sh ${{ matrix.engine }}); do
             out=$(qemu-hexagon -d plugin -plugin /tmp/libinsncount.so \
-              build-hex/$bin 2>&1)
+              build-hex/$bin 2>&1) || true
             echo "$out" | grep -q 'ICOUNT_DONE ok=1' || {
               echo "$out"; echo "::error::hexagon $bin did not complete"; exit 1; }
             n=$(echo "$out" | grep -o 'TAP_SR_INSN_COUNT [0-9]*' | cut -d' ' -f2)
