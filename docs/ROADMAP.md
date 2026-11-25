@@ -394,10 +394,11 @@ the recommendation). Its name map and breaking changes are `CHANGELOG.md`'s 0.8.
   The maintainer tags `v0.8.0`.
 - **X-c. DspTap's scaffold (X10)**, the low-band round trip as a DspTap primitive
   generic over `sync_stage`, in DspTap 0.3.0 with the IIR plan's substrate (X13).
-  *Open.*
+  *Landed (tap/DspTap#67, DspTap `v0.3.0` with IIR-a).*
 - **Then TapTools:** its DspTap pin to `v0.4.0` (the family's floor since the guard band's Q15
   rows) first, then SampleRateTap as a submodule (X11), `stft.h`'s change mode, the low-band EQ
-  and notch object (X14) and a notebook; then TapTools-Max. *Open.*
+  and notch object (X14) and a notebook; then TapTools-Max. *The pin landed, past the floor:
+  DspTap 0.7.0 (tap/TapTools#40). The rest open.*
 
 ## 10. Block IIR: recursive stages for `rational`, and 0.9.0 (added 2026-11-22)
 
