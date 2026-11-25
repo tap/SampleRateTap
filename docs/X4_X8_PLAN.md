@@ -1,6 +1,15 @@
 # ×4, ×8 and ×16, by intent: aliases for `rational`, and the low-band FFT round trip: plan
 
-Status: **v8, 2026-11-21: SampleRateTap's part landed.** X-a4 is done (SampleRateTap#111),
+Status: **v9, 2026-11-25: X-c landed.** DspTap's scaffold (X10), `tap/dsp/subband.h` with
+`subband_delta` over the `exact_delay_stage` and `subband_op` concepts, merged as
+tap/DspTap#67 on 2026-11-21 and shipped in DspTap `v0.3.0` beside the IIR plan's IIR-a (X13);
+this tree has pinned it since IIR-b, and `rational`'s IIR battery runs its stages through it
+(`rational/tests/test_iir_stage.cpp`). TapTools' DspTap pin has moved past it, to 0.7.0
+(tap/TapTools#40, with its own battery). What remains is the rest of TapTools (section 8,
+item 8): X11's submodule, `stft.h`'s change mode, the object (X14) and a notebook, then
+TapTools-Max.
+
+v8 (2026-11-21): **SampleRateTap's part landed.** X-a4 is done (SampleRateTap#111),
 and **X-b lands the aliases and 0.8.0** (section 8, item 6, as landed): X1's names as X2's
 plain aliases, the ×16 `_transparent` twins X4's rule keeps, X5, X7's alias constants,
 section 5's tests, 6.6's example and its tests, D19 and the release. X2, X5 and X16 are
@@ -1190,8 +1199,9 @@ version comes with the scaffold (X10), which replaces its hand-written delay and
      109 of 109 on the M33 and M55 and 124 of 124 on Hexagon in both builds
      (`rational/PLAN.md` section 6, the X-b record).
 7. **X-c, DspTap's scaffold** (X10), part of DspTap 0.3.0, landing as soon as it is ready
-   (X13).
-8. **Then TapTools:** its DspTap pin to `v0.3.0` first, with its own battery; then X11's
+   (X13). **Landed** (tap/DspTap#67, 2026-11-21, in DspTap `v0.3.0` with IIR-a).
+8. **Then TapTools:** its DspTap pin to `v0.3.0` first, with its own battery (done, and
+   past it: 0.7.0, tap/TapTools#40); then X11's
    submodule, checkout, layering and install changes, `stft.h`'s change mode, the object
    (X14) and a notebook. **Then TapTools-Max.**
 
