@@ -21,16 +21,16 @@ with their engine.
 - **async.** SampleRateTap measures −134 dB THD+N / 149 dB DR at the 24-bit
   interface with the servo in the loop, ~10 dB from the oracle-fed
   libraries' format ceiling: the measured price of clock recovery. On the
-  Cortex-M33 its Q15 datapath costs 879 instructions per stereo frame in
+  Cortex-M33 its Q15 datapath costs 849 instructions per stereo frame in
   steady state; SpeexDSP's fixed-point build, the one competitor with a
-  fixed-point path, 2.0× that at its passband knee, and the float-only
-  libraries 30–56×.
+  fixed-point path, 2.1× that at its passband knee, and the float-only
+  libraries 31–58×.
 - **bridge.** `economy` measures its 70 dB design (−91 / −86 dB THD+N by
   direction) at 29 / 19 input frames of latency; r8brain is the one library
   that offers that design point, the others overshoot it by 15–50 dB to keep
   the 18 kHz passband. `transparent` and every frontier setting measure at
   the 24-bit ceiling. In Q15 `bridge` is the cheapest row on every target
-  (209 instructions per stereo frame on the M55, 419 on the M33, going
+  (201 instructions per stereo frame on the M55, 418 on the M33, going
   down), 3–34× under r8brain's matched setting; in float, r8brain's FFT
   convolution undercuts `bridge`'s polyphase at both tiers, at 4–15× the
   latency.
@@ -42,10 +42,9 @@ with their engine.
   measures −93 dB and `transparent` −141 dB (since X17's re-tuned designer;
   −88 and −140 before); elsewhere every float row is at the 24-bit ceiling.
   Its Q15 stage is the cheapest row at every ratio on every target
-  (189–379 instructions per stereo frame on the M55, 291–575 on the M33,
-  measured before X17 shortened its designs), and in float the short Nyquist stage holds its own against
-  r8brain's FFT (0.8–2.5× at economy), which `bridge`'s longer polyphase
-  does not.
+  (134–319 instructions per stereo frame on the M55, 179–392 on the M33),
+  and in float the short Nyquist stage holds its own against r8brain's FFT
+  (0.9–2.8× at economy), which `bridge`'s longer polyphase does not.
 
 ## The shared tooling
 

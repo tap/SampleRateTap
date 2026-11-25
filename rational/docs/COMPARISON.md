@@ -153,12 +153,13 @@ settings are 13× (SpeexDSP) to 180–245× (`CDSPResampler24`).
 
 ## Computational cost, identical conditions
 
-The host and embedded cost tables below were measured on `667934a`
-(2026-10-10), before X17 re-tuned `rational`'s designer (2026-11-20). The
-designs it ships since are shorter — the by-2 stage at `economy` 21 MACs
-per output against 23, at `transparent` 51 against 63; `bench/baselines.json`
-records the instruction counts that moved — so the `rational` rows here are
-the longer designs' until `compare.yml` is re-run and re-harvested.
+The embedded instruction counts below were measured after X17 re-tuned
+`rational`'s designer (2026-11-20), in `compare.yml` run 45540985569 on
+`f1816cc` (2026-11-25). The host wall-clock table was measured on `667934a`
+(2026-10-10), before X17: the designs shipped since are shorter — the by-2
+stage at `economy` 21 MACs per output against 23, at `transparent` 51
+against 63 — so its `rational` rows are the longer designs' until the host
+comparison bench is re-run.
 
 Same engines, same task: convert a float 997 Hz stereo stream at exactly
 2/1, 1/2, 3/2 or 2/3, streaming in 128-frame input blocks (`bench/compare/`,
@@ -241,9 +242,9 @@ cross-compiled here.
 
 <!-- COMPARE:BEGIN -->
 Measured in `compare.yml` run
-[38013347369](https://github.com/tap/SampleRateTap/actions/runs/38013347369)
-on `667934a` (DspTap `d7ebe4b`), 2026-10-10; arm-none-eabi-gcc 15:13.2.rel1-2,
-qemu-system-arm 1:8.2.2+ds-0ubuntu1.18 (ubuntu24 20261004.327.1),
+[45540985569](https://github.com/tap/SampleRateTap/actions/runs/45540985569)
+on `f1816cc` (DspTap `4b30a02`), 2026-11-25; arm-none-eabi-gcc 15:13.2.rel1-2,
+qemu-system-arm 1:8.2.2+ds-0ubuntu1.18 (ubuntu24 20261116.376.1),
 hexagon-clang 19.1.5 and qemu-hexagon 8.2.2 at the pinned digests.
 
 **↑2 (48 → 96 kHz).** Steady state, instructions per stereo output frame (× = vs. the
@@ -251,24 +252,24 @@ rational row the label names; the cheapest rational row per target in bold):
 
 | Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
 |---|---:|---:|---:|
-| **rational** economy, float | 230 | 3,620 | 677 |
-| **rational** economy, Q15 | **189** | **291** | **103** |
-| **rational** transparent, float | 472 | 9,856 | 1,732 |
-| libsamplerate `MEDIUM` (economy-matched) | 2,177 (9.5×) | 42,566 (11.8×) | 9,380 (13.9×) |
-| r8brain 70 dB, 16 % band (economy-matched)³ | 203 (0.9×) | 4,479 (1.2×) | 932 (1.4×) |
-| SpeexDSP float, quality 2 (economy-matched) | 303 (1.3×) | 380 (0.1×) | 130 (0.2×) |
-| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 488 (2.6×) | 571 (2.0×) | 165 (1.6×) |
-| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 6,355 (13.5×) | 130,259 (13.2×) | 28,006 (16.2×) |
-| r8brain 120 dB, 10 % band (transparent-matched; × vs. transparent)³ | 241 (0.5×) | 5,875 (0.6×) | 1,205 (0.7×) |
-| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 2,293 (4.9×) | 33,056 (3.4×) | 5,647 (3.3×) |
+| **rational** economy, float | 192 | 3,263 | 604 |
+| **rational** economy, Q15 | **134** | **179** | **87** |
+| **rational** transparent, float | 373 | 7,902 | 1,394 |
+| libsamplerate `MEDIUM` (economy-matched) | 2,177 (11.4×) | 42,566 (13.0×) | 9,380 (15.5×) |
+| r8brain 70 dB, 16 % band (economy-matched)³ | 203 (1.1×) | 4,479 (1.4×) | 932 (1.5×) |
+| SpeexDSP float, quality 2 (economy-matched) | 303 (1.6×) | 380 (0.1×) | 130 (0.2×) |
+| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 488 (3.6×) | 571 (3.2×) | 165 (1.9×) |
+| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 6,355 (17.0×) | 130,259 (16.5×) | 28,006 (20.1×) |
+| r8brain 120 dB, 10 % band (transparent-matched; × vs. transparent)³ | 241 (0.6×) | 5,875 (0.7×) | 1,205 (0.9×) |
+| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 2,293 (6.1×) | 33,056 (4.2×) | 5,647 (4.1×) |
 
 One-time construction, millions of instructions:
 
 | Engine | Cortex-M55 | Cortex-M33 | Hexagon |
 |---|---:|---:|---:|
 | **rational** economy, float | 1.4 | 23.8 | 7.9 |
-| **rational** economy, Q15 | 1.5 | 26.5 | 8.3 |
-| **rational** transparent, float | 1.4 | 24.8 | 8.1 |
+| **rational** economy, Q15 | 1.5 | 26.4 | 8.3 |
+| **rational** transparent, float | 1.4 | 24.6 | 8.0 |
 | libsamplerate `MEDIUM` (economy-matched) | 1.3 | 19.2 | 7.0 |
 | r8brain 70 dB, 16 % band (economy-matched) | 1.4 | 24.2 | 8.1 |
 | SpeexDSP float, quality 2 (economy-matched) | 1.4 | 23.6 | 7.9 |
@@ -282,24 +283,24 @@ rational row the label names; the cheapest rational row per target in bold):
 
 | Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
 |---|---:|---:|---:|
-| **rational** economy, float | 501 | 7,291 | 1,350 |
-| **rational** economy, Q15 | **379** | **519** | **214** |
-| **rational** transparent, float | 989 | 19,768 | 3,469 |
-| libsamplerate `MEDIUM` (economy-matched) | 4,174 (8.3×) | 83,674 (11.5×) | 18,223 (13.5×) |
-| r8brain 70 dB, 16 % band (economy-matched)³ | 399 (0.8×) | 8,897 (1.2×) | 1,857 (1.4×) |
-| SpeexDSP float, quality 2 (economy-matched) | 568 (1.1×) | 764 (0.1×) | 384 (0.3×) |
-| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 915 (2.4×) | 1,111 (2.1×) | 397 (1.9×) |
-| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 12,522 (12.7×) | 258,524 (13.1×) | 55,473 (16.0×) |
-| r8brain 120 dB, 10 % band (transparent-matched; × vs. transparent)³ | 474 (0.5×) | 11,709 (0.6×) | 2,412 (0.7×) |
-| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 4,567 (4.6×) | 65,150 (3.3×) | 11,927 (3.4×) |
+| **rational** economy, float | 457 | 6,651 | 1,221 |
+| **rational** economy, Q15 | **319** | **392** | **180** |
+| **rational** transparent, float | 822 | 15,932 | 2,807 |
+| libsamplerate `MEDIUM` (economy-matched) | 4,174 (9.1×) | 83,674 (12.6×) | 18,223 (14.9×) |
+| r8brain 70 dB, 16 % band (economy-matched)³ | 399 (0.9×) | 8,897 (1.3×) | 1,857 (1.5×) |
+| SpeexDSP float, quality 2 (economy-matched) | 568 (1.2×) | 764 (0.1×) | 384 (0.3×) |
+| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 915 (2.9×) | 1,111 (2.8×) | 397 (2.2×) |
+| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 12,522 (15.2×) | 258,524 (16.2×) | 55,473 (19.8×) |
+| r8brain 120 dB, 10 % band (transparent-matched; × vs. transparent)³ | 474 (0.6×) | 11,709 (0.7×) | 2,412 (0.9×) |
+| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 4,567 (5.6×) | 65,150 (4.1×) | 11,927 (4.2×) |
 
 One-time construction, millions of instructions:
 
 | Engine | Cortex-M55 | Cortex-M33 | Hexagon |
 |---|---:|---:|---:|
 | **rational** economy, float | 2.8 | 47.2 | 15.7 |
-| **rational** economy, Q15 | 3.0 | 52.5 | 16.5 |
-| **rational** transparent, float | 2.8 | 48.2 | 15.9 |
+| **rational** economy, Q15 | 3.0 | 52.4 | 16.4 |
+| **rational** transparent, float | 2.8 | 48.0 | 15.8 |
 | libsamplerate `MEDIUM` (economy-matched) | 2.7 | 42.8 | 14.8 |
 | r8brain 70 dB, 16 % band (economy-matched) | 2.8 | 47.7 | 15.9 |
 | SpeexDSP float, quality 2 (economy-matched) | 2.8 | 47.1 | 15.7 |
@@ -313,23 +314,23 @@ rational row the label names; the cheapest rational row per target in bold):
 
 | Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
 |---|---:|---:|---:|
-| **rational** economy, float | 271 | 4,719 | 867 |
-| **rational** economy, Q15 | **207** | **352** | **120** |
-| **rational** transparent, float | 497 | 10,548 | 1,848 |
-| libsamplerate `MEDIUM` (economy-matched) | 2,195 (8.1×) | 46,071 (9.8×) | 9,277 (10.7×) |
-| r8brain 70 dB, 16 % band (economy-matched)³ | 438 (1.6×) | 10,247 (2.2×) | 2,176 (2.5×) |
-| SpeexDSP float, quality 2 (economy-matched) | 308 (1.1×) | 386 (0.1×) | 135 (0.2×) |
-| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 493 (2.4×) | 577 (1.6×) | 172 (1.4×) |
-| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 6,375 (12.8×) | 139,465 (13.2×) | 27,645 (15.0×) |
-| r8brain 120 dB, 10 % band (transparent-matched; × vs. transparent)³ | 408 (0.8×) | 10,944 (1.0×) | 2,242 (1.2×) |
-| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 2,299 (4.6×) | 33,403 (3.2×) | 5,689 (3.1×) |
+| **rational** economy, float | 236 | 4,247 | 776 |
+| **rational** economy, Q15 | **147** | **206** | **103** |
+| **rational** transparent, float | 477 | 10,440 | 1,829 |
+| libsamplerate `MEDIUM` (economy-matched) | 2,195 (9.3×) | 46,071 (10.8×) | 9,277 (12.0×) |
+| r8brain 70 dB, 16 % band (economy-matched)³ | 438 (1.9×) | 10,247 (2.4×) | 2,176 (2.8×) |
+| SpeexDSP float, quality 2 (economy-matched) | 308 (1.3×) | 386 (0.1×) | 135 (0.2×) |
+| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 493 (3.4×) | 577 (2.8×) | 172 (1.7×) |
+| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 6,375 (13.4×) | 139,465 (13.4×) | 27,645 (15.1×) |
+| r8brain 120 dB, 10 % band (transparent-matched; × vs. transparent)³ | 408 (0.9×) | 10,944 (1.0×) | 2,242 (1.2×) |
+| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 2,299 (4.8×) | 33,403 (3.2×) | 5,689 (3.1×) |
 
 One-time construction, millions of instructions:
 
 | Engine | Cortex-M55 | Cortex-M33 | Hexagon |
 |---|---:|---:|---:|
-| **rational** economy, float | 1.0 | 16.3 | 5.4 |
-| **rational** economy, Q15 | 1.0 | 18.1 | 5.6 |
+| **rational** economy, float | 1.0 | 16.2 | 5.3 |
+| **rational** economy, Q15 | 1.0 | 18.0 | 5.6 |
 | **rational** transparent, float | 1.0 | 17.5 | 5.5 |
 | libsamplerate `MEDIUM` (economy-matched) | 0.9 | 12.3 | 4.6 |
 | r8brain 70 dB, 16 % band (economy-matched) | 1.0 | 16.7 | 5.5 |
@@ -344,23 +345,23 @@ rational row the label names; the cheapest rational row per target in bold):
 
 | Engine | Cortex-M55 | Cortex-M33 (Pico 2 class) | Hexagon |
 |---|---:|---:|---:|
-| **rational** economy, float | 523 | 8,940 | 1,861 |
-| **rational** economy, Q15 | **344** | **575** | **182** |
-| **rational** transparent, float | 1,034 | 20,239 | 4,214 |
-| libsamplerate `MEDIUM` (economy-matched) | 3,194 (6.1×) | 73,202 (8.2×) | 13,293 (7.1×) |
-| r8brain 70 dB, 16 % band (economy-matched)³ | 684 (1.3×) | 16,307 (1.8×) | 3,297 (1.8×) |
-| SpeexDSP float, quality 2 (economy-matched) | 443 (0.8×) | 579 (0.1×) | 265 (0.1×) |
-| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 709 (2.1×) | 849 (1.5×) | 284 (1.6×) |
-| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 9,457 (9.2×) | 223,356 (11.0×) | 40,069 (9.5×) |
-| r8brain 120 dB, 10 % band (transparent-matched; × vs. transparent)³ | 640 (0.6×) | 17,174 (0.8×) | 3,412 (0.8×) |
-| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 3,437 (3.3×) | 50,584 (2.5×) | 8,790 (2.1×) |
+| **rational** economy, float | 450 | 8,035 | 1,684 |
+| **rational** economy, Q15 | **199** | **332** | **170** |
+| **rational** transparent, float | 996 | 20,072 | 4,189 |
+| libsamplerate `MEDIUM` (economy-matched) | 3,194 (7.1×) | 73,202 (9.1×) | 13,293 (7.9×) |
+| r8brain 70 dB, 16 % band (economy-matched)³ | 684 (1.5×) | 16,307 (2.0×) | 3,297 (2.0×) |
+| SpeexDSP float, quality 2 (economy-matched) | 443 (1.0×) | 579 (0.1×) | 265 (0.2×) |
+| SpeexDSP fixed-point, quality 3 (× vs. Q15) | 709 (3.6×) | 849 (2.6×) | 284 (1.7×) |
+| libsamplerate `BEST` (transparent-matched; × vs. transparent) | 9,457 (9.5×) | 223,356 (11.1×) | 40,069 (9.6×) |
+| r8brain 120 dB, 10 % band (transparent-matched; × vs. transparent)³ | 640 (0.6×) | 17,174 (0.9×) | 3,412 (0.8×) |
+| SpeexDSP float, quality 9 (transparent-matched; × vs. transparent) | 3,437 (3.5×) | 50,584 (2.5×) | 8,790 (2.1×) |
 
 One-time construction, millions of instructions:
 
 | Engine | Cortex-M55 | Cortex-M33 | Hexagon |
 |---|---:|---:|---:|
-| **rational** economy, float | 1.4 | 24.1 | 8.0 |
-| **rational** economy, Q15 | 1.5 | 26.8 | 8.3 |
+| **rational** economy, float | 1.4 | 24.1 | 7.9 |
+| **rational** economy, Q15 | 1.5 | 26.7 | 8.3 |
 | **rational** transparent, float | 1.5 | 25.4 | 8.1 |
 | libsamplerate `MEDIUM` (economy-matched) | 1.3 | 19.9 | 7.2 |
 | r8brain 70 dB, 16 % band (economy-matched) | 1.4 | 24.5 | 8.1 |
@@ -370,45 +371,46 @@ One-time construction, millions of instructions:
 | r8brain 120 dB, 10 % band (transparent-matched) | 1.5 | 27.1 | 8.7 |
 | SpeexDSP float, quality 9 (transparent-matched) | 1.5 | 24.2 | 8.5 |
 
-Key figures (↓2, 96 → 48): on the M33 the economy Q15 half-band costs **519
+Key figures (↓2, 96 → 48): on the M33 the economy Q15 half-band costs **392
 instructions/frame** in steady state, SpeexDSP's fixed-point build at quality
-3 **2.1×** that, libsamplerate `MEDIUM` **~161×** and r8brain at 70 dB
-**~17×**; on the M55 the economy float half-band (501) is dearer than Q15
-(379) by 32%.
+3 **2.8×** that, libsamplerate `MEDIUM` **~213×** and r8brain at 70 dB
+**~23×**; on the M55 the economy float half-band (457) is dearer than Q15
+(319) by 43%.
 <!-- COMPARE:END -->
 
 **The Q15 stage is the cheapest row at every ratio on every target.**
-Economy in Q15 costs 189–379 instructions per stereo output frame on the
-M55, 291–575 on the M33 and 103–214 on Hexagon: the half-band's structural
-zeros are never multiplied (23 MACs of its 43 taps going down) and the
+Economy in Q15 costs 134–319 instructions per stereo output frame on the
+M55, 179–392 on the M33 and 87–180 on Hexagon: the half-band's structural
+zeros are never multiplied (21 MACs of its 39 taps going down) and the
 Helium dot takes the rest. Against it, SpeexDSP's fixed-point build at
 quality 3 — the one competitor that runs on the Q15 row's terms — costs
-1.4–2.6×, and the float libraries are a different order: r8brain's
-economy-matched setting 17–31× on the M33, libsamplerate `MEDIUM` 130–160×.
+1.7–3.6×, and the float libraries are a different order: r8brain's
+economy-matched setting 23–50× on the M33, libsamplerate `MEDIUM` 210–240×.
 
 **In float the Nyquist stage holds its own against r8brain's FFT, which
 `bridge`'s 58-tap polyphase did not.** r8brain's economy-matched setting
-costs 0.8–0.9× `economy` on the M55 at the by-2 pair, where its block
-convolution amortizes best, and 1.2–2.5× everywhere else: 1.2–1.4× on the
-soft-double M33 and Hexagon at by 2, 1.3–2.5× at the mixed pair on every
+costs 0.9–1.1× `economy` on the M55 at the by-2 pair, where its block
+convolution amortizes best, and 1.3–2.8× everywhere else: 1.3–1.5× on the
+soft-double M33 and Hexagon at by 2, 1.5–2.8× at the mixed pair on every
 target, where r8brain's two-stage structure for 3/2 and 2/3 costs it. At
-`transparent` r8brain is 0.5–0.8× at by 2 and 0.8–1.2× at the mixed pair;
-the short L-th-band designs (63–149 taps per branch at 120 dB) leave FFT
-convolution less to win. libsamplerate `MEDIUM` costs 6–14× `economy` and its
-`BEST` 9–16× `transparent`, consistently across targets. SpeexDSP's
-single-precision float build at quality 2 costs 0.8–1.3× `economy` on the
-M55 and, as in both sibling comparisons, undercuts the double-accumulating
-float row by an order of magnitude on the soft-double targets while still
-costing 1.4–2.6× the Q15 row; it is the one competitor row near `economy`
-in cost and in stopband (70–76 dB), at 1.5× the latency.
+`transparent` r8brain is 0.6–0.9× at by 2 and 0.6–1.2× at the mixed pair;
+the short L-th-band designs (99 taps by 2 and 149 at the mixed pair at
+120 dB) leave FFT convolution less to win. libsamplerate `MEDIUM` costs
+7–16× `economy` and its `BEST` 10–20× `transparent`, consistently across
+targets. SpeexDSP's single-precision float build at quality 2 costs
+1.0–1.6× `economy` on the M55 and, as in both sibling comparisons, undercuts
+the double-accumulating float row by an order of magnitude on the
+soft-double targets while still costing 1.3–2.1× the Q15 row; it is the one
+competitor row near `economy` in cost and in stopband (70–76 dB), at 1.5×
+the latency.
 
 **Construction is a wash here, and mostly fixture.** Every row's one-time
 figure is within a few hundred thousand instructions of the others at the
 same ratio (1.0–3.0 M on the M55, 16–53 M on the M33), because the workload
 synthesizes its 0.25 s input fixture with libm `sin()` at the input rate
 and that is most of the 2 × (2 s) − (4 s) difference; `rational`'s own
-design — one Kaiser prototype of 23–65 taps per branch — is the fraction of
-a million above libsamplerate's row. The sibling engines' construction
+design — one Kaiser prototype of 39 (by 2) to 59 (the mixed pair) taps —
+is the fraction of a million above libsamplerate's row. The sibling engines' construction
 columns carry the same fixture and are dominated by their designs instead
 (`bridge` 98–437 M on the M33); a chain of stages pays this once per stage.
 
